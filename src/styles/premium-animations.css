@@ -1,0 +1,224 @@
+/* Premium Animations and Effects for Awwwards-level UI */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* Custom Properties */
+:root {
+  --premium-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-glow: 0 0 50px rgba(59, 130, 246, 0.3);
+}
+
+/* Global Font Enhancement */
+* {
+  font-family: var(--premium-font);
+  font-feature-settings: 'cv11', 'ss01';
+  font-variant-numeric: tabular-nums;
+}
+
+/* Glass Morphism Effects */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-premium);
+}
+
+.glass-container {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02));
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 32px 64px -12px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Custom Animations */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.6);
+    transform: scale(1.02);
+  }
+}
+
+@keyframes slide-in-blur {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+    filter: blur(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes counter-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Premium Utility Classes */
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-slide-in-blur {
+  animation: slide-in-blur 0.8s ease-out;
+}
+
+.animate-counter-up {
+  animation: counter-up 0.5s ease-out;
+}
+
+/* Enhanced Focus States */
+.focus-premium:focus {
+  outline: none;
+  box-shadow: 
+    0 0 0 3px rgba(59, 130, 246, 0.3),
+    0 32px 64px -12px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Micro Interactions */
+.micro-bounce:hover {
+  animation: micro-bounce 0.6s ease-in-out;
+}
+
+@keyframes micro-bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-8px); }
+  60% { transform: translateY(-4px); }
+}
+
+/* Smooth Loading States */
+.skeleton-loading {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Premium Typography */
+.text-premium-gradient {
+  background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 50%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+/* Enhanced Hover States */
+.hover-lift {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.3);
+}
+
+/* Responsive Enhancements */
+@media (max-width: 768px) {
+  .glass-container {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  
+  .glass-card {
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+  }
+  
+  /* Reduce animation complexity on mobile for better performance */
+  .animate-float {
+    animation: none;
+  }
+  
+  .animate-glow-pulse {
+    animation: none;
+  }
+  
+  .micro-bounce:hover {
+    animation: none;
+  }
+  
+  /* Simplify hover effects on mobile */
+  .hover-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  /* Reduce blur effects on mobile */
+  .animate-slide-in-blur {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* High DPI Optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .glass-container,
+  .glass-card {
+    border-width: 0.5px;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Dark Mode Enhancements */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.03);
+    --glass-border: rgba(255, 255, 255, 0.08);
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "name": "construction-expense-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@types/react-datepicker": "^6.2.0",
+    "firebase": "^12.0.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
+    "lucide-react": "^0.263.1",
+    "react": "^18.2.0",
+    "react-datepicker": "^8.4.0",
+    "react-dom": "^18.2.0",
+    "react-dropzone": "^14.3.8",
+    "react-scripts": "^5.0.1",
+    "react-select": "^5.10.2",
+    "recharts": "^3.1.0",
+    "tesseract.js": "^4.1.1"
+  },
+  "devDependencies": {
+    "@craco/craco": "^7.1.0",
+    "@types/react": "^18.2.15",
+    "@types/react-dom": "^18.2.7",
+    "autoprefixer": "^10.4.14",
+    "cssnano": "^7.1.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.3.3"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "start:clean": "powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Where-Object {$_.ProcessName -eq 'node'} | Stop-Process -Force; react-scripts start\"",
+    "dev": "react-scripts start",
+    "build": "react-scripts build",
+    "build:analyze": "ANALYZE=true react-scripts build",
+    "analyze": "node scripts/analyze-bundle.js",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

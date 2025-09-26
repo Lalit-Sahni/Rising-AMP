@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow users to access their own data (temporarily allow all access for debugging)
+    match /users/{accessCode} {
+      allow read, write: if true;
+      
+      // Allow access to all subcollections with specific rules for new unified structure
+      match /expenses/{document} {
+        allow read, write: if true;
+      }
+      match /clients/{document} {
+        allow read, write: if true;
+      }
+      match /labour/{document} {
+        allow read, write: if true;
+      }
+      match /trades/{document} {
+        allow read, write: if true;
+      }
+      match /projects/{document} {
+        allow read, write: if true;
+      }
+      match /purchaseOrders/{document} {
+        allow read, write: if true;
+      }
+      match /workerHistory/{document} {
+        allow read, write: if true;
+      }
+      match /siteNames/{document} {
+        allow read, write: if true;
+      }
+      match /projectPhases/{document} {
+        allow read, write: if true;
+      }
+      match /progressPayments/{document} {
+        allow read, write: if true;
+      }
+      match /invoices/{document} {
+        allow read, write: if true;
+      }
+      match /hiaContracts/{document} {
+        allow read, write: if true;
+      }
+      match /bankDetails/{document} {
+        allow read, write: if true;
+      }
+      // Legacy collections for backward compatibility
+      match /savedLabour/{document} {
+        allow read, write: if true;
+      }
+      match /savedTrades/{document} {
+        allow read, write: if true;
+      }
+      match /savedCompanies/{document} {
+        allow read, write: if true;
+      }
+      match /savedProjects/{document} {
+        allow read, write: if true;
+      }
+      match /clientDetails/{document} {
+        allow read, write: if true;
+      }
+      // Catch-all for any other subcollections
+      match /{allPaths=**} {
+        allow read, write: if true;
+      }
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 
