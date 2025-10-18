@@ -242,7 +242,9 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
         formData: {
           ...extractedData.formData,
           notes: editableData.notes
-        }
+        },
+        // Include the original image file for storage
+        imageFile: extractedData.imageFile
       };
       
       onScanComplete(updatedData);
@@ -433,15 +435,23 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                   />
                 </div>
 
-                {/* Confidence Score */}
-                <div className="flex items-center gap-3 p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
-                  <div className="w-4 h-4 rounded-full bg-slate-600 flex items-center justify-center">
-                    <span className="text-xs text-slate-300 font-bold">%</span>
+                {/* AI Service and Confidence Score */}
+                <div className="flex items-center justify-between p-4 bg-slate-800/50 border border-slate-700 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 rounded-full bg-slate-600 flex items-center justify-center">
+                      <span className="text-xs text-slate-300 font-bold">%</span>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-400 font-medium">Confidence Score</p>
+                      <p className="text-white font-medium">{extractedData.confidence.toFixed(0)}%</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-slate-400 font-medium">Confidence Score</p>
-                    <p className="text-white font-medium">{extractedData.confidence.toFixed(0)}%</p>
-                  </div>
+                  {extractedData.aiService && (
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500">AI Service</p>
+                      <p className="text-sm font-medium text-blue-400">{extractedData.aiService}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Extracted Items */}

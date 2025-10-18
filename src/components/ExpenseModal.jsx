@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Database } from 'lucide-react';
+import { X, Database, Upload, Image, Trash2, Eye } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import SavedDataSelector from './SavedDataSelector';
 import CreatableSelect from 'react-select/creatable';
 import DatePicker from 'react-datepicker';
+import { useDropzone } from 'react-dropzone';
+import ReceiptViewer from './ReceiptViewer';
 import "react-datepicker/dist/react-datepicker.css";
 
 const categoryFields = {
@@ -87,11 +89,16 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
     saveTradeToFirebase,
     saveCompanyToFirebase,
     saveProjectToFirebase,
+    accessCode
   } = useApp();
 
   const [formData, setFormData] = useState({});
   const [validationErrors, setValidationErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [receiptFile, setReceiptFile] = useState(null);
+  const [receiptPreview, setReceiptPreview] = useState(null);
+  const [receiptViewerOpen, setReceiptViewerOpen] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Initialize form data
   useEffect(() => {
@@ -106,6 +113,14 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
       });
       setFormData(initialFormData);
       setValidationErrors({});
+      
+      // Handle receipt from OCR scanner
+      if (initialData.imageFile) {
+        setReceiptFile(initialData.imageFile);
+        const reader = new FileReader();
+        reader.onload = (e) => setReceiptPreview(e.target.result);
+        reader.readAsDataURL(initialData.imageFile);
+      }
     }
   }, [isOpen, category, initialData]);
 
@@ -256,6 +271,35 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
     }
   };
 
+  // Receipt handling functions
+  const onDrop = (acceptedFiles) => {
+    const file = acceptedFiles[0];
+    if (file) {
+      setReceiptFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => setReceiptPreview(e.target.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
+    },
+    maxSize: 5 * 1024 * 1024, // 5MB
+    multiple: false
+  });
+
+  const removeReceipt = () => {
+    setReceiptFile(null);
+    setReceiptPreview(null);
+  };
+
+  const openReceiptViewer = () => {
+    setReceiptViewerOpen(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -274,6 +318,28 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
         total: calculateTotal(category, formData),
         timestamp: new Date().toISOString()
       };
+
+      // Upload receipt if present
+      if (receiptFile) {
+        try {
+          setUploadProgress(10);
+          const { uploadReceiptImage } = await import('../firebase/storage');
+          const uploadResult = await uploadReceiptImage(accessCode, expenseData.id, receiptFile);
+          
+          if (uploadResult.success) {
+            expenseData.receiptImageUrl = uploadResult.url;
+            expenseData.receiptImagePath = uploadResult.path;
+            expenseData.receiptUploadedAt = uploadResult.uploadedAt;
+            setUploadProgress(100);
+          } else {
+            console.warn('Receipt upload failed:', uploadResult.error);
+            showToast('Receipt upload failed, but expense will be saved', 'warning');
+          }
+        } catch (error) {
+          console.error('Error uploading receipt:', error);
+          showToast('Receipt upload failed, but expense will be saved', 'warning');
+        }
+      }
 
       await addExpenseToFirebase(expenseData);
 
@@ -667,6 +733,89 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
               ))}
             </div>
 
+            {/* Receipt Upload Section */}
+            <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
+              <h3 className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
+                <Image className="w-4 h-4 text-blue-400" />
+                Receipt Attachment
+              </h3>
+              
+              {receiptFile ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
+                    <div className="w-12 h-12 bg-slate-600 rounded-lg flex items-center justify-center overflow-hidden">
+                      {receiptPreview ? (
+                        <img 
+                          src={receiptPreview} 
+                          alt="Receipt preview" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Image className="w-6 h-6 text-slate-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{receiptFile.name}</p>
+                      <p className="text-xs text-slate-400">
+                        {(receiptFile.size / 1024 / 1024).toFixed(2)} MB
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={openReceiptViewer}
+                        className="p-2 hover:bg-slate-600 rounded-lg text-slate-300 hover:text-white transition-colors"
+                        title="View Receipt"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={removeReceipt}
+                        className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 hover:text-red-300 transition-colors"
+                        title="Remove Receipt"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {uploadProgress > 0 && uploadProgress < 100 && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs text-slate-400">
+                        <span>Uploading receipt...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full bg-slate-600 rounded-full h-2">
+                        <div 
+                          className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  {...getRootProps()}
+                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                    isDragActive 
+                      ? 'border-blue-400 bg-blue-400/10' 
+                      : 'border-slate-600 hover:border-slate-500 hover:bg-slate-600/50'
+                  }`}
+                >
+                  <input {...getInputProps()} />
+                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-3" />
+                  <p className="text-sm text-slate-300 mb-1">
+                    {isDragActive ? 'Drop receipt here' : 'Upload receipt image'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Drag & drop or click to select (JPG, PNG, GIF, WebP - Max 5MB)
+                  </p>
+                </div>
+              )}
+            </div>
+
             {/* Total Calculation */}
             <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
               <div className="flex justify-between items-center">
@@ -690,6 +839,20 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
           </div>
         </form>
       </div>
+      
+      {/* Receipt Viewer Modal */}
+      <ReceiptViewer
+        isOpen={receiptViewerOpen}
+        onClose={() => setReceiptViewerOpen(false)}
+        receiptUrl={receiptPreview}
+        receiptMetadata={{
+          fileName: receiptFile?.name,
+          size: receiptFile?.size,
+          contentType: receiptFile?.type,
+          uploadedAt: new Date().toISOString()
+        }}
+        onDelete={removeReceipt}
+      />
     </div>
   );
 };

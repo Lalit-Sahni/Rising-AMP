@@ -4,9 +4,10 @@ This guide explains how to safely rotate API keys for Rising-AMP to maintain sec
 
 ## Overview
 
-Rising-AMP uses two main API keys:
-1. **Firebase API Key** - For Firebase services (Firestore, Auth)
-2. **Google Cloud Vision API Key** - For OCR functionality
+Rising-AMP uses three main API keys:
+1. **Firebase API Key** - For Firebase services (Firestore, Auth, Storage)
+2. **Google Cloud Vision API Key** - For OCR functionality (fallback)
+3. **OpenAI API Key** - For advanced AI-powered OCR (primary)
 
 ## Before You Start
 
@@ -40,6 +41,9 @@ REACT_APP_FIREBASE_STORAGE_BUCKET=rising-amp-467702-b5.firebasestorage.app
 REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
 REACT_APP_FIREBASE_APP_ID=your_app_id
 REACT_APP_FIREBASE_MEASUREMENT_ID=your_measurement_id
+
+# OpenAI API Key (for AI-powered OCR)
+REACT_APP_OPENAI_API_KEY=sk-your_openai_api_key_here
 ```
 
 ### Step 3: Test Firebase Connection
@@ -54,6 +58,38 @@ Verify that:
 - Data loads from Firestore
 - New expenses can be added
 - Existing data is preserved
+
+## OpenAI API Key Rotation
+
+### Step 1: Get New OpenAI API Key
+
+1. Go to [OpenAI Platform](https://platform.openai.com/)
+2. Sign in to your account
+3. Go to API Keys section
+4. Click "Create new secret key"
+5. Copy the new API key (starts with `sk-`)
+
+### Step 2: Update Environment Variables
+
+Update your `.env.local` file with the new OpenAI API key:
+
+```env
+# New OpenAI API Key
+REACT_APP_OPENAI_API_KEY=sk-your_new_openai_api_key_here
+```
+
+### Step 3: Test OpenAI Connection
+
+```bash
+npm run env:check
+npm start
+```
+
+### Step 4: Revoke Old Key (Optional)
+
+1. Go back to [OpenAI Platform](https://platform.openai.com/)
+2. Find your old API key
+3. Click "Revoke" to disable it
 
 ## Google Cloud Vision API Key Rotation
 

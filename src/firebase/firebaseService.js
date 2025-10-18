@@ -53,11 +53,26 @@ export const updateExpense = async (accessCode, expenseId, expenseData) => {
     ...expenseData,
     updatedAt: serverTimestamp()
   });
+  
+  // Handle receipt image updates if provided
+  if (expenseData.receiptImageUrl || expenseData.receiptImagePath) {
+    // Receipt image was updated, no additional action needed
+    // The new image URL/path is already in the expenseData
+  }
 };
 
 export const deleteExpense = async (accessCode, expenseId) => {
   const expenseRef = doc(db, `users/${accessCode}/${COLLECTIONS.EXPENSES}`, expenseId);
   await deleteDoc(expenseRef);
+  
+  // Also delete associated receipt image if it exists
+  try {
+    const { deleteReceiptImage } = await import('./storage');
+    await deleteReceiptImage(accessCode, expenseId);
+  } catch (error) {
+    console.warn('Error deleting receipt image:', error);
+    // Don't throw error here as expense deletion should still succeed
+  }
 };
 
 // ===== PURCHASE ORDERS =====

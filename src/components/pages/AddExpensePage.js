@@ -47,8 +47,11 @@ export default function AddExpensePage() {
     // Auto-select the detected category
     setSelectedCategory(extractedData.category);
     
-    // Pre-fill the modal with extracted data
-    setModalData(extractedData.formData);
+    // Pre-fill the modal with extracted data and include the image file
+    setModalData({
+      ...extractedData.formData,
+      imageFile: extractedData.imageFile // Pass the image file for storage
+    });
     
     // Open the expense modal
     setModalOpen(true);

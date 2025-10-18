@@ -1,6 +1,8 @@
 // Enhanced OCR Service - Comprehensive Receipt Scanner & Parser System
 // This integrates the sophisticated system from the user's provided code
 import Tesseract from 'tesseract.js';
+import OpenAIOCRService from './OpenAIOCRService.js';
+import OCRService from './OCRService.js';
 
 class ReceiptOCR {
   constructor(apiKey = null) {
@@ -576,12 +578,30 @@ class ReceiptProcessor {
 class EnhancedOCRService {
   constructor() {
     this.apiKey = process.env.REACT_APP_GOOGLE_CLOUD_VISION_API_KEY;
+    this.openAIKey = process.env.REACT_APP_OPENAI_API_KEY;
+    // Keep the processor for local/Tesseract fallback
     this.processor = new ReceiptProcessor({ ocrApiKey: this.apiKey });
+    // Use the dedicated Google Vision OCR service which exposes extractTextFromImage
+    this.visionService = new OCRService();
     
-    // Validate API key
+    // Initialize OpenAI service
+    this.openAIService = null;
+    if (this.openAIKey) {
+      try {
+        this.openAIService = new OpenAIOCRService();
+      } catch (err) {
+        console.warn('Failed to load OpenAI service:', err);
+      }
+    }
+    
+    // Validate API keys
     if (!this.apiKey) {
       console.warn('⚠️ Google Cloud Vision API key not found. OCR functionality will be limited.');
       console.warn('📝 Please set REACT_APP_GOOGLE_CLOUD_VISION_API_KEY in your .env.local file.');
+    }
+    if (!this.openAIKey) {
+      console.warn('⚠️ OpenAI API key not found. Advanced OCR functionality will be limited.');
+      console.warn('📝 Please set REACT_APP_OPENAI_API_KEY in your .env.local file.');
     }
   }
 
@@ -598,42 +618,82 @@ class EnhancedOCRService {
     });
   }
 
-  // Main method to extract text and process receipt
+  // Main method to extract text and process receipt with fallback
   async extractTextFromImage(imageFile) {
-    try {
-      const result = await this.processor.processReceipt(imageFile);
-      
-      if (!result.success) {
-        throw new Error(result.error);
-      }
-
-      const data = result.data;
-      
-      // Map to form fields compatible with existing app
-      const formData = this.mapToFormFields(data);
-      
-      return {
-        rawText: data.rawText,
-        category: data.category,
-        formData,
-        confidence: result.confidence * 100, // Convert to percentage
-        extractedData: {
-          vendor: data.vendor,
-          date: data.date,
-          totalAmount: data.totalAmount,
-          tax: data.tax,
-          subtotal: data.subtotal,
-          items: data.items,
-          phone: data.phone,
-          address: data.address
-        },
-        suggestions: this.generateSuggestions(data),
-        warnings: data.metadata.warnings || []
-      };
-    } catch (error) {
-      console.error('Enhanced OCR extraction failed:', error);
-      throw error;
+    const services = [];
+    
+    // Try OpenAI first if available
+    if (this.openAIKey && this.openAIService) {
+      services.push({ name: 'OpenAI', service: this.openAIService });
     }
+    
+    // Add Google Cloud Vision as fallback
+    if (this.apiKey) {
+      services.push({ name: 'GoogleVision', service: this.visionService });
+    }
+
+    // Add Tesseract local fallback as last resort
+    services.push({
+      name: 'Tesseract',
+      service: {
+        extractTextFromImage: async (file) => {
+          const result = await this.processor.processReceipt(file);
+          if (!result.success || !result.data) {
+            throw new Error(result.error || 'Tesseract processing failed');
+          }
+          const finalData = result.data;
+          const confidencePct = Math.round((result.confidence || 0) * 100);
+          return {
+            rawText: '',
+            category: finalData.category,
+            formData: this.mapToFormFields(finalData),
+            confidence: confidencePct,
+            extractedData: {
+              vendor: finalData.vendor,
+              date: finalData.date,
+              totalAmount: finalData.totalAmount,
+              tax: finalData.tax,
+              subtotal: finalData.subtotal,
+              invoiceNumber: null,
+              items: finalData.items,
+              category: finalData.category,
+              confidence: confidencePct,
+              rawText: ''
+            },
+            suggestions: this.generateSuggestions(finalData),
+            warnings: finalData.metadata?.warnings || []
+          };
+        }
+      }
+    });
+    
+    // Try each service in order
+    for (let i = 0; i < services.length; i++) {
+      const { name, service } = services[i];
+      try {
+        console.log(`Trying ${name} OCR service...`);
+        const result = await service.extractTextFromImage(imageFile);
+        
+        // Add service info to result
+        result.aiService = name;
+        result.imageFile = imageFile; // Keep reference for later upload
+        
+        console.log(`✅ ${name} OCR completed successfully`);
+        return result;
+        
+      } catch (error) {
+        console.warn(`❌ ${name} OCR failed:`, error.message);
+        // If this is the last service, surface the error
+        if (i === services.length - 1) {
+          throw new Error(`All OCR services failed. Last error: ${error.message}`);
+        }
+        // Otherwise, continue to the next provider
+        continue;
+      }
+    }
+    
+    // If no services available, throw error
+    throw new Error('No OCR services available. Please configure API keys.');
   }
 
   // Map extracted data to form fields

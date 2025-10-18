@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronUp, ChevronDown, DollarSign, Calendar, Hash, Eye, ExternalLink } from 'lucide-react';
+import { ChevronUp, ChevronDown, DollarSign, Calendar, Hash, Eye, ExternalLink, Paperclip, Image } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import ReceiptViewer from '../ReceiptViewer';
 
 const ExpenseSummaryTable = ({ expenses = [] }) => {
   const { setCurrentPage } = useApp();
@@ -9,6 +10,8 @@ const ExpenseSummaryTable = ({ expenses = [] }) => {
     direction: 'desc'
   });
   const [showAll, setShowAll] = useState(false);
+  const [receiptViewerOpen, setReceiptViewerOpen] = useState(false);
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
 
   // Helper function to safely get expense total
   const getExpenseTotal = (expense) => {
@@ -126,6 +129,22 @@ const ExpenseSummaryTable = ({ expenses = [] }) => {
     setCurrentPage('history');
   };
 
+  // Handle receipt viewing
+  const handleViewReceipt = (expense) => {
+    if (expense.receiptImageUrl) {
+      setSelectedReceipt({
+        url: expense.receiptImageUrl,
+        metadata: {
+          fileName: `receipt_${expense.id}`,
+          size: expense.receiptSize,
+          contentType: expense.receiptContentType,
+          uploadedAt: expense.receiptUploadedAt
+        }
+      });
+      setReceiptViewerOpen(true);
+    }
+  };
+
   return (
     <div className="bg-slate-800 rounded-lg p-2 sm:p-3 md:p-4 shadow mobile-compact">
       {/* Header */}
@@ -194,6 +213,14 @@ const ExpenseSummaryTable = ({ expenses = [] }) => {
                       <span>Status</span>
                     </div>
                   </th>
+                  <th 
+                    className="px-4 py-3 cursor-pointer hover:bg-slate-600 transition-colors"
+                  >
+                    <div className="flex items-center space-x-1">
+                      <Paperclip className="w-3 h-3" />
+                      <span>Receipt</span>
+                    </div>
+                  </th>
                 </tr>
               </thead>
 
@@ -231,6 +258,20 @@ const ExpenseSummaryTable = ({ expenses = [] }) => {
                         {expense.reviewed ? 'Reviewed' : 'Pending'}
                       </span>
                     </td>
+                    <td className="px-4 py-4">
+                      {expense.receiptImageUrl ? (
+                        <button
+                          onClick={() => handleViewReceipt(expense)}
+                          className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors"
+                          title="View Receipt"
+                        >
+                          <Image className="w-4 h-4" />
+                          <span className="text-xs">View</span>
+                        </button>
+                      ) : (
+                        <span className="text-slate-500 text-xs">No receipt</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -265,12 +306,22 @@ const ExpenseSummaryTable = ({ expenses = [] }) => {
                     ${getExpenseTotal(expense).toLocaleString()}
                   </span>
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 flex items-center justify-between">
                   <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                     expense.reviewed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                   }`}>
                     {expense.reviewed ? 'Reviewed' : 'Pending'}
                   </span>
+                  {expense.receiptImageUrl && (
+                    <button
+                      onClick={() => handleViewReceipt(expense)}
+                      className="flex items-center gap-1 text-blue-400 hover:text-blue-300 transition-colors text-xs"
+                      title="View Receipt"
+                    >
+                      <Image className="w-3 h-3" />
+                      <span>Receipt</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -309,6 +360,14 @@ const ExpenseSummaryTable = ({ expenses = [] }) => {
           </p>
         </div>
       )}
+      
+      {/* Receipt Viewer Modal */}
+      <ReceiptViewer
+        isOpen={receiptViewerOpen}
+        onClose={() => setReceiptViewerOpen(false)}
+        receiptUrl={selectedReceipt?.url}
+        receiptMetadata={selectedReceipt?.metadata}
+      />
     </div>
   );
 };
