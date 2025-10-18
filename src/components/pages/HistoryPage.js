@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Trash2, Filter, Search, Download, Eye, Calendar, DollarSign, Hash } from 'lucide-react';
+import ExportDialog from '../ExportDialog';
+import { exportExpensesToExcel } from '../../utils/excelExport';
 
 const categoryLabels = {
   labour: 'Labour',
@@ -30,6 +32,7 @@ export default function HistoryPage() {
     key: 'date',
     direction: 'desc'
   });
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   // Safe date helper for sorting
   const safeDate = (expense) => {
@@ -223,6 +226,21 @@ export default function HistoryPage() {
     }
   };
 
+  const handleExport = async (filename) => {
+    try {
+      const result = await exportExpensesToExcel(filteredAndSortedExpenses, filename);
+      if (result.success) {
+        showToast('Excel file exported successfully!', 'success');
+      } else {
+        showToast(`Export failed: ${result.error}`, 'error');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      showToast('Export failed. Please try again.', 'error');
+    }
+  };
+
+
   // Calculate totals
   const totalAmount = filteredAndSortedExpenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
   const reviewedCount = filteredAndSortedExpenses.filter(e => e.reviewed).length;
@@ -239,7 +257,10 @@ export default function HistoryPage() {
             <p className="text-slate-400 mt-1">Complete overview of all expenses - Deletion issue resolved</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+            <button 
+              onClick={() => setShowExportDialog(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            >
               <Download className="w-4 h-4" />
               Export
             </button>
@@ -627,6 +648,14 @@ export default function HistoryPage() {
         </div>
 
       </div>
+
+      {/* Export Dialog */}
+      <ExportDialog
+        isOpen={showExportDialog}
+        onClose={() => setShowExportDialog(false)}
+        onExport={handleExport}
+        expenseCount={filteredAndSortedExpenses.length}
+      />
     </div>
   );
 } 
