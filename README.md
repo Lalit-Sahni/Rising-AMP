@@ -23,33 +23,64 @@ A comprehensive React application for tracking construction expenses with OCR ca
 
 ## Installation
 
-1. Install dependencies:
-```bash
-npm install
+### Prerequisites
+- Node.js 18.17.0 or higher (see `.nvmrc`)
+- npm or yarn package manager
+- Firebase project with Firestore enabled
+- Google Cloud Vision API key (for OCR functionality)
+
+### Quick Setup
+
+1. **Clone and install dependencies:**
+   ```bash
+   git clone https://github.com/your-username/Rising-AMP.git
+   cd Rising-AMP
+   npm install
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your actual API keys
+   ```
+
+3. **Start the development server:**
+   ```bash
+   # Method 1: Quick Start (Windows)
+   start-dev.bat
+   
+   # Method 2: PowerShell (Windows)
+   .\start-dev.ps1
+   
+   # Method 3: Manual Start
+   npm start
+   
+   # Method 4: Clean Start (kills existing processes)
+   npm run start:clean
+   ```
+
+4. **Open your browser:**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+### Environment Configuration
+
+Create a `.env.local` file with the following variables:
+
+```env
+# Firebase Configuration
+REACT_APP_FIREBASE_API_KEY=your_firebase_api_key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+REACT_APP_FIREBASE_PROJECT_ID=your_project_id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your_project_id.firebasestorage.app
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+REACT_APP_FIREBASE_APP_ID=your_app_id
+REACT_APP_FIREBASE_MEASUREMENT_ID=your_measurement_id
+
+# Google Cloud Vision API (for OCR)
+REACT_APP_GOOGLE_CLOUD_VISION_API_KEY=your_google_cloud_vision_api_key
 ```
 
-2. Start the development server (choose one method):
-
-### Method 1: Quick Start (Recommended)
-```bash
-# Windows Batch File (easiest)
-start-dev.bat
-
-# Or PowerShell Script (more detailed)
-.\start-dev.ps1
-```
-
-### Method 2: Manual Start
-```bash
-npm start
-```
-
-### Method 3: Clean Start (kills existing processes)
-```bash
-npm run start:clean
-```
-
-3. Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+**⚠️ Security Note:** Never commit `.env.local` to version control. Use `.env.example` as a template.
 
 ## Quick Development Workflow
 
@@ -89,11 +120,52 @@ npm run start:clean
 
 ## Dependencies
 
-- React 18
-- Lucide React (Icons)
-- XLSX (Excel export)
-- Tesseract.js (OCR processing)
-- Tailwind CSS (Styling)
+### Core Dependencies
+- React 18 - Frontend framework
+- Firebase 12.0.0 - Backend services (Firestore, Auth)
+- Lucide React - Icon library
+- Tailwind CSS - Styling framework
+
+### Feature Dependencies
+- Tesseract.js - Client-side OCR processing
+- XLSX - Excel export functionality
+- Recharts - Data visualization
+- React DatePicker - Date selection
+- React Dropzone - File upload handling
+
+### Development Dependencies
+- CRACO - Create React App Configuration Override
+- PostCSS - CSS processing
+- Autoprefixer - CSS vendor prefixes
+
+## Security Features
+
+### Data Protection
+- All business data encrypted in Firebase
+- Environment variables for API keys
+- Secure Firebase security rules
+- Regular automated backups
+
+### API Security
+- Google Cloud Vision API with domain restrictions
+- Firebase API keys properly configured
+- No hardcoded secrets in source code
+- Development-only logging
+
+### Security Scripts
+```bash
+# Run security audit
+npm run security:audit
+
+# Check for security vulnerabilities
+npm run security:check
+
+# Update dependencies
+npm run deps:update
+
+# Check environment variables
+npm run env:check
+```
 
 ## Project Structure
 

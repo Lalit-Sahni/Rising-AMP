@@ -3,9 +3,15 @@ import SmartInvoiceOCR from './SmartInvoiceOCR.js';
 
 class OCRService {
   constructor() {
-    this.apiKey = "AIzaSyBbaimImW_JbsUzSVKnw_oLS_WogjeYEzo";
+    this.apiKey = process.env.REACT_APP_GOOGLE_CLOUD_VISION_API_KEY;
     this.apiEndpoint = "https://vision.googleapis.com/v1/images:annotate";
     this.smartOCR = new SmartInvoiceOCR();
+    
+    // Validate API key
+    if (!this.apiKey) {
+      console.warn('⚠️ Google Cloud Vision API key not found. OCR functionality will be limited.');
+      console.warn('📝 Please set REACT_APP_GOOGLE_CLOUD_VISION_API_KEY in your .env.local file.');
+    }
     
     // Enhanced patterns from the user's provided code
     this.patterns = {

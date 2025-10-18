@@ -575,8 +575,14 @@ class ReceiptProcessor {
 // Enhanced OCR Service - Main class that integrates everything
 class EnhancedOCRService {
   constructor() {
-    this.apiKey = "AIzaSyBbaimImW_JbsUzSVKnw_oLS_WogjeYEzo";
+    this.apiKey = process.env.REACT_APP_GOOGLE_CLOUD_VISION_API_KEY;
     this.processor = new ReceiptProcessor({ ocrApiKey: this.apiKey });
+    
+    // Validate API key
+    if (!this.apiKey) {
+      console.warn('⚠️ Google Cloud Vision API key not found. OCR functionality will be limited.');
+      console.warn('📝 Please set REACT_APP_GOOGLE_CLOUD_VISION_API_KEY in your .env.local file.');
+    }
   }
 
   // Convert image to base64

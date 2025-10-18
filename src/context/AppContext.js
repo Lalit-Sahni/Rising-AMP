@@ -33,6 +33,7 @@ import {
   deleteProject,
   deleteClient
 } from '../firebase/firebaseService';
+import logger from '../utils/logger';
 
 const AppContext = createContext();
 
@@ -61,7 +62,7 @@ export const AppProvider = ({ children, accessCode }) => {
   // Load all data from Firestore when accessCode changes or component mounts
   useEffect(() => {
     if (accessCode) {
-      console.log('Loading data for access code:', accessCode);
+      logger.firebase('LOAD_DATA', 'Loading data for access code:', accessCode);
       
       // Add a loading state to prevent multiple simultaneous loads
       let isMounted = true;
@@ -73,16 +74,16 @@ export const AppProvider = ({ children, accessCode }) => {
           if (result.success && isMounted) {
             setExpenses(result.expenses);
             setBudget(result.budget || 0);
-            console.log('Loaded expenses:', result.expenses.length);
-            console.log('Loaded budget:', result.budget);
+            logger.firebase('LOAD_EXPENSES', 'Loaded expenses:', result.expenses.length);
+            logger.firebase('LOAD_BUDGET', 'Loaded budget:', result.budget);
           } else if (!isMounted) {
-            console.log('Component unmounted, skipping expense load');
+            logger.debug('Component unmounted, skipping expense load');
           } else {
-            console.error('Failed to load expenses and budget:', result.error);
+            logger.error('Failed to load expenses and budget:', result.error);
           }
         } catch (error) {
           if (isMounted) {
-            console.error('Error loading expenses and budget:', error);
+            logger.error('Error loading expenses and budget:', error);
           }
         }
       };

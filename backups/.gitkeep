@@ -1,0 +1,12 @@
+# This directory contains Firebase data backups
+# Backup files are automatically generated and should not be committed to git
+# 
+# Backup files are created with timestamps:
+# - firebase-backup-YYYY-MM-DDTHH-mm-ss-sssZ.json
+# - latest-backup.json (symlink to most recent backup)
+#
+# To create a backup:
+# node scripts/backup-firebase-data.js
+#
+# To restore from backup:
+# node scripts/restore-firebase-data.js [backup-file]
