@@ -7,7 +7,6 @@ import Header from './components/Header';
 import MainContent from './components/MainContent';
 
 import CommandPalette from './components/CommandPalette';
-import Fab from './components/Fab';
 import LoginScreen from './components/LoginScreen';
 import './styles/premium-animations.css';
 
@@ -92,7 +91,6 @@ function App() {
         </div>
 
         <CommandPalette />
-        <Fab />
       </div>
     </AppProvider>
   );

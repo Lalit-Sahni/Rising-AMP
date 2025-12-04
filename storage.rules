@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow users to access their own data
+    match /receipts/{accessCode}/{expenseId}/{fileName} {
+      allow read, write: if true;
+    }
+    
+    // Allow users to access site log images
+    match /siteLogs/{accessCode}/{logEntryId}/{fileName} {
+      allow read, write: if true;
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

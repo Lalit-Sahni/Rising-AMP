@@ -167,3 +167,4 @@ export const getVendorCategory = (vendorName) => {
 };
 
 export default OCR_CONFIG;
+

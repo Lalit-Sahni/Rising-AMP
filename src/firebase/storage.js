@@ -10,7 +10,8 @@ import { storage } from "./config";
 
 // Collection names
 const STORAGE_PATHS = {
-  RECEIPTS: 'receipts'
+  RECEIPTS: 'receipts',
+  SITE_LOGS: 'siteLogs'
 };
 
 /**
@@ -321,3 +322,99 @@ export const getReceiptImageMetadata = async (accessCode, expenseId) => {
     };
   }
 };
+
+/**
+ * Upload a site log image to Firebase Storage
+ * @param {string} accessCode - User's access code
+ * @param {string} logEntryId - Site log entry ID
+ * @param {File} imageFile - Image file to upload
+ * @returns {Promise<{success: boolean, url?: string, path?: string, error?: string}>}
+ */
+export const uploadSiteLogImage = async (accessCode, logEntryId, imageFile) => {
+  try {
+    // Validate inputs
+    if (!accessCode || !logEntryId || !imageFile) {
+      throw new Error('Missing required parameters: accessCode, logEntryId, or imageFile');
+    }
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(imageFile.type)) {
+      throw new Error('Invalid file type. Please upload JPG, PNG, GIF, or WebP images.');
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (imageFile.size > maxSize) {
+      throw new Error('File size too large. Please upload images smaller than 5MB.');
+    }
+
+    // Compress image if needed
+    const compressedFile = await compressImage(imageFile);
+
+    // Generate unique filename with timestamp
+    const timestamp = Date.now();
+    const fileExtension = imageFile.name.split('.').pop() || 'jpg';
+    const fileName = `log_${timestamp}.${fileExtension}`;
+    
+    // Create storage reference
+    const storagePath = `${STORAGE_PATHS.SITE_LOGS}/${accessCode}/${logEntryId}/${fileName}`;
+    const storageRef = ref(storage, storagePath);
+
+    // Upload file
+    const uploadResult = await uploadBytes(storageRef, compressedFile);
+    
+    // Get download URL
+    const downloadURL = await getDownloadURL(uploadResult.ref);
+
+    return {
+      success: true,
+      url: downloadURL,
+      path: storagePath,
+      fileName: fileName,
+      size: compressedFile.size,
+      uploadedAt: new Date().toISOString()
+    };
+
+  } catch (error) {
+    console.error('Error uploading site log image:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
+/**
+ * Delete all site log images for an entry
+ * @param {string} accessCode - User's access code
+ * @param {string} logEntryId - Site log entry ID
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export const deleteSiteLogImages = async (accessCode, logEntryId) => {
+  try {
+    if (!accessCode || !logEntryId) {
+      throw new Error('Missing required parameters: accessCode or logEntryId');
+    }
+
+    const folderPath = `${STORAGE_PATHS.SITE_LOGS}/${accessCode}/${logEntryId}`;
+    const folderRef = ref(storage, folderPath);
+    const fileList = await listAll(folderRef);
+    
+    // Delete all files
+    const deletePromises = fileList.items.map(fileRef => deleteObject(fileRef));
+    await Promise.all(deletePromises);
+
+    return {
+      success: true
+    };
+
+  } catch (error) {
+    console.error('Error deleting site log images:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+

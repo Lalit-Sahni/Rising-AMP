@@ -293,3 +293,4 @@ const ReceiptViewer = ({ isOpen, onClose, receiptUrl, receiptMetadata, onDelete 
 };
 
 export default ReceiptViewer;
+
