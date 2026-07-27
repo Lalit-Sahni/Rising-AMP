@@ -19,13 +19,14 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
   // Cleanup camera when component unmounts or modal closes
   useEffect(() => {
+    const videoElement = videoRef.current;
+
     return () => {
-      const currentVideoRef = videoRef.current;
-      if (currentVideoRef && currentVideoRef.srcObject) {
-        const stream = currentVideoRef.srcObject;
+      if (videoElement && videoElement.srcObject) {
+        const stream = videoElement.srcObject;
         const tracks = stream.getTracks();
         tracks.forEach(track => track.stop());
-        currentVideoRef.srcObject = null;
+        videoElement.srcObject = null;
       }
     };
   }, []);

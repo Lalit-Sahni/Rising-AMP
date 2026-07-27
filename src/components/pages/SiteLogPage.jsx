@@ -16,7 +16,7 @@ const categoryLabels = {
 };
 
 const categoryColors = {
-  labour: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  labour: 'bg-orange-100 text-orange-700 border-orange-200',
   trade: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
   equipment: 'bg-green-500/20 text-green-400 border-green-500/30',
   service: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
@@ -54,6 +54,9 @@ export default function SiteLogPage() {
   const [imagePreviews, setImagePreviews] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailDraft, setEmailDraft] = useState(null);
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState('');
 
   // Get unique companies for filter
   const uniqueCompanies = useMemo(() => {
@@ -296,14 +299,14 @@ export default function SiteLogPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-2 border-b border-white/10">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 pb-2 border-b border-zinc-200">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1.5 tracking-tight">Site Log</h1>
-          <p className="text-gray-400 text-sm">Track and manage site activities and events</p>
+          <h1 className="text-3xl font-bold text-zinc-900 mb-1.5 tracking-tight">Site Log</h1>
+          <p className="text-zinc-500 text-sm">Track and manage site activities and events</p>
         </div>
         <button
           onClick={handleAddNew}
-          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 shadow-lg shadow-blue-600/20 hover:shadow-blue-600/30 font-medium"
+          className="flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-dark text-white rounded-lg transition-all duration-200 shadow-md font-medium"
         >
           <Plus className="w-4 h-4" />
           Add New Entry
@@ -311,17 +314,17 @@ export default function SiteLogPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-gray-800/50 rounded-xl p-5 border border-white/10 backdrop-blur-sm">
+      <div className="bg-white rounded-xl p-5 border border-zinc-200 shadow-sm">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
             <input
               type="text"
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
             />
           </div>
 
@@ -329,7 +332,7 @@ export default function SiteLogPage() {
           <select
             value={companyFilter}
             onChange={(e) => setCompanyFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-900 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500"
+            className="px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="all">All Companies</option>
             {uniqueCompanies.map(company => (
@@ -341,7 +344,7 @@ export default function SiteLogPage() {
           <select
             value={serviceTypeFilter}
             onChange={(e) => setServiceTypeFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-900 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500"
+            className="px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
           >
             <option value="all">All Service Types</option>
             {Object.entries(categoryLabels).map(([key, label]) => (
@@ -356,12 +359,12 @@ export default function SiteLogPage() {
               onChange={(date) => setDateFilter(date)}
               placeholderText="Filter by date"
               dateFormat="MMM dd, yyyy"
-              className="w-full px-4 py-2 bg-gray-900 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500"
+              className="w-full px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
             />
             {dateFilter && (
               <button
                 onClick={() => setDateFilter(null)}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -372,23 +375,23 @@ export default function SiteLogPage() {
 
       {/* Logs List */}
       {filteredLogs.length === 0 ? (
-        <div className="bg-gray-800/50 rounded-xl border border-white/10 p-12 text-center">
-          <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-500 opacity-50" />
-          <p className="text-gray-400 text-lg font-medium">No site log entries found</p>
-          <p className="text-gray-500 text-sm mt-2">Get started by adding your first site log entry</p>
+        <div className="bg-white rounded-xl border border-zinc-200 p-12 text-center shadow-sm">
+          <Calendar className="w-16 h-16 mx-auto mb-4 text-zinc-400" />
+          <p className="text-zinc-700 text-lg font-medium">No site log entries found</p>
+          <p className="text-zinc-500 text-sm mt-2">Get started by adding your first site log entry</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredLogs.map((log) => (
             <div
               key={log.id}
-              className="bg-gray-800/60 rounded-xl p-5 border border-white/10 hover:border-white/20 transition-all duration-200 cursor-pointer backdrop-blur-sm hover:shadow-xl hover:shadow-black/20 group"
+              className="bg-white rounded-xl p-5 border border-zinc-200 hover:border-zinc-300 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-md group"
               onClick={() => setSelectedLog(log)}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-white mb-2 truncate group-hover:text-blue-400 transition-colors">{log.company}</h3>
-                  <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium border ${categoryColors[log.serviceType] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+                  <h3 className="text-lg font-semibold text-zinc-900 mb-2 truncate group-hover:text-accent transition-colors">{log.company}</h3>
+                  <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-medium border ${categoryColors[log.serviceType] || 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}>
                     {categoryLabels[log.serviceType] || log.serviceType}
                   </span>
                 </div>
@@ -398,7 +401,7 @@ export default function SiteLogPage() {
                       e.stopPropagation();
                       handleEdit(log);
                     }}
-                    className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all duration-200"
+                    className="p-1.5 text-zinc-400 hover:text-accent hover:bg-orange-50 rounded transition-all duration-200"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -408,7 +411,7 @@ export default function SiteLogPage() {
                       e.stopPropagation();
                       handleDelete(log);
                     }}
-                    className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-all duration-200"
+                    className="p-1.5 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded transition-all duration-200"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -416,17 +419,17 @@ export default function SiteLogPage() {
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 text-sm text-gray-400 mb-3">
+              <div className="flex items-center gap-2 text-sm text-zinc-600 mb-3">
                 <Calendar className="w-4 h-4 flex-shrink-0" />
                 <span>{formatDate(log.date)}</span>
               </div>
               
               {log.comments && (
-                <p className="text-sm text-gray-300 mb-4 line-clamp-2 leading-relaxed">{log.comments}</p>
+                <p className="text-sm text-zinc-700 mb-4 line-clamp-2 leading-relaxed">{log.comments}</p>
               )}
               
               {log.images && log.images.length > 0 && (
-                <div className="flex items-center gap-2 text-sm text-gray-400 pt-3 border-t border-white/5">
+                <div className="flex items-center gap-2 text-sm text-zinc-600 pt-3 border-t border-zinc-200">
                   <ImageIcon className="w-4 h-4 flex-shrink-0" />
                   <span className="font-medium">{log.images.length} image{log.images.length !== 1 ? 's' : ''}</span>
                 </div>
@@ -439,8 +442,8 @@ export default function SiteLogPage() {
       {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
-            <div className="sticky top-0 bg-gray-800/95 backdrop-blur-sm border-b border-white/10 px-6 py-4 flex items-center justify-between rounded-t-xl">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-zinc-200 shadow-xl">
+            <div className="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
               <h2 className="text-xl font-bold text-white">
                 {editingLog ? 'Edit Site Log Entry' : 'Add New Site Log Entry'}
               </h2>
@@ -449,7 +452,7 @@ export default function SiteLogPage() {
                   resetForm();
                   setShowForm(false);
                 }}
-                className="text-gray-400 hover:text-white transition-colors p-1 hover:bg-gray-700 rounded"
+                className="text-zinc-500 hover:text-zinc-900 transition-colors p-1 hover:bg-zinc-100 rounded"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -503,7 +506,7 @@ export default function SiteLogPage() {
                 <select
                   value={formData.serviceType}
                   onChange={(e) => setFormData(prev => ({ ...prev, serviceType: e.target.value }))}
-                  className="w-full px-4 py-2.5 bg-gray-900 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                  className="w-full px-4 py-2.5 bg-white border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                   required
                 >
                   <option value="">Select service type</option>
@@ -522,7 +525,7 @@ export default function SiteLogPage() {
                   selected={formData.date}
                   onChange={(date) => setFormData(prev => ({ ...prev, date: date || new Date() }))}
                   dateFormat="MMM dd, yyyy"
-                  className="w-full px-4 py-2.5 bg-gray-900 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                  className="w-full px-4 py-2.5 bg-white border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all"
                   required
                 />
               </div>
@@ -536,7 +539,7 @@ export default function SiteLogPage() {
                   value={formData.comments}
                   onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
                   rows={4}
-                  className="w-full px-4 py-2.5 bg-gray-900 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all resize-none"
+                  className="w-full px-4 py-2.5 bg-white border border-zinc-300 rounded-lg text-zinc-900 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-accent transition-all resize-none"
                   placeholder="Enter comments or notes..."
                 />
               </div>
@@ -550,13 +553,13 @@ export default function SiteLogPage() {
                   {...getRootProps()}
                   className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
                     isDragActive 
-                      ? 'border-blue-500 bg-blue-500/10 scale-[1.02]' 
-                      : 'border-white/20 hover:border-white/40 hover:bg-gray-900/50'
+                      ? 'border-accent bg-orange-50 scale-[1.02]' 
+                      : 'border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50'
                   }`}
                 >
                   <input {...getInputProps()} />
-                  <ImageIcon className={`w-10 h-10 mx-auto mb-3 ${isDragActive ? 'text-blue-400' : 'text-gray-400'}`} />
-                  <p className={`text-sm font-medium ${isDragActive ? 'text-blue-400' : 'text-gray-400'}`}>
+                  <ImageIcon className={`w-10 h-10 mx-auto mb-3 ${isDragActive ? 'text-accent' : 'text-zinc-400'}`} />
+                  <p className={`text-sm font-medium ${isDragActive ? 'text-accent' : 'text-zinc-500'}`}>
                     {isDragActive ? 'Drop images here' : 'Drag & drop images or click to select'}
                   </p>
                   <p className="text-xs text-gray-500 mt-2">Max 5MB per image • Multiple images supported</p>
@@ -587,7 +590,7 @@ export default function SiteLogPage() {
 
               {/* Upload Progress */}
               {uploadProgress > 0 && uploadProgress < 100 && (
-                <div className="w-full bg-gray-900 rounded-full h-2">
+                <div className="w-full bg-zinc-200 rounded-full h-2">
                   <div
                     className="bg-blue-500 h-2 rounded-full transition-all"
                     style={{ width: `${uploadProgress}%` }}
@@ -603,7 +606,7 @@ export default function SiteLogPage() {
                     resetForm();
                     setShowForm(false);
                   }}
-                  className="flex-1 px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-5 py-2.5 bg-accent hover:bg-accent-dark text-white rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isSubmitting}
                 >
                   Cancel
@@ -624,13 +627,36 @@ export default function SiteLogPage() {
       {/* Detail View Modal */}
       {selectedLog && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl">
-            <div className="sticky top-0 bg-gray-800/95 backdrop-blur-sm border-b border-white/10 px-6 py-4 flex items-center justify-between rounded-t-xl">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-zinc-200 shadow-xl">
+            <div className="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
               <h2 className="text-xl font-bold text-white">Site Log Details</h2>
               <div className="flex gap-2">
                 <button
+                  onClick={async () => {
+                    if (!selectedLog || isGeneratingEmail) return;
+                    try {
+                      setIsGeneratingEmail(true);
+                      setEmailDraft(null);
+                      const { default: SiteLogEmailService } = await import('../../utils/SiteLogEmailService');
+                      const service = new SiteLogEmailService();
+                      const draft = await service.generateEmailFromSiteLog(selectedLog);
+                      setEmailDraft(draft);
+                    } catch (error) {
+                      console.error('Error generating email draft:', error);
+                      showToast('Failed to generate email draft. Please try again.', 'error');
+                    } finally {
+                      setIsGeneratingEmail(false);
+                    }
+                  }}
+                  className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-60"
+                  disabled={isGeneratingEmail}
+                  title="Generate email draft for this site log"
+                >
+                  {isGeneratingEmail ? 'Generating…' : 'Email Draft'}
+                </button>
+                <button
                   onClick={() => handleEdit(selectedLog)}
-                  className="p-2 text-gray-400 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-all duration-200"
+                  className="p-2 text-zinc-400 hover:text-accent hover:bg-orange-50 rounded transition-all duration-200"
                   title="Edit"
                 >
                   <Edit2 className="w-5 h-5" />
@@ -647,7 +673,7 @@ export default function SiteLogPage() {
                 </button>
                 <button
                   onClick={() => setSelectedLog(null)}
-                  className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-all duration-200"
+                  className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded transition-all duration-200"
                   title="Close"
                 >
                   <X className="w-5 h-5" />
@@ -658,7 +684,7 @@ export default function SiteLogPage() {
             <div className="p-6 space-y-6">
               <div>
                 <h3 className="text-2xl font-bold text-white mb-2">{selectedLog.company}</h3>
-                <span className={`inline-block px-3 py-1 rounded text-sm border ${categoryColors[selectedLog.serviceType] || 'bg-gray-500/20 text-gray-400'}`}>
+                <span className={`inline-block px-3 py-1 rounded text-sm border ${categoryColors[selectedLog.serviceType] || 'bg-zinc-100 text-zinc-600'}`}>
                   {categoryLabels[selectedLog.serviceType] || selectedLog.serviceType}
                 </span>
               </div>
@@ -686,12 +712,105 @@ export default function SiteLogPage() {
                       <div key={index} className="relative group aspect-square">
                         <img
                           src={image.url || image}
-                          alt={`Site log image ${index + 1}`}
+                          alt={`Site log ${index + 1}`}
                           className="w-full h-full object-cover rounded-lg border border-white/10 cursor-pointer hover:opacity-90 hover:scale-[1.02] transition-all duration-200"
                           onClick={() => window.open(image.url || image, '_blank')}
                         />
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* AI Email Draft */}
+              {emailDraft && (
+                <div className="mt-4 border border-orange-200 bg-orange-50 rounded-xl p-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-zinc-800 mb-1">
+                    Email Draft (AI)
+                  </h3>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-zinc-600">
+                      To
+                    </label>
+                    <input
+                      type="email"
+                      value={emailRecipient}
+                      onChange={(e) => setEmailRecipient(e.target.value)}
+                      placeholder="recipient@example.com"
+                      className="w-full px-3 py-2 text-sm bg-white border border-zinc-300 rounded-lg text-zinc-900 placeholder-zinc-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-zinc-600">
+                      Subject
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={emailDraft.subject}
+                      className="w-full px-3 py-2 text-sm bg-white border border-zinc-300 rounded-lg text-zinc-900"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-zinc-600">
+                      Body
+                    </label>
+                    <textarea
+                      readOnly
+                      rows={6}
+                      value={emailDraft.body}
+                      className="w-full px-3 py-2 text-sm bg-white border border-zinc-300 rounded-lg text-zinc-900 resize-y"
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-end pt-1">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(emailDraft.subject);
+                          showToast('Subject copied to clipboard', 'success');
+                        } catch (error) {
+                          console.error('Clipboard error:', error);
+                          showToast('Could not copy subject', 'error');
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-800 rounded-lg border border-zinc-200"
+                    >
+                      Copy subject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const fullText = `Subject: ${emailDraft.subject}\n\n${emailDraft.body}`;
+                        try {
+                          await navigator.clipboard.writeText(fullText);
+                          showToast('Email draft copied to clipboard', 'success');
+                        } catch (error) {
+                          console.error('Clipboard error:', error);
+                          showToast('Could not copy email draft', 'error');
+                        }
+                      }}
+                      className="px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                    >
+                      Copy full email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!emailRecipient) {
+                          showToast('Please enter a recipient email first', 'error');
+                          return;
+                        }
+                        const mailtoSubject = encodeURIComponent(emailDraft.subject);
+                        const mailtoBody = encodeURIComponent(emailDraft.body);
+                        window.location.href = `mailto:${encodeURIComponent(
+                          emailRecipient
+                        )}?subject=${mailtoSubject}&body=${mailtoBody}`;
+                      }}
+                      className="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg"
+                    >
+                      Open in email app
+                    </button>
                   </div>
                 </div>
               )}

@@ -30,11 +30,11 @@ export default function CommandPalette() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="command-palette glass-card w-full max-w-xl mx-auto rounded-xl shadow-lg animate-fadeIn">
-        <input ref={inputRef} type="text" className="command-input w-full px-6 py-4 bg-transparent border-b border-white/10 text-white text-lg outline-none" placeholder="Type a command or search..." />
+        <input ref={inputRef} type="text" className="command-input w-full px-6 py-4 bg-transparent border-b border-zinc-200 text-zinc-900 text-lg outline-none placeholder-zinc-500" placeholder="Type a command or search..." />
         <div className="command-results max-h-80 overflow-y-auto">
           {commands.map((cmd, i) => (
-            <button key={i} className="command-item flex items-center gap-3 w-full px-6 py-3 text-left hover:bg-white/5 transition-all" onClick={() => { cmd.action(ctx); setCommandPaletteOpen(false); }}>
-              <cmd.icon className="w-5 h-5 text-blue-400" />
+            <button key={i} className="command-item flex items-center gap-3 w-full px-6 py-3 text-left hover:bg-zinc-50 transition-all text-zinc-900" onClick={() => { cmd.action(ctx); setCommandPaletteOpen(false); }}>
+              <cmd.icon className="w-5 h-5 text-accent" />
               <span className="flex-1">{cmd.label}</span>
             </button>
           ))}

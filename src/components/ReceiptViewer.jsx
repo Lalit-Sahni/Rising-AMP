@@ -52,6 +52,8 @@ const ReceiptViewer = ({ isOpen, onClose, receiptUrl, receiptMetadata, onDelete 
           e.preventDefault();
           setIsFullscreen(prev => !prev);
           break;
+        default:
+          break;
       }
     };
 

@@ -60,26 +60,21 @@ export default function AddExpensePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
-      {/* Ambient Background Elements */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-purple-500/5 to-green-500/5 blur-3xl"></div>
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      
+    <div className="min-h-screen text-zinc-900 p-4 sm:p-6 lg:p-8 relative overflow-hidden">
       <div className="relative max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
         
         {/* Enhanced Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/25">
+              <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center shadow-lg">
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent tracking-tight">
+                <h1 className="text-4xl lg:text-5xl font-bold text-zinc-900 tracking-tight">
                   Add New Expense
                 </h1>
-                <p className="text-slate-400 text-lg font-medium mt-1">
+                <p className="text-zinc-500 text-lg font-medium mt-1">
                   Track construction expenses with intelligent categorization
                 </p>
               </div>
@@ -88,35 +83,35 @@ export default function AddExpensePage() {
           
           {/* Status Indicator */}
           <div className="flex items-center gap-4 flex-shrink-0">
-            <div className="glass-card px-6 py-3 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/10 shadow-xl">
+            <div className="bg-white border border-zinc-200 px-6 py-3 rounded-2xl shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                  <div className="absolute inset-0 w-3 h-3 bg-green-400 rounded-full animate-ping opacity-30"></div>
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-0 w-3 h-3 bg-emerald-500 rounded-full animate-ping opacity-30"></div>
                 </div>
-                <span className="text-white font-semibold text-sm tracking-wide">READY TO ADD</span>
+                <span className="text-zinc-700 font-semibold text-sm tracking-wide">READY TO ADD</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Container - Fixed hover effect */}
-        <div className="backdrop-blur-2xl bg-white/5 border border-white/10 rounded-3xl p-6 lg:p-8 shadow-2xl shadow-black/20 transition-all duration-700 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+        {/* Main Container */}
+        <div className="bg-white border border-zinc-200 rounded-3xl p-6 lg:p-8 shadow-sm transition-all duration-700 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
           {/* Primary Action Header */}
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center shadow-lg">
                 <FileText className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-white tracking-tight">Primary Actions</h2>
-                <p className="text-slate-400 font-medium">Choose your preferred expense entry method</p>
+                <h2 className="text-2xl font-bold text-zinc-900 tracking-tight">Primary Actions</h2>
+                <p className="text-zinc-500 font-medium">Choose your preferred expense entry method</p>
               </div>
             </div>
             
             {/* Floating Action Button */}
             <button 
-              className="hidden lg:flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold rounded-2xl shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-500/40 hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-slate-900"
+              className="hidden lg:flex items-center gap-3 px-6 py-3 bg-accent hover:bg-accent-dark text-white font-semibold rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-white"
               onClick={() => handleQuickAction('quick')}
             >
               <Zap className="w-5 h-5" />

@@ -65,26 +65,26 @@ const CategoryChartCard = ({ expenses = [] }) => {
   
   if (expenses.length === 0) {
     return (
-      <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-6 backdrop-blur-sm">
+      <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl border border-purple-500/20">
-              <PieChartIcon className="w-5 h-5 text-purple-400" />
+            <div className="p-3 bg-orange-50 rounded-xl border border-orange-100">
+              <PieChartIcon className="w-5 h-5 text-accent" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-white">Spending by Category</h3>
-              <p className="text-sm text-slate-400">No expenses found - add some expenses to see the chart!</p>
+              <h3 className="text-lg font-semibold text-zinc-900">Spending by Category</h3>
+              <p className="text-sm text-zinc-500">No expenses found - add some expenses to see the chart!</p>
             </div>
           </div>
-          <div className="px-2 py-1 bg-slate-700/50 border border-slate-600 rounded-lg">
-            <span className="text-xs text-slate-300 font-medium">0 categories</span>
+          <div className="px-2 py-1 bg-zinc-100 border border-zinc-200 rounded-lg">
+            <span className="text-xs text-zinc-600 font-medium">0 categories</span>
           </div>
         </div>
         <div className="text-center py-8">
-          <p className="text-slate-400 mb-4">Start tracking your expenses to see beautiful charts here!</p>
+          <p className="text-zinc-500 mb-4">Start tracking your expenses to see charts here!</p>
           <button 
             onClick={() => window.location.href = '#add-expense'}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+            className="px-4 py-2 bg-accent hover:bg-accent-dark text-white rounded-lg transition-colors"
           >
             Add First Expense
           </button>
@@ -94,23 +94,23 @@ const CategoryChartCard = ({ expenses = [] }) => {
   }
   
      return (
-     <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 border border-slate-700 rounded-2xl p-6 backdrop-blur-sm hover:border-slate-600 transition-all duration-300 shadow-xl hover:shadow-2xl hover:shadow-purple-500/10">
+     <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm hover:border-zinc-300 transition-all duration-300">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/20 rounded-xl border border-purple-500/20">
-            <PieChartIcon className="w-5 h-5 text-purple-400" />
+          <div className="p-3 bg-orange-50 rounded-xl border border-orange-100">
+            <PieChartIcon className="w-5 h-5 text-accent" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Spending by Category</h3>
-            <p className="text-sm text-slate-400">
+            <h3 className="text-lg font-semibold text-zinc-900">Spending by Category</h3>
+            <p className="text-sm text-zinc-500">
               {isExpanded ? 'Category breakdown' : 'Click to expand'}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <div className="px-2 py-1 bg-slate-700/50 border border-slate-600 rounded-lg">
-            <span className="text-xs text-slate-300 font-medium">
+          <div className="px-2 py-1 bg-zinc-100 border border-zinc-200 rounded-lg">
+            <span className="text-xs text-zinc-600 font-medium">
               {categoryData.length} categories
             </span>
           </div>
@@ -147,7 +147,7 @@ const CategoryChartCard = ({ expenses = [] }) => {
                dataKey="value"
                onClick={() => setIsExpanded(!isExpanded)}
                style={{ cursor: 'pointer' }}
-               stroke="#1f2937"
+               stroke="#e4e4e7"
                strokeWidth={2}
              >
                {categoryData.map((entry, index) => (
@@ -161,12 +161,13 @@ const CategoryChartCard = ({ expenses = [] }) => {
              </Pie>
              <Tooltip 
                contentStyle={{ 
-                 backgroundColor: '#1F2937', 
-                 border: '1px solid #374151',
-                 borderRadius: '16px',
-                 boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                 backgroundColor: '#fff', 
+                 border: '1px solid #e4e4e7',
+                 borderRadius: '12px',
+                 boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                  fontSize: '14px',
-                 padding: '12px 16px'
+                 padding: '12px 16px',
+                 color: '#18181b'
                }}
                formatter={(value, name) => [`$${value.toLocaleString()}`, name]}
                labelFormatter={(label) => `${label}`}
@@ -183,7 +184,7 @@ const CategoryChartCard = ({ expenses = [] }) => {
           {categoryData.map((category, index) => (
                          <div 
                key={index}
-               className="bg-slate-700/50 border border-slate-600 rounded-xl p-4 hover:bg-slate-700/70 transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-slate-900/50 backdrop-blur-sm"
+               className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 hover:bg-zinc-100 transition-all duration-200 hover:shadow-md"
              >
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
@@ -191,16 +192,16 @@ const CategoryChartCard = ({ expenses = [] }) => {
                    className="w-3 h-3 rounded-full shadow-sm" 
                    style={{ backgroundColor: category.solidColor }}
                  />
-                  <span className="text-white font-medium text-sm">{category.name}</span>
+                  <span className="text-zinc-900 font-medium text-sm">{category.name}</span>
                 </div>
-                <span className="text-slate-400 text-xs font-medium">
+                <span className="text-zinc-500 text-xs font-medium">
                   {category.percentage.toFixed(1)}%
                 </span>
               </div>
-              <div className="text-xl font-bold text-white mb-2">
+              <div className="text-xl font-bold text-zinc-900 mb-2">
                 ${category.value.toLocaleString()}
               </div>
-              <div className="w-full bg-slate-600 rounded-full h-1.5">
+              <div className="w-full bg-zinc-200 rounded-full h-1.5">
                                  <div 
                    className="h-1.5 rounded-full transition-all duration-300 shadow-sm"
                    style={{ 
@@ -214,10 +215,10 @@ const CategoryChartCard = ({ expenses = [] }) => {
         </div>
         
         {/* Total Summary */}
-        <div className="bg-slate-700/30 border border-slate-600 rounded-xl p-4 mb-4">
+        <div className="bg-zinc-100 border border-zinc-200 rounded-xl p-4 mb-4">
           <div className="flex items-center justify-between">
-            <span className="text-slate-300 font-medium">Total Expenses</span>
-            <span className="text-white font-bold text-lg">
+            <span className="text-zinc-600 font-medium">Total Expenses</span>
+            <span className="text-zinc-900 font-bold text-lg">
               ${totalExpenses.toLocaleString()}
             </span>
           </div>
@@ -228,7 +229,7 @@ const CategoryChartCard = ({ expenses = [] }) => {
       <div className="flex justify-center">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-700/50 hover:bg-slate-700/70 border border-slate-600 rounded-lg text-white transition-all duration-200 hover:scale-105 hover:shadow-lg"
+          className="flex items-center gap-2 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 border border-zinc-200 rounded-lg text-zinc-800 transition-all duration-200 font-medium"
         >
           {isExpanded ? (
             <>

@@ -97,9 +97,9 @@ const InvoiceManagementPage = () => {
             </div>
             <div style="text-align: right;">
               <div style="width: 64px; height: 64px; background-color: #2563eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
-                <span style="color: white; font-size: 24px;">BT</span>
+                <span style="color: white; font-size: 24px;">OT</span>
               </div>
-              <p style="font-size: 14px; color: #6b7280; margin: 2px 0;">BuildTrack</p>
+              <p style="font-size: 14px; color: #6b7280; margin: 2px 0;">Opal Track</p>
               <p style="font-size: 14px; color: #6b7280; margin: 2px 0;">Construction Management</p>
             </div>
           </div>
@@ -244,14 +244,14 @@ const InvoiceManagementPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-4">
+    <div className="min-h-screen text-zinc-900 p-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-white">Invoice Management</h1>
+          <h1 className="text-3xl font-bold text-zinc-900">Invoice Management</h1>
           <button
             onClick={() => setShowNewInvoice(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+            className="bg-accent hover:bg-accent-dark text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
             New Invoice
@@ -260,62 +260,62 @@ const InvoiceManagementPage = () => {
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Total Invoiced</p>
-                <p className="text-2xl font-bold text-white">${totalInvoiced.toLocaleString()}</p>
+                <p className="text-zinc-500 text-sm">Total Invoiced</p>
+                <p className="text-2xl font-bold text-zinc-900">${totalInvoiced.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-blue-500/20 rounded-lg">
-                <DollarSign className="w-6 h-6 text-blue-400" />
+              <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
+                <DollarSign className="w-6 h-6 text-accent" />
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Total Paid</p>
-                <p className="text-2xl font-bold text-green-400">${totalPaid.toLocaleString()}</p>
+                <p className="text-zinc-500 text-sm">Total Paid</p>
+                <p className="text-2xl font-bold text-emerald-600">${totalPaid.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-green-500/20 rounded-lg">
-                <Calendar className="w-6 h-6 text-green-400" />
+              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                <Calendar className="w-6 h-6 text-emerald-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm">Pending</p>
-                <p className="text-2xl font-bold text-orange-400">${totalPending.toLocaleString()}</p>
+                <p className="text-zinc-500 text-sm">Pending</p>
+                <p className="text-2xl font-bold text-amber-600">${totalPending.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-orange-500/20 rounded-lg">
-                <User className="w-6 h-6 text-orange-400" />
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
+                <User className="w-6 h-6 text-amber-600" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Search and Filter */}
-        <div className="bg-slate-800 rounded-xl p-6 border border-slate-700 mb-6">
+        <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
               <input
                 type="text"
                 placeholder="Search invoices..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               />
             </div>
             <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent appearance-none"
               >
                 <option value="all">All Status</option>
                 <option value="draft">Draft</option>
@@ -328,47 +328,47 @@ const InvoiceManagementPage = () => {
         </div>
 
         {/* Invoices Table */}
-        <div className="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-700">
+              <thead className="bg-zinc-100">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">Invoice #</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">Client</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">Project</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">Date</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-slate-300">Due</th>
-                  <th className="px-6 py-4 text-right text-sm font-medium text-slate-300">Amount</th>
-                  <th className="px-6 py-4 text-center text-sm font-medium text-slate-300">Status</th>
-                  <th className="px-6 py-4 text-center text-sm font-medium text-slate-300">Actions</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Invoice #</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Client</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Project</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Date</th>
+                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Due</th>
+                  <th className="px-6 py-4 text-right text-sm font-medium text-zinc-700">Amount</th>
+                  <th className="px-6 py-4 text-center text-sm font-medium text-zinc-700">Status</th>
+                  <th className="px-6 py-4 text-center text-sm font-medium text-zinc-700">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700">
+              <tbody className="divide-y divide-zinc-200">
                 {filteredInvoices.map((invoice, index) => (
-                  <tr key={index} className="hover:bg-slate-700/50 transition-colors">
-                    <td className="px-6 py-4 text-sm text-white font-medium">
+                  <tr key={index} className="hover:bg-zinc-50 transition-colors">
+                    <td className="px-6 py-4 text-sm text-zinc-900 font-medium">
                       {invoice.invoiceNumber}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-300">
+                    <td className="px-6 py-4 text-sm text-zinc-600">
                       {invoice.clientName}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-300">
+                    <td className="px-6 py-4 text-sm text-zinc-600">
                       {invoice.projectName}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-300">
+                    <td className="px-6 py-4 text-sm text-zinc-600">
                       {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : 'Invalid Date'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-300">
+                    <td className="px-6 py-4 text-sm text-zinc-600">
                       {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'Invalid Date'}
                     </td>
-                    <td className="px-6 py-4 text-sm text-white text-right font-medium">
+                    <td className="px-6 py-4 text-sm text-zinc-900 text-right font-medium">
                       ${(parseFloat(invoice.total) || 0).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 text-center">
                       <select
                         value={invoice.status || 'draft'}
                         onChange={(e) => handleStatusUpdate(invoice.id, e.target.value)}
-                        className="px-3 py-1 bg-slate-700 border border-slate-600 rounded text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="px-3 py-1 bg-white border border-zinc-300 rounded text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
                       >
                         <option value="draft">Draft</option>
                         <option value="sent">Sent</option>
@@ -380,7 +380,7 @@ const InvoiceManagementPage = () => {
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handlePreviewInvoice(invoice)}
-                          className="p-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                          className="p-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-colors"
                           title="Preview Invoice"
                         >
                           <Eye className="w-4 h-4 text-white" />
@@ -388,7 +388,7 @@ const InvoiceManagementPage = () => {
 
                         <button
                           onClick={() => downloadInvoice(invoice)}
-                          className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                          className="p-2 bg-accent hover:bg-accent-dark rounded-lg transition-colors"
                           title="Download PDF"
                         >
                           <Download className="w-4 h-4 text-white" />
@@ -396,7 +396,7 @@ const InvoiceManagementPage = () => {
 
                         <button
                           onClick={() => handleDeleteInvoice(invoice.id)}
-                          className="p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                          className="p-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
                           title="Delete Invoice"
                         >
                           <Trash2 className="w-4 h-4 text-white" />
@@ -411,11 +411,11 @@ const InvoiceManagementPage = () => {
           
           {filteredInvoices.length === 0 && (
             <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-              <p className="text-slate-400">No invoices found</p>
+              <FileText className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
+              <p className="text-zinc-500">No invoices found</p>
               <button
                 onClick={() => setShowNewInvoice(true)}
-                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="mt-4 bg-accent hover:bg-accent-dark text-white px-6 py-3 rounded-lg font-medium transition-colors"
               >
                 Create Your First Invoice
               </button>

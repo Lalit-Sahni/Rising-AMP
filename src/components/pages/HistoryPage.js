@@ -36,16 +36,39 @@ export default function HistoryPage() {
 
   // Safe date helper for sorting
   const safeDate = (expense) => {
-    // Try form date first (the actual date from the form)
-    if (expense.date) {
-      const dt = new Date(expense.date);
+    /**
+     * Normalise any supported date-like value into a valid JS Date
+     * Supports:
+     * - Firestore Timestamp objects (value.toDate())
+     * - Native Date instances
+     * - ISO / string dates
+     */
+    const toValidDate = (value) => {
+      if (!value) return null;
+
+      // Firestore Timestamp (has .toDate())
+      if (value.toDate && typeof value.toDate === 'function') {
+        const dt = value.toDate();
+        return isNaN(dt.getTime()) ? null : dt;
+      }
+
+      // Already a JS Date
+      if (value instanceof Date) {
+        return isNaN(value.getTime()) ? null : value;
+      }
+
+      // Fallback: treat as string/number
+      const dt = new Date(value);
       return isNaN(dt.getTime()) ? null : dt;
-    }
-    // Fallback to timestamp (when expense was added to database)
-    if (expense.timestamp) {
-      const dt = new Date(expense.timestamp);
-      return isNaN(dt.getTime()) ? null : dt;
-    }
+    };
+
+    // Prefer explicit form date, then fallback to created timestamp
+    const formDate = toValidDate(expense.date);
+    if (formDate) return formDate;
+
+    const createdDate = toValidDate(expense.timestamp);
+    if (createdDate) return createdDate;
+
     return null;
   };
 
@@ -166,11 +189,11 @@ export default function HistoryPage() {
   // Sort icon component
   const SortIcon = ({ column }) => {
     if (sortConfig.key !== column) {
-      return <Hash className="w-4 h-4 text-slate-500" />;
+      return <Hash className="w-4 h-4 text-zinc-400" />;
     }
     return sortConfig.direction === 'asc' 
-      ? <Hash className="w-4 h-4 text-blue-400" />
-      : <Hash className="w-4 h-4 text-blue-400" />;
+      ? <Hash className="w-4 h-4 text-accent" />
+      : <Hash className="w-4 h-4 text-accent" />;
   };
 
   // Format date with proper validation
@@ -247,19 +270,19 @@ export default function HistoryPage() {
   const pendingCount = filteredAndSortedExpenses.filter(e => !e.reviewed).length;
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-1 sm:p-2 md:p-4 animate-fadeIn portrait-mobile">
+    <div className="min-h-screen text-zinc-900 p-1 sm:p-2 md:p-4 animate-fadeIn portrait-mobile">
       <div className="max-w-screen-xl mx-auto px-1 sm:px-2 md:px-4 space-y-2 sm:space-y-4 md:space-y-8">
         
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-white">Expense History <span className="text-green-400 text-sm">[FIXED v2.1]</span></h1>
-            <p className="text-slate-400 mt-1">Complete overview of all expenses - Deletion issue resolved</p>
+            <h1 className="text-3xl font-bold text-zinc-900">Expense History</h1>
+            <p className="text-zinc-500 mt-1">Complete overview of all expenses</p>
           </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-dark text-white rounded-lg font-medium transition-colors"
             >
               <Download className="w-4 h-4" />
               Export
@@ -269,72 +292,72 @@ export default function HistoryPage() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-6">
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm font-medium">Total Expenses</p>
-                <p className="text-2xl font-bold text-white">{filteredAndSortedExpenses.length}</p>
+                <p className="text-zinc-500 text-sm font-medium">Total Expenses</p>
+                <p className="text-2xl font-bold text-zinc-900">{filteredAndSortedExpenses.length}</p>
               </div>
-              <div className="p-3 bg-blue-500/20 rounded-lg">
-                <Hash className="w-6 h-6 text-blue-400" />
+              <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
+                <Hash className="w-6 h-6 text-accent" />
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm font-medium">Total Amount</p>
-                <p className="text-2xl font-bold text-green-400">${totalAmount.toLocaleString()}</p>
+                <p className="text-zinc-500 text-sm font-medium">Total Amount</p>
+                <p className="text-2xl font-bold text-emerald-600">${totalAmount.toLocaleString()}</p>
               </div>
-              <div className="p-3 bg-green-500/20 rounded-lg">
-                <DollarSign className="w-6 h-6 text-green-400" />
+              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                <DollarSign className="w-6 h-6 text-emerald-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm font-medium">Reviewed</p>
-                <p className="text-2xl font-bold text-blue-400">{reviewedCount}</p>
+                <p className="text-zinc-500 text-sm font-medium">Reviewed</p>
+                <p className="text-2xl font-bold text-accent">{reviewedCount}</p>
               </div>
-              <div className="p-3 bg-blue-500/20 rounded-lg">
-                <Eye className="w-6 h-6 text-blue-400" />
+              <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
+                <Eye className="w-6 h-6 text-accent" />
               </div>
             </div>
           </div>
 
-          <div className="bg-slate-800 rounded-xl p-6 border border-slate-700">
+          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-slate-400 text-sm font-medium">Pending</p>
-                <p className="text-2xl font-bold text-yellow-400">{pendingCount}</p>
+                <p className="text-zinc-500 text-sm font-medium">Pending</p>
+                <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
               </div>
-              <div className="p-3 bg-yellow-500/20 rounded-lg">
-                <Calendar className="w-6 h-6 text-yellow-400" />
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
+                <Calendar className="w-6 h-6 text-amber-600" />
               </div>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-slate-800 rounded-lg p-3 sm:p-4 md:p-6 border border-slate-700 mobile-compact">
+        <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 border border-zinc-200 shadow-sm mobile-compact">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-white">Filters</h2>
-            <Filter className="w-5 h-5 text-slate-400" />
+            <h2 className="text-lg font-semibold text-zinc-900">Filters</h2>
+            <Filter className="w-5 h-5 text-zinc-500" />
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
               <input
                 type="text"
                 placeholder="Search expenses..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
               />
             </div>
 
@@ -342,7 +365,7 @@ export default function HistoryPage() {
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="all">All Categories</option>
               {Object.entries(categoryLabels).map(([key, label]) => (
@@ -354,7 +377,7 @@ export default function HistoryPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="all">All Status</option>
               <option value="reviewed">Reviewed</option>
@@ -368,7 +391,7 @@ export default function HistoryPage() {
                 setCategoryFilter('all');
                 setStatusFilter('all');
               }}
-              className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg font-medium transition-colors"
+              className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 rounded-lg font-medium transition-colors"
             >
               Clear Filters
             </button>
@@ -376,13 +399,13 @@ export default function HistoryPage() {
         </div>
 
         {/* Expense Table */}
-        <div className="bg-slate-800 rounded-lg p-3 sm:p-4 md:p-6 border border-slate-700 mobile-compact">
+        <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 border border-zinc-200 shadow-sm mobile-compact">
           <div className="overflow-x-auto mobile-table-container">
-            <table className="w-full text-sm text-left text-slate-300">
-              <thead className="bg-slate-700 text-slate-100 text-xs uppercase">
+            <table className="w-full text-sm text-left text-zinc-700">
+              <thead className="bg-zinc-100 text-zinc-700 text-xs uppercase">
                 <tr>
                   <th 
-                    className="px-4 py-3 cursor-pointer hover:bg-slate-600 transition-colors"
+                    className="px-4 py-3 cursor-pointer hover:bg-zinc-200 transition-colors"
                     onClick={() => handleSort('date')}
                   >
                     <div className="flex items-center space-x-1">
@@ -392,7 +415,7 @@ export default function HistoryPage() {
                     </div>
                   </th>
                   <th 
-                    className="px-4 py-3 cursor-pointer hover:bg-slate-600 transition-colors"
+                    className="px-4 py-3 cursor-pointer hover:bg-zinc-200 transition-colors"
                     onClick={() => handleSort('category')}
                   >
                     <div className="flex items-center space-x-1">
@@ -404,7 +427,7 @@ export default function HistoryPage() {
                     <span>Description</span>
                   </th>
                   <th 
-                    className="px-4 py-3 cursor-pointer hover:bg-slate-600 transition-colors"
+                    className="px-4 py-3 cursor-pointer hover:bg-zinc-200 transition-colors"
                     onClick={() => handleSort('total')}
                   >
                     <div className="flex items-center space-x-1">
@@ -426,28 +449,28 @@ export default function HistoryPage() {
                   filteredAndSortedExpenses.map((expense, index) => (
                     <React.Fragment key={`${expense.id || index}-${getExpenseDate(expense)}`}>
                       <tr 
-                        className="bg-slate-800 border-b border-slate-700 hover:bg-slate-700 transition-colors cursor-pointer"
+                        className="bg-white border-b border-zinc-200 hover:bg-zinc-50 transition-colors cursor-pointer"
                         onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)}
                       >
-                        <td className="px-4 py-4 text-slate-400">
+                        <td className="px-4 py-4 text-zinc-500">
                           {formatDate(getExpenseDate(expense))}
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${categoryColors[expense.category] || 'bg-gray-100 text-gray-800'}`}>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${categoryColors[expense.category] || 'bg-zinc-100 text-zinc-800'}`}>
                             {categoryLabels[expense.category] || expense.category}
                           </span>
                         </td>
-                        <td className="px-4 py-4 font-medium text-slate-100">
+                        <td className="px-4 py-4 font-medium text-zinc-900">
                           <div>
                             <div>{getExpenseDisplayName(expense)}</div>
                             {expense.notes && (
-                              <div className="text-xs text-slate-400 mt-1 truncate max-w-xs">
+                              <div className="text-xs text-zinc-500 mt-1 truncate max-w-xs">
                                 {expense.notes}
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-4 font-semibold text-green-400">
+                        <td className="px-4 py-4 font-semibold text-emerald-600">
                           ${getExpenseTotal(expense).toLocaleString()}
                         </td>
                         <td className="px-4 py-4">
@@ -459,7 +482,7 @@ export default function HistoryPage() {
                         </td>
                         <td className="px-4 py-4">
                           <button 
-                            className="text-red-400 hover:text-red-600 transition-colors" 
+                            className="text-red-500 hover:text-red-700 transition-colors" 
                             title="Delete" 
                             onClick={(e) => {
                               e.stopPropagation();
@@ -473,11 +496,11 @@ export default function HistoryPage() {
                       
                       {/* Expanded Details Row */}
                       {expandedExpense === expense.id && (
-                        <tr className="bg-slate-700 border-b border-slate-600">
+                        <tr className="bg-zinc-50 border-b border-zinc-200">
                           <td colSpan="6" className="px-4 py-6">
-                            <div className="bg-slate-800 rounded-lg p-6 border border-slate-600">
-                              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${categoryColors[expense.category] || 'bg-gray-100 text-gray-800'}`}>
+                            <div className="bg-white rounded-lg p-6 border border-zinc-200">
+                              <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${categoryColors[expense.category] || 'bg-zinc-100 text-zinc-800'}`}>
                                   {categoryLabels[expense.category] || expense.category}
                                 </span>
                                 {getExpenseDisplayName(expense)}
@@ -485,18 +508,18 @@ export default function HistoryPage() {
                               
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                  <h4 className="text-sm font-semibold text-slate-300 mb-3">Expense Details</h4>
+                                  <h4 className="text-sm font-semibold text-zinc-700 mb-3">Expense Details</h4>
                                   <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
-                                      <span className="text-slate-400">Date:</span>
-                                      <span className="text-white">{formatDate(getExpenseDate(expense))}</span>
+                                      <span className="text-zinc-500">Date:</span>
+                                      <span className="text-zinc-900">{formatDate(getExpenseDate(expense))}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-slate-400">Amount:</span>
-                                      <span className="text-green-400 font-semibold">${getExpenseTotal(expense).toLocaleString()}</span>
+                                      <span className="text-zinc-500">Amount:</span>
+                                      <span className="text-emerald-600 font-semibold">${getExpenseTotal(expense).toLocaleString()}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-slate-400">Status:</span>
+                                      <span className="text-zinc-500">Status:</span>
                                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                         expense.reviewed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                                       }`}>
@@ -505,7 +528,7 @@ export default function HistoryPage() {
                                     </div>
                                     {expense.notes && (
                                       <div className="flex justify-between">
-                                        <span className="text-slate-400">Notes:</span>
+                                        <span className="text-zinc-500">Notes:</span>
                                         <span className="text-white text-right max-w-xs">{expense.notes}</span>
                                       </div>
                                     )}
@@ -513,24 +536,24 @@ export default function HistoryPage() {
                                 </div>
                                 
                                 <div>
-                                  <h4 className="text-sm font-semibold text-slate-300 mb-3">Category Specific Details</h4>
+                                  <h4 className="text-sm font-semibold text-zinc-700 mb-3">Category Specific Details</h4>
                                   <div className="space-y-2 text-sm">
                                     {expense.category === 'labour' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Worker:</span>
+                                          <span className="text-zinc-500">Worker:</span>
                                           <span className="text-white">{expense.workerName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Role:</span>
+                                          <span className="text-zinc-500">Role:</span>
                                           <span className="text-white">{expense.role || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Hours:</span>
+                                          <span className="text-zinc-500">Hours:</span>
                                           <span className="text-white">{expense.hours || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Rate:</span>
+                                          <span className="text-zinc-500">Rate:</span>
                                           <span className="text-white">${expense.rate || 'N/A'}/hr</span>
                                         </div>
                                       </>
@@ -539,15 +562,15 @@ export default function HistoryPage() {
                                     {expense.category === 'trade' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Trade:</span>
+                                          <span className="text-zinc-500">Trade:</span>
                                           <span className="text-white">{expense.tradeName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Category:</span>
+                                          <span className="text-zinc-500">Category:</span>
                                           <span className="text-white">{expense.tradeCategory || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Task:</span>
+                                          <span className="text-zinc-500">Task:</span>
                                           <span className="text-white">{expense.task || 'N/A'}</span>
                                         </div>
                                       </>
@@ -556,19 +579,19 @@ export default function HistoryPage() {
                                     {expense.category === 'purchase' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Item:</span>
+                                          <span className="text-zinc-500">Item:</span>
                                           <span className="text-white">{expense.itemName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Supplier:</span>
+                                          <span className="text-zinc-500">Supplier:</span>
                                           <span className="text-white">{expense.supplier || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Quantity:</span>
+                                          <span className="text-zinc-500">Quantity:</span>
                                           <span className="text-white">{expense.quantity || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Unit Cost:</span>
+                                          <span className="text-zinc-500">Unit Cost:</span>
                                           <span className="text-white">${expense.unitCost || 'N/A'}</span>
                                         </div>
                                       </>
@@ -577,24 +600,24 @@ export default function HistoryPage() {
                                     {expense.category === 'equipment' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Equipment:</span>
+                                          <span className="text-zinc-500">Equipment:</span>
                                           <span className="text-white">{expense.equipmentName || 'N/A'}</span>
                                         </div>
                                         {expense.startDate && (
                                           <div className="flex justify-between">
-                                            <span className="text-slate-400">Start Date:</span>
+                                            <span className="text-zinc-500">Start Date:</span>
                                             <span className="text-white">{formatDate(expense.startDate)}</span>
                                           </div>
                                         )}
                                         {expense.endDate && (
                                           <div className="flex justify-between">
-                                            <span className="text-slate-400">End Date:</span>
+                                            <span className="text-zinc-500">End Date:</span>
                                             <span className="text-white">{formatDate(expense.endDate)}</span>
                                           </div>
                                         )}
                                         {expense.totalPrice && (
                                           <div className="flex justify-between">
-                                            <span className="text-slate-400">Total Price:</span>
+                                            <span className="text-zinc-500">Total Price:</span>
                                             <span className="text-white">${expense.totalPrice}</span>
                                           </div>
                                         )}
@@ -604,15 +627,15 @@ export default function HistoryPage() {
                                     {expense.category === 'service' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Service:</span>
+                                          <span className="text-zinc-500">Service:</span>
                                           <span className="text-white">{expense.serviceName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Provider:</span>
+                                          <span className="text-zinc-500">Provider:</span>
                                           <span className="text-white">{expense.provider || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-slate-400">Cost:</span>
+                                          <span className="text-zinc-500">Cost:</span>
                                           <span className="text-white">${expense.cost || 'N/A'}</span>
                                         </div>
                                       </>
@@ -628,7 +651,7 @@ export default function HistoryPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center text-slate-400">
+                    <td colSpan="6" className="px-4 py-8 text-center text-zinc-500">
                       <div className="flex flex-col items-center">
                         <Eye className="w-12 h-12 mb-4 opacity-50" />
                         <h3 className="text-lg font-semibold mb-2">No Expenses Found</h3>

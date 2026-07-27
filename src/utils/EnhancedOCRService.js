@@ -65,8 +65,8 @@ class ReceiptParser {
     this.patterns = {
       // Date patterns
       date: [
-        /(\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4})/,
-        /(\d{4}[-\/]\d{1,2}[-\/]\d{1,2})/,
+        /(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})/,
+        /(\d{4}[-/]\d{1,2}[-/]\d{1,2})/,
         /(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/i,
         /\d{1,2}\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/i,
       ],
@@ -165,8 +165,8 @@ class ReceiptParser {
     }
     // Try manual parsing for common formats
     const formats = [
-      /(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/, // MM/DD/YYYY or DD/MM/YYYY
-      /(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/, // YYYY/MM/DD
+      /(\d{1,2})[-/](\d{1,2})[-/](\d{4})/, // MM/DD/YYYY or DD/MM/YYYY
+      /(\d{4})[-/](\d{1,2})[-/](\d{1,2})/, // YYYY/MM/DD
     ];
     for (const format of formats) {
       const match = dateStr.match(format);

@@ -409,14 +409,14 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-slate-800 rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] overflow-hidden border border-slate-700 flex flex-col">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-zinc-200 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
+        <div className="flex items-center justify-between p-6 border-b border-zinc-200">
           <div>
-            <h2 className="text-xl font-bold text-white">
+            <h2 className="text-xl font-bold text-zinc-900">
               Add {categoryLabels[category]} Expense
             </h2>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-zinc-500">
               Enter expense details
             </p>
           </div>
@@ -427,9 +427,9 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
               setFormData({});
               setValidationErrors({});
             }}
-            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-slate-400" />
+            <X className="w-5 h-5 text-zinc-500" />
           </button>
         </div>
 
@@ -437,9 +437,9 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
         <form onSubmit={handleSubmit} className="flex-1 p-6 overflow-y-auto">
           <div className="space-y-6">
             {/* Saved Data Access */}
-            <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
-              <h3 className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
-                <Database className="w-4 h-4 text-blue-400" />
+            <div className="bg-zinc-50 rounded-lg p-4 border border-zinc-200">
+              <h3 className="text-sm font-medium text-zinc-700 mb-3 flex items-center gap-2">
+                <Database className="w-4 h-4 text-accent" />
                 Quick Access to Saved Data
               </h3>
               <div className="grid grid-cols-2 gap-2">
@@ -503,7 +503,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {fields.map((field) => (
                 <div key={field.name} className="relative">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
                     {field.label}
                     {field.required && <span className="text-red-400 ml-1">*</span>}
                   </label>
@@ -681,8 +681,8 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
                     <select
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
-                      className={`w-full px-3 py-2 bg-slate-700 border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        validationErrors[field.name] ? 'border-red-500' : 'border-slate-600'
+                      className={`w-full px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
+                        validationErrors[field.name] ? 'border-red-500' : 'border-zinc-300'
                       }`}
                       required={field.required}
                     >
@@ -695,8 +695,8 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
                     <DatePicker
                       selected={formData[field.name] ? new Date(formData[field.name]) : new Date()}
                       onChange={(date) => handleInputChange(field.name, date)}
-                      className={`w-full px-3 py-2 bg-slate-700 border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        validationErrors[field.name] ? 'border-red-500' : 'border-slate-600'
+                      className={`w-full px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
+                        validationErrors[field.name] ? 'border-red-500' : 'border-zinc-300'
                       }`}
                       placeholderText="Select date"
                       dateFormat="yyyy-MM-dd"
@@ -706,8 +706,8 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
                       rows={3}
-                      className={`w-full px-3 py-2 bg-slate-700 border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400 ${
-                        validationErrors[field.name] ? 'border-red-500' : 'border-slate-600'
+                      className={`w-full px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent placeholder-zinc-500 ${
+                        validationErrors[field.name] ? 'border-red-500' : 'border-zinc-300'
                       }`}
                       placeholder={`Enter ${field.label.toLowerCase()}`}
                       required={field.required}
@@ -718,8 +718,8 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
                       step={field.step}
-                      className={`w-full px-3 py-2 bg-slate-700 border text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400 ${
-                        validationErrors[field.name] ? 'border-red-500' : 'border-slate-600'
+                      className={`w-full px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent placeholder-zinc-500 ${
+                        validationErrors[field.name] ? 'border-red-500' : 'border-zinc-300'
                       }`}
                       placeholder={`Enter ${field.label.toLowerCase()}`}
                       required={field.required}
@@ -734,16 +734,16 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
             </div>
 
             {/* Receipt Upload Section */}
-            <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
-              <h3 className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
-                <Image className="w-4 h-4 text-blue-400" />
+            <div className="bg-zinc-50 rounded-lg p-4 border border-zinc-200">
+              <h3 className="text-sm font-medium text-zinc-700 mb-3 flex items-center gap-2">
+                <Image className="w-4 h-4 text-accent" />
                 Receipt Attachment
               </h3>
               
               {receiptFile ? (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-600">
-                    <div className="w-12 h-12 bg-slate-600 rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-zinc-200">
+                    <div className="w-12 h-12 bg-zinc-100 rounded-lg flex items-center justify-center overflow-hidden">
                       {receiptPreview ? (
                         <img 
                           src={receiptPreview} 
@@ -751,12 +751,12 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <Image className="w-6 h-6 text-slate-400" />
+                        <Image className="w-6 h-6 text-zinc-400" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-white truncate">{receiptFile.name}</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-zinc-500">
                         {(receiptFile.size / 1024 / 1024).toFixed(2)} MB
                       </p>
                     </div>
@@ -764,7 +764,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
                       <button
                         type="button"
                         onClick={openReceiptViewer}
-                        className="p-2 hover:bg-slate-600 rounded-lg text-slate-300 hover:text-white transition-colors"
+                        className="p-2 hover:bg-zinc-200 rounded-lg text-zinc-600 hover:text-zinc-900 transition-colors"
                         title="View Receipt"
                       >
                         <Eye className="w-4 h-4" />
@@ -782,13 +782,13 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
                   
                   {uploadProgress > 0 && uploadProgress < 100 && (
                     <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-slate-400">
+                      <div className="flex justify-between text-xs text-zinc-500">
                         <span>Uploading receipt...</span>
                         <span>{uploadProgress}%</span>
                       </div>
-                      <div className="w-full bg-slate-600 rounded-full h-2">
+                      <div className="w-full bg-zinc-200 rounded-full h-2">
                         <div 
-                          className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                          className="bg-accent h-2 rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
@@ -800,16 +800,16 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
                   {...getRootProps()}
                   className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
                     isDragActive 
-                      ? 'border-blue-400 bg-blue-400/10' 
-                      : 'border-slate-600 hover:border-slate-500 hover:bg-slate-600/50'
+                      ? 'border-accent bg-orange-50' 
+                      : 'border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50'
                   }`}
                 >
                   <input {...getInputProps()} />
-                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-                  <p className="text-sm text-slate-300 mb-1">
+                  <Upload className="w-8 h-8 text-zinc-400 mx-auto mb-3" />
+                  <p className="text-sm text-zinc-600 mb-1">
                     {isDragActive ? 'Drop receipt here' : 'Upload receipt image'}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-zinc-500">
                     Drag & drop or click to select (JPG, PNG, GIF, WebP - Max 5MB)
                   </p>
                 </div>
@@ -817,9 +817,9 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
             </div>
 
             {/* Total Calculation */}
-            <div className="bg-slate-700 rounded-lg p-4 border border-slate-600">
+            <div className="bg-zinc-50 rounded-lg p-4 border border-zinc-200">
               <div className="flex justify-between items-center">
-                <span className="text-lg font-medium text-slate-300">Total:</span>
+                <span className="text-lg font-medium text-zinc-700">Total:</span>
                 <span className="text-2xl font-bold text-green-400">
                   ${calculateTotal(category, formData).toFixed(2)}
                 </span>
@@ -831,7 +831,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white font-medium rounded-lg transition-colors"
+                className="px-6 py-2 bg-accent hover:bg-accent-dark disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors"
               >
                 {isSubmitting ? 'Adding...' : 'Add Expense'}
               </button>

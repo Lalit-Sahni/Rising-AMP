@@ -26,14 +26,14 @@ const Header = ({ onLogout }) => {
   };
 
   return (
-    <header className="bg-gradient-to-r from-slate-800 to-slate-700 border-b border-slate-600 px-4 md:px-6 py-3 md:py-4 shadow-lg">
+    <header className="bg-[#3b3b3b] border-b border-[#2d2d2d] px-4 md:px-6 py-3 md:py-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg md:text-xl font-semibold text-white md:ml-0 ml-12">{getPageTitle()}</h1>
         
         <div className="flex items-center space-x-2 md:space-x-3">
           <button
             onClick={() => setCommandPaletteOpen(true)}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-white hover:bg-[#4a4a4a]/60 rounded-lg transition-colors"
             title="Search (Ctrl+K)"
           >
             <Search className="w-4 h-4 md:w-5 md:h-5" />
@@ -41,7 +41,7 @@ const Header = ({ onLogout }) => {
           
           <button
             onClick={exportToExcel}
-            className="p-2 text-gray-400 hover:text-white hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-white hover:bg-[#4a4a4a]/60 rounded-lg transition-colors"
             title="Export to Excel"
           >
             <Download className="w-4 h-4 md:w-5 md:h-5" />
@@ -49,7 +49,7 @@ const Header = ({ onLogout }) => {
           
           <button
             onClick={onLogout}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 text-slate-400 hover:text-red-400 hover:bg-[#4a4a4a]/60 rounded-lg transition-colors"
             title="Log Out"
           >
             <LogOut className="w-4 h-4 md:w-5 md:h-5" />

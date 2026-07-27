@@ -100,160 +100,162 @@ input[type="number"]:focus {
 
 
 
-/* React Select Dark Theme Overrides */
+/* React Select – white/black + orange accent */
 .react-select__control {
-  background-color: #1f2937 !important;
-  border-color: #374151 !important;
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
   box-shadow: none !important;
 }
 
 .react-select__control:hover {
-  border-color: #4b5563 !important;
+  border-color: #d1d5db !important;
 }
 
 .react-select__control--is-focused {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 0 1px #3b82f6 !important;
+  border-color: #ea580c !important;
+  box-shadow: 0 0 0 1px #ea580c !important;
 }
 
 .react-select__menu {
-  background-color: #1f2937 !important;
-  border: 1px solid #374151 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
 }
 
 .react-select__option {
-  background-color: #1f2937 !important;
-  color: #f9fafb !important;
+  background-color: #ffffff !important;
+  color: #0a0a0a !important;
 }
 
 .react-select__option:hover {
-  background-color: #374151 !important;
+  background-color: #fff7ed !important;
 }
 
 .react-select__option--is-focused {
-  background-color: #374151 !important;
+  background-color: #fff7ed !important;
 }
 
 .react-select__option--is-selected {
-  background-color: #3b82f6 !important;
+  background-color: #ea580c !important;
+  color: #ffffff !important;
 }
 
 .react-select__single-value {
-  color: #f9fafb !important;
+  color: #0a0a0a !important;
 }
 
 .react-select__input-container {
-  color: #f9fafb !important;
+  color: #0a0a0a !important;
 }
 
 .react-select__placeholder {
-  color: #9ca3af !important;
+  color: #6b7280 !important;
 }
 
 .react-select__multi-value {
-  background-color: #374151 !important;
+  background-color: #fff7ed !important;
+  border: 1px solid #fed7aa !important;
 }
 
 .react-select__multi-value__label {
-  color: #f9fafb !important;
+  color: #0a0a0a !important;
 }
 
 .react-select__multi-value__remove:hover {
-  background-color: #ef4444 !important;
-  color: #f9fafb !important;
+  background-color: #c2410c !important;
+  color: #ffffff !important;
 }
 
-/* React DatePicker Dark Theme Overrides */
+/* React DatePicker – white/black + orange accent */
 .react-datepicker {
-  background-color: #1f2937 !important;
-  border: 1px solid #374151 !important;
-  color: #f9fafb !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  color: #0a0a0a !important;
 }
 
 .react-datepicker__header {
-  background-color: #111827 !important;
-  border-bottom: 1px solid #374151 !important;
+  background-color: #0a0a0a !important;
+  border-bottom: 1px solid #e5e7eb !important;
 }
 
 .react-datepicker__current-month {
-  color: #f9fafb !important;
+  color: #fafafa !important;
 }
 
 .react-datepicker__day-name {
-  color: #9ca3af !important;
+  color: #a1a1aa !important;
 }
 
 .react-datepicker__day {
-  color: #f9fafb !important;
+  color: #0a0a0a !important;
 }
 
 .react-datepicker__day:hover {
-  background-color: #374151 !important;
+  background-color: #fff7ed !important;
 }
 
 .react-datepicker__day--selected {
-  background-color: #3b82f6 !important;
+  background-color: #ea580c !important;
   color: #ffffff !important;
 }
 
 .react-datepicker__day--keyboard-selected {
-  background-color: #3b82f6 !important;
+  background-color: #ea580c !important;
   color: #ffffff !important;
 }
 
 .react-datepicker__day--disabled {
-  color: #6b7280 !important;
+  color: #a1a1aa !important;
 }
 
 .react-datepicker__navigation {
-  border-color: #9ca3af !important;
+  border-color: #a1a1aa !important;
 }
 
 .react-datepicker__navigation:hover {
-  border-color: #f9fafb !important;
+  border-color: #fafafa !important;
 }
 
 .react-datepicker__year-dropdown,
 .react-datepicker__month-dropdown {
-  background-color: #1f2937 !important;
-  border: 1px solid #374151 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
 }
 
 .react-datepicker__year-option,
 .react-datepicker__month-option {
-  color: #f9fafb !important;
+  color: #0a0a0a !important;
 }
 
 .react-datepicker__year-option:hover,
 .react-datepicker__month-option:hover {
-  background-color: #374151 !important;
+  background-color: #fff7ed !important;
 }
 
-/* React Quill Dark Theme Overrides */
+/* React Quill – white/black + orange accent */
 .ql-editor {
-  background-color: #1f2937 !important;
-  color: #f9fafb !important;
+  background-color: #ffffff !important;
+  color: #0a0a0a !important;
 }
 
 .ql-toolbar {
-  background-color: #111827 !important;
-  border: 1px solid #374151 !important;
+  background-color: #fafafa !important;
+  border: 1px solid #e5e7eb !important;
 }
 
 .ql-toolbar button {
-  color: #f9fafb !important;
+  color: #0a0a0a !important;
 }
 
 .ql-toolbar button:hover {
-  color: #3b82f6 !important;
+  color: #ea580c !important;
 }
 
 .ql-toolbar .ql-active {
-  color: #3b82f6 !important;
+  color: #ea580c !important;
 }
 
 .ql-container {
-  border: 1px solid #374151 !important;
+  border: 1px solid #e5e7eb !important;
 }
 
 /* Custom animations */
@@ -294,58 +296,52 @@ input[type="number"]:focus {
   animation: scaleIn 0.3s ease-out;
 }
 
-/* Glassmorphism effects */
+/* Glassmorphism effects – works on light content */
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
 }
 
 .glass-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-/* Neumorphic effects */
+/* Neumorphic – neutral gray for cards */
 .neumorphic {
-  background: linear-gradient(145deg, #1a1a1a, #2a2a2a);
-  box-shadow: 
-    5px 5px 10px rgba(0, 0, 0, 0.3),
-    -5px -5px 10px rgba(255, 255, 255, 0.05);
+  background: linear-gradient(145deg, #fafafa, #f4f4f5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .neumorphic-inset {
-  background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
-  box-shadow: 
-    inset 5px 5px 10px rgba(0, 0, 0, 0.3),
-    inset -5px -5px 10px rgba(255, 255, 255, 0.05);
+  background: #f4f4f5;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar – neutral for light UI */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2937;
+  background: #f4f4f5;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4b5563;
+  background: #d4d4d8;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+  background: #a1a1aa;
 }
 
-/* Focus styles */
+/* Focus styles – orange accent */
 .focus-ring:focus {
   outline: none;
-  ring: 2px;
-  ring-color: #3b82f6;
-  ring-offset: 2px;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #ea580c;
 }
 
 /* Loading states */

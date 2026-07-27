@@ -8,65 +8,65 @@ const categories = [
     label: 'Labour', 
     icon: User,
     description: 'Worker wages & hourly rates',
-    color: 'text-blue-400',
-    borderColor: 'border-slate-700',
-    bgColor: 'bg-blue-500/20',
-    cardBg: 'bg-slate-800',
-    cardBorder: 'border-slate-700',
-    hoverBg: 'hover:bg-slate-700',
-    hoverBorder: 'hover:border-slate-600'
+    color: 'text-blue-600',
+    borderColor: 'border-zinc-200',
+    bgColor: 'bg-blue-100',
+    cardBg: 'bg-white',
+    cardBorder: 'border-zinc-200',
+    hoverBg: 'hover:bg-zinc-50',
+    hoverBorder: 'hover:border-zinc-300'
   },
   { 
     key: 'trade', 
     label: 'Trade', 
     icon: Wrench,
     description: 'Contractor & specialist work',
-    color: 'text-purple-400',
-    borderColor: 'border-slate-700',
-    bgColor: 'bg-purple-500/20',
-    cardBg: 'bg-slate-800',
-    cardBorder: 'border-slate-700',
-    hoverBg: 'hover:bg-slate-700',
-    hoverBorder: 'hover:border-slate-600'
+    color: 'text-violet-600',
+    borderColor: 'border-zinc-200',
+    bgColor: 'bg-violet-100',
+    cardBg: 'bg-white',
+    cardBorder: 'border-zinc-200',
+    hoverBg: 'hover:bg-zinc-50',
+    hoverBorder: 'hover:border-zinc-300'
   },
   { 
     key: 'equipment', 
     label: 'Equipment', 
     icon: HardHat,
     description: 'Tools & machinery rental',
-    color: 'text-green-400',
-    borderColor: 'border-slate-700',
-    bgColor: 'bg-green-500/20',
-    cardBg: 'bg-slate-800',
-    cardBorder: 'border-slate-700',
-    hoverBg: 'hover:bg-slate-700',
-    hoverBorder: 'hover:border-slate-600'
+    color: 'text-emerald-600',
+    borderColor: 'border-zinc-200',
+    bgColor: 'bg-emerald-100',
+    cardBg: 'bg-white',
+    cardBorder: 'border-zinc-200',
+    hoverBg: 'hover:bg-zinc-50',
+    hoverBorder: 'hover:border-zinc-300'
   },
   { 
     key: 'service', 
     label: 'Service', 
     icon: FileText,
     description: 'Professional services',
-    color: 'text-orange-400',
-    borderColor: 'border-slate-700',
-    bgColor: 'bg-orange-500/20',
-    cardBg: 'bg-slate-800',
-    cardBorder: 'border-slate-700',
-    hoverBg: 'hover:bg-slate-700',
-    hoverBorder: 'hover:border-slate-600'
+    color: 'text-orange-600',
+    borderColor: 'border-zinc-200',
+    bgColor: 'bg-orange-100',
+    cardBg: 'bg-white',
+    cardBorder: 'border-zinc-200',
+    hoverBg: 'hover:bg-zinc-50',
+    hoverBorder: 'hover:border-zinc-300'
   },
   { 
     key: 'purchase', 
     label: 'Materials', 
     icon: DollarSign,
     description: 'Supplies & raw materials',
-    color: 'text-red-400',
-    borderColor: 'border-slate-700',
-    bgColor: 'bg-red-500/20',
-    cardBg: 'bg-slate-800',
-    cardBorder: 'border-slate-700',
-    hoverBg: 'hover:bg-slate-700',
-    hoverBorder: 'hover:border-slate-600'
+    color: 'text-red-600',
+    borderColor: 'border-zinc-200',
+    bgColor: 'bg-red-100',
+    cardBg: 'bg-white',
+    cardBorder: 'border-zinc-200',
+    hoverBg: 'hover:bg-zinc-50',
+    hoverBorder: 'hover:border-zinc-300'
   }
 ];
 
@@ -101,12 +101,12 @@ const ExpenseCategoryGrid = ({ onCategorySelect, onQuickAction, selectedCategory
       icon: Camera,
       description: 'Use camera to capture receipt',
       action: () => onQuickAction('scan'),
-      color: 'text-emerald-400',
-      bgColor: 'bg-emerald-500/10',
-      borderColor: 'border-emerald-500/30',
-      iconBg: 'bg-emerald-500/20',
-      hoverBg: 'hover:bg-emerald-500/20',
-      hoverBorder: 'hover:border-emerald-500/50'
+      color: 'text-emerald-600',
+      bgColor: 'bg-white',
+      borderColor: 'border-zinc-200',
+      iconBg: 'bg-emerald-100',
+      hoverBg: 'hover:bg-zinc-50',
+      hoverBorder: 'hover:border-emerald-300'
     },
     {
       key: 'import',
@@ -114,12 +114,12 @@ const ExpenseCategoryGrid = ({ onCategorySelect, onQuickAction, selectedCategory
       icon: Download,
       description: 'Bulk import from spreadsheet',
       action: () => onQuickAction('import'),
-      color: 'text-indigo-400',
-      bgColor: 'bg-slate-800',
-      borderColor: 'border-slate-700',
-      iconBg: 'bg-indigo-500/20',
-      hoverBg: 'hover:bg-slate-700',
-      hoverBorder: 'hover:border-slate-600'
+      color: 'text-violet-600',
+      bgColor: 'bg-white',
+      borderColor: 'border-zinc-200',
+      iconBg: 'bg-violet-100',
+      hoverBg: 'hover:bg-zinc-50',
+      hoverBorder: 'hover:border-zinc-300'
     },
     {
       key: 'quick',
@@ -127,12 +127,12 @@ const ExpenseCategoryGrid = ({ onCategorySelect, onQuickAction, selectedCategory
       icon: Zap,
       description: 'Fast expense entry form',
       action: () => onQuickAction('quick'),
-      color: 'text-yellow-400',
-      bgColor: 'bg-slate-800',
-      borderColor: 'border-slate-700',
-      iconBg: 'bg-yellow-500/20',
-      hoverBg: 'hover:bg-slate-700',
-      hoverBorder: 'hover:border-slate-600'
+      color: 'text-amber-600',
+      bgColor: 'bg-white',
+      borderColor: 'border-zinc-200',
+      iconBg: 'bg-amber-100',
+      hoverBg: 'hover:bg-zinc-50',
+      hoverBorder: 'hover:border-zinc-300'
     }
   ];
 
@@ -152,7 +152,7 @@ const ExpenseCategoryGrid = ({ onCategorySelect, onQuickAction, selectedCategory
                 cursor-pointer border rounded-lg p-4 transition-all duration-200
                 ${category.cardBg} ${category.cardBorder}
                 ${category.hoverBg} ${category.hoverBorder}
-                ${isSelected ? 'ring-2 ring-blue-500 bg-slate-600/30' : ''}
+                ${isSelected ? 'ring-2 ring-accent bg-orange-50/50' : ''}
               `}
               tabIndex={0}
               role="button"
@@ -170,25 +170,25 @@ const ExpenseCategoryGrid = ({ onCategorySelect, onQuickAction, selectedCategory
                 </div>
                 
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white">
+                  <h3 className="text-lg font-semibold text-zinc-900">
                     {category.label}
                   </h3>
-                  <p className="text-sm text-slate-400">
+                  <p className="text-sm text-zinc-500">
                     {category.description}
                   </p>
                 </div>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="text-xs text-slate-500">Total</span>
+                <span className="text-xs text-zinc-500">Total</span>
                 <span className={`text-sm font-medium ${category.color}`}>
                   {category.totalEntries}
                 </span>
               </div>
               
               <div className="flex justify-between items-center mt-1">
-                <span className="text-xs text-slate-500">This Month</span>
-                <span className="text-sm font-medium text-green-400">
+                <span className="text-xs text-zinc-500">This Month</span>
+                <span className="text-sm font-medium text-emerald-600">
                   {category.thisMonthEntries}
                 </span>
               </div>
@@ -200,12 +200,12 @@ const ExpenseCategoryGrid = ({ onCategorySelect, onQuickAction, selectedCategory
       {/* Colorful Quick Actions */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-slate-300" />
+          <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+            <Zap className="w-4 h-4 text-accent" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-white">Quick Actions</h3>
-            <p className="text-sm text-slate-400">Alternative expense entry methods</p>
+            <h3 className="text-lg font-semibold text-zinc-900">Quick Actions</h3>
+            <p className="text-sm text-zinc-500">Alternative expense entry methods</p>
           </div>
         </div>
 

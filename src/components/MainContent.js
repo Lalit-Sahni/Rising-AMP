@@ -11,6 +11,7 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const BudgetTrackingPage = lazy(() => import('./pages/BudgetTrackingPage'));
 const SiteLogPage = lazy(() => import('./pages/SiteLogPage'));
+const WeeklyReportPage = lazy(() => import('./pages/WeeklyReportPage'));
 const OCRTest = lazy(() => import('./OCRTest'));
 const EnhancedOCRTest = lazy(() => import('./EnhancedOCRTest'));
 
@@ -29,6 +30,8 @@ export default function MainContent() {
         return <BudgetTrackingPage />;
       case 'site-log':
         return <SiteLogPage />;
+      case 'weekly-report':
+        return <WeeklyReportPage />;
       case 'new-invoice':
         return <InvoiceManagementPage />;
       case 'hia-contract':
@@ -45,7 +48,7 @@ export default function MainContent() {
   };
 
   return (
-    <div className="content flex-1 overflow-y-auto p-4 md:p-8 bg-gradient-to-br from-gray-950 to-gray-900 animate-fadeIn">
+    <div className="content flex-1 overflow-y-auto p-4 md:p-8 bg-white text-zinc-900 animate-fadeIn">
       <Suspense fallback={
         <div className="space-y-6">
           <LoadingSkeleton type="card" lines={4} />
