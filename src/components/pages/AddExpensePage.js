@@ -71,7 +71,7 @@ export default function AddExpensePage() {
                 <DollarSign className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-4xl lg:text-5xl font-bold text-zinc-900 tracking-tight">
+                <h1 className="text-2xl sm:text-3xl lg:text-5xl font-bold text-zinc-900 tracking-tight">
                   Add New Expense
                 </h1>
                 <p className="text-zinc-500 text-lg font-medium mt-1">

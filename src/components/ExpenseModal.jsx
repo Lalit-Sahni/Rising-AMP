@@ -408,10 +408,10 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
   const fields = categoryFields[category] || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-zinc-200 flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-zinc-200">
+        <div className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-200">
           <div>
             <h2 className="text-xl font-bold text-zinc-900">
               Add {categoryLabels[category]} Expense
@@ -434,7 +434,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex-1 p-6 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex-1 p-4 md:p-6 overflow-y-auto">
           <div className="space-y-6">
             {/* Saved Data Access */}
             <div className="bg-zinc-50 rounded-lg p-4 border border-zinc-200">

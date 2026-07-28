@@ -444,7 +444,7 @@ export default function SiteLogPage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-zinc-200 shadow-xl">
             <div className="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-zinc-900">
                 {editingLog ? 'Edit Site Log Entry' : 'Add New Site Log Entry'}
               </h2>
               <button
@@ -629,7 +629,7 @@ export default function SiteLogPage() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-zinc-200 shadow-xl">
             <div className="sticky top-0 bg-white border-b border-zinc-200 px-6 py-4 flex items-center justify-between rounded-t-xl">
-              <h2 className="text-xl font-bold text-white">Site Log Details</h2>
+              <h2 className="text-xl font-bold text-zinc-900">Site Log Details</h2>
               <div className="flex gap-2">
                 <button
                   onClick={async () => {

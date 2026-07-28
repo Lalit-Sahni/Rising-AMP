@@ -229,10 +229,10 @@ const ExpenseCategoryGrid = ({ onCategorySelect, onQuickAction, selectedCategory
                   </div>
                   
                   <div>
-                    <h4 className="text-white font-medium text-sm">
+                    <h4 className="text-zinc-900 font-medium text-sm">
                       {action.label}
                     </h4>
-                    <p className="text-slate-400 text-xs mt-1">
+                    <p className="text-zinc-500 text-xs mt-1">
                       {action.description}
                     </p>
                   </div>
