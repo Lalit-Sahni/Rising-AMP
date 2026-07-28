@@ -529,7 +529,7 @@ export default function HistoryPage() {
                                     {expense.notes && (
                                       <div className="flex justify-between">
                                         <span className="text-zinc-500">Notes:</span>
-                                        <span className="text-white text-right max-w-xs">{expense.notes}</span>
+                                        <span className="text-zinc-700 text-right max-w-xs">{expense.notes}</span>
                                       </div>
                                     )}
                                   </div>
@@ -542,19 +542,19 @@ export default function HistoryPage() {
                                       <>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Worker:</span>
-                                          <span className="text-white">{expense.workerName || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.workerName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Role:</span>
-                                          <span className="text-white">{expense.role || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.role || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Hours:</span>
-                                          <span className="text-white">{expense.hours || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.hours || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Rate:</span>
-                                          <span className="text-white">${expense.rate || 'N/A'}/hr</span>
+                                          <span className="text-zinc-900">${expense.rate || 'N/A'}/hr</span>
                                         </div>
                                       </>
                                     )}
@@ -563,15 +563,15 @@ export default function HistoryPage() {
                                       <>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Trade:</span>
-                                          <span className="text-white">{expense.tradeName || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.tradeName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Category:</span>
-                                          <span className="text-white">{expense.tradeCategory || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.tradeCategory || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Task:</span>
-                                          <span className="text-white">{expense.task || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.task || 'N/A'}</span>
                                         </div>
                                       </>
                                     )}
@@ -580,19 +580,19 @@ export default function HistoryPage() {
                                       <>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Item:</span>
-                                          <span className="text-white">{expense.itemName || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.itemName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Supplier:</span>
-                                          <span className="text-white">{expense.supplier || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.supplier || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Quantity:</span>
-                                          <span className="text-white">{expense.quantity || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.quantity || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Unit Cost:</span>
-                                          <span className="text-white">${expense.unitCost || 'N/A'}</span>
+                                          <span className="text-zinc-900">${expense.unitCost || 'N/A'}</span>
                                         </div>
                                       </>
                                     )}
@@ -601,24 +601,24 @@ export default function HistoryPage() {
                                       <>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Equipment:</span>
-                                          <span className="text-white">{expense.equipmentName || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.equipmentName || 'N/A'}</span>
                                         </div>
                                         {expense.startDate && (
                                           <div className="flex justify-between">
                                             <span className="text-zinc-500">Start Date:</span>
-                                            <span className="text-white">{formatDate(expense.startDate)}</span>
+                                            <span className="text-zinc-900">{formatDate(expense.startDate)}</span>
                                           </div>
                                         )}
                                         {expense.endDate && (
                                           <div className="flex justify-between">
                                             <span className="text-zinc-500">End Date:</span>
-                                            <span className="text-white">{formatDate(expense.endDate)}</span>
+                                            <span className="text-zinc-900">{formatDate(expense.endDate)}</span>
                                           </div>
                                         )}
                                         {expense.totalPrice && (
                                           <div className="flex justify-between">
                                             <span className="text-zinc-500">Total Price:</span>
-                                            <span className="text-white">${expense.totalPrice}</span>
+                                            <span className="text-zinc-900">${expense.totalPrice}</span>
                                           </div>
                                         )}
                                       </>
@@ -628,15 +628,15 @@ export default function HistoryPage() {
                                       <>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Service:</span>
-                                          <span className="text-white">{expense.serviceName || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.serviceName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Provider:</span>
-                                          <span className="text-white">{expense.provider || 'N/A'}</span>
+                                          <span className="text-zinc-900">{expense.provider || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
                                           <span className="text-zinc-500">Cost:</span>
-                                          <span className="text-white">${expense.cost || 'N/A'}</span>
+                                          <span className="text-zinc-900">${expense.cost || 'N/A'}</span>
                                         </div>
                                       </>
                                     )}
