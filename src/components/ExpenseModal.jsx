@@ -104,12 +104,20 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
   // Initialize form data
   useEffect(() => {
     if (isOpen && category) {
+      const toSafeDate = (val) => {
+        if (!val) return null;
+        if (typeof val?.toDate === 'function') return val.toDate(); // Firestore Timestamp
+        const d = new Date(val);
+        return isNaN(d.getTime()) ? null : d;
+      };
+
       const initialFormData = {};
       categoryFields[category]?.forEach(field => {
-        if (field.name === 'date') {
-          initialFormData[field.name] = initialData[field.name] || new Date();
+        if (field.type === 'date') {
+          const converted = toSafeDate(initialData[field.name]);
+          initialFormData[field.name] = converted || (field.required !== false ? new Date() : null);
         } else {
-          initialFormData[field.name] = initialData[field.name] || '';
+          initialFormData[field.name] = initialData[field.name] ?? '';
         }
       });
       setFormData(initialFormData);
