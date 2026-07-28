@@ -77,9 +77,10 @@ function calculateTotal(category, data) {
   }
 }
 
-const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
-  const { 
-    addExpenseToFirebase, 
+const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId = null }) => {
+  const {
+    addExpenseToFirebase,
+    updateExpenseInFirebase,
     showToast, 
     savedLabour = [],
     savedTrades = [],
@@ -311,12 +312,19 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
     try {
       setIsSubmitting(true);
       
+      const isEditMode = !!expenseId;
+
       const expenseData = {
-        id: `expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: isEditMode ? expenseId : `expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         category: category,
         ...formData,
         total: calculateTotal(category, formData),
-        timestamp: new Date().toISOString()
+        timestamp: isEditMode ? (initialData.timestamp || new Date().toISOString()) : new Date().toISOString(),
+        ...(isEditMode && initialData.receiptImageUrl && !receiptFile ? {
+          receiptImageUrl: initialData.receiptImageUrl,
+          receiptImagePath: initialData.receiptImagePath,
+          receiptUploadedAt: initialData.receiptUploadedAt
+        } : {})
       };
 
       // Upload receipt if present
@@ -325,7 +333,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
           setUploadProgress(10);
           const { uploadReceiptImage } = await import('../firebase/storage');
           const uploadResult = await uploadReceiptImage(accessCode, expenseData.id, receiptFile);
-          
+
           if (uploadResult.success) {
             expenseData.receiptImageUrl = uploadResult.url;
             expenseData.receiptImagePath = uploadResult.path;
@@ -341,7 +349,11 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
         }
       }
 
-      await addExpenseToFirebase(expenseData);
+      if (isEditMode) {
+        await updateExpenseInFirebase(expenseId, expenseData);
+      } else {
+        await addExpenseToFirebase(expenseData);
+      }
 
       // Save labour information for autofill
       if (category === 'labour' && formData.workerName) {
@@ -394,7 +406,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
       onClose();
       setFormData({});
       setValidationErrors({});
-      showToast('Expense added successfully!', 'success');
+      showToast(expenseId ? 'Expense updated successfully!' : 'Expense added successfully!', 'success');
     } catch (error) {
       console.error('Error submitting expense:', error);
       showToast('Failed to add expense. Please try again.', 'error');
@@ -414,7 +426,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {} }) => {
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-200">
           <div>
             <h2 className="text-xl font-bold text-zinc-900">
-              Add {categoryLabels[category]} Expense
+              {expenseId ? 'Edit' : 'Add'} {categoryLabels[category]} Expense
             </h2>
             <p className="text-sm text-zinc-500">
               Enter expense details

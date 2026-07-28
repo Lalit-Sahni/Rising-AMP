@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Trash2, Filter, Search, Download, Eye, Calendar, DollarSign, Hash } from 'lucide-react';
+import { Trash2, Pencil, Filter, Search, Download, Eye, Calendar, DollarSign, Hash } from 'lucide-react';
 import ExportDialog from '../ExportDialog';
+import ExpenseModal from '../ExpenseModal';
 import { exportExpensesToExcel } from '../../utils/excelExport';
 
 const categoryLabels = {
@@ -26,8 +27,8 @@ export default function HistoryPage() {
   const { expenses, showToast, deleteExpenseFromFirebase } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [expandedExpense, setExpandedExpense] = useState(null);
+  const [editingExpense, setEditingExpense] = useState(null);
   const [sortConfig, setSortConfig] = useState({
     key: 'date',
     direction: 'desc'
@@ -122,13 +123,6 @@ export default function HistoryPage() {
         return false;
       }
       
-      // Status filter
-      if (statusFilter !== 'all') {
-        const isReviewed = expense.reviewed === true;
-        if (statusFilter === 'reviewed' && !isReviewed) return false;
-        if (statusFilter === 'pending' && isReviewed) return false;
-      }
-      
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -176,7 +170,7 @@ export default function HistoryPage() {
     });
 
     return filtered;
-  }, [expenses, searchTerm, categoryFilter, statusFilter, sortConfig]);
+  }, [expenses, searchTerm, categoryFilter, sortConfig]);
 
   // Handle sorting
   const handleSort = (key) => {
@@ -266,8 +260,6 @@ export default function HistoryPage() {
 
   // Calculate totals
   const totalAmount = filteredAndSortedExpenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
-  const reviewedCount = filteredAndSortedExpenses.filter(e => e.reviewed).length;
-  const pendingCount = filteredAndSortedExpenses.filter(e => !e.reviewed).length;
 
   return (
     <div className="min-h-screen text-zinc-900 p-1 sm:p-2 md:p-4 animate-fadeIn portrait-mobile">
@@ -291,7 +283,7 @@ export default function HistoryPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-6">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-6">
           <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
             <div className="flex items-center justify-between">
               <div>
@@ -312,30 +304,6 @@ export default function HistoryPage() {
               </div>
               <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
                 <DollarSign className="w-6 h-6 text-emerald-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-zinc-500 text-sm font-medium">Reviewed</p>
-                <p className="text-2xl font-bold text-accent">{reviewedCount}</p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
-                <Eye className="w-6 h-6 text-accent" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-zinc-500 text-sm font-medium">Pending</p>
-                <p className="text-2xl font-bold text-amber-600">{pendingCount}</p>
-              </div>
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <Calendar className="w-6 h-6 text-amber-600" />
               </div>
             </div>
           </div>
@@ -373,23 +341,11 @@ export default function HistoryPage() {
               ))}
             </select>
 
-            {/* Status Filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="all">All Status</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="pending">Pending</option>
-            </select>
-
             {/* Clear Filters */}
             <button
               onClick={() => {
                 setSearchTerm('');
                 setCategoryFilter('all');
-                setStatusFilter('all');
               }}
               className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 rounded-lg font-medium transition-colors"
             >
@@ -437,9 +393,6 @@ export default function HistoryPage() {
                     </div>
                   </th>
                   <th className="px-4 py-3">
-                    <span>Status</span>
-                  </th>
-                  <th className="px-4 py-3">
                     <span>Actions</span>
                   </th>
                 </tr>
@@ -474,23 +427,28 @@ export default function HistoryPage() {
                           ${getExpenseTotal(expense).toLocaleString()}
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                            expense.reviewed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {expense.reviewed ? 'Reviewed' : 'Pending'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <button 
-                            className="text-red-500 hover:text-red-700 transition-colors" 
-                            title="Delete" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(expense.id);
-                            }}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              className="text-zinc-400 hover:text-accent transition-colors"
+                              title="Edit"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingExpense(expense);
+                              }}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              className="text-red-500 hover:text-red-700 transition-colors"
+                              title="Delete"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(expense.id);
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                       
@@ -517,14 +475,6 @@ export default function HistoryPage() {
                                     <div className="flex justify-between">
                                       <span className="text-zinc-500">Amount:</span>
                                       <span className="text-emerald-600 font-semibold">${getExpenseTotal(expense).toLocaleString()}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-zinc-500">Status:</span>
-                                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                        expense.reviewed ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                                      }`}>
-                                        {expense.reviewed ? 'Reviewed' : 'Pending'}
-                                      </span>
                                     </div>
                                     {expense.notes && (
                                       <div className="flex justify-between">
@@ -656,7 +606,7 @@ export default function HistoryPage() {
                         <Eye className="w-12 h-12 mb-4 opacity-50" />
                         <h3 className="text-lg font-semibold mb-2">No Expenses Found</h3>
                         <p className="text-sm">
-                          {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all' 
+                          {searchTerm || categoryFilter !== 'all'
                             ? 'Try adjusting your filters to see more results.'
                             : 'Add some expenses to see them here.'
                           }
@@ -679,6 +629,17 @@ export default function HistoryPage() {
         onExport={handleExport}
         expenseCount={filteredAndSortedExpenses.length}
       />
+
+      {/* Edit Expense Modal */}
+      {editingExpense && (
+        <ExpenseModal
+          isOpen={true}
+          onClose={() => setEditingExpense(null)}
+          category={editingExpense.category}
+          initialData={editingExpense}
+          expenseId={editingExpense.id}
+        />
+      )}
     </div>
   );
 } 
