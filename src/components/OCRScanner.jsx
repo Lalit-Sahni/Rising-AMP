@@ -1,20 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, X, AlertCircle, Loader2 } from 'lucide-react';
+import { Camera, Upload, X, AlertCircle, Loader2, User, Wrench, HardHat, FileText, DollarSign, Sparkles } from 'lucide-react';
 import EnhancedOCRService from '../utils/EnhancedOCRService';
 
+const CATEGORIES = [
+  { key: 'labour',   label: 'Labour',    icon: User,      description: 'Worker wages & hours',        iconBg: 'bg-blue-100',    iconColor: 'text-blue-600' },
+  { key: 'trade',    label: 'Trade',     icon: Wrench,    description: 'Contractor & specialist work', iconBg: 'bg-violet-100',  iconColor: 'text-violet-600' },
+  { key: 'equipment',label: 'Equipment', icon: HardHat,   description: 'Tools & machinery rental',    iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+  { key: 'service',  label: 'Service',   icon: FileText,  description: 'Professional services',       iconBg: 'bg-orange-100',  iconColor: 'text-orange-600' },
+  { key: 'purchase', label: 'Materials', icon: DollarSign,description: 'Supplies & raw materials',    iconBg: 'bg-red-100',     iconColor: 'text-red-600' },
+];
+
 const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
-  const [isScanning, setIsScanning] = useState(false);
+  const [isScanning, setIsScanning]     = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
-  const [error, setError] = useState(null);
-  const [useCamera, setUseCamera] = useState(false);
-  const [cameraReady, setCameraReady] = useState(false);
+  const [error, setError]               = useState(null);
+  const [useCamera, setUseCamera]       = useState(false);
+  const [cameraReady, setCameraReady]   = useState(false);
+  // After OCR completes, hold the result here until user confirms category
+  const [pendingData, setPendingData]   = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   const fileInputRef = useRef(null);
-  const videoRef = useRef(null);
-  const canvasRef = useRef(null);
-  const ocrService = new EnhancedOCRService();
+  const videoRef     = useRef(null);
+  const canvasRef    = useRef(null);
+  const ocrService   = new EnhancedOCRService();
 
-  // Cleanup camera on unmount
   useEffect(() => {
     const videoElement = videoRef.current;
     return () => {
@@ -25,9 +35,8 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
     };
   }, []);
 
-  // Cleanup camera when modal closes
   useEffect(() => {
-    if (!isOpen) stopCamera();
+    if (!isOpen) resetAll();
   }, [isOpen]);
 
   // Map generic OCR fields to category-specific ExpenseModal field names
@@ -68,21 +77,16 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
       const data = { ...result, imageFile: file };
 
       const editable = {
-        category: data.category,
-        amount: data.formData?.amount || data.formData?.unitCost || data.formData?.cost || data.extractedData?.totalAmount || null,
-        date: data.formData?.date || data.extractedData?.date || new Date(),
+        amount:   data.formData?.amount || data.formData?.unitCost || data.formData?.cost || data.extractedData?.totalAmount || null,
+        date:     data.formData?.date   || data.extractedData?.date || new Date(),
         supplier: data.formData?.supplier || data.formData?.workerName || data.formData?.tradeName || data.formData?.provider || data.extractedData?.vendor || null,
         itemName: data.formData?.itemName || data.formData?.equipmentName || data.formData?.serviceName || data.formData?.task || null,
-        notes: data.formData?.notes || '',
+        notes:    data.formData?.notes || '',
       };
 
-      if (onScanComplete) {
-        onScanComplete({
-          ...data,
-          formData: buildFormData(data.category, editable, data.formData || {}),
-        });
-      }
-      handleClose();
+      // Show category confirmation step instead of immediately closing
+      setPendingData({ data, editable });
+      setSelectedCategory(data.category || 'purchase');
 
     } catch (err) {
       console.error('OCR processing failed:', err);
@@ -93,49 +97,46 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
     }
   };
 
+  const confirmCategory = () => {
+    if (!pendingData || !selectedCategory) return;
+    const { data, editable } = pendingData;
+    if (onScanComplete) {
+      onScanComplete({
+        ...data,
+        category: selectedCategory,
+        formData: buildFormData(selectedCategory, editable, data.formData || {}),
+      });
+    }
+    handleClose();
+  };
+
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setError('Please select a valid image file');
-      return;
-    }
+    if (!file.type.startsWith('image/')) { setError('Please select a valid image file'); return; }
     await processImage(file);
   };
 
   const handleCameraCapture = () => {
-    if (!videoRef.current || !canvasRef.current) {
-      setError('Camera not ready. Please try again.');
-      return;
-    }
+    if (!videoRef.current || !canvasRef.current) { setError('Camera not ready. Please try again.'); return; }
     try {
       const canvas = canvasRef.current;
-      const video = videoRef.current;
-      if (video.videoWidth === 0 || video.videoHeight === 0) {
-        setError('Camera stream not ready. Please wait and try again.');
-        return;
-      }
-      canvas.width = video.videoWidth;
+      const video  = videoRef.current;
+      if (video.videoWidth === 0 || video.videoHeight === 0) { setError('Camera not ready. Please wait and try again.'); return; }
+      canvas.width  = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext('2d').drawImage(video, 0, 0);
       canvas.toBlob(async (blob) => {
-        if (blob) {
-          await processImage(new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' }));
-        } else {
-          setError('Failed to capture image. Please try again.');
-        }
+        if (blob) await processImage(new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' }));
+        else setError('Failed to capture image. Please try again.');
       }, 'image/jpeg', 0.9);
-    } catch (err) {
-      setError('Failed to capture image. Please try again.');
-    }
+    } catch { setError('Failed to capture image. Please try again.'); }
   };
 
   const startCamera = async () => {
     try {
       setError(null);
-      if (!navigator.mediaDevices?.getUserMedia) {
-        throw new Error('Camera not supported in this browser');
-      }
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera not supported');
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
       });
@@ -161,22 +162,100 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
     setCameraReady(false);
   };
 
-  const handleClose = () => {
+  const resetAll = () => {
     stopCamera();
     setError(null);
     setScanProgress(0);
     setIsScanning(false);
+    setPendingData(null);
+    setSelectedCategory(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleClose = () => {
+    resetAll();
     if (onClose) onClose();
   };
 
   if (!isOpen) return null;
 
+  // ── Category confirmation screen ──────────────────────────────────────────
+  if (pendingData) {
+    const aiCategory = pendingData.data.category;
+
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-zinc-200">
+
+          <div className="flex items-center justify-between p-5 border-b border-zinc-200">
+            <div>
+              <h2 className="text-lg font-bold text-zinc-900">What type of expense?</h2>
+              <p className="text-sm text-zinc-500 mt-0.5">Invoice scanned — confirm the category</p>
+            </div>
+            <button onClick={handleClose} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
+              <X className="w-5 h-5 text-zinc-400" />
+            </button>
+          </div>
+
+          <div className="p-5 space-y-3">
+            {/* AI suggestion badge */}
+            {aiCategory && (
+              <div className="flex items-center gap-2 text-xs text-zinc-500 mb-1">
+                <Sparkles className="w-3.5 h-3.5 text-accent" />
+                <span>AI detected: <span className="font-semibold text-accent capitalize">{CATEGORIES.find(c => c.key === aiCategory)?.label || aiCategory}</span></span>
+              </div>
+            )}
+
+            {/* Category buttons */}
+            <div className="space-y-2">
+              {CATEGORIES.map(({ key, label, icon: Icon, description, iconBg, iconColor }) => {
+                const isSelected = selectedCategory === key;
+                const isAiPick   = aiCategory === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedCategory(key)}
+                    className={`w-full flex items-center gap-4 p-3.5 rounded-xl border-2 transition-all duration-150 text-left
+                      ${isSelected
+                        ? 'border-accent bg-orange-50'
+                        : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50'
+                      }`}
+                  >
+                    <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`w-5 h-5 ${iconColor}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className={`font-semibold text-sm ${isSelected ? 'text-accent' : 'text-zinc-900'}`}>{label}</span>
+                        {isAiPick && (
+                          <span className="text-xs bg-orange-100 text-accent px-1.5 py-0.5 rounded-full font-medium">AI pick</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-500 truncate">{description}</p>
+                    </div>
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${isSelected ? 'border-accent bg-accent' : 'border-zinc-300'}`} />
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={confirmCategory}
+              className="w-full mt-2 bg-accent hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition-colors"
+            >
+              Open Expense Form
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Scanner screen ────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-zinc-200">
 
-        {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-zinc-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
@@ -194,7 +273,6 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
         <div className="p-5 space-y-4">
 
-          {/* Error */}
           {error && (
             <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -202,7 +280,6 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
             </div>
           )}
 
-          {/* Scanning progress */}
           {isScanning && (
             <div className="space-y-3 py-4">
               <div className="flex items-center gap-3">
@@ -210,29 +287,18 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                 <span className="text-zinc-700 font-medium text-sm">Scanning invoice...</span>
               </div>
               <div className="w-full bg-zinc-200 rounded-full h-2">
-                <div
-                  className="bg-accent h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${scanProgress}%` }}
-                />
+                <div className="bg-accent h-2 rounded-full transition-all duration-300" style={{ width: `${scanProgress}%` }} />
               </div>
               <p className="text-xs text-zinc-400">Extracting text and identifying expense details</p>
             </div>
           )}
 
-          {/* Upload / Camera options */}
           {!isScanning && (
             <div className="space-y-3">
-
-              {/* Camera */}
               {useCamera ? (
                 <div className="space-y-3">
                   <div className="relative rounded-xl overflow-hidden bg-zinc-100">
-                    <video
-                      ref={videoRef}
-                      autoPlay playsInline muted
-                      className="w-full h-48 object-cover"
-                      style={{ transform: 'scaleX(-1)' }}
-                    />
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-48 object-cover" style={{ transform: 'scaleX(-1)' }} />
                     {!cameraReady && (
                       <div className="absolute inset-0 flex items-center justify-center bg-zinc-100">
                         <div className="text-center">
@@ -252,10 +318,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                       <Camera className="w-4 h-4" />
                       Capture Photo
                     </button>
-                    <button
-                      onClick={stopCamera}
-                      className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl font-medium transition-colors"
-                    >
+                    <button onClick={stopCamera} className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl font-medium transition-colors">
                       <X className="w-4 h-4" />
                       Cancel
                     </button>
@@ -271,7 +334,6 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                 </button>
               )}
 
-              {/* File upload */}
               {!useCamera && (
                 <>
                   <div className="flex items-center gap-3">
@@ -279,7 +341,6 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                     <span className="text-xs text-zinc-400 font-medium">or</span>
                     <div className="flex-1 h-px bg-zinc-200" />
                   </div>
-
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-zinc-300 rounded-xl hover:border-accent hover:bg-orange-50 transition-all duration-200"
@@ -287,13 +348,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                     <Upload className="w-6 h-6 text-zinc-400" />
                     <span className="text-zinc-600 font-medium">Upload Image</span>
                   </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                  />
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
                   <p className="text-xs text-zinc-400 text-center">Supports JPG, PNG, GIF, BMP</p>
                 </>
               )}
