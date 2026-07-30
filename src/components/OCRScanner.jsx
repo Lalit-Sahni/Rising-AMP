@@ -228,26 +228,33 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
     }));
   };
 
+  // Map generic editableData fields to the correct category-specific field names
+  const buildFormData = (category, editable, originalFormData) => {
+    const base = { ...originalFormData, date: editable.date, notes: editable.notes };
+    switch (category) {
+      case 'labour':
+        return { ...base, workerName: editable.supplier || base.workerName, rate: editable.amount || base.rate };
+      case 'trade':
+        return { ...base, tradeName: editable.supplier || base.tradeName, amount: editable.amount || base.amount, task: editable.itemName || base.task };
+      case 'service':
+        return { ...base, provider: editable.supplier || base.provider, cost: editable.amount || base.cost, serviceName: editable.itemName || base.serviceName };
+      case 'equipment':
+        return { ...base, equipmentName: editable.itemName || base.equipmentName, totalPrice: editable.amount || base.totalPrice };
+      case 'purchase':
+      default:
+        return { ...base, supplier: editable.supplier || base.supplier, itemName: editable.itemName || base.itemName, unitCost: editable.amount || base.unitCost, quantity: base.quantity || '1' };
+    }
+  };
+
   // Add as expense
   const addAsExpense = () => {
     if (onScanComplete && extractedData && editableData) {
-      // Update the extracted data with editable values
       const updatedData = {
         ...extractedData,
         category: editableData.category,
-        amount: editableData.amount,
-        date: editableData.date,
-        supplier: editableData.supplier,
-        itemName: editableData.itemName,
-        invoiceNumber: editableData.invoiceNumber,
-        formData: {
-          ...extractedData.formData,
-          notes: editableData.notes
-        },
-        // Include the original image file for storage
+        formData: buildFormData(editableData.category, editableData, extractedData.formData || {}),
         imageFile: extractedData.imageFile
       };
-      
       onScanComplete(updatedData);
       handleClose();
     }
