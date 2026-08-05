@@ -81,15 +81,17 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
   const {
     addExpenseToFirebase,
     updateExpenseInFirebase,
-    showToast, 
+    showToast,
     savedLabour = [],
     savedTrades = [],
     savedCompanies = [],
     savedProjects = [],
+    savedPayers = [],
     saveLabourToFirebase,
     saveTradeToFirebase,
     saveCompanyToFirebase,
     saveProjectToFirebase,
+    savePayerToFirebase,
     accessCode
   } = useApp();
 
@@ -120,6 +122,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
           initialFormData[field.name] = initialData[field.name] ?? '';
         }
       });
+      initialFormData['paidBy'] = initialData['paidBy'] ?? '';
       setFormData(initialFormData);
       setValidationErrors({});
       
@@ -228,6 +231,17 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
     }
   };
 
+  const getPaidByOptions = () => {
+    return savedPayers.map(p => ({ value: p.name, label: p.name }));
+  };
+
+  const handlePaidBySelect = (selectedOption) => {
+    setFormData(prev => ({
+      ...prev,
+      paidBy: selectedOption ? selectedOption.value : ''
+    }));
+  };
+
   const saveWorkerToFirebase = async (workerData) => {
     try {
       await saveLabourToFirebase(workerData);
@@ -326,6 +340,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
         id: isEditMode ? expenseId : `expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         category: category,
         ...formData,
+        paidBy: formData.paidBy || '',
         total: calculateTotal(category, formData),
         timestamp: isEditMode ? (initialData.timestamp || new Date().toISOString()) : new Date().toISOString(),
         ...(isEditMode && initialData.receiptImageUrl && !receiptFile ? {
@@ -408,6 +423,15 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
           });
         } catch (error) {
           console.error('Error saving project info:', error);
+        }
+      }
+
+      // Save payer for autofill
+      if (formData.paidBy && formData.paidBy.trim()) {
+        try {
+          await savePayerToFirebase(formData.paidBy.trim());
+        } catch (error) {
+          console.error('Error saving payer info:', error);
         }
       }
 
@@ -751,6 +775,43 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Paid By */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
+                Paid by <span className="text-zinc-400 font-normal">(optional)</span>
+              </label>
+              <CreatableSelect
+                value={formData.paidBy ? { value: formData.paidBy, label: formData.paidBy } : null}
+                onChange={handlePaidBySelect}
+                options={getPaidByOptions()}
+                isClearable
+                placeholder="Who paid? Type a name or select..."
+                className="react-select-container"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                    borderColor: '#d4d4d8',
+                    '&:hover': { borderColor: '#a1a1aa' }
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: 'white',
+                    border: '1px solid #e4e4e7'
+                  }),
+                  option: (base, state) => ({
+                    ...base,
+                    backgroundColor: state.isFocused ? '#f4f4f5' : 'white',
+                    color: '#18181b'
+                  }),
+                  singleValue: (base) => ({ ...base, color: '#18181b' }),
+                  input: (base) => ({ ...base, color: '#18181b' }),
+                  placeholder: (base) => ({ ...base, color: '#a1a1aa' })
+                }}
+              />
             </div>
 
             {/* Receipt Upload Section */}

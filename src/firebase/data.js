@@ -1025,12 +1025,56 @@ export const deleteSiteLogFromFirestore = async (accessCode, logId) => {
   try {
     const userDocRef = await ensureUserDocument(accessCode);
     const logDocRef = doc(userDocRef, 'siteLogs', logId);
-    
+
     await deleteDoc(logDocRef);
-    
+
     return { success: true };
   } catch (error) {
     console.error('Delete site log error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Payer functions
+export const savePayerToFirestore = async (accessCode, payerName) => {
+  try {
+    const userDocRef = await ensureUserDocument(accessCode);
+    const payersCollectionRef = collection(userDocRef, 'payers');
+
+    const existingQuery = query(payersCollectionRef, where('name', '==', payerName));
+    const existingSnapshot = await getDocs(existingQuery);
+
+    if (!existingSnapshot.empty) {
+      return { success: true, payer: { id: existingSnapshot.docs[0].id, name: payerName } };
+    }
+
+    const docRef = await addDoc(payersCollectionRef, {
+      name: payerName,
+      createdAt: serverTimestamp()
+    });
+
+    return { success: true, payer: { id: docRef.id, name: payerName } };
+  } catch (error) {
+    console.error('Save payer error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const fetchPayersFromFirestore = async (accessCode) => {
+  try {
+    const userDocRef = await ensureUserDocument(accessCode);
+    const payersCollectionRef = collection(userDocRef, 'payers');
+    const payersQuery = query(payersCollectionRef, orderBy('createdAt', 'asc'));
+    const payersSnapshot = await getDocs(payersQuery);
+
+    const payers = [];
+    payersSnapshot.forEach((d) => {
+      payers.push({ id: d.id, ...d.data() });
+    });
+
+    return { success: true, payers };
+  } catch (error) {
+    console.error('Fetch payers error:', error);
     return { success: false, error: error.message };
   }
 }; 

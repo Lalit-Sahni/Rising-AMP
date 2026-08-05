@@ -27,6 +27,7 @@ export default function HistoryPage() {
   const { expenses, showToast, deleteExpenseFromFirebase } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [payerFilter, setPayerFilter] = useState('all');
   const [expandedExpense, setExpandedExpense] = useState(null);
   const [editingExpense, setEditingExpense] = useState(null);
   const [sortConfig, setSortConfig] = useState({
@@ -115,6 +116,12 @@ export default function HistoryPage() {
     }
   };
 
+  // Unique payer names for filter dropdown
+  const uniquePayers = useMemo(() => {
+    const names = new Set(expenses.filter(e => e.paidBy).map(e => e.paidBy));
+    return Array.from(names).sort();
+  }, [expenses]);
+
   // Filter and sort expenses
   const filteredAndSortedExpenses = useMemo(() => {
     let filtered = expenses.filter(expense => {
@@ -122,21 +129,26 @@ export default function HistoryPage() {
       if (categoryFilter !== 'all' && expense.category !== categoryFilter) {
         return false;
       }
-      
+
+      // Payer filter
+      if (payerFilter !== 'all' && expense.paidBy !== payerFilter) {
+        return false;
+      }
+
       // Search filter
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
         const displayName = getExpenseDisplayName(expense).toLowerCase();
         const category = (categoryLabels[expense.category] || expense.category || '').toLowerCase();
         const notes = (expense.notes || '').toLowerCase();
-        
-        if (!displayName.includes(searchLower) && 
-            !category.includes(searchLower) && 
+
+        if (!displayName.includes(searchLower) &&
+            !category.includes(searchLower) &&
             !notes.includes(searchLower)) {
           return false;
         }
       }
-      
+
       return true;
     });
 
@@ -170,7 +182,7 @@ export default function HistoryPage() {
     });
 
     return filtered;
-  }, [expenses, searchTerm, categoryFilter, sortConfig]);
+  }, [expenses, searchTerm, categoryFilter, payerFilter, sortConfig]);
 
   // Handle sorting
   const handleSort = (key) => {
@@ -341,11 +353,24 @@ export default function HistoryPage() {
               ))}
             </select>
 
+            {/* Payer Filter */}
+            <select
+              value={payerFilter}
+              onChange={(e) => setPayerFilter(e.target.value)}
+              className="px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+              <option value="all">All Payers</option>
+              {uniquePayers.map(name => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+
             {/* Clear Filters */}
             <button
               onClick={() => {
                 setSearchTerm('');
                 setCategoryFilter('all');
+                setPayerFilter('all');
               }}
               className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 rounded-lg font-medium transition-colors"
             >
@@ -416,6 +441,11 @@ export default function HistoryPage() {
                         <td className="px-4 py-4 font-medium text-zinc-900">
                           <div>
                             <div>{getExpenseDisplayName(expense)}</div>
+                            {expense.paidBy && (
+                              <div className="text-xs text-zinc-400 mt-0.5">
+                                Paid by: {expense.paidBy}
+                              </div>
+                            )}
                             {expense.notes && (
                               <div className="text-xs text-zinc-500 mt-1 truncate max-w-xs">
                                 {expense.notes}
@@ -476,6 +506,12 @@ export default function HistoryPage() {
                                       <span className="text-zinc-500">Amount:</span>
                                       <span className="text-emerald-600 font-semibold">${getExpenseTotal(expense).toLocaleString()}</span>
                                     </div>
+                                    {expense.paidBy && (
+                                      <div className="flex justify-between">
+                                        <span className="text-zinc-500">Paid by:</span>
+                                        <span className="text-zinc-900 font-medium">{expense.paidBy}</span>
+                                      </div>
+                                    )}
                                     {expense.notes && (
                                       <div className="flex justify-between">
                                         <span className="text-zinc-500">Notes:</span>

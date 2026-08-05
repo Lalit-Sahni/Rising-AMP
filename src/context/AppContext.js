@@ -21,7 +21,9 @@ import {
   addSiteLogToFirestore,
   fetchSiteLogsFromFirestore,
   updateSiteLogInFirestore,
-  deleteSiteLogFromFirestore
+  deleteSiteLogFromFirestore,
+  savePayerToFirestore,
+  fetchPayersFromFirestore
 } from '../firebase/data';
 import { 
   getLabour, 
@@ -63,6 +65,7 @@ export const AppProvider = ({ children, accessCode }) => {
   const [clientDetails, setClientDetails] = useState([]);
   const [userBankDetails, setUserBankDetails] = useState(null);
   const [siteLogs, setSiteLogs] = useState([]);
+  const [savedPayers, setSavedPayers] = useState([]);
 
   // Load all data from Firestore when accessCode changes or component mounts
   useEffect(() => {
@@ -257,6 +260,21 @@ export const AppProvider = ({ children, accessCode }) => {
         }
       };
 
+      // Load payers
+      const loadPayers = async () => {
+        try {
+          const result = await fetchPayersFromFirestore(accessCode);
+          if (result.success) {
+            setSavedPayers(result.payers || []);
+          } else {
+            setSavedPayers([]);
+          }
+        } catch (error) {
+          console.error('Error loading payers:', error);
+          setSavedPayers([]);
+        }
+      };
+
       // Load all data in parallel
       Promise.all([
         loadExpensesAndBudget(),
@@ -269,7 +287,8 @@ export const AppProvider = ({ children, accessCode }) => {
         loadHIAContracts(),
         loadClientDetails(),
         loadUserBankDetails(),
-        loadSiteLogs()
+        loadSiteLogs(),
+        loadPayers()
       ]).then(() => {
         if (isMounted) {
           console.log('All data loaded successfully');
@@ -890,6 +909,22 @@ export const AppProvider = ({ children, accessCode }) => {
     }
   };
 
+  // Payer functions
+  const savePayerToFirebase = async (payerName) => {
+    if (!payerName || !payerName.trim()) return;
+    try {
+      const result = await savePayerToFirestore(accessCode, payerName.trim());
+      if (result.success) {
+        setSavedPayers(prev => {
+          const exists = prev.some(p => p.name === payerName.trim());
+          return exists ? prev : [...prev, result.payer];
+        });
+      }
+    } catch (error) {
+      console.error('Error saving payer:', error);
+    }
+  };
+
   // Site Log functions
   const addSiteLogToFirebase = async (logData) => {
     try {
@@ -1014,7 +1049,9 @@ export const AppProvider = ({ children, accessCode }) => {
     addSiteLogToFirebase,
     updateSiteLogInFirebase,
     deleteSiteLogFromFirebase,
-    loadSiteLogs
+    loadSiteLogs,
+    savedPayers,
+    savePayerToFirebase
   };
 
   return (
