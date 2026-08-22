@@ -10,40 +10,33 @@ Restore tag: `pre-phase1-2026-08-22`
 
 ### Done
 
-- Agreed preview model: localhost → staging Firebase; never `firebase deploy` to production during this work.
-- Investigated the repo (read-only). Wrote `ARCHITECTURE.md`, `PLAN.md`, `CLAUDE.md`.
-- Git: tagged restore point `pre-phase1-2026-08-22`, created branch `phase-1-foundation`. Did not change app behaviour. Did not deploy to production. Did not write to production Firestore/Storage.
-- Created empty Firebase project **`rising-amp-staging`**. Created its default Firestore database (`nam5`). Deployed current Firestore rules/indexes **to staging only**.
-- Pointed local env at staging: `.env.local` and `.env.staging` → `rising-amp-staging`. Saved previous live keys as `.env.production.local` (gitignored).
-- `.firebaserc` aliases: `default`/`staging` = `rising-amp-staging`, `production` = `rising-amp-467702-b5`. Accidental `firebase deploy` now hits staging, not live.
-- Existing backup (`backups/latest-backup.json`, Oct 2025) is empty (`totalUsers: 0`) and is not a restore.
+- Docs, restore tag, branch, empty staging project, localhost pointed at staging (earlier in session).
+- Owner confirmed: Gmail `sahni.lalit18@gmail.com`; two real workspaces (recorded in gitignored `.phase1-local.json` only); other family emails later is fine; other codes are tests/typos and must not be deleted.
+- Staging Auth Get started is done. Anonymous sign-in enabled on staging.
+- Billing upgrade was not offered. Staging has **no Storage bucket** yet.
+- Wrote production read-only backup + staging-only restore scripts (`scripts/backup-production.js`, `scripts/restore-to-staging.js`). Guards refuse to write production.
+- Ran read-only production backup. 239 Firestore documents, 18 storage files, 5 workspace codes. Second database `cost-tracker` is empty.
+- Restored Firestore into **staging only** (239/239). Verified both real workspaces exist on staging with their collections.
+- Storage upload to staging failed (bucket does not exist). Receipt/site-log images remain in the local backup folder. Live Storage was not touched.
 
-### In flight / blocked on two Google clicks
+### In flight
 
-Staging exists but is not fully usable until Lalit:
-
-1. **Authentication → Get started** on the staging project (so the current code-login can sign in anonymously while we test).
-2. **Attach the same billing account the live app already uses** (Google now requires this for Storage and for Identity Platform-style Auth APIs). Needed before we can copy receipt images.
-
-No family data has been copied yet.
+- Staging copy is ready for localhost checks (numbers/jobs). Receipt thumbnails on staging will be missing until Storage is turned on.
 
 ### Next concrete step
 
-1. Lalit does the two Console clicks (instructions in the session notes / PLAN).
-2. Then: propose a proper **read-only** backup script. Do not run it until he says yes.
-3. After that: copy backup into staging only; he checks localhost with the family code.
+Lalit runs `npm start`, opens http://localhost:3000, signs in with each real code, and says whether the jobs look right. Then we start Site Log / Weekly Report **code** removal on the branch (still no production writes).
 
 ### Waiting on Lalit
 
-- Two Console clicks (Auth Get started + billing on staging).
-- Confirm owner Gmail (`sahni.lalit18@gmail.com`?).
-- The other three family Gmails.
-- The real family access code (chat only, never commit).
+- Click around staging on localhost and confirm the two real cabinets look like production.
+- Other family Gmails whenever convenient (not blocking).
+- Optional later: if Google offers Blaze/billing on staging, attach the same account so receipt photos can be copied.
 
 ## Do not do next session until approved
 
-- Any `firebase deploy` to production (`--project production` / `rising-amp-467702-b5`).
+- Any `firebase deploy` to production.
 - Any Firestore/Storage write to `rising-amp-467702-b5`.
-- Copying production data (needs reviewed backup script first).
 - Deleting Site Log / Weekly Report from the live database.
-- Committing secrets or the access code.
+- Committing secrets or access codes.
+- Deleting leftover test/typo workspaces.

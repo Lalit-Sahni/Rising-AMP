@@ -24,20 +24,13 @@ Restore point if we ever need to unwind code: git tag `pre-phase1-2026-08-22`.
 |------|--------|------|
 | Git restore tag | Done this session: `pre-phase1-2026-08-22` | — |
 | Feature branch | Done: `phase-1-foundation` | — |
-| Staging Firebase project | **Created empty:** `rising-amp-staging` | Firestore exists. Storage + Auth still need a one-time Google Console setup (billing / Get started). No production data copied yet. |
-| Usable production backup | **Missing** (Oct 2025 file has 0 users; script skips siteLogs/payers; no Storage) | Cannot safely restore today |
-| Auto-deploy on git push | None (good) | Live site only changes on `firebase deploy` |
-| Production deploy protection | Weak: `.firebaserc` default is production | Accidental `firebase deploy` would hit live |
+| Staging Firebase project | **Created:** `rising-amp-staging` | Firestore copy of production loaded. Receipt photos are in the local backup folder; staging has no Storage bucket yet (Google did not ask to upgrade). Auth Get started is done; anonymous sign-in enabled on staging. |
+| Usable production backup | **Taken 2026-08-22** (read-only). Folder gitignored under `backups/production-*`. Includes Storage files. | Keep this folder. Do not commit it. |
+| Production deploy protection | `.firebaserc` default is **staging**. Production is the named alias `production`. | Accidental `firebase deploy` hits empty-then-copied staging, not live. |
 
-**Before any cleanup or migration scripts run**, we will:
+**Safety scaffolding is in place.** Cleanup and auth work still wait for Lalit to confirm localhost looks right.
 
-1. Create an empty staging Firebase project.
-2. Point localhost at staging (new env file). Change Firebase aliases so `default` is staging, production is a named alias you have to ask for.
-3. Write a proper backup script (Admin SDK, all collections, Storage, explicit `--project`, dry-run flag). Review it, then take a **production read-only backup** to a folder **outside** git (and outside the live database).
-4. Copy that backup **into staging only**. Verify the family workspace appears in staging by logging in with the known code on localhost.
-5. Only then start feature removal and auth work against staging.
-
-I will not copy or write production data until you confirm steps 1–2, and I will not run the new backup until you have seen the script.
+The old Oct 2025 backup file is unused. Do not write to production. Do not delete leftover test/typo workspaces.
 
 ---
 
@@ -118,32 +111,36 @@ Anonymous auth and `localStorage.accessCode` go away for the family app path. We
 
 ## C. Ownership migration (staging first)
 
-This is not “add an owner field to ownerless projects”. It is **promoting the family’s code-keyed cabinet into one organisation**.
+This is not “add an owner field to ownerless projects”. It is **promoting the family’s two real code-keyed cabinets into one organisation**.
 
-1. You tell me the **real family access code** in chat (do not commit it to git).
-2. On staging (copy of prod), find `users/{thatCode}`. Leave every other `users/{otherCode}` document alone.
-3. Create `organizations/{orgId}` named e.g. “Opal SS Constructions”.
-4. Attach the four Gmail addresses as members (pending until each person signs in once).
-5. Create `projects` under that org from today’s `users/{code}/projects` list.
-6. Move tracker data (expenses, invoices, clients, labour, trades, budget, payers, bank details, HIA, progress payments, receipts in Storage) under the matching project.
-   - Match expenses/invoices to a project by `projectName` where it lines up.
-   - Records with no project name go into an explicit **“Unassigned”** project so nothing is dropped. You can rename or merge that later.
-7. Script properties: `--dry-run` default, idempotent, logs every move, can reverse by writing back to the old paths **on staging only** until we delete the old tree (old tree kept until you confirm the new tree looks right).
+The owner confirmed (chat only, stored in gitignored `.phase1-local.json`, never commit):
+
+- Owner Gmail: already recorded locally.
+- Two real workspaces. All other codes are tests or typos and must be left untouched (not deleted).
+- Other family Gmails can be attached later. Phase 1 can start with the owner only.
+
+On staging (copy of prod):
+
+1. Find the two real `users/{code}` trees. Leave every other code document alone.
+2. Create `organizations/{orgId}` named e.g. “Opal SS Constructions”.
+3. Attach the owner Gmail now; add father/sister/mother when those addresses are provided.
+4. There is **no saved `projects` collection** in the live data. Project names live on expense/invoice records. The migration will build the org project list from those names (plus an **Unassigned** bucket so nothing is dropped).
+5. Move tracker data under the matching project. Keep both cabinets’ jobs visible inside the one org — do not merge them into a single project unless the owner asks.
+6. Script properties: `--dry-run` default, idempotent, logs every move, can reverse **on staging only** until the old tree is retired (old tree kept until the owner confirms the new tree looks right).
 
 Production run of this script is a separate, signed-off event with a fresh backup immediately before.
 
 ### What I need from you before C can be written (not needed to start staging)
 
-- The family access code (chat only).
-- The four Gmail addresses (you, father, sister, mother). I already see `sahni.lalit18@gmail.com` on this machine’s Firebase login; confirm if that is the owner account to use.
+Owner Gmail is confirmed. Other family Gmails can wait. Both real access codes are recorded locally, not in git.
 
 ---
 
 ## Suggested session order (one item, then commit)
 
-0. **This session:** docs + git safety + empty staging project `rising-amp-staging`. Localhost env now points at staging. `.firebaserc` default is staging. **No app behaviour change. No data copy yet.**
-1. You finish the two Google Console clicks below (Auth + billing/Storage). Then confirm staging is OK.
-2. Proper backup script (review → run **read-only** against production → copy into staging). You click around staging on localhost with the family code and say “this looks like our data”.
+0. Docs, git safety, staging project, localhost → staging.
+1. Production read-only backup + Firestore copy into staging (done 2026-08-22). Receipt files saved locally; not yet on staging Storage.
+2. Lalit confirms localhost looks like the live jobs.
 3. Site Log / Weekly Report **code** removal on the branch; you check localhost.
 4. Staging export of those collections, then staging data delete for those two features only.
 5. Google Auth on staging + login UI + project picker (still may show old data shape until step 6).
@@ -161,8 +158,7 @@ Billing, Stripe, a second product, design/3D/takeoff, new features, new npm pack
 ## Approval checkpoints (I will stop and wait)
 
 - [ ] You: staging project is OK, and the two Console clicks below are done.
-- [ ] You: backup script looks OK to run as **read-only** on production.
-- [ ] You: staging copy looks like real data.
+- [ ] You: localhost with the real codes looks like the live jobs (Firestore copy is loaded; receipt photos may be missing on staging).
 - [ ] You: Site Log / Weekly Report gone from the UI (code).
 - [ ] You: export files exist; OK to delete those two features’ data **on staging**.
 - [ ] You: Google login + org/project model on staging.

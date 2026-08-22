@@ -82,7 +82,7 @@ Anyone who can load the web app (the Firebase API key is in the client bundle) c
 There is **no organisation**. There is **no per-user ownership**.
 
 - One “workspace” = one document `users/{accessCode}` plus its subcollections.
-- **Projects are labels, not containers.** Saved projects live in `users/{accessCode}/projects/{id}`. Expenses store a `projectName` string. The dashboard shows **all** expenses in the workspace, not one project at a time.
+- **Projects are labels, not containers.** There is currently **no** `users/{accessCode}/projects` collection in production. Saved project names, where they exist, are fields on records (e.g. expense `projectName`). The dashboard shows **all** expenses in the workspace, not one project at a time.
 - After login you land straight on the workspace dashboard. There is no project picker.
 
 This matters for Phase 1: “select a project, then see that project’s dashboard” is **new behaviour**, not a small wiring change. Records will need to be grouped under real project documents (matching on `projectName` where we can; leftover records with no name need an explicit home).
@@ -98,7 +98,7 @@ Under `users/{accessCode}/`:
 | Subcollection | Used by |
 |---------------|---------|
 | `expenses` | Core tracker |
-| `projects` | Saved project names |
+| `projects` | In the code, not present in the current production snapshot |
 | `clients` | Client records (optional `projectId` field) |
 | `labour` | Saved labour contacts |
 | `trades` | Saved trades |
