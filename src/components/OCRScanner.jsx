@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, X, AlertCircle, Loader2, User, Wrench, HardHat, FileText, DollarSign, Sparkles } from 'lucide-react';
 import EnhancedOCRService from '../utils/EnhancedOCRService';
+import { categoryIconWell, getCategoryStyle } from '../utils/categoryStyle';
 
 const CATEGORIES = [
-  { key: 'labour',   label: 'Labour',    icon: User,      description: 'Worker wages & hours',        iconBg: 'bg-blue-100',    iconColor: 'text-blue-600' },
-  { key: 'trade',    label: 'Trade',     icon: Wrench,    description: 'Contractor & specialist work', iconBg: 'bg-violet-100',  iconColor: 'text-violet-600' },
-  { key: 'equipment',label: 'Equipment', icon: HardHat,   description: 'Tools & machinery rental',    iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
-  { key: 'service',  label: 'Service',   icon: FileText,  description: 'Professional services',       iconBg: 'bg-orange-100',  iconColor: 'text-orange-600' },
-  { key: 'purchase', label: 'Materials', icon: DollarSign,description: 'Supplies & raw materials',    iconBg: 'bg-red-100',     iconColor: 'text-red-600' },
+  { key: 'labour',   label: 'Labour',    icon: User,      description: 'Worker wages & hours' },
+  { key: 'trade',    label: 'Trade',     icon: Wrench,    description: 'Contractor & specialist work' },
+  { key: 'equipment',label: 'Equipment', icon: HardHat,   description: 'Tools & machinery rental' },
+  { key: 'service',  label: 'Service',   icon: FileText,  description: 'Professional services' },
+  { key: 'purchase', label: 'Materials', icon: DollarSign,description: 'Supplies & raw materials' },
 ];
 
 const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
@@ -208,27 +209,31 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
             {/* Category buttons */}
             <div className="space-y-2">
-              {CATEGORIES.map(({ key, label, icon: Icon, description, iconBg, iconColor }) => {
+              {CATEGORIES.map(({ key, label, icon: Icon, description }) => {
                 const isSelected = selectedCategory === key;
                 const isAiPick   = aiCategory === key;
+                const style = getCategoryStyle(key);
                 return (
                   <button
                     key={key}
                     onClick={() => setSelectedCategory(key)}
-                    className={`w-full flex items-center gap-4 p-3.5 rounded-xl border-2 transition-all duration-150 text-left
+                    className={`pressable w-full flex items-center gap-4 p-3.5 rounded-xl border text-left bg-surface
                       ${isSelected
-                        ? 'border-accent bg-orange-50'
-                        : 'border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50'
+                        ? 'border-accent'
+                        : 'border-hairline'
                       }`}
                   >
-                    <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center flex-shrink-0`}>
-                      <Icon className={`w-5 h-5 ${iconColor}`} />
+                    <div
+                      className="w-10 h-10 rounded-[9px] flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: categoryIconWell(style.hex), color: style.hex }}
+                    >
+                      <Icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className={`font-semibold text-sm ${isSelected ? 'text-accent' : 'text-zinc-900'}`}>{label}</span>
                         {isAiPick && (
-                          <span className="text-xs bg-orange-100 text-accent px-1.5 py-0.5 rounded-full font-medium">AI pick</span>
+                          <span className="text-xs bg-accent-tint text-accent px-1.5 py-0.5 rounded-full font-medium">AI pick</span>
                         )}
                       </div>
                       <p className="text-xs text-zinc-500 truncate">{description}</p>
@@ -241,7 +246,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
             <button
               onClick={confirmCategory}
-              className="w-full mt-2 bg-accent hover:bg-orange-600 text-white font-semibold py-3 rounded-xl transition-colors"
+              className="w-full mt-2 bg-accent hover:bg-accent-600 text-white font-semibold py-3 rounded-xl transition-colors"
             >
               Open Expense Form
             </button>
@@ -313,7 +318,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                     <button
                       onClick={handleCameraCapture}
                       disabled={!cameraReady}
-                      className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-orange-600 disabled:opacity-50 text-white px-4 py-3 rounded-xl font-semibold transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent-600 disabled:opacity-50 text-white px-4 py-3 rounded-xl font-semibold transition-colors"
                     >
                       <Camera className="w-4 h-4" />
                       Capture Photo
@@ -327,7 +332,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
               ) : (
                 <button
                   onClick={startCamera}
-                  className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-zinc-300 rounded-xl hover:border-accent hover:bg-orange-50 transition-all duration-200"
+                  className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-zinc-300 rounded-xl hover:border-accent hover:bg-accent-tint transition-all duration-200"
                 >
                   <Camera className="w-6 h-6 text-zinc-400" />
                   <span className="text-zinc-600 font-medium">Use Camera</span>
@@ -343,7 +348,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                   </div>
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-zinc-300 rounded-xl hover:border-accent hover:bg-orange-50 transition-all duration-200"
+                    className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-zinc-300 rounded-xl hover:border-accent hover:bg-accent-tint transition-all duration-200"
                   >
                     <Upload className="w-6 h-6 text-zinc-400" />
                     <span className="text-zinc-600 font-medium">Upload Image</span>

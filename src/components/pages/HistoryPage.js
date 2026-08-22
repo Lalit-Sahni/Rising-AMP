@@ -3,7 +3,9 @@ import { useApp } from '../../context/AppContext';
 import { Trash2, Pencil, Filter, Search, Download, Eye, Calendar, DollarSign, Hash } from 'lucide-react';
 import ExportDialog from '../ExportDialog';
 import ExpenseModal from '../ExpenseModal';
+import CategoryChip from '../ui/CategoryChip';
 import { exportExpensesToExcel } from '../../utils/excelExport';
+import { CATEGORY_STYLE } from '../../utils/categoryStyle';
 
 const categoryLabels = {
   labour: 'Labour',
@@ -12,15 +14,6 @@ const categoryLabels = {
   service: 'Service',
   purchase: 'Materials',
   installation: 'Installation'
-};
-
-const categoryColors = {
-  labour: 'bg-blue-100 text-blue-800',
-  trade: 'bg-purple-100 text-purple-800',
-  equipment: 'bg-green-100 text-green-800',
-  service: 'bg-indigo-100 text-indigo-800',
-  purchase: 'bg-orange-100 text-orange-800',
-  installation: 'bg-red-100 text-red-800'
 };
 
 export default function HistoryPage() {
@@ -195,7 +188,7 @@ export default function HistoryPage() {
   // Sort icon component
   const SortIcon = ({ column }) => {
     if (sortConfig.key !== column) {
-      return <Hash className="w-4 h-4 text-zinc-400" />;
+      return <Hash className="w-4 h-4 text-slate-400" />;
     }
     return sortConfig.direction === 'asc' 
       ? <Hash className="w-4 h-4 text-accent" />
@@ -204,12 +197,12 @@ export default function HistoryPage() {
 
   // Format date with proper validation
   const formatDate = (dateString) => {
-    if (!dateString) return 'No date';
+    if (!dateString) return '—';
     
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) {
-        return 'Invalid date';
+        return '—';
       }
       return date.toLocaleDateString('en-US', {
         month: 'short',
@@ -218,7 +211,7 @@ export default function HistoryPage() {
       });
     } catch (error) {
       console.error('Date formatting error:', error);
-      return 'Invalid date';
+      return '—';
     }
   };
 
@@ -274,19 +267,20 @@ export default function HistoryPage() {
   const totalAmount = filteredAndSortedExpenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
 
   return (
-    <div className="min-h-screen text-zinc-900 p-1 sm:p-2 md:p-4 animate-fadeIn portrait-mobile">
-      <div className="max-w-screen-xl mx-auto px-1 sm:px-2 md:px-4 space-y-2 sm:space-y-4 md:space-y-8">
+    <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
+      <div className="max-w-7xl mx-auto space-y-4">
         
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-zinc-900">Expense History</h1>
-            <p className="text-zinc-500 mt-1">Complete overview of all expenses</p>
+            <div className="eyebrow">Ledger</div>
+            <h1 className="text-[26px] font-bold tracking-tight mt-1">History</h1>
+            <p className="text-[13.5px] text-slate-600 mt-0.5">Every recorded expense on this job.</p>
           </div>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-dark text-white rounded-lg font-medium transition-colors"
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-accent hover:bg-accent-600 text-white rounded-ot-sm text-[12.5px] font-medium"
             >
               <Download className="w-4 h-4" />
               Export
@@ -295,69 +289,44 @@ export default function HistoryPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:gap-6">
-          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-zinc-500 text-sm font-medium">Total Expenses</p>
-                <p className="text-2xl font-bold text-zinc-900">{filteredAndSortedExpenses.length}</p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
-                <Hash className="w-6 h-6 text-accent" />
-              </div>
-            </div>
+        <div className="grid grid-cols-2 gap-3.5">
+          <div className="relative bg-surface rounded-ot p-[18px] border border-hairline shadow-whisper">
+            <span className="absolute left-[18px] right-[18px] top-0 h-0.5 bg-accent rounded-b" />
+            <p className="text-slate-400 text-xs font-medium">Total expenses</p>
+            <p className="tabular text-[25px] font-semibold text-ink mt-2.5">{filteredAndSortedExpenses.length}</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-zinc-500 text-sm font-medium">Total Amount</p>
-                <p className="text-2xl font-bold text-emerald-600">${totalAmount.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                <DollarSign className="w-6 h-6 text-emerald-600" />
-              </div>
-            </div>
+          <div className="bg-surface rounded-ot p-[18px] border border-hairline shadow-whisper">
+            <p className="text-slate-400 text-xs font-medium">Total amount</p>
+            <p className="tabular text-[25px] font-semibold text-ink mt-2.5">${totalAmount.toLocaleString()}</p>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 border border-zinc-200 shadow-sm mobile-compact">
+        <div className="bg-surface rounded-ot p-4 md:p-5 border border-hairline shadow-whisper">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-zinc-900">Filters</h2>
-            <Filter className="w-5 h-5 text-zinc-500" />
+            <h2 className="text-sm font-semibold text-ink">Filters</h2>
+            <Filter className="w-4 h-4 text-slate-400" />
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search expenses..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
               />
             </div>
-
-            {/* Category Filter */}
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <option value="all">All Categories</option>
-              {Object.entries(categoryLabels).map(([key, label]) => (
-                <option key={key} value={key}>{label}</option>
-              ))}
-            </select>
 
             {/* Payer Filter */}
             <select
               value={payerFilter}
               onChange={(e) => setPayerFilter(e.target.value)}
-              className="px-4 py-2 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
+              className="px-4 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
             >
               <option value="all">All Payers</option>
               {uniquePayers.map(name => (
@@ -372,21 +341,51 @@ export default function HistoryPage() {
                 setCategoryFilter('all');
                 setPayerFilter('all');
               }}
-              className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 text-zinc-800 rounded-lg font-medium transition-colors"
+              className="pressable px-4 py-2 bg-surface border border-hairline text-ink rounded-ot-sm text-[13px] font-medium"
             >
               Clear Filters
             </button>
           </div>
+
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            <button
+              type="button"
+              onClick={() => setCategoryFilter('all')}
+              className={`pressable px-2.5 py-1 rounded-full text-xs font-medium border ${
+                categoryFilter === 'all'
+                  ? 'border-accent bg-accent-tint text-accent'
+                  : 'border-hairline bg-surface text-slate-600'
+              }`}
+            >
+              All
+            </button>
+            {Object.entries(CATEGORY_STYLE).filter(([key]) => key !== 'materials').map(([key, style]) => {
+              const active = categoryFilter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setCategoryFilter(key)}
+                  className={`pressable inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-surface ${
+                    active ? 'border-accent text-ink' : 'border-hairline text-slate-600'
+                  }`}
+                >
+                  <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: style.hex }} />
+                  {style.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Expense Table */}
-        <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 border border-zinc-200 shadow-sm mobile-compact">
-          <div className="overflow-x-auto mobile-table-container">
-            <table className="w-full text-sm text-left text-zinc-700">
-              <thead className="bg-zinc-100 text-zinc-700 text-xs uppercase">
+        <div className="bg-surface rounded-ot border border-hairline shadow-whisper overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left text-ink">
+              <thead className="bg-canvas text-slate-600 text-[11px] uppercase tracking-wide">
                 <tr>
                   <th 
-                    className="px-4 py-3 cursor-pointer hover:bg-zinc-200 transition-colors"
+                    className="px-4 py-3 cursor-pointer hover:text-ink"
                     onClick={() => handleSort('date')}
                   >
                     <div className="flex items-center space-x-1">
@@ -396,7 +395,7 @@ export default function HistoryPage() {
                     </div>
                   </th>
                   <th 
-                    className="px-4 py-3 cursor-pointer hover:bg-zinc-200 transition-colors"
+                    className="px-4 py-3 cursor-pointer hover:text-ink"
                     onClick={() => handleSort('category')}
                   >
                     <div className="flex items-center space-x-1">
@@ -408,7 +407,7 @@ export default function HistoryPage() {
                     <span>Description</span>
                   </th>
                   <th 
-                    className="px-4 py-3 cursor-pointer hover:bg-zinc-200 transition-colors"
+                    className="px-4 py-3 cursor-pointer hover:text-ink"
                     onClick={() => handleSort('total')}
                   >
                     <div className="flex items-center space-x-1">
@@ -427,39 +426,37 @@ export default function HistoryPage() {
                   filteredAndSortedExpenses.map((expense, index) => (
                     <React.Fragment key={`${expense.id || index}-${getExpenseDate(expense)}`}>
                       <tr 
-                        className="bg-white border-b border-zinc-200 hover:bg-zinc-50 transition-colors cursor-pointer"
+                        className="bg-surface border-b border-hairline hover:bg-canvas transition-colors cursor-pointer"
                         onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)}
                       >
-                        <td className="px-4 py-4 text-zinc-500">
+                        <td className="px-4 py-4 text-slate-600 font-mono text-xs">
                           {formatDate(getExpenseDate(expense))}
                         </td>
                         <td className="px-4 py-4">
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${categoryColors[expense.category] || 'bg-zinc-100 text-zinc-800'}`}>
-                            {categoryLabels[expense.category] || expense.category}
-                          </span>
+                          <CategoryChip category={expense.category} />
                         </td>
-                        <td className="px-4 py-4 font-medium text-zinc-900">
+                        <td className="px-4 py-4 font-medium text-ink">
                           <div>
                             <div>{getExpenseDisplayName(expense)}</div>
                             {expense.paidBy && (
-                              <div className="text-xs text-zinc-400 mt-0.5">
+                              <div className="text-xs text-slate-400 mt-0.5">
                                 Paid by: {expense.paidBy}
                               </div>
                             )}
                             {expense.notes && (
-                              <div className="text-xs text-zinc-500 mt-1 truncate max-w-xs">
+                              <div className="text-xs text-slate-400 mt-1 truncate max-w-xs">
                                 {expense.notes}
                               </div>
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-4 font-semibold text-emerald-600">
+                        <td className="px-4 py-4 tabular font-medium text-ink">
                           ${getExpenseTotal(expense).toLocaleString()}
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             <button
-                              className="text-zinc-400 hover:text-accent transition-colors"
+                              className="text-slate-400 hover:text-accent transition-colors"
                               title="Edit"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -469,7 +466,7 @@ export default function HistoryPage() {
                               <Pencil className="w-4 h-4" />
                             </button>
                             <button
-                              className="text-red-500 hover:text-red-700 transition-colors"
+                              className="text-neg hover:opacity-80 transition-colors"
                               title="Delete"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -484,63 +481,61 @@ export default function HistoryPage() {
                       
                       {/* Expanded Details Row */}
                       {expandedExpense === expense.id && (
-                        <tr className="bg-zinc-50 border-b border-zinc-200">
+                        <tr className="bg-canvas border-b border-hairline">
                           <td colSpan="6" className="px-4 py-6">
-                            <div className="bg-white rounded-lg p-6 border border-zinc-200">
-                              <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${categoryColors[expense.category] || 'bg-zinc-100 text-zinc-800'}`}>
-                                  {categoryLabels[expense.category] || expense.category}
-                                </span>
+                            <div className="bg-surface rounded-ot p-5 border border-hairline">
+                              <h3 className="text-sm font-semibold text-ink mb-4 flex items-center gap-2">
+                                <CategoryChip category={expense.category} />
                                 {getExpenseDisplayName(expense)}
                               </h3>
                               
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                  <h4 className="text-sm font-semibold text-zinc-700 mb-3">Expense Details</h4>
+                                  <h4 className="text-sm font-semibold text-ink mb-3">Expense Details</h4>
                                   <div className="space-y-2 text-sm">
                                     <div className="flex justify-between">
-                                      <span className="text-zinc-500">Date:</span>
-                                      <span className="text-zinc-900">{formatDate(getExpenseDate(expense))}</span>
+                                      <span className="text-slate-600">Date:</span>
+                                      <span className="text-ink">{formatDate(getExpenseDate(expense))}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                      <span className="text-zinc-500">Amount:</span>
-                                      <span className="text-emerald-600 font-semibold">${getExpenseTotal(expense).toLocaleString()}</span>
+                                      <span className="text-slate-600">Amount:</span>
+                                      <span className="tabular text-ink font-medium">${getExpenseTotal(expense).toLocaleString()}</span>
                                     </div>
                                     {expense.paidBy && (
                                       <div className="flex justify-between">
-                                        <span className="text-zinc-500">Paid by:</span>
-                                        <span className="text-zinc-900 font-medium">{expense.paidBy}</span>
+                                        <span className="text-slate-600">Paid by:</span>
+                                        <span className="text-ink font-medium">{expense.paidBy}</span>
                                       </div>
                                     )}
                                     {expense.notes && (
                                       <div className="flex justify-between">
-                                        <span className="text-zinc-500">Notes:</span>
-                                        <span className="text-zinc-700 text-right max-w-xs">{expense.notes}</span>
+                                        <span className="text-slate-600">Notes:</span>
+                                        <span className="text-ink text-right max-w-xs">{expense.notes}</span>
                                       </div>
                                     )}
                                   </div>
                                 </div>
                                 
                                 <div>
-                                  <h4 className="text-sm font-semibold text-zinc-700 mb-3">Category Specific Details</h4>
+                                  <h4 className="text-sm font-semibold text-ink mb-3">Category Specific Details</h4>
                                   <div className="space-y-2 text-sm">
                                     {expense.category === 'labour' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Worker:</span>
-                                          <span className="text-zinc-900">{expense.workerName || 'N/A'}</span>
+                                          <span className="text-slate-600">Worker:</span>
+                                          <span className="text-ink">{expense.workerName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Role:</span>
-                                          <span className="text-zinc-900">{expense.role || 'N/A'}</span>
+                                          <span className="text-slate-600">Role:</span>
+                                          <span className="text-ink">{expense.role || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Hours:</span>
-                                          <span className="text-zinc-900">{expense.hours || 'N/A'}</span>
+                                          <span className="text-slate-600">Hours:</span>
+                                          <span className="text-ink">{expense.hours || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Rate:</span>
-                                          <span className="text-zinc-900">${expense.rate || 'N/A'}/hr</span>
+                                          <span className="text-slate-600">Rate:</span>
+                                          <span className="text-ink">${expense.rate || 'N/A'}/hr</span>
                                         </div>
                                       </>
                                     )}
@@ -548,16 +543,16 @@ export default function HistoryPage() {
                                     {expense.category === 'trade' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Trade:</span>
-                                          <span className="text-zinc-900">{expense.tradeName || 'N/A'}</span>
+                                          <span className="text-slate-600">Trade:</span>
+                                          <span className="text-ink">{expense.tradeName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Category:</span>
-                                          <span className="text-zinc-900">{expense.tradeCategory || 'N/A'}</span>
+                                          <span className="text-slate-600">Category:</span>
+                                          <span className="text-ink">{expense.tradeCategory || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Task:</span>
-                                          <span className="text-zinc-900">{expense.task || 'N/A'}</span>
+                                          <span className="text-slate-600">Task:</span>
+                                          <span className="text-ink">{expense.task || 'N/A'}</span>
                                         </div>
                                       </>
                                     )}
@@ -565,20 +560,20 @@ export default function HistoryPage() {
                                     {expense.category === 'purchase' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Item:</span>
-                                          <span className="text-zinc-900">{expense.itemName || 'N/A'}</span>
+                                          <span className="text-slate-600">Item:</span>
+                                          <span className="text-ink">{expense.itemName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Supplier:</span>
-                                          <span className="text-zinc-900">{expense.supplier || 'N/A'}</span>
+                                          <span className="text-slate-600">Supplier:</span>
+                                          <span className="text-ink">{expense.supplier || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Quantity:</span>
-                                          <span className="text-zinc-900">{expense.quantity || 'N/A'}</span>
+                                          <span className="text-slate-600">Quantity:</span>
+                                          <span className="text-ink">{expense.quantity || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Unit Cost:</span>
-                                          <span className="text-zinc-900">${expense.unitCost || 'N/A'}</span>
+                                          <span className="text-slate-600">Unit Cost:</span>
+                                          <span className="text-ink">${expense.unitCost || 'N/A'}</span>
                                         </div>
                                       </>
                                     )}
@@ -586,25 +581,25 @@ export default function HistoryPage() {
                                     {expense.category === 'equipment' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Equipment:</span>
-                                          <span className="text-zinc-900">{expense.equipmentName || 'N/A'}</span>
+                                          <span className="text-slate-600">Equipment:</span>
+                                          <span className="text-ink">{expense.equipmentName || 'N/A'}</span>
                                         </div>
                                         {expense.startDate && (
                                           <div className="flex justify-between">
-                                            <span className="text-zinc-500">Start Date:</span>
-                                            <span className="text-zinc-900">{formatDate(expense.startDate)}</span>
+                                            <span className="text-slate-600">Start Date:</span>
+                                            <span className="text-ink">{formatDate(expense.startDate)}</span>
                                           </div>
                                         )}
                                         {expense.endDate && (
                                           <div className="flex justify-between">
-                                            <span className="text-zinc-500">End Date:</span>
-                                            <span className="text-zinc-900">{formatDate(expense.endDate)}</span>
+                                            <span className="text-slate-600">End Date:</span>
+                                            <span className="text-ink">{formatDate(expense.endDate)}</span>
                                           </div>
                                         )}
                                         {expense.totalPrice && (
                                           <div className="flex justify-between">
-                                            <span className="text-zinc-500">Total Price:</span>
-                                            <span className="text-zinc-900">${expense.totalPrice}</span>
+                                            <span className="text-slate-600">Total Price:</span>
+                                            <span className="text-ink">${expense.totalPrice}</span>
                                           </div>
                                         )}
                                       </>
@@ -613,16 +608,16 @@ export default function HistoryPage() {
                                     {expense.category === 'service' && (
                                       <>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Service:</span>
-                                          <span className="text-zinc-900">{expense.serviceName || 'N/A'}</span>
+                                          <span className="text-slate-600">Service:</span>
+                                          <span className="text-ink">{expense.serviceName || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Provider:</span>
-                                          <span className="text-zinc-900">{expense.provider || 'N/A'}</span>
+                                          <span className="text-slate-600">Provider:</span>
+                                          <span className="text-ink">{expense.provider || 'N/A'}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                          <span className="text-zinc-500">Cost:</span>
-                                          <span className="text-zinc-900">${expense.cost || 'N/A'}</span>
+                                          <span className="text-slate-600">Cost:</span>
+                                          <span className="text-ink">${expense.cost || 'N/A'}</span>
                                         </div>
                                       </>
                                     )}
@@ -637,7 +632,7 @@ export default function HistoryPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center text-zinc-500">
+                    <td colSpan="6" className="px-4 py-8 text-center text-slate-600">
                       <div className="flex flex-col items-center">
                         <Eye className="w-12 h-12 mb-4 opacity-50" />
                         <h3 className="text-lg font-semibold mb-2">No Expenses Found</h3>
