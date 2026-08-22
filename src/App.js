@@ -1,70 +1,128 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { onAuthChange, signOut } from './firebase/auth';
-import { syncExpensesToFirestore } from './firebase/data';
 import { AppProvider } from './context/AppContext';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import MainContent from './components/MainContent';
-
 import CommandPalette from './components/CommandPalette';
 import LoginScreen from './components/LoginScreen';
+import NotInvitedScreen from './components/NotInvitedScreen';
+import ProjectPicker from './components/ProjectPicker';
+import { listOrgProjects } from './firebase/projectCatalog';
+import { clearSession, readSession, resolveInvitation, writeSession } from './firebase/tenancy';
 import './styles/premium-animations.css';
 
 function App() {
-  const [accessCode, setAccessCode] = useState(localStorage.getItem('accessCode'));
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [authUser, setAuthUser] = useState(undefined);
+  const [membership, setMembership] = useState(null);
+  const [membershipLoading, setMembershipLoading] = useState(false);
+  const [projectId, setProjectId] = useState(() => readSession().projectId);
+  const [workspaceId, setWorkspaceId] = useState(() => readSession().workspaceId);
+  const [projectName, setProjectName] = useState(() => readSession().projectName);
 
   useEffect(() => {
-    // Listen for Firebase auth state changes
+    localStorage.removeItem('accessCode');
     const unsubscribe = onAuthChange((user) => {
-      if (user) {
-        const savedAccessCode = localStorage.getItem('accessCode');
-        if (savedAccessCode) {
-          setIsAuthenticated(true);
-          setAccessCode(savedAccessCode);
-        }
-      } else {
-        setIsAuthenticated(false);
-        setAccessCode(null);
+      if (user && user.isAnonymous) {
+        signOut();
+        setAuthUser(null);
+        return;
       }
-      setLoading(false);
+      setAuthUser(user || null);
     });
-
     return () => unsubscribe();
   }, []);
 
-  const handleLogin = async (code) => {
-    setAccessCode(code);
-    setIsAuthenticated(true);
-    
-    // Sync any existing local data to Firestore
-    try {
-      const existingExpenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-      if (existingExpenses.length > 0) {
-        await syncExpensesToFirestore(code, existingExpenses);
-        // Clear local storage after successful sync
-        localStorage.removeItem('expenses');
-      }
-    } catch (error) {
-      console.error('Error syncing local data:', error);
+  useEffect(() => {
+    let cancelled = false;
+    if (!authUser) {
+      setMembership(null);
+      setMembershipLoading(false);
+      return undefined;
     }
-  };
+
+    setMembershipLoading(true);
+    resolveInvitation(authUser)
+      .then(async (result) => {
+        if (cancelled) return;
+        setMembership(result);
+
+        if (!result.invited) {
+          clearSession();
+          setProjectId(null);
+          setWorkspaceId(null);
+          setProjectName(null);
+          setMembershipLoading(false);
+          return;
+        }
+
+        const allowed = await listOrgProjects(result.email);
+        if (cancelled) return;
+        const session = readSession();
+        const current = allowed.find((row) => row.projectId === session.projectId);
+        if (current) {
+          setProjectId(current.projectId);
+          setWorkspaceId(current.workspaceId);
+          setProjectName(current.name);
+        } else {
+          writeSession({
+            projectId: null,
+            workspaceId: null,
+            projectName: null,
+            orgId: result.orgId,
+          });
+          setProjectId(null);
+          setWorkspaceId(null);
+          setProjectName(null);
+        }
+        setMembershipLoading(false);
+      })
+      .catch((err) => {
+        console.error('Invite check failed:', err);
+        if (!cancelled) setMembershipLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser]);
 
   const handleLogout = async () => {
-    try {
-      const result = await signOut();
-      if (result.success) {
-        setIsAuthenticated(false);
-        setAccessCode(null);
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await signOut();
+    setMembership(null);
+    setProjectId(null);
+    setWorkspaceId(null);
+    setProjectName(null);
   };
 
-  // Show loading screen while checking auth state
-  if (loading) {
+  const handlePickProject = (project) => {
+    if (!project.projectId) {
+      return;
+    }
+    writeSession({
+      projectId: project.projectId,
+      workspaceId: project.workspaceId,
+      projectName: project.name,
+      orgId: membership.orgId,
+    });
+    setProjectId(project.projectId);
+    setWorkspaceId(project.workspaceId);
+    setProjectName(project.name);
+  };
+
+  const handleSwitchProject = () => {
+    writeSession({
+      projectId: null,
+      workspaceId: null,
+      projectName: null,
+      orgId: membership ? membership.orgId : null,
+    });
+    setProjectId(null);
+    setWorkspaceId(null);
+    setProjectName(null);
+  };
+
+  if (authUser === undefined) {
     return (
       <div className="min-h-screen bg-slate-700 flex items-center justify-center">
         <div className="text-center">
@@ -75,25 +133,57 @@ function App() {
     );
   }
 
-  // Show login screen if not authenticated
-  if (!isAuthenticated || !accessCode) {
-    return <LoginScreen onLogin={handleLogin} />;
+  if (!authUser) {
+    return <LoginScreen />;
   }
 
-  // Show main app if authenticated
+  if (membershipLoading || !membership) {
+    return (
+      <div className="min-h-screen bg-slate-700 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
+          <p className="text-zinc-400">Checking invite…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!membership.invited) {
+    return (
+      <NotInvitedScreen
+        email={authUser.email || membership.email}
+        reason={membership.reason}
+        onSignOut={handleLogout}
+      />
+    );
+  }
+
+  if (!projectId) {
+    return (
+      <ProjectPicker
+        membership={membership}
+        onPick={handlePickProject}
+        onSignOut={handleLogout}
+      />
+    );
+  }
+
   return (
-    <AppProvider accessCode={accessCode}>
+    <AppProvider projectId={projectId} storageKey={workspaceId}>
       <div className="flex h-screen bg-slate-700 text-white overflow-hidden">
         <Sidebar />
         <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
-          <Header onLogout={handleLogout} />
+          <Header
+            onLogout={handleLogout}
+            onSwitchProject={handleSwitchProject}
+            projectName={projectName}
+          />
           <MainContent />
         </div>
-
         <CommandPalette />
       </div>
     </AppProvider>
   );
 }
 
-export default App; 
+export default App;

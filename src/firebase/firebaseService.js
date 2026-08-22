@@ -11,6 +11,7 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import { db } from "./config";
+import { FAMILY_ORG_ID } from "./tenancy";
 
 // Collection names
 const COLLECTIONS = {
@@ -27,7 +28,7 @@ const COLLECTIONS = {
 
 // ===== EXPENSES =====
 export const addExpense = async (accessCode, expenseData) => {
-  const docRef = await addDoc(collection(db, `users/${accessCode}/${COLLECTIONS.EXPENSES}`), {
+  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.EXPENSES}`), {
     ...expenseData,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -37,7 +38,7 @@ export const addExpense = async (accessCode, expenseData) => {
 
 export const getExpenses = async (accessCode) => {
   const q = query(
-    collection(db, `users/${accessCode}/${COLLECTIONS.EXPENSES}`),
+    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.EXPENSES}`),
     orderBy('createdAt', 'desc')
   );
   const querySnapshot = await getDocs(q);
@@ -48,7 +49,7 @@ export const getExpenses = async (accessCode) => {
 };
 
 export const updateExpense = async (accessCode, expenseId, expenseData) => {
-  const expenseRef = doc(db, `users/${accessCode}/${COLLECTIONS.EXPENSES}`, expenseId);
+  const expenseRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.EXPENSES}`, expenseId);
   await updateDoc(expenseRef, {
     ...expenseData,
     updatedAt: serverTimestamp()
@@ -62,7 +63,7 @@ export const updateExpense = async (accessCode, expenseId, expenseData) => {
 };
 
 export const deleteExpense = async (accessCode, expenseId) => {
-  const expenseRef = doc(db, `users/${accessCode}/${COLLECTIONS.EXPENSES}`, expenseId);
+  const expenseRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.EXPENSES}`, expenseId);
   await deleteDoc(expenseRef);
   
   // Also delete associated receipt image if it exists
@@ -77,7 +78,7 @@ export const deleteExpense = async (accessCode, expenseId) => {
 
 // ===== PURCHASE ORDERS =====
 export const addPurchaseOrder = async (accessCode, poData) => {
-  const docRef = await addDoc(collection(db, `users/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`), {
+  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`), {
     ...poData,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -87,7 +88,7 @@ export const addPurchaseOrder = async (accessCode, poData) => {
 
 export const getPurchaseOrders = async (accessCode) => {
   const q = query(
-    collection(db, `users/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`),
+    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`),
     orderBy('createdAt', 'desc')
   );
   const querySnapshot = await getDocs(q);
@@ -98,7 +99,7 @@ export const getPurchaseOrders = async (accessCode) => {
 };
 
 export const updatePurchaseOrder = async (accessCode, poId, poData) => {
-  const poRef = doc(db, `users/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`, poId);
+  const poRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`, poId);
   await updateDoc(poRef, {
     ...poData,
     updatedAt: serverTimestamp()
@@ -106,13 +107,13 @@ export const updatePurchaseOrder = async (accessCode, poId, poData) => {
 };
 
 export const deletePurchaseOrder = async (accessCode, poId) => {
-  const poRef = doc(db, `users/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`, poId);
+  const poRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`, poId);
   await deleteDoc(poRef);
 };
 
 // ===== WORKER HISTORY =====
 export const addWorkerToHistory = async (accessCode, workerData) => {
-  const docRef = await addDoc(collection(db, `users/${accessCode}/${COLLECTIONS.WORKER_HISTORY}`), {
+  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.WORKER_HISTORY}`), {
     ...workerData,
     createdAt: serverTimestamp()
   });
@@ -121,7 +122,7 @@ export const addWorkerToHistory = async (accessCode, workerData) => {
 
 export const getWorkerHistory = async (accessCode) => {
   const q = query(
-    collection(db, `users/${accessCode}/${COLLECTIONS.WORKER_HISTORY}`),
+    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.WORKER_HISTORY}`),
     orderBy('createdAt', 'desc')
   );
   const querySnapshot = await getDocs(q);
@@ -133,7 +134,7 @@ export const getWorkerHistory = async (accessCode) => {
 
 // ===== SITE NAMES =====
 export const addSiteName = async (accessCode, siteName) => {
-  const docRef = await addDoc(collection(db, `users/${accessCode}/${COLLECTIONS.SITE_NAMES}`), {
+  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.SITE_NAMES}`), {
     name: siteName,
     createdAt: serverTimestamp()
   });
@@ -142,7 +143,7 @@ export const addSiteName = async (accessCode, siteName) => {
 
 export const getSiteNames = async (accessCode) => {
   const q = query(
-    collection(db, `users/${accessCode}/${COLLECTIONS.SITE_NAMES}`),
+    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.SITE_NAMES}`),
     orderBy('createdAt', 'desc')
   );
   const querySnapshot = await getDocs(q);
@@ -154,7 +155,7 @@ export const getSiteNames = async (accessCode) => {
 
 // ===== PROJECT PHASES =====
 export const addProjectPhase = async (accessCode, phaseName) => {
-  const docRef = await addDoc(collection(db, `users/${accessCode}/${COLLECTIONS.PROJECT_PHASES}`), {
+  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECT_PHASES}`), {
     name: phaseName,
     createdAt: serverTimestamp()
   });
@@ -163,7 +164,7 @@ export const addProjectPhase = async (accessCode, phaseName) => {
 
 export const getProjectPhases = async (accessCode) => {
   const q = query(
-    collection(db, `users/${accessCode}/${COLLECTIONS.PROJECT_PHASES}`),
+    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECT_PHASES}`),
     orderBy('createdAt', 'desc')
   );
   const querySnapshot = await getDocs(q);
@@ -176,7 +177,7 @@ export const getProjectPhases = async (accessCode) => {
 // ===== CLIENTS =====
 export const saveClientInfo = async (accessCode, clientData) => {
   try {
-    const clientsCollectionRef = collection(db, `users/${accessCode}/${COLLECTIONS.CLIENTS}`);
+    const clientsCollectionRef = collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.CLIENTS}`);
     
     // Check if client with same email already exists (if email provided)
     if (clientData.email) {
@@ -230,7 +231,7 @@ export const saveClientInfo = async (accessCode, clientData) => {
 export const getClients = async (accessCode) => {
   try {
     const q = query(
-      collection(db, `users/${accessCode}/${COLLECTIONS.CLIENTS}`),
+      collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.CLIENTS}`),
       orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
@@ -248,7 +249,7 @@ export const getClients = async (accessCode) => {
 
 export const updateClient = async (accessCode, clientId, clientData) => {
   try {
-    const clientRef = doc(db, `users/${accessCode}/${COLLECTIONS.CLIENTS}`, clientId);
+    const clientRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.CLIENTS}`, clientId);
     await updateDoc(clientRef, {
       ...clientData,
       updatedAt: serverTimestamp()
@@ -270,7 +271,7 @@ export const updateClient = async (accessCode, clientId, clientData) => {
 
 export const deleteClient = async (accessCode, clientId) => {
   try {
-    const clientRef = doc(db, `users/${accessCode}/${COLLECTIONS.CLIENTS}`, clientId);
+    const clientRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.CLIENTS}`, clientId);
     await deleteDoc(clientRef);
     
     return { success: true };
@@ -288,7 +289,7 @@ export const addClient = async (accessCode, clientData) => {
 // ===== LABOUR =====
 export const saveLabourInfo = async (accessCode, labourData) => {
   try {
-    const labourCollectionRef = collection(db, `users/${accessCode}/${COLLECTIONS.LABOUR}`);
+    const labourCollectionRef = collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.LABOUR}`);
     
     // Check if labour with same name and role already exists
     if (labourData.name && labourData.role) {
@@ -343,7 +344,7 @@ export const saveLabourInfo = async (accessCode, labourData) => {
 export const getLabour = async (accessCode) => {
   try {
     const q = query(
-      collection(db, `users/${accessCode}/${COLLECTIONS.LABOUR}`),
+      collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.LABOUR}`),
       orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
@@ -361,7 +362,7 @@ export const getLabour = async (accessCode) => {
 
 export const updateLabour = async (accessCode, labourId, labourData) => {
   try {
-    const labourRef = doc(db, `users/${accessCode}/${COLLECTIONS.LABOUR}`, labourId);
+    const labourRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.LABOUR}`, labourId);
     await updateDoc(labourRef, {
       ...labourData,
       updatedAt: serverTimestamp()
@@ -383,7 +384,7 @@ export const updateLabour = async (accessCode, labourId, labourData) => {
 
 export const deleteLabour = async (accessCode, labourId) => {
   try {
-    const labourRef = doc(db, `users/${accessCode}/${COLLECTIONS.LABOUR}`, labourId);
+    const labourRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.LABOUR}`, labourId);
     await deleteDoc(labourRef);
     
     return { success: true };
@@ -396,7 +397,7 @@ export const deleteLabour = async (accessCode, labourId) => {
 // ===== TRADES =====
 export const saveTradeInfo = async (accessCode, tradeData) => {
   try {
-    const tradesCollectionRef = collection(db, `users/${accessCode}/${COLLECTIONS.TRADES}`);
+    const tradesCollectionRef = collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.TRADES}`);
     
     // Check if trade with same name and category already exists
     if (tradeData.tradeName && tradeData.tradeCategory) {
@@ -451,7 +452,7 @@ export const saveTradeInfo = async (accessCode, tradeData) => {
 export const getTrades = async (accessCode) => {
   try {
     const q = query(
-      collection(db, `users/${accessCode}/${COLLECTIONS.TRADES}`),
+      collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.TRADES}`),
       orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
@@ -469,7 +470,7 @@ export const getTrades = async (accessCode) => {
 
 export const updateTrade = async (accessCode, tradeId, tradeData) => {
   try {
-    const tradeRef = doc(db, `users/${accessCode}/${COLLECTIONS.TRADES}`, tradeId);
+    const tradeRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.TRADES}`, tradeId);
     await updateDoc(tradeRef, {
       ...tradeData,
       updatedAt: serverTimestamp()
@@ -491,7 +492,7 @@ export const updateTrade = async (accessCode, tradeId, tradeData) => {
 
 export const deleteTrade = async (accessCode, tradeId) => {
   try {
-    const tradeRef = doc(db, `users/${accessCode}/${COLLECTIONS.TRADES}`, tradeId);
+    const tradeRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.TRADES}`, tradeId);
     await deleteDoc(tradeRef);
     
     return { success: true };
@@ -504,7 +505,7 @@ export const deleteTrade = async (accessCode, tradeId) => {
 // ===== PROJECTS =====
 export const saveProjectInfo = async (accessCode, projectData) => {
   try {
-    const projectsCollectionRef = collection(db, `users/${accessCode}/${COLLECTIONS.PROJECTS}`);
+    const projectsCollectionRef = collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECTS}`);
     
     // Check if project with same name already exists
     if (projectData.name) {
@@ -558,7 +559,7 @@ export const saveProjectInfo = async (accessCode, projectData) => {
 export const getProjects = async (accessCode) => {
   try {
     const q = query(
-      collection(db, `users/${accessCode}/${COLLECTIONS.PROJECTS}`),
+      collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECTS}`),
       orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
@@ -576,7 +577,7 @@ export const getProjects = async (accessCode) => {
 
 export const updateProject = async (accessCode, projectId, projectData) => {
   try {
-    const projectRef = doc(db, `users/${accessCode}/${COLLECTIONS.PROJECTS}`, projectId);
+    const projectRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECTS}`, projectId);
     await updateDoc(projectRef, {
       ...projectData,
       updatedAt: serverTimestamp()
@@ -598,7 +599,7 @@ export const updateProject = async (accessCode, projectId, projectData) => {
 
 export const deleteProject = async (accessCode, projectId) => {
   try {
-    const projectRef = doc(db, `users/${accessCode}/${COLLECTIONS.PROJECTS}`, projectId);
+    const projectRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECTS}`, projectId);
     await deleteDoc(projectRef);
     
     return { success: true };

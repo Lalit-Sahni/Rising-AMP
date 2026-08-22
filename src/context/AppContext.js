@@ -47,7 +47,7 @@ export const useApp = () => {
   return context;
 };
 
-export const AppProvider = ({ children, accessCode }) => {
+export const AppProvider = ({ children, projectId: jobListId, storageKey }) => {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [expenses, setExpenses] = useState([]);
   const [budget, setBudget] = useState(0);
@@ -62,10 +62,10 @@ export const AppProvider = ({ children, accessCode }) => {
   const [userBankDetails, setUserBankDetails] = useState(null);
   const [savedPayers, setSavedPayers] = useState([]);
 
-  // Load all data from Firestore when accessCode changes or component mounts
+  // Load all data from Firestore when the selected job list changes
   useEffect(() => {
-    if (accessCode) {
-      logger.firebase('LOAD_DATA', 'Loading data for access code:', accessCode);
+    if (jobListId) {
+      logger.firebase('LOAD_DATA', 'Loading data for project:', jobListId);
       
       // Add a loading state to prevent multiple simultaneous loads
       let isMounted = true;
@@ -73,7 +73,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load expenses and budget
       const loadExpensesAndBudget = async () => {
         try {
-          const result = await fetchExpensesFromFirestore(accessCode);
+          const result = await fetchExpensesFromFirestore(jobListId);
           if (result.success && isMounted) {
             setExpenses(result.expenses);
             setBudget(result.budget || 0);
@@ -94,7 +94,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load saved labour
       const loadLabour = async () => {
         try {
-          const result = await getLabour(accessCode);
+          const result = await getLabour(jobListId);
           if (result.success) {
             const labourData = result.labour || [];
             setSavedLabour(Array.isArray(labourData) ? labourData : []);
@@ -112,7 +112,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load saved trades
       const loadTrades = async () => {
         try {
-          const result = await getTrades(accessCode);
+          const result = await getTrades(jobListId);
           if (result.success) {
             const tradesData = result.trades || [];
             setSavedTrades(Array.isArray(tradesData) ? tradesData : []);
@@ -130,7 +130,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load saved companies
       const loadCompanies = async () => {
         try {
-          const result = await getClients(accessCode);
+          const result = await getClients(jobListId);
           if (result.success) {
             const clientsData = result.clients || [];
             setClients(Array.isArray(clientsData) ? clientsData : []);
@@ -148,7 +148,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load saved projects
       const loadProjects = async () => {
         try {
-          const result = await getProjects(accessCode);
+          const result = await getProjects(jobListId);
           if (result.success) {
             const projectsData = result.projects || [];
             setSavedProjects(Array.isArray(projectsData) ? projectsData : []);
@@ -166,7 +166,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load progress payments
       const loadPayments = async () => {
         try {
-          const result = await fetchProgressPayments(accessCode);
+          const result = await fetchProgressPayments(jobListId);
           if (result.success) {
             setProgressPayments(result.progressPayments);
             console.log('Loaded progress payments:', result.progressPayments.length);
@@ -181,7 +181,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load invoices
       const loadInvoices = async () => {
         try {
-          const result = await fetchInvoicesFromFirestore(accessCode);
+          const result = await fetchInvoicesFromFirestore(jobListId);
           if (result.success) {
             setInvoices(result.invoices);
             console.log('Loaded invoices:', result.invoices.length);
@@ -196,7 +196,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load HIA contracts
       const loadHIAContracts = async () => {
         try {
-          const result = await fetchHIAContractsFromFirestore(accessCode);
+          const result = await fetchHIAContractsFromFirestore(jobListId);
           if (result.success) {
             setHiaContracts(result.hiaContracts);
             console.log('Loaded HIA contracts:', result.hiaContracts.length);
@@ -211,7 +211,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load client details - using clients collection now
       const loadClientDetails = async () => {
         try {
-          const result = await getClients(accessCode);
+          const result = await getClients(jobListId);
           if (result.success) {
             setClientDetails(result.clients);
             console.log('Loaded client details:', result.clients.length);
@@ -226,7 +226,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load user bank details
       const loadUserBankDetails = async () => {
         try {
-          const result = await fetchUserBankDetailsFromFirestore(accessCode);
+          const result = await fetchUserBankDetailsFromFirestore(jobListId);
           if (result.success) {
             setUserBankDetails(result.userBankDetails);
             console.log('Loaded user bank details:', result.userBankDetails);
@@ -241,7 +241,7 @@ export const AppProvider = ({ children, accessCode }) => {
       // Load payers
       const loadPayers = async () => {
         try {
-          const result = await fetchPayersFromFirestore(accessCode);
+          const result = await fetchPayersFromFirestore(jobListId);
           if (result.success) {
             setSavedPayers(result.payers || []);
           } else {
@@ -281,7 +281,7 @@ export const AppProvider = ({ children, accessCode }) => {
         isMounted = false;
       };
     }
-  }, [accessCode]);
+  }, [jobListId]);
 
   // Toast notification function
   const showToast = (message, type = 'info') => {
@@ -292,7 +292,7 @@ export const AppProvider = ({ children, accessCode }) => {
   // Expense functions
   const addExpenseToFirebase = async (expenseData) => {
     try {
-      const result = await addExpenseToFirestore(accessCode, expenseData);
+      const result = await addExpenseToFirestore(jobListId, expenseData);
       if (result.success) {
         setExpenses(prev => [...prev, result.expense]);
         showToast('Expense added successfully', 'success');
@@ -310,7 +310,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const updateExpenseInFirebase = async (expenseId, expenseData) => {
     try {
-      const result = await updateExpenseInFirestore(accessCode, expenseId, expenseData);
+      const result = await updateExpenseInFirestore(jobListId, expenseId, expenseData);
       if (result.success) {
         setExpenses(prev => prev.map(exp => exp.id === expenseId ? result.expense : exp));
         showToast('Expense updated successfully', 'success');
@@ -331,7 +331,7 @@ export const AppProvider = ({ children, accessCode }) => {
       console.log('🗑️ [DELETION v2.1] Starting deletion for expense:', expenseId);
       
       // Simple approach: Delete from Firebase first, then update UI
-      const result = await deleteExpenseFromFirestore(accessCode, expenseId);
+      const result = await deleteExpenseFromFirestore(jobListId, expenseId);
       
       if (result.success) {
         console.log('✅ [DELETION v2.1] Firebase deletion successful:', expenseId);
@@ -372,7 +372,7 @@ export const AppProvider = ({ children, accessCode }) => {
   // Saved data functions
   const saveLabourToFirebase = async (labourData) => {
     try {
-      const result = await saveLabourInfo(accessCode, labourData);
+      const result = await saveLabourInfo(jobListId, labourData);
       if (result.success) {
         const labourItem = result.labour || result.savedLabour;
         setSavedLabour(prev => [...prev, labourItem]);
@@ -391,7 +391,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const saveTradeToFirebase = async (tradeData) => {
     try {
-      const result = await saveTradeInfo(accessCode, tradeData);
+      const result = await saveTradeInfo(jobListId, tradeData);
       if (result.success) {
         const tradeItem = result.trade || result.savedTrade;
         setSavedTrades(prev => [...prev, tradeItem]);
@@ -410,7 +410,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const loadSavedLabour = async () => {
     try {
-      const result = await getLabour(accessCode);
+      const result = await getLabour(jobListId);
       if (result.success) {
         const labourData = result.labour || [];
         setSavedLabour(labourData);
@@ -428,7 +428,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const loadSavedTrades = async () => {
     try {
-      const result = await getTrades(accessCode);
+      const result = await getTrades(jobListId);
       if (result.success) {
         const tradesData = result.trades || [];
         setSavedTrades(tradesData);
@@ -447,7 +447,7 @@ export const AppProvider = ({ children, accessCode }) => {
   // Progress payment functions
   const addProgressPaymentToFirebase = async (paymentData) => {
     try {
-      const result = await addProgressPayment(accessCode, paymentData);
+      const result = await addProgressPayment(jobListId, paymentData);
       if (result.success) {
         setProgressPayments(prev => [...prev, result.progressPayment]);
         showToast('Progress payment added successfully', 'success');
@@ -465,7 +465,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const updateProgressPaymentInFirebase = async (paymentId, paymentData) => {
     try {
-      const result = await updateProgressPayment(accessCode, paymentId, paymentData);
+      const result = await updateProgressPayment(jobListId, paymentId, paymentData);
       if (result.success) {
         setProgressPayments(prev => prev.map(payment => payment.id === paymentId ? result.progressPayment : payment));
         showToast('Progress payment updated successfully', 'success');
@@ -483,7 +483,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const deleteProgressPaymentFromFirebase = async (paymentId) => {
     try {
-      const result = await deleteProgressPayment(accessCode, paymentId);
+      const result = await deleteProgressPayment(jobListId, paymentId);
       if (result.success) {
         setProgressPayments(prev => prev.filter(payment => payment.id !== paymentId));
         showToast('Progress payment deleted successfully', 'success');
@@ -501,7 +501,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const loadProgressPayments = async () => {
     try {
-      const result = await fetchProgressPayments(accessCode);
+      const result = await fetchProgressPayments(jobListId);
       if (result.success) {
         setProgressPayments(result.progressPayments);
         return { success: true, progressPayments: result.progressPayments };
@@ -517,7 +517,7 @@ export const AppProvider = ({ children, accessCode }) => {
   // Invoice functions
   const addInvoiceToFirebase = async (invoiceData) => {
     try {
-      const result = await addInvoiceToFirestore(accessCode, invoiceData);
+      const result = await addInvoiceToFirestore(jobListId, invoiceData);
       if (result.success) {
         setInvoices(prev => [...prev, result.invoice]);
         showToast('Invoice added successfully', 'success');
@@ -535,7 +535,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const updateInvoiceInFirebase = async (invoiceId, invoiceData) => {
     try {
-      const result = await updateInvoiceInFirestore(accessCode, invoiceId, invoiceData);
+      const result = await updateInvoiceInFirestore(jobListId, invoiceId, invoiceData);
       if (result.success) {
         setInvoices(prev => prev.map(inv => inv.id === invoiceId ? result.invoice : inv));
         showToast('Invoice updated successfully', 'success');
@@ -553,7 +553,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const updateInvoiceStatus = async (invoiceId, status) => {
     try {
-      const result = await updateInvoiceInFirestore(accessCode, invoiceId, { status });
+      const result = await updateInvoiceInFirestore(jobListId, invoiceId, { status });
       if (result.success) {
         setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status } : inv));
         showToast('Invoice status updated successfully', 'success');
@@ -571,7 +571,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const deleteInvoiceFromFirebase = async (invoiceId) => {
     try {
-      const result = await deleteInvoiceFromFirestore(accessCode, invoiceId);
+      const result = await deleteInvoiceFromFirestore(jobListId, invoiceId);
       if (result.success) {
         setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
         showToast('Invoice deleted successfully', 'success');
@@ -589,7 +589,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const loadInvoices = async () => {
     try {
-      const result = await fetchInvoicesFromFirestore(accessCode);
+      const result = await fetchInvoicesFromFirestore(jobListId);
       if (result.success) {
         setInvoices(result.invoices);
         return { success: true, invoices: result.invoices };
@@ -605,7 +605,7 @@ export const AppProvider = ({ children, accessCode }) => {
   // Company and Project functions
   const saveCompanyToFirebase = async (companyData) => {
     try {
-      const result = await saveClientInfo(accessCode, companyData);
+      const result = await saveClientInfo(jobListId, companyData);
       if (result.success) {
         setClients(prev => [...prev, result.client]);
         showToast('Client saved successfully', 'success');
@@ -623,7 +623,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const saveProjectToFirebase = async (projectData) => {
     try {
-      const result = await saveProjectInfo(accessCode, projectData);
+      const result = await saveProjectInfo(jobListId, projectData);
       if (result.success) {
         setSavedProjects(prev => [...prev, result.project]);
         showToast('Project saved successfully', 'success');
@@ -642,7 +642,7 @@ export const AppProvider = ({ children, accessCode }) => {
   // Delete functions
   const deleteLabourFromFirebase = async (labourId) => {
     try {
-      const result = await deleteLabour(accessCode, labourId);
+      const result = await deleteLabour(jobListId, labourId);
       if (result.success) {
         setSavedLabour(prev => prev.filter(labour => labour.id !== labourId));
         showToast('Labour deleted successfully', 'success');
@@ -660,7 +660,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const deleteTradeFromFirebase = async (tradeId) => {
     try {
-      const result = await deleteTrade(accessCode, tradeId);
+      const result = await deleteTrade(jobListId, tradeId);
       if (result.success) {
         setSavedTrades(prev => prev.filter(trade => trade.id !== tradeId));
         showToast('Trade deleted successfully', 'success');
@@ -678,7 +678,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const deleteProjectFromFirebase = async (projectId) => {
     try {
-      const result = await deleteProject(accessCode, projectId);
+      const result = await deleteProject(jobListId, projectId);
       if (result.success) {
         setSavedProjects(prev => prev.filter(project => project.id !== projectId));
         showToast('Project deleted successfully', 'success');
@@ -696,7 +696,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const deleteClientFromFirebase = async (clientId) => {
     try {
-      const result = await deleteClient(accessCode, clientId);
+      const result = await deleteClient(jobListId, clientId);
       if (result.success) {
         setClients(prev => prev.filter(client => client.id !== clientId));
         showToast('Client deleted successfully', 'success');
@@ -714,7 +714,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const loadCompanies = async () => {
     try {
-      const result = await getClients(accessCode);
+      const result = await getClients(jobListId);
       if (result.success) {
         setClients(result.clients);
         return { success: true, clients: result.clients };
@@ -729,7 +729,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const loadProjects = async () => {
     try {
-      const result = await getProjects(accessCode);
+      const result = await getProjects(jobListId);
       if (result.success) {
         setSavedProjects(result.projects);
         return { success: true, savedProjects: result.projects };
@@ -745,7 +745,7 @@ export const AppProvider = ({ children, accessCode }) => {
   // HIA Contract functions
   const addHIAContractToFirebase = async (contractData) => {
     try {
-      const result = await saveHIAContractToFirestore(accessCode, contractData);
+      const result = await saveHIAContractToFirestore(jobListId, contractData);
       if (result.success) {
         setHiaContracts(prev => [...prev, result.hiaContract]);
         showToast('HIA Contract saved successfully', 'success');
@@ -763,7 +763,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const updateHIAContractInFirebase = async (contractId, updates) => {
     try {
-      const result = await updateHIAContractInFirestore(accessCode, contractId, updates);
+      const result = await updateHIAContractInFirestore(jobListId, contractId, updates);
       if (result.success) {
         setHiaContracts(prev => prev.map(contract => contract.id === contractId ? result.hiaContract : contract));
         showToast('HIA Contract updated successfully', 'success');
@@ -781,7 +781,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const deleteHIAContractFromFirebase = async (contractId) => {
     try {
-      const result = await deleteHIAContractFromFirestore(accessCode, contractId);
+      const result = await deleteHIAContractFromFirestore(jobListId, contractId);
       if (result.success) {
         setHiaContracts(prev => prev.filter(contract => contract.id !== contractId));
         showToast('HIA Contract deleted successfully', 'success');
@@ -799,7 +799,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const loadHIAContracts = async () => {
     try {
-      const result = await fetchHIAContractsFromFirestore(accessCode);
+      const result = await fetchHIAContractsFromFirestore(jobListId);
       if (result.success) {
         setHiaContracts(result.hiaContracts);
         return { success: true, hiaContracts: result.hiaContracts };
@@ -817,7 +817,7 @@ export const AppProvider = ({ children, accessCode }) => {
     try {
       // Add projectId to client data for backward compatibility
       const clientWithProject = { ...clientData, projectId };
-      const result = await saveClientInfo(accessCode, clientWithProject);
+      const result = await saveClientInfo(jobListId, clientWithProject);
       if (result.success) {
         setClientDetails(prev => [...prev, result.client]);
         showToast('Client details saved successfully', 'success');
@@ -835,7 +835,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const loadClientDetails = async (projectId = null) => {
     try {
-      const result = await getClients(accessCode);
+      const result = await getClients(jobListId);
       if (result.success) {
         // Filter by projectId if provided for backward compatibility
         const filteredClients = projectId 
@@ -855,7 +855,7 @@ export const AppProvider = ({ children, accessCode }) => {
   // User Bank Details functions
   const saveUserBankDetailsToFirebase = async (bankData) => {
     try {
-      const result = await saveUserBankDetailsToFirestore(accessCode, bankData);
+      const result = await saveUserBankDetailsToFirestore(jobListId, bankData);
       if (result.success) {
         setUserBankDetails(result.userBankDetails);
         showToast('Bank details saved successfully', 'success');
@@ -873,7 +873,7 @@ export const AppProvider = ({ children, accessCode }) => {
 
   const loadUserBankDetails = async () => {
     try {
-      const result = await fetchUserBankDetailsFromFirestore(accessCode);
+      const result = await fetchUserBankDetailsFromFirestore(jobListId);
       if (result.success) {
         setUserBankDetails(result.userBankDetails);
         return { success: true, userBankDetails: result.userBankDetails };
@@ -890,7 +890,7 @@ export const AppProvider = ({ children, accessCode }) => {
   const savePayerToFirebase = async (payerName) => {
     if (!payerName || !payerName.trim()) return;
     try {
-      const result = await savePayerToFirestore(accessCode, payerName.trim());
+      const result = await savePayerToFirestore(jobListId, payerName.trim());
       if (result.success) {
         setSavedPayers(prev => {
           const exists = prev.some(p => p.name === payerName.trim());
@@ -903,7 +903,8 @@ export const AppProvider = ({ children, accessCode }) => {
   };
 
   const value = {
-    accessCode,
+    accessCode: jobListId,
+    storageKey,
     currentPage,
     setCurrentPage,
     expenses,

@@ -67,9 +67,64 @@ service cloud.firestore {
       }
     }
     
+    // Product-agnostic org + invite list (Phase 1 B).
+    match /organizations/{orgId} {
+      function signedIn() {
+        return request.auth != null
+          && request.auth.token.email is string
+          && request.auth.token.email.size() > 0;
+      }
+
+      function emailLower() {
+        return request.auth.token.email.lower();
+      }
+
+      function isInvited() {
+        return signedIn() && emailLower() in resource.data.invitedEmails;
+      }
+
+      allow read: if isInvited();
+      allow create, delete: if false;
+      allow update: if isInvited()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['legacyWorkspaceNames', 'invitedEmails', 'updatedAt'])
+        && request.resource.data.ownerEmail.lower() in request.resource.data.invitedEmails
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['invitedEmails'])
+          || emailLower() == resource.data.ownerEmail.lower()
+        );
+
+      match /projects/{projectId} {
+        function isProjectMember() {
+          return signedIn() && emailLower() in resource.data.invitedEmails;
+        }
+
+        function canUseProject() {
+          return signedIn()
+            && emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)/projects/$(projectId)).data.invitedEmails;
+        }
+
+        allow read: if isProjectMember();
+        allow update: if isProjectMember()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['name', 'invitedEmails', 'updatedAt'])
+          && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerEmail.lower()
+            in request.resource.data.invitedEmails;
+        allow create, delete: if false;
+
+        match /{allPaths=**} {
+          allow read, write: if canUseProject();
+        }
+      }
+
+      match /{allPaths=**} {
+        allow read, write: if false;
+      }
+    }
+
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;
     }
   }
-} 
+}

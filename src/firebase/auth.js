@@ -1,30 +1,32 @@
-import { 
-  signInAnonymously, 
+import {
+  GoogleAuthProvider,
+  signInWithPopup,
   signOut as firebaseSignOut,
-  onAuthStateChanged 
+  onAuthStateChanged,
 } from 'firebase/auth';
 import { auth } from './config';
+import { clearSession } from './tenancy';
 
-export const loginWithAccessCode = async (accessCode) => {
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+export const loginWithGoogle = async () => {
   try {
-    // Sign in anonymously first
-    const userCredential = await signInAnonymously(auth);
-    const user = userCredential.user;
-    
-    // Store access code in localStorage for persistence
-    localStorage.setItem('accessCode', accessCode);
-    
-    return { success: true, user, accessCode };
+    const credential = await signInWithPopup(auth, googleProvider);
+    return { success: true, user: credential.user };
   } catch (error) {
-    console.error('Login error:', error);
-    return { success: false, error: error.message };
+    if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+      return { success: false, cancelled: true };
+    }
+    console.error('Google login error:', error);
+    return { success: false, error: error.message, code: error.code };
   }
 };
 
 export const signOut = async () => {
   try {
     await firebaseSignOut(auth);
-    localStorage.removeItem('accessCode');
+    clearSession();
     return { success: true };
   } catch (error) {
     console.error('Sign out error:', error);
@@ -38,4 +40,4 @@ export const getCurrentUser = () => {
 
 export const onAuthChange = (callback) => {
   return onAuthStateChanged(auth, callback);
-}; 
+};

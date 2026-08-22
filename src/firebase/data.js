@@ -15,29 +15,25 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from './config';
+import { FAMILY_ORG_ID } from './tenancy';
 
-// Create or ensure user document exists
-const ensureUserDocument = async (accessCode) => {
-  const userDocRef = doc(db, 'users', accessCode);
-  const userDoc = await getDoc(userDocRef);
-  
-  if (!userDoc.exists()) {
-    await setDoc(userDocRef, {
-      accessCode,
-      budget: 0,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+const projectRootRef = async (projectId) => {
+  if (!projectId) {
+    throw new Error('Missing job list');
   }
-  
-  return userDocRef;
+  const projectRef = doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId);
+  const projectDoc = await getDoc(projectRef);
+  if (!projectDoc.exists()) {
+    throw new Error('Job list not found');
+  }
+  return projectRef;
 };
 
 // Sync local expenses to Firestore (migrate from array to subcollection)
 export const syncExpensesToFirestore = async (accessCode, expenses) => {
   try {
     console.log('Syncing expenses to Firestore with consistent IDs');
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     
     // Add each expense as a separate document using expense ID as document ID
     for (const expense of expenses) {
@@ -64,7 +60,7 @@ export const syncExpensesToFirestore = async (accessCode, expenses) => {
 export const fetchExpensesFromFirestore = async (accessCode) => {
   try {
     console.log('Attempting to fetch data for access code:', accessCode);
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const expensesCollectionRef = collection(userDocRef, 'expenses');
     
     // Query expenses ordered by timestamp with limit for performance
@@ -106,7 +102,7 @@ export const fetchExpensesFromFirestore = async (accessCode) => {
 // Update budget in Firestore
 export const updateBudgetInFirestore = async (accessCode, budget) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     await updateDoc(userDocRef, {
       budget: budget,
       updatedAt: serverTimestamp()
@@ -124,7 +120,7 @@ export const addExpenseToFirestore = async (accessCode, expense) => {
   try {
     console.log('Adding expense with ID:', expense.id, 'to Firebase');
     
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const expenseDocRef = doc(userDocRef, 'expenses', expense.id);
     
     // Use setDoc with the expense's ID as the document ID
@@ -149,7 +145,7 @@ export const addExpenseToFirestore = async (accessCode, expense) => {
 // Update expense in Firestore
 export const updateExpenseInFirestore = async (accessCode, expenseId, updatedExpense) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
     
     await updateDoc(expenseDocRef, {
@@ -185,7 +181,7 @@ export const deleteExpenseFromFirestore = async (accessCode, expenseId) => {
       return { success: false, error: 'Expense ID is required' };
     }
     
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
     
     // Verify the document exists before deleting
@@ -229,7 +225,7 @@ export const batchDeleteExpenses = async (accessCode, expenseIds) => {
   try {
     console.log('Batch deleting expenses:', expenseIds, 'for access code:', accessCode);
     
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const batch = writeBatch(db);
     
     for (const expenseId of expenseIds) {
@@ -250,7 +246,7 @@ export const batchDeleteExpenses = async (accessCode, expenseIds) => {
 // Save labour information (updated to use unified structure)
 export const saveLabourInfo = async (accessCode, labourData) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const labourCollectionRef = collection(userDocRef, 'labour');
     
     // Check if labour with same name and role already exists
@@ -304,7 +300,7 @@ export const saveLabourInfo = async (accessCode, labourData) => {
 // Save trade information (updated to use unified structure)
 export const saveTradeInfo = async (accessCode, tradeData) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const tradeCollectionRef = collection(userDocRef, 'trades');
     
     // Check if trade with same name and category already exists
@@ -358,7 +354,7 @@ export const saveTradeInfo = async (accessCode, tradeData) => {
 // Fetch labour (updated to use unified structure)
 export const fetchLabour = async (accessCode) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const labourCollectionRef = collection(userDocRef, 'labour');
     const labourQuery = query(labourCollectionRef, orderBy('createdAt', 'desc'));
     const labourSnapshot = await getDocs(labourQuery);
@@ -386,7 +382,7 @@ export const fetchSavedLabour = async (accessCode) => {
 // Fetch trades (updated to use unified structure)
 export const fetchTrades = async (accessCode) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const tradeCollectionRef = collection(userDocRef, 'trades');
     const tradeQuery = query(tradeCollectionRef, orderBy('createdAt', 'desc'));
     const tradeSnapshot = await getDocs(tradeQuery);
@@ -414,7 +410,7 @@ export const fetchSavedTrades = async (accessCode) => {
 // Save client information (replaces saveCompanyInfo)
 export const saveClientInfo = async (accessCode, clientData) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const clientCollectionRef = collection(userDocRef, 'clients');
     
     // Check if client with same email already exists (if email provided)
@@ -467,7 +463,7 @@ export const saveClientInfo = async (accessCode, clientData) => {
 // Save project information (updated to use unified structure)
 export const saveProjectInfo = async (accessCode, projectData) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const projectCollectionRef = collection(userDocRef, 'projects');
     
     // Check if project with same name already exists
@@ -520,7 +516,7 @@ export const saveProjectInfo = async (accessCode, projectData) => {
 // Fetch clients (replaces fetchSavedCompanies)
 export const fetchClients = async (accessCode) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const clientCollectionRef = collection(userDocRef, 'clients');
     const clientQuery = query(clientCollectionRef, orderBy('createdAt', 'desc'));
     const clientSnapshot = await getDocs(clientQuery);
@@ -543,7 +539,7 @@ export const fetchClients = async (accessCode) => {
 // Fetch projects (updated to use unified structure)
 export const fetchProjects = async (accessCode) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const projectCollectionRef = collection(userDocRef, 'projects');
     const projectQuery = query(projectCollectionRef, orderBy('createdAt', 'desc'));
     const projectSnapshot = await getDocs(projectQuery);
@@ -571,7 +567,7 @@ export const fetchSavedProjects = async (accessCode) => {
 // Progress payment functions
 export const addProgressPayment = async (accessCode, paymentData) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const paymentsCollectionRef = collection(userDocRef, 'progressPayments');
     
     const docRef = await addDoc(paymentsCollectionRef, {
@@ -594,7 +590,7 @@ export const addProgressPayment = async (accessCode, paymentData) => {
 
 export const fetchProgressPayments = async (accessCode) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const paymentsCollectionRef = collection(userDocRef, 'progressPayments');
     const paymentsQuery = query(paymentsCollectionRef, orderBy('timestamp', 'desc'));
     const paymentsSnapshot = await getDocs(paymentsQuery);
@@ -616,7 +612,7 @@ export const fetchProgressPayments = async (accessCode) => {
 
 export const updateProgressPayment = async (accessCode, paymentId, updatedPayment) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const paymentDocRef = doc(userDocRef, 'progressPayments', paymentId);
     
     await updateDoc(paymentDocRef, {
@@ -639,7 +635,7 @@ export const updateProgressPayment = async (accessCode, paymentId, updatedPaymen
 
 export const deleteProgressPayment = async (accessCode, paymentId) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const paymentDocRef = doc(userDocRef, 'progressPayments', paymentId);
     
     await deleteDoc(paymentDocRef);
@@ -654,7 +650,7 @@ export const deleteProgressPayment = async (accessCode, paymentId) => {
 // Invoice functions
 export const addInvoiceToFirestore = async (accessCode, invoice) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const invoicesCollectionRef = collection(userDocRef, 'invoices');
     
     const docRef = await addDoc(invoicesCollectionRef, {
@@ -677,7 +673,7 @@ export const addInvoiceToFirestore = async (accessCode, invoice) => {
 
 export const fetchInvoicesFromFirestore = async (accessCode) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const invoicesCollectionRef = collection(userDocRef, 'invoices');
     const invoicesQuery = query(invoicesCollectionRef, orderBy('timestamp', 'desc'));
     const invoicesSnapshot = await getDocs(invoicesQuery);
@@ -699,7 +695,7 @@ export const fetchInvoicesFromFirestore = async (accessCode) => {
 
 export const updateInvoiceInFirestore = async (accessCode, invoiceId, updatedInvoice) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const invoiceDocRef = doc(userDocRef, 'invoices', invoiceId);
     
     await updateDoc(invoiceDocRef, {
@@ -722,7 +718,7 @@ export const updateInvoiceInFirestore = async (accessCode, invoiceId, updatedInv
 
 export const deleteInvoiceFromFirestore = async (accessCode, invoiceId) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const invoiceDocRef = doc(userDocRef, 'invoices', invoiceId);
     
     await deleteDoc(invoiceDocRef);
@@ -737,7 +733,7 @@ export const deleteInvoiceFromFirestore = async (accessCode, invoiceId) => {
 // HIA Contract functions
 export const saveHIAContractToFirestore = async (accessCode, contractData) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const contractsCollectionRef = collection(userDocRef, 'hiaContracts');
     
     const docRef = await addDoc(contractsCollectionRef, {
@@ -760,7 +756,7 @@ export const saveHIAContractToFirestore = async (accessCode, contractData) => {
 
 export const fetchHIAContractsFromFirestore = async (accessCode) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const contractsCollectionRef = collection(userDocRef, 'hiaContracts');
     const contractsQuery = query(contractsCollectionRef, orderBy('timestamp', 'desc'));
     const contractsSnapshot = await getDocs(contractsQuery);
@@ -782,7 +778,7 @@ export const fetchHIAContractsFromFirestore = async (accessCode) => {
 
 export const updateHIAContractInFirestore = async (accessCode, contractId, updates) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const contractDocRef = doc(userDocRef, 'hiaContracts', contractId);
     
     await updateDoc(contractDocRef, {
@@ -805,7 +801,7 @@ export const updateHIAContractInFirestore = async (accessCode, contractId, updat
 
 export const deleteHIAContractFromFirestore = async (accessCode, contractId) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const contractDocRef = doc(userDocRef, 'hiaContracts', contractId);
     
     await deleteDoc(contractDocRef);
@@ -820,7 +816,7 @@ export const deleteHIAContractFromFirestore = async (accessCode, contractId) => 
 // Update client information
 export const updateClientInfo = async (accessCode, clientId, clientData) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const clientDocRef = doc(userDocRef, 'clients', clientId);
     
     await updateDoc(clientDocRef, {
@@ -844,7 +840,7 @@ export const updateClientInfo = async (accessCode, clientId, clientData) => {
 // Delete client information
 export const deleteClientInfo = async (accessCode, clientId) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const clientDocRef = doc(userDocRef, 'clients', clientId);
     
     await deleteDoc(clientDocRef);
@@ -859,7 +855,7 @@ export const deleteClientInfo = async (accessCode, clientId) => {
 // User Bank Details functions
 export const saveUserBankDetailsToFirestore = async (accessCode, bankData) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const bankDetailsCollectionRef = collection(userDocRef, 'bankDetails');
     
     // Check if bank details already exist
@@ -906,7 +902,7 @@ export const saveUserBankDetailsToFirestore = async (accessCode, bankData) => {
 
 export const fetchUserBankDetailsFromFirestore = async (accessCode) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const bankDetailsCollectionRef = collection(userDocRef, 'bankDetails');
     const bankDetailsQuery = query(bankDetailsCollectionRef, limit(1));
     const bankDetailsSnapshot = await getDocs(bankDetailsQuery);
@@ -931,7 +927,7 @@ export const fetchUserBankDetailsFromFirestore = async (accessCode) => {
 // Payer functions
 export const savePayerToFirestore = async (accessCode, payerName) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const payersCollectionRef = collection(userDocRef, 'payers');
 
     const existingQuery = query(payersCollectionRef, where('name', '==', payerName));
@@ -955,7 +951,7 @@ export const savePayerToFirestore = async (accessCode, payerName) => {
 
 export const fetchPayersFromFirestore = async (accessCode) => {
   try {
-    const userDocRef = await ensureUserDocument(accessCode);
+    const userDocRef = await projectRootRef(accessCode);
     const payersCollectionRef = collection(userDocRef, 'payers');
     const payersQuery = query(payersCollectionRef, orderBy('createdAt', 'asc'));
     const payersSnapshot = await getDocs(payersQuery);
