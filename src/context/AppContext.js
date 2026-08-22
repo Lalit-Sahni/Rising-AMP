@@ -18,10 +18,6 @@ import {
   deleteHIAContractFromFirestore,
   saveUserBankDetailsToFirestore,
   fetchUserBankDetailsFromFirestore,
-  addSiteLogToFirestore,
-  fetchSiteLogsFromFirestore,
-  updateSiteLogInFirestore,
-  deleteSiteLogFromFirestore,
   savePayerToFirestore,
   fetchPayersFromFirestore
 } from '../firebase/data';
@@ -64,7 +60,6 @@ export const AppProvider = ({ children, accessCode }) => {
   const [hiaContracts, setHiaContracts] = useState([]);
   const [clientDetails, setClientDetails] = useState([]);
   const [userBankDetails, setUserBankDetails] = useState(null);
-  const [siteLogs, setSiteLogs] = useState([]);
   const [savedPayers, setSavedPayers] = useState([]);
 
   // Load all data from Firestore when accessCode changes or component mounts
@@ -243,23 +238,6 @@ export const AppProvider = ({ children, accessCode }) => {
         }
       };
 
-      // Load site logs
-      const loadSiteLogs = async () => {
-        try {
-          const result = await fetchSiteLogsFromFirestore(accessCode);
-          if (result.success) {
-            setSiteLogs(result.siteLogs || []);
-            console.log('Loaded site logs:', result.siteLogs.length);
-          } else {
-            console.error('Failed to load site logs:', result.error);
-            setSiteLogs([]);
-          }
-        } catch (error) {
-          console.error('Error loading site logs:', error);
-          setSiteLogs([]);
-        }
-      };
-
       // Load payers
       const loadPayers = async () => {
         try {
@@ -287,7 +265,6 @@ export const AppProvider = ({ children, accessCode }) => {
         loadHIAContracts(),
         loadClientDetails(),
         loadUserBankDetails(),
-        loadSiteLogs(),
         loadPayers()
       ]).then(() => {
         if (isMounted) {
@@ -925,76 +902,6 @@ export const AppProvider = ({ children, accessCode }) => {
     }
   };
 
-  // Site Log functions
-  const addSiteLogToFirebase = async (logData) => {
-    try {
-      const result = await addSiteLogToFirestore(accessCode, logData);
-      if (result.success) {
-        setSiteLogs(prev => [...prev, result.siteLog]);
-        showToast('Site log added successfully', 'success');
-        return { success: true, siteLog: result.siteLog };
-      } else {
-        showToast('Failed to add site log', 'error');
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error adding site log:', error);
-      showToast('Error adding site log', 'error');
-      return { success: false, error: error.message };
-    }
-  };
-
-  const updateSiteLogInFirebase = async (logId, logData) => {
-    try {
-      const result = await updateSiteLogInFirestore(accessCode, logId, logData);
-      if (result.success) {
-        setSiteLogs(prev => prev.map(log => log.id === logId ? result.siteLog : log));
-        showToast('Site log updated successfully', 'success');
-        return { success: true, siteLog: result.siteLog };
-      } else {
-        showToast('Failed to update site log', 'error');
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error updating site log:', error);
-      showToast('Error updating site log', 'error');
-      return { success: false, error: error.message };
-    }
-  };
-
-  const deleteSiteLogFromFirebase = async (logId) => {
-    try {
-      const result = await deleteSiteLogFromFirestore(accessCode, logId);
-      if (result.success) {
-        setSiteLogs(prev => prev.filter(log => log.id !== logId));
-        showToast('Site log deleted successfully', 'success');
-        return { success: true };
-      } else {
-        showToast('Failed to delete site log', 'error');
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error deleting site log:', error);
-      showToast('Error deleting site log', 'error');
-      return { success: false, error: error.message };
-    }
-  };
-
-  const loadSiteLogs = async () => {
-    try {
-      const result = await fetchSiteLogsFromFirestore(accessCode);
-      if (result.success) {
-        setSiteLogs(result.siteLogs || []);
-        return { success: true, siteLogs: result.siteLogs };
-      } else {
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error loading site logs:', error);
-      return { success: false, error: error.message };
-    }
-  };
-
   const value = {
     accessCode,
     currentPage,
@@ -1011,7 +918,6 @@ export const AppProvider = ({ children, accessCode }) => {
     hiaContracts,
     clientDetails,
     userBankDetails,
-    siteLogs,
     showToast,
     addExpenseToFirebase,
     updateExpenseInFirebase,
@@ -1046,10 +952,6 @@ export const AppProvider = ({ children, accessCode }) => {
     loadClientDetails,
     saveUserBankDetailsToFirebase,
     loadUserBankDetails,
-    addSiteLogToFirebase,
-    updateSiteLogInFirebase,
-    deleteSiteLogFromFirebase,
-    loadSiteLogs,
     savedPayers,
     savePayerToFirebase
   };

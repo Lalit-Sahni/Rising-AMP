@@ -7,11 +7,7 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-
-const FIREBASE_CLI_OAUTH = {
-  client_id: '563584335869-fgrhgmd47bqnekij5i8b5pr03ho849e6.apps.googleusercontent.com',
-  client_secret: 'FAKESECRET_e2f3g4h5i6j7k8l9m0n1',
-};
+const { execFileSync } = require('child_process');
 
 const PRODUCTION_PROJECT = 'rising-amp-467702-b5';
 const STAGING_PROJECT = 'rising-amp-staging';
@@ -28,27 +24,17 @@ function loadCliTokens() {
 }
 
 async function getAccessToken() {
-  const tokens = loadCliTokens();
+  let tokens = loadCliTokens();
   const expiresAt = Number(tokens.expires_at || 0);
   if (tokens.access_token && expiresAt > Date.now() + 60 * 1000) {
     return tokens.access_token;
   }
-  const body = new URLSearchParams({
-    client_id: FIREBASE_CLI_OAUTH.client_id,
-    client_secret: FIREBASE_CLI_OAUTH.client_secret,
-    refresh_token: tokens.refresh_token,
-    grant_type: 'refresh_token',
-  });
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
-  });
-  const json = await res.json();
-  if (!res.ok || !json.access_token) {
-    throw new Error(`Could not refresh Google token: ${res.status} ${JSON.stringify(json)}`);
+  execFileSync('firebase', ['projects:list', '--non-interactive'], { stdio: 'pipe' });
+  tokens = loadCliTokens();
+  if (!tokens.access_token) {
+    throw new Error('Firebase CLI is logged in but did not return an access token.');
   }
-  return json.access_token;
+  return tokens.access_token;
 }
 
 async function googleFetch(url, { method = 'GET', body, accessToken, headers = {} } = {}) {

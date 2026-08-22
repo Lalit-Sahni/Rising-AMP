@@ -6,11 +6,6 @@ service firebase.storage {
       allow read, write: if true;
     }
     
-    // Allow users to access site log images
-    match /siteLogs/{accessCode}/{logEntryId}/{fileName} {
-      allow read, write: if true;
-    }
-    
     // Deny all other access
     match /{allPaths=**} {
       allow read, write: if false;

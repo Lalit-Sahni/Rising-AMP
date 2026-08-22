@@ -74,26 +74,14 @@ See `ARCHITECTURE.md` sections 9–10. Short version:
 - Backend: Cloud Function `generateWeeklyReport` plus `functions/buildWeeklyReport.js`.
 - Email: client `mailto:` helper only.
 
-### Removal plan (staging first, production last)
+### Status (2026-08-22)
 
-1. **Export (throwaway insurance, not re-imported)**  
-   Dry-runnable script dumps, for the family access code only (and optionally all codes, still as files):
-   - `users/{code}/siteLogs` → JSON
-   - Storage prefixes `siteLogs/{code}/` and `reports/{code}/` → listed + downloaded  
-   Save **outside** Firestore (a dated folder on this machine, gitignored). Production export happens only when we are ready to remove from production, after staging practice.
+Done on this branch and on **staging**. Production still has the old features until cutover.
 
-2. **Remove from the app (code, on the branch)**  
-   Small commits, in order:
-   - Hide/remove sidebar entries and `MainContent` cases.
-   - Delete pages and `SiteLogEmailService.js`.
-   - Strip AppContext site-log state and `data.js` / `storage.js` helpers.
-   - Remove `generateWeeklyReport` and `buildWeeklyReport.js`. Leave `functions/` in a compiling state (or empty index with a comment) so we do not surprise-deploy a broken functions package.
-
-3. **Remove from the database**  
-   Staging: after you confirm the export file exists and you can open it, a reviewed script deletes only `siteLogs` (and report files) in **staging**.  
-   Production: same script, much later, after backup + your yes. Never a console click-delete of the whole project.
-
-Expenses stay. Weekly Report only *reads* expenses; removing the report does not delete expense history.
+- Cold export saved under `backups/cold-export-site-log-weekly-*` (5 records, 9 files). Not re-imported.
+- Feature code removed from the app.
+- Five site log documents deleted on staging only. Production still has those five records.
+- Do not deploy functions to production.
 
 ---
 
@@ -140,10 +128,9 @@ Owner Gmail is confirmed. Other family Gmails can wait. Both real access codes a
 
 0. Docs, git safety, staging project, localhost → staging.
 1. Production read-only backup + Firestore copy into staging (done 2026-08-22). Receipt files saved locally; not yet on staging Storage.
-2. Lalit confirms localhost looks like the live jobs.
-3. Site Log / Weekly Report **code** removal on the branch; you check localhost.
-4. Staging export of those collections, then staging data delete for those two features only.
-5. Google Auth on staging + login UI + project picker (still may show old data shape until step 6).
+2. Lalit confirmed localhost looks like the live jobs (PIN screen colour differs; expected).
+3. Site Log / Weekly Report removed from the app; cold export taken; staging site logs deleted. Production still has the old data.
+4. Google Auth on staging + login UI + project picker (still may show old data shape until step 5).
 6. Ownership migration script on staging, dry-run then apply. You and family (or just you) verify projects.
 7. Only after all of that: production backup, production migration, production deploy — each with a written yes.
 
@@ -157,10 +144,10 @@ Billing, Stripe, a second product, design/3D/takeoff, new features, new npm pack
 
 ## Approval checkpoints (I will stop and wait)
 
-- [ ] You: staging project is OK, and the two Console clicks below are done.
-- [ ] You: localhost with the real codes looks like the live jobs (Firestore copy is loaded; receipt photos may be missing on staging).
-- [ ] You: Site Log / Weekly Report gone from the UI (code).
-- [ ] You: export files exist; OK to delete those two features’ data **on staging**.
+- [x] You: staging project is OK, and the two Console clicks below are done.
+- [x] You: localhost with the real codes looks like the live jobs (Firestore copy is loaded; receipt photos may be missing on staging).
+- [ ] You: Site Log / Weekly Report gone from the UI (refresh localhost).
+- [x] Staging: those two features’ data deleted (production still has them).
 - [ ] You: Google login + org/project model on staging.
 - [ ] You: migration dry-run log looks right; OK to apply **on staging**.
 - [ ] You: family Gmails can sign in and see the right projects on staging.

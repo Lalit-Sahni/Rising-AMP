@@ -3,16 +3,11 @@ import { Plus } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const Fab = () => {
-  const { setCurrentPage, currentPage } = useApp();
+  const { setCurrentPage } = useApp();
 
   const handleClick = () => {
     setCurrentPage('add-expense');
   };
-
-  // Hide FAB on site-log page since it has its own Add New button
-  if (currentPage === 'site-log') {
-    return null;
-  }
 
   return (
     <button

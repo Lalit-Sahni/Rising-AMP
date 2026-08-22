@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HardHat, PlusCircle, LayoutDashboard, Clock, Menu, X, ChevronRight, Target, FileText, ClipboardList, FileBarChart } from 'lucide-react';
+import { HardHat, PlusCircle, LayoutDashboard, Clock, Menu, X, ChevronRight, Target, FileText } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const navMain = [
@@ -8,8 +8,6 @@ const navMain = [
   { key: 'new-invoice', label: 'Invoices', icon: FileText },
   { key: 'history', label: 'History', icon: Clock },
   { key: 'budget-tracking', label: 'Budget Tracking', icon: Target },
-  { key: 'site-log', label: 'Site Log', icon: ClipboardList },
-  { key: 'weekly-report', label: 'Weekly Report', icon: FileBarChart },
 ];
 
 

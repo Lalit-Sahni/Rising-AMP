@@ -15,7 +15,7 @@ App name in the sidebar: “Opal Track”. Login title still says “Constructio
 | UI | React 18, Create React App (`react-scripts`), Tailwind |
 | Routing | **No react-router.** A string `currentPage` in `AppContext` switches which page component is shown. |
 | Backend | Firebase: Auth (anonymous), Firestore, Storage, Hosting, Cloud Functions, Analytics |
-| Functions | Node 22. One callable function: `generateWeeklyReport`. No scheduled jobs. |
+| Functions | Node 22. Weekly Report function removed on this branch (stub only). Production still has `generateWeeklyReport` until cutover. |
 | OCR | Client-side: OpenAI Vision (`gpt-4o-mini`) → Google Cloud Vision → Tesseract.js |
 | PWA | Mobile web-app meta tags only. No `manifest.json`, no service worker. Not a full installable PWA despite the product description. |
 
@@ -34,8 +34,8 @@ Wired in `src/components/MainContent.js`:
 | `new-invoice` | Yes (“Invoices”) | `src/components/pages/InvoiceManagementPage.jsx` |
 | `history` | Yes | `src/components/pages/HistoryPage.js` |
 | `budget-tracking` | Yes | `src/components/pages/BudgetTrackingPage.js` |
-| `site-log` | Yes | `src/components/pages/SiteLogPage.jsx` |
-| `weekly-report` | Yes | `src/components/pages/WeeklyReportPage.jsx` |
+| `site-log` | Removed on `phase-1-foundation` | — |
+| `weekly-report` | Removed on `phase-1-foundation` | — |
 | `hia-contract` | Dashboard card only | `src/components/pages/HIAContractPage.jsx` |
 | `client-manager` | Switch only | `src/components/pages/ClientManagerPage.jsx` |
 | `ocr-test` | Hidden | `src/components/OCRTest.jsx` |
@@ -110,7 +110,7 @@ Under `users/{accessCode}/`:
 | `invoices` | Invoices |
 | `hiaContracts` | HIA contracts |
 | `bankDetails` | Bank details for invoices |
-| `siteLogs` | Site Log feature |
+| `siteLogs` | Site Log (removed from the app on this branch; deleted from **staging** only; still on production until cutover) |
 | `payers` | “Paid by” autocomplete |
 
 Legacy names still in rules (may or may not have data): `savedLabour`, `savedTrades`, `savedCompanies`, `savedProjects`, `clientDetails`.
@@ -139,40 +139,14 @@ Only export: `generateWeeklyReport` (`functions/index.js`).
 - Writes a `.docx` to Storage and returns a signed download URL (~1 hour).
 - No cron. No email send.
 
-Email for Site Log is **client-side only**: OpenAI drafts subject/body, then the browser opens a `mailto:` link (`src/utils/SiteLogEmailService.js`).
+## 9–10. Site Log and Weekly Report
 
----
+**Removed from the app on `phase-1-foundation` (2026-08-22).** Sidebar, pages, context helpers, Storage upload helpers, email helper, and the Cloud Function source are gone.
 
-## 9. Site Log — full map (for removal)
-
-| Kind | Location |
-|------|----------|
-| Page | `src/components/pages/SiteLogPage.jsx` |
-| Nav | `src/components/Sidebar.js` (`site-log`) |
-| Switch | `src/components/MainContent.js` |
-| Context | `src/context/AppContext.js` (`siteLogs`, add/update/delete/load) |
-| Firestore | `src/firebase/data.js` (`addSiteLogToFirestore`, `fetchSiteLogsFromFirestore`, `updateSiteLogInFirestore`, `deleteSiteLogFromFirestore`) → `users/{code}/siteLogs` |
-| Storage | `src/firebase/storage.js` (`uploadSiteLogImage`, `deleteSiteLogImages`) → `siteLogs/{code}/…` |
-| Email | `src/utils/SiteLogEmailService.js` |
-| Function | Weekly Report **reads** site logs (see below) |
-| Other | `src/components/Fab.js` (unwired) |
-
----
-
-## 10. Weekly Report — full map (for removal)
-
-| Kind | Location |
-|------|----------|
-| Page | `src/components/pages/WeeklyReportPage.jsx` |
-| Nav | `src/components/Sidebar.js` (`weekly-report`) |
-| Switch | `src/components/MainContent.js` |
-| Client call | `httpsCallable(..., 'generateWeeklyReport')` |
-| Function | `functions/index.js` (`exports.generateWeeklyReport`) |
-| Builder | `functions/buildWeeklyReport.js` |
-| Reads | `users/{code}/siteLogs`, `users/{code}/expenses` |
-| Storage | `reports/{code}/Weekly-Report-*.docx` |
-
-After both features are gone, the `functions/` package may have nothing left to deploy. That is a later, reviewed step — do not delete Cloud Functions from production until staging is verified.
+- Cold export (throwaway insurance, not re-imported): gitignored folder `backups/cold-export-site-log-weekly-*` (5 site log records, 9 files).
+- Staging Firestore: those 5 site log documents deleted. Expenses and everything else left in place.
+- Production Firestore and Storage: **untouched**. Live Site Log data and the live `generateWeeklyReport` function still exist until cutover.
+- Do not `firebase deploy --only functions` to production; that would delete the live function early.
 
 ---
 

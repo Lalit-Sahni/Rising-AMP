@@ -10,8 +10,6 @@ const ClientManagerPage = lazy(() => import('./pages/ClientManagerPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const BudgetTrackingPage = lazy(() => import('./pages/BudgetTrackingPage'));
-const SiteLogPage = lazy(() => import('./pages/SiteLogPage'));
-const WeeklyReportPage = lazy(() => import('./pages/WeeklyReportPage'));
 const OCRTest = lazy(() => import('./OCRTest'));
 const EnhancedOCRTest = lazy(() => import('./EnhancedOCRTest'));
 
@@ -28,10 +26,6 @@ export default function MainContent() {
         return <HistoryPage />;
       case 'budget-tracking':
         return <BudgetTrackingPage />;
-      case 'site-log':
-        return <SiteLogPage />;
-      case 'weekly-report':
-        return <WeeklyReportPage />;
       case 'new-invoice':
         return <InvoiceManagementPage />;
       case 'hia-contract':
