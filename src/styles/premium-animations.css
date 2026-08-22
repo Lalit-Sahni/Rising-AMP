@@ -1,21 +1,11 @@
-/* Premium Animations and Effects for Awwwards-level UI */
+/* Motion leftovers. Type and colour live in tokens.css — do not force Inter here. */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
-/* Custom Properties */
 :root {
-  --premium-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --premium-font: var(--ui);
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-border: rgba(255, 255, 255, 0.1);
   --shadow-premium: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  --shadow-glow: 0 0 50px rgba(59, 130, 246, 0.3);
-}
-
-/* Global Font Enhancement */
-* {
-  font-family: var(--premium-font);
-  font-feature-settings: 'cv11', 'ss01';
-  font-variant-numeric: tabular-nums;
+  --shadow-glow: 0 0 50px rgba(232, 93, 26, 0.18);
 }
 
 /* Glass Morphism Effects */

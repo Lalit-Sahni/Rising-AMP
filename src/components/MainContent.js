@@ -42,7 +42,7 @@ export default function MainContent() {
   };
 
   return (
-    <div className="content flex-1 overflow-y-auto p-4 md:p-8 bg-white text-zinc-900 animate-fadeIn">
+    <div className="content flex-1 overflow-y-auto bg-canvas text-ink">
       <Suspense fallback={
         <div className="space-y-6">
           <LoadingSkeleton type="card" lines={4} />

@@ -330,12 +330,12 @@ const NewInvoicePage = ({ onComplete }) => {
 
   if (!formData || !formData.lineItems) {
     return (
-      <div className="min-h-screen bg-slate-900 text-slate-100 p-8 flex items-center justify-center">
+      <div className="p-8 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-400 text-lg mb-4">Something went wrong</div>
+          <div className="text-neg text-lg mb-4">Something went wrong</div>
           <button 
             onClick={() => window.location.reload()} 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+            className="bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm"
           >
             Reload Page
           </button>
@@ -345,25 +345,21 @@ const NewInvoicePage = ({ onComplete }) => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-1 sm:p-2 md:p-4 animate-fadeIn portrait-mobile">
-      <div className="max-w-screen-xl mx-auto px-1 sm:px-2 md:px-4 space-y-2 sm:space-y-4 md:space-y-8">
+    <div className="text-ink px-4 py-6 md:px-[26px]">
+      <div className="max-w-5xl mx-auto space-y-4">
         
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-blue-500/20 rounded-lg">
-              <FileText className="w-6 h-6 text-blue-400" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-100">New Invoice</h1>
-              <p className="text-sm text-slate-400">Create professional invoices for your clients</p>
-            </div>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="eyebrow">Billing</div>
+            <h1 className="text-[26px] font-semibold tracking-tight mt-1">New invoice</h1>
+            <p className="text-[13.5px] text-slate-600 mt-0.5">Create an invoice for this job.</p>
           </div>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-2">
             <button
               onClick={previewInvoice}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="inline-flex items-center gap-2 border border-hairline hover:border-[#D6D9DD] text-ink px-3.5 py-2 rounded-ot-sm text-[12.5px] font-medium"
             >
               <Eye className="w-4 h-4" />
               Preview
@@ -371,7 +367,7 @@ const NewInvoicePage = ({ onComplete }) => {
             <button
               onClick={saveInvoice}
               disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 disabled:opacity-50 text-white px-3.5 py-2 rounded-ot-sm text-[12.5px] font-medium"
             >
               <Save className="w-4 h-4" />
               {isSubmitting ? 'Saving...' : 'Save'}
@@ -385,14 +381,14 @@ const NewInvoicePage = ({ onComplete }) => {
             <div key={step} className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                 currentStep >= step 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-700 text-gray-400'
+                  ? 'bg-accent text-white' 
+                  : 'bg-canvas text-slate-400 border border-hairline'
               }`}>
                 {currentStep > step ? <CheckCircle className="w-4 h-4" /> : step}
               </div>
               {step < 3 && (
                 <div className={`w-16 h-1 mx-2 ${
-                  currentStep > step ? 'bg-blue-600' : 'bg-gray-700'
+                  currentStep > step ? 'bg-accent' : 'bg-hairline'
                 }`} />
               )}
             </div>
@@ -401,30 +397,30 @@ const NewInvoicePage = ({ onComplete }) => {
 
         {/* Step Labels */}
         <div className="flex justify-center space-x-8 mb-8">
-          <span className={`text-sm ${currentStep === 1 ? 'text-blue-400 font-medium' : 'text-gray-400'}`}>
+          <span className={`text-sm ${currentStep === 1 ? 'text-accent font-medium' : 'text-slate-400'}`}>
             Client & Project Details
           </span>
-          <span className={`text-sm ${currentStep === 2 ? 'text-blue-400 font-medium' : 'text-gray-400'}`}>
+          <span className={`text-sm ${currentStep === 2 ? 'text-accent font-medium' : 'text-slate-400'}`}>
             Line Items
           </span>
-          <span className={`text-sm ${currentStep === 3 ? 'text-blue-400 font-medium' : 'text-gray-400'}`}>
+          <span className={`text-sm ${currentStep === 3 ? 'text-accent font-medium' : 'text-slate-400'}`}>
             Review & Generate
           </span>
         </div>
 
         {/* Form Content */}
-        <div className="bg-slate-800 rounded-2xl p-6 shadow-lg border border-slate-700">
+        <div className="bg-surface rounded-ot p-6 shadow-whisper border border-hairline">
           
           {/* Step 1: Client & Project Details */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-slate-100 mb-6">Client & Project Information</h2>
+              <h2 className="text-xl font-semibold text-ink mb-6">Client & Project Information</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Client Information */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-medium text-slate-200 flex items-center gap-2">
+                    <h3 className="text-lg font-medium text-ink flex items-center gap-2">
                       <User className="w-5 h-5" />
                       Client Information
                     </h3>
@@ -456,7 +452,7 @@ const NewInvoicePage = ({ onComplete }) => {
                             if (client) handleClientSelect(client);
                           }
                         }}
-                        className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                        className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent appearance-none"
                       >
                         <option value="">Select a client or enter manually</option>
                         {(clients || []).map(client => (
@@ -470,15 +466,15 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
 
                   {selectedClient && (
-                    <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div className="p-3 bg-accent-tint border border-hairline rounded-ot-sm">
                       <div className="flex items-center justify-between">
-                        <span className="text-green-400 text-sm font-medium">
+                        <span className="text-ink text-sm font-medium">
                           ✓ Using saved client: {selectedClient.name}
                         </span>
                         <button
                           type="button"
                           onClick={clearClientSelection}
-                          className="text-green-400 hover:text-green-300 text-sm"
+                          className="text-slate-600 hover:text-ink text-sm"
                         >
                           Clear
                         </button>
@@ -494,7 +490,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="text"
                       value={formData.clientName}
                       onChange={(e) => setFormData(prev => ({ ...prev, clientName: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Enter client name"
                     />
                   </div>
@@ -507,7 +503,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="text"
                       value={formData.clientCompany}
                       onChange={(e) => setFormData(prev => ({ ...prev, clientCompany: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Enter company name"
                     />
                   </div>
@@ -520,7 +516,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="email"
                       value={formData.clientEmail}
                       onChange={(e) => setFormData(prev => ({ ...prev, clientEmail: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="client@example.com"
                     />
                   </div>
@@ -533,7 +529,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="tel"
                       value={formData.clientPhone}
                       onChange={(e) => setFormData(prev => ({ ...prev, clientPhone: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="+61 400 000 000"
                     />
                   </div>
@@ -546,7 +542,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       value={formData.clientAddress}
                       onChange={(e) => setFormData(prev => ({ ...prev, clientAddress: e.target.value }))}
                       rows="2"
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Enter client address"
                     />
                   </div>
@@ -559,7 +555,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="text"
                       value={formData.clientABN}
                       onChange={(e) => setFormData(prev => ({ ...prev, clientABN: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Enter ABN"
                     />
                   </div>
@@ -567,7 +563,7 @@ const NewInvoicePage = ({ onComplete }) => {
                 
                 {/* Project Information */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-slate-200 flex items-center gap-2">
+                  <h3 className="text-lg font-medium text-ink flex items-center gap-2">
                     <FileText className="w-5 h-5" />
                     Project Information
                   </h3>
@@ -580,7 +576,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="text"
                       value={formData.projectName}
                       onChange={(e) => setFormData(prev => ({ ...prev, projectName: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Enter project name"
                     />
                   </div>
@@ -593,7 +589,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="text"
                       value={formData.projectReference}
                       onChange={(e) => setFormData(prev => ({ ...prev, projectReference: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Optional reference number"
                     />
                   </div>
@@ -606,7 +602,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       <DatePicker
                         selected={formData.invoiceDate}
                         onChange={(date) => setFormData(prev => ({ ...prev, invoiceDate: date }))}
-                        className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                         dateFormat="dd/MM/yyyy"
                       />
                     </div>
@@ -618,7 +614,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       <DatePicker
                         selected={formData.dueDate}
                         onChange={(date) => setFormData(prev => ({ ...prev, dueDate: date }))}
-                        className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                         dateFormat="dd/MM/yyyy"
                       />
                     </div>
@@ -632,10 +628,10 @@ const NewInvoicePage = ({ onComplete }) => {
           {currentStep === 2 && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-slate-100">Invoice Line Items</h2>
+                <h2 className="text-xl font-semibold text-ink">Invoice Line Items</h2>
                 <button
                   onClick={addLineItem}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                 >
                   <Plus className="w-4 h-4" />
                   Add Item
@@ -644,7 +640,7 @@ const NewInvoicePage = ({ onComplete }) => {
               
               <div className="space-y-4">
                 {formData.lineItems.map((item, index) => (
-                  <div key={item.id} className="bg-slate-700 rounded-lg p-4 border border-slate-600">
+                  <div key={item.id} className="bg-canvas rounded-ot p-4 border border-hairline">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="md:col-span-2">
                         <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -654,7 +650,7 @@ const NewInvoicePage = ({ onComplete }) => {
                           type="text"
                           value={item.description}
                           onChange={(e) => updateLineItemTotal(item.id, 'description', e.target.value)}
-                          className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                           placeholder="Item description"
                         />
                       </div>
@@ -669,7 +665,7 @@ const NewInvoicePage = ({ onComplete }) => {
                           step="0.01"
                           value={item.quantity}
                           onChange={(e) => updateLineItemTotal(item.id, 'quantity', parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                         />
                       </div>
                       
@@ -683,13 +679,13 @@ const NewInvoicePage = ({ onComplete }) => {
                           step="0.01"
                           value={item.unitCost}
                           onChange={(e) => updateLineItemTotal(item.id, 'unitCost', parseFloat(e.target.value) || 0)}
-                          className="w-full px-3 py-2 bg-slate-600 border border-slate-500 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                         />
                       </div>
                     </div>
                     
                     <div className="flex items-center justify-between mt-4">
-                      <div className="text-lg font-semibold text-slate-200">
+                      <div className="text-lg font-semibold text-ink">
                         Total: ${(parseFloat(item.total) || 0).toFixed(2)}
                       </div>
                       
@@ -713,7 +709,7 @@ const NewInvoicePage = ({ onComplete }) => {
                   id="includeGST"
                   checked={formData.includeGST}
                   onChange={(e) => setFormData(prev => ({ ...prev, includeGST: e.target.checked }))}
-                  className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
+                  className="w-4 h-4 text-accent bg-canvas border-hairline rounded focus:ring-accent"
                 />
                 <label htmlFor="includeGST" className="text-sm font-medium text-slate-300">
                   Include 10% GST
@@ -725,62 +721,62 @@ const NewInvoicePage = ({ onComplete }) => {
           {/* Step 3: Review & Generate */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-slate-100">Review & Generate Invoice</h2>
+              <h2 className="text-xl font-semibold text-ink">Review & Generate Invoice</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Invoice Summary */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-slate-200">Invoice Summary</h3>
+                  <h3 className="text-lg font-medium text-ink">Invoice Summary</h3>
                   
-                  <div className="bg-slate-700 rounded-lg p-4 space-y-3">
+                  <div className="bg-canvas rounded-ot p-4 space-y-3">
                     <div className="flex justify-between">
                       <span className="text-slate-300">Invoice Number:</span>
-                      <span className="font-medium text-slate-100">{invoiceNumber}</span>
+                      <span className="font-medium text-ink">{invoiceNumber}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-300">Client:</span>
-                      <span className="font-medium text-slate-100">{formData.clientName}</span>
+                      <span className="font-medium text-ink">{formData.clientName}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-300">Project:</span>
-                      <span className="font-medium text-slate-100">{formData.projectName}</span>
+                      <span className="font-medium text-ink">{formData.projectName}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-300">Invoice Date:</span>
-                      <span className="font-medium text-slate-100">
+                      <span className="font-medium text-ink">
                         {formData.invoiceDate.toLocaleDateString()}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-300">Due Date:</span>
-                      <span className="font-medium text-slate-100">
+                      <span className="font-medium text-ink">
                         {formData.dueDate.toLocaleDateString()}
                       </span>
                     </div>
                   </div>
                   
                   {/* Totals */}
-                  <div className="bg-slate-700 rounded-lg p-4 space-y-2">
+                  <div className="bg-canvas rounded-ot p-4 space-y-2">
                     <div className="flex justify-between">
                       <span className="text-slate-300">Subtotal:</span>
-                      <span className="font-medium text-slate-100">${calculateSubtotal().toFixed(2)}</span>
+                      <span className="font-medium text-ink">${calculateSubtotal().toFixed(2)}</span>
                     </div>
                     {formData.includeGST && (
                       <div className="flex justify-between">
                         <span className="text-slate-300">GST (10%):</span>
-                        <span className="font-medium text-slate-100">${calculateGST().toFixed(2)}</span>
+                        <span className="font-medium text-ink">${calculateGST().toFixed(2)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-lg font-semibold border-t border-slate-600 pt-2">
-                      <span className="text-slate-200">Total:</span>
-                      <span className="text-blue-400">${calculateTotal().toFixed(2)}</span>
+                      <span className="text-ink">Total:</span>
+                      <span className="tabular text-ink font-semibold">${calculateTotal().toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
                 
                 {/* Additional Information */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-slate-200">Additional Information</h3>
+                  <h3 className="text-lg font-medium text-ink">Additional Information</h3>
                   
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -790,7 +786,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       value={formData.notes}
                       onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                       rows="3"
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Additional notes or terms..."
                     />
                   </div>
@@ -803,7 +799,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       value={formData.paymentInstructions}
                       onChange={(e) => setFormData(prev => ({ ...prev, paymentInstructions: e.target.value }))}
                       rows="3"
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Bank details, payment terms, etc..."
                     />
                   </div>
@@ -812,7 +808,7 @@ const NewInvoicePage = ({ onComplete }) => {
               
               {/* Bank Account Details */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium text-slate-200">Bank Account Details</h3>
+                <h3 className="text-lg font-medium text-ink">Bank Account Details</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">
@@ -822,7 +818,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="text"
                       value={formData.bsb}
                       onChange={(e) => setFormData(prev => ({ ...prev, bsb: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="000-000"
                     />
                   </div>
@@ -835,7 +831,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="text"
                       value={formData.accountName}
                       onChange={(e) => setFormData(prev => ({ ...prev, accountName: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Account holder name"
                     />
                   </div>
@@ -848,7 +844,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       type="text"
                       value={formData.accountNumber}
                       onChange={(e) => setFormData(prev => ({ ...prev, accountNumber: e.target.value }))}
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
                       placeholder="Account number"
                     />
                   </div>
@@ -858,11 +854,11 @@ const NewInvoicePage = ({ onComplete }) => {
           )}
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t border-slate-700">
+          <div className="flex items-center justify-between pt-6 border-t border-hairline">
             <button
               onClick={prevStep}
               disabled={currentStep === 1}
-              className="bg-slate-700 hover:bg-slate-600 disabled:bg-slate-800 disabled:text-slate-500 text-slate-200 px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+              className="inline-flex items-center gap-2 border border-hairline hover:border-[#D6D9DD] disabled:opacity-50 text-ink px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
             >
               <ArrowLeft className="w-4 h-4" />
               Previous
@@ -872,7 +868,7 @@ const NewInvoicePage = ({ onComplete }) => {
               {currentStep === 3 && (
                 <button
                   onClick={downloadPDF}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                 >
                   <Download className="w-4 h-4" />
                   Download PDF
@@ -882,7 +878,7 @@ const NewInvoicePage = ({ onComplete }) => {
               {currentStep < 3 ? (
                 <button
                   onClick={nextStep}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                 >
                   Next
                   <ArrowRight className="w-4 h-4" />
@@ -891,7 +887,7 @@ const NewInvoicePage = ({ onComplete }) => {
                 <button
                   onClick={saveInvoice}
                   disabled={isSubmitting}
-                  className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 disabled:opacity-50 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                 >
                   <Save className="w-4 h-4" />
                   {isSubmitting ? 'Saving...' : 'Save Invoice'}
@@ -910,14 +906,14 @@ const NewInvoicePage = ({ onComplete }) => {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={downloadPDF}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                    className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                   >
                     <Download className="w-4 h-4" />
                     Download
                   </button>
                   <button
                     onClick={() => setShowPreview(false)}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                    className="inline-flex items-center gap-2 border border-hairline hover:border-[#D6D9DD] text-ink px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                   >
                     Close
                   </button>

@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ChevronUp, ChevronDown, DollarSign, Calendar, Hash, Eye, ExternalLink, Paperclip, Image } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import ReceiptViewer from '../ReceiptViewer';
+import CategoryChip from '../ui/CategoryChip';
 
 const ExpenseSummaryTable = ({ expenses = [] }) => {
   const { setCurrentPage } = useApp();
@@ -53,19 +54,6 @@ const ExpenseSummaryTable = ({ expenses = [] }) => {
       default:
         return expense.category || 'Unknown';
     }
-  };
-
-  // Helper function to get category label
-  const getCategoryLabel = (category) => {
-    const labels = {
-      labour: 'Labour',
-      trade: 'Trade',
-      equipment: 'Equipment',
-      service: 'Service',
-      purchase: 'Materials',
-      installation: 'Installation'
-    };
-    return labels[category] || category;
   };
 
   // Sort function
@@ -234,16 +222,7 @@ const ExpenseSummaryTable = ({ expenses = [] }) => {
                       {formatDate(expense.timestamp)}
                     </td>
                     <td className="px-4 py-4">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        expense.category === 'labour' ? 'bg-blue-100 text-blue-800' :
-                        expense.category === 'trade' ? 'bg-purple-100 text-purple-800' :
-                        expense.category === 'equipment' ? 'bg-green-100 text-green-800' :
-                        expense.category === 'purchase' ? 'bg-orange-100 text-orange-800' :
-                        expense.category === 'service' ? 'bg-indigo-100 text-indigo-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {getCategoryLabel(expense.category)}
-                      </span>
+                      <CategoryChip category={expense.category} />
                     </td>
                     <td className="px-4 py-4 font-medium text-slate-100">
                       {getExpenseDisplayName(expense)}
@@ -289,16 +268,7 @@ const ExpenseSummaryTable = ({ expenses = [] }) => {
                   <span className="text-sm text-slate-400">
                     {formatDate(expense.timestamp)}
                   </span>
-                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                    expense.category === 'labour' ? 'bg-blue-100 text-blue-800' :
-                    expense.category === 'trade' ? 'bg-purple-100 text-purple-800' :
-                    expense.category === 'equipment' ? 'bg-green-100 text-green-800' :
-                    expense.category === 'purchase' ? 'bg-orange-100 text-orange-800' :
-                    expense.category === 'service' ? 'bg-indigo-100 text-indigo-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {getCategoryLabel(expense.category)}
-                  </span>
+                  <CategoryChip category={expense.category} />
                 </div>
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-slate-100">{getExpenseDisplayName(expense)}</h3>

@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { Check, HardHat, Pencil, UserPlus, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Check, ChevronRight, Pencil, Search, UserPlus, X } from 'lucide-react';
 import { canonicalEmail, emailInviteVariants, sendInviteFromSignedInGmail } from '../firebase/email';
 import { inviteEmailToProject, listOrgProjects, renameOrgProject } from '../firebase/projectCatalog';
+import BrandMark from './BrandMark';
+import LoadingSkeleton from './ui/LoadingSkeleton';
 
 function displayInviteEmails(emails) {
   const seen = new Set();
@@ -15,10 +17,30 @@ function displayInviteEmails(emails) {
   return out;
 }
 
+function jobMark(name) {
+  const trimmed = (name || '').trim();
+  const digits = trimmed.match(/^(\d+)/);
+  if (digits) return digits[1].slice(0, 3);
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return trimmed.slice(0, 2).toUpperCase() || '?';
+}
+
+function accountLabel(email) {
+  if (!email) return '';
+  return email.split('@')[0];
+}
+
+function initials(email) {
+  const local = accountLabel(email) || '?';
+  return local.slice(0, 1).toUpperCase();
+}
+
 const ProjectPicker = ({ membership, onPick, onSignOut }) => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [invitingId, setInvitingId] = useState(null);
   const [draftName, setDraftName] = useState('');
@@ -46,6 +68,12 @@ const ProjectPicker = ({ membership, onPick, onSignOut }) => {
       cancelled = true;
     };
   }, [membership]);
+
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return projects;
+    return projects.filter((row) => (row.name || '').toLowerCase().includes(q));
+  }, [projects, query]);
 
   const startRename = (event, project) => {
     event.stopPropagation();
@@ -143,179 +171,217 @@ const ProjectPicker = ({ membership, onPick, onSignOut }) => {
   };
 
   return (
-    <div className="min-h-screen bg-brand-black flex items-center justify-center p-4">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-2xl mb-4 shadow-lg">
-            <HardHat className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">{membership.orgName || 'Opal Track'}</h1>
-          <p className="text-zinc-400">Choose a job list</p>
-          {membership.email && (
-            <p className="text-xs text-zinc-500 mt-2">{membership.email}</p>
-          )}
-        </div>
-
-        <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-xl">
-          {loading && (
-            <div className="py-10 text-center text-zinc-500 text-sm">Loading job lists…</div>
-          )}
-
-          {!loading && error && (
-            <p className="text-red-600 text-sm mb-4">{error}</p>
-          )}
-
-          {!loading && !error && projects.length === 0 && (
-            <p className="text-zinc-600 text-sm">No job lists were found for this account.</p>
-          )}
-
-          {!loading && projects.length > 0 && (
-            <ul className="space-y-3">
-              {projects.map((project) => {
-                const extra = [];
-                if (project.expenseCount) extra.push(`${project.expenseCount} expenses`);
-                if (project.invoiceCount) extra.push(`${project.invoiceCount} invoices`);
-                const isEditing = editingId === project.id;
-                const isInviting = invitingId === project.id;
-                const isSaving = savingId === project.id;
-
-                return (
-                  <li key={project.id}>
-                    {isEditing ? (
-                      <div className="px-4 py-3 rounded-lg border border-accent bg-zinc-50">
-                        <input
-                          autoFocus
-                          type="text"
-                          value={draftName}
-                          disabled={isSaving}
-                          onChange={(event) => setDraftName(event.target.value)}
-                          onClick={(event) => event.stopPropagation()}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') saveRename(event, project);
-                            if (event.key === 'Escape') cancelPanels(event);
-                          }}
-                          className="w-full px-3 py-2 rounded-md border border-zinc-300 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
-                          maxLength={80}
-                        />
-                        <div className="mt-3 flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={(event) => cancelPanels(event)}
-                            disabled={isSaving}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-zinc-600 hover:text-zinc-800"
-                          >
-                            <X className="w-4 h-4" />
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => saveRename(event, project)}
-                            disabled={isSaving}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-accent hover:bg-accent-dark rounded-md disabled:opacity-50"
-                          >
-                            <Check className="w-4 h-4" />
-                            {isSaving ? 'Saving…' : 'Save'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : isInviting ? (
-                      <div className="px-4 py-3 rounded-lg border border-accent bg-zinc-50">
-                        <p className="text-sm text-zinc-700 mb-2">
-                          Invite someone to <span className="font-medium">{project.name}</span> only. They will not see your other jobs. We will email them a link from your Gmail.
-                        </p>
-                        {displayInviteEmails(project.invitedEmails).length > 0 && (
-                          <p className="text-xs text-zinc-500 mb-2">
-                            Already on this job: {displayInviteEmails(project.invitedEmails).join(', ')}
-                          </p>
-                        )}
-                        <input
-                          autoFocus
-                          type="email"
-                          value={draftEmail}
-                          disabled={isSaving}
-                          placeholder="name@gmail.com"
-                          onChange={(event) => setDraftEmail(event.target.value)}
-                          onClick={(event) => event.stopPropagation()}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') saveInvite(event, project);
-                            if (event.key === 'Escape') cancelPanels(event);
-                          }}
-                          className="w-full px-3 py-2 rounded-md border border-zinc-300 text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
-                        />
-                        <div className="mt-3 flex items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={(event) => cancelPanels(event)}
-                            disabled={isSaving}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-zinc-600 hover:text-zinc-800"
-                          >
-                            <X className="w-4 h-4" />
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(event) => saveInvite(event, project)}
-                            disabled={isSaving}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-accent hover:bg-accent-dark rounded-md disabled:opacity-50"
-                          >
-                            <Check className="w-4 h-4" />
-                            {isSaving ? 'Saving…' : 'Invite'}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-stretch rounded-lg border border-zinc-200 hover:border-accent transition-colors">
-                        <button
-                          type="button"
-                          onClick={() => onPick(project)}
-                          className="flex-1 text-left px-4 py-3"
-                        >
-                          <div className="font-medium text-zinc-900">{project.name}</div>
-                          <div className="text-xs text-zinc-500 mt-1">
-                            {extra.join(' · ') || 'No records yet'}
-                          </div>
-                        </button>
-                        {isOwner && (
-                          <button
-                            type="button"
-                            onClick={(event) => startInvite(event, project)}
-                            className="px-3 text-zinc-400 hover:text-zinc-800"
-                            title="Invite"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(event) => startRename(event, project)}
-                          className="px-3 text-zinc-400 hover:text-zinc-800"
-                          title="Rename"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          <p className="mt-6 text-xs text-zinc-500 leading-relaxed">
-            Invite is per job list. Type their Gmail and tap Invite — they get an email from you with a link.
-          </p>
-
+    <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
+      <div className="w-full max-w-[440px] bg-surface border border-hairline rounded-2xl shadow-whisper p-8 min-h-[480px] flex flex-col">
+        <div className="flex items-center justify-between mb-6">
+          <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+            <BrandMark size={26} icon={14} />
+            {membership.orgName || 'Opal Track'}
+          </span>
           <button
             type="button"
             onClick={onSignOut}
-            className="mt-4 w-full text-sm text-zinc-500 hover:text-zinc-800 py-2"
+            className="flex items-center gap-2 pl-2 pr-1.5 py-1 border border-hairline rounded-full pressable"
+            title="Sign out"
           >
-            Sign out
+            <small className="font-mono text-[11px] text-slate-600 max-w-[8rem] truncate">
+              {accountLabel(membership.email)}
+            </small>
+            <span className="w-[22px] h-[22px] rounded-full bg-steel-900 text-white grid place-items-center text-[10px] font-semibold">
+              {initials(membership.email)}
+            </span>
           </button>
         </div>
+
+        <h1 className="text-[22px] font-semibold tracking-tight text-ink mb-4">Choose a job list</h1>
+
+        <label className="flex items-center gap-2.5 border border-hairline rounded-[10px] px-3.5 py-2.5 mb-3.5">
+          <Search className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={1.7} />
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search job lists"
+            className="flex-1 border-0 outline-none bg-transparent text-[13.5px] text-ink placeholder:text-slate-400"
+          />
+        </label>
+
+        {loading && (
+          <LoadingSkeleton type="job" lines={3} />
+        )}
+
+        {!loading && error && (
+          <p className="text-neg text-sm mb-4">{error}</p>
+        )}
+
+        {!loading && !error && visible.length === 0 && (
+          <p className="text-slate-600 text-sm">
+            {query ? 'No job lists match that search.' : 'No job lists were found for this account.'}
+          </p>
+        )}
+
+        {!loading && visible.length > 0 && (
+          <ul className="flex flex-col gap-1.5">
+            {visible.map((project) => {
+              const extra = [];
+              if (project.expenseCount) extra.push(`${project.expenseCount} expenses`);
+              if (project.invoiceCount) extra.push(`${project.invoiceCount} invoices`);
+              const isEditing = editingId === project.id;
+              const isInviting = invitingId === project.id;
+              const isSaving = savingId === project.id;
+
+              return (
+                <li key={project.id}>
+                  {isEditing ? (
+                    <div className="relative px-3.5 py-3 rounded-[11px] border border-accent bg-accent-tint">
+                      <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-accent" />
+                      <input
+                        autoFocus
+                        type="text"
+                        value={draftName}
+                        disabled={isSaving}
+                        onChange={(event) => setDraftName(event.target.value)}
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') saveRename(event, project);
+                          if (event.key === 'Escape') cancelPanels(event);
+                        }}
+                        className="w-full px-3 py-2 rounded-ot-sm border border-hairline text-ink focus:outline-none focus:border-accent"
+                        maxLength={80}
+                      />
+                      <div className="mt-3 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => cancelPanels(event)}
+                          disabled={isSaving}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-slate-600 hover:text-ink"
+                        >
+                          <X className="w-4 h-4" />
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => saveRename(event, project)}
+                          disabled={isSaving}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-accent hover:bg-accent-600 rounded-ot-sm disabled:opacity-50"
+                        >
+                          <Check className="w-4 h-4" />
+                          {isSaving ? 'Saving…' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : isInviting ? (
+                    <div className="relative px-3.5 py-3 rounded-[11px] border border-accent bg-accent-tint">
+                      <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-accent" />
+                      <p className="text-sm text-ink mb-2">
+                        Invite someone to <span className="font-medium">{project.name}</span> only. They will not see your other jobs. We will email them a link from your Gmail.
+                      </p>
+                      {displayInviteEmails(project.invitedEmails).length > 0 && (
+                        <p className="text-xs font-mono text-slate-400 mb-2">
+                          Already on this job: {displayInviteEmails(project.invitedEmails).join(', ')}
+                        </p>
+                      )}
+                      <input
+                        autoFocus
+                        type="email"
+                        value={draftEmail}
+                        disabled={isSaving}
+                        placeholder="name@gmail.com"
+                        onChange={(event) => setDraftEmail(event.target.value)}
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') saveInvite(event, project);
+                          if (event.key === 'Escape') cancelPanels(event);
+                        }}
+                        className="w-full px-3 py-2 rounded-ot-sm border border-hairline text-ink focus:outline-none focus:border-accent"
+                      />
+                      <div className="mt-3 flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => cancelPanels(event)}
+                          disabled={isSaving}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-slate-600 hover:text-ink"
+                        >
+                          <X className="w-4 h-4" />
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => saveInvite(event, project)}
+                          disabled={isSaving}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-accent hover:bg-accent-600 rounded-ot-sm disabled:opacity-50"
+                        >
+                          <Check className="w-4 h-4" />
+                          {isSaving ? 'Saving…' : 'Invite'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="group pressable flex items-stretch rounded-[11px] border border-hairline bg-surface">
+                      <button
+                        type="button"
+                        onClick={() => onPick(project)}
+                        className="flex-1 flex items-center gap-3 text-left px-3.5 py-3 min-w-0"
+                      >
+                        <span className="w-[38px] h-[38px] rounded-[9px] bg-canvas border border-hairline grid place-items-center font-mono text-xs font-semibold text-ink shrink-0">
+                          {jobMark(project.name)}
+                        </span>
+                        <span className="flex-1 min-w-0">
+                          <b className="block text-sm font-semibold text-ink truncate">{project.name}</b>
+                          <small className="block font-mono text-xs text-slate-400 truncate">
+                            {extra.join(' · ') || 'No records yet'}
+                          </small>
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={1.7} />
+                      </button>
+                      {isOwner && (
+                        <button
+                          type="button"
+                          onClick={(event) => startInvite(event, project)}
+                          className="px-2.5 text-slate-400 hover:text-ink"
+                          title="Invite"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={(event) => startRename(event, project)}
+                        className="px-2.5 pr-3 text-slate-400 hover:text-ink"
+                        title="Rename"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <p className="mt-auto pt-6 text-[11.5px] font-mono text-slate-400 leading-relaxed">
+          Invite is per job list. Type their Gmail and tap Invite — they get an email from you with a link.
+        </p>
       </div>
     </div>
   );
 };
+
+export function ChooserSkeleton({ orgName = 'Opal Track' }) {
+  return (
+    <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
+      <div className="w-full max-w-[440px] bg-surface border border-hairline rounded-2xl shadow-whisper p-8 min-h-[480px] flex flex-col">
+        <div className="flex items-center gap-2 text-[13px] font-semibold text-ink mb-6">
+          <BrandMark size={26} icon={14} />
+          {orgName}
+        </div>
+        <h1 className="text-[22px] font-semibold tracking-tight text-ink mb-4">Choose a job list</h1>
+        <div className="h-[42px] border border-hairline rounded-[10px] mb-3.5 skeleton-bar" />
+        <LoadingSkeleton type="job" lines={3} />
+      </div>
+    </div>
+  );
+}
 
 export default ProjectPicker;

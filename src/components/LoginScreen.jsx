@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { loginWithGoogle } from '../firebase/auth';
-import { HardHat } from 'lucide-react';
+import BrandMark from './BrandMark';
 
 const GoogleMark = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
+  <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" aria-hidden="true">
     <path
       fill="#4285F4"
       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
@@ -60,48 +60,40 @@ const LoginScreen = () => {
   };
 
   return (
-    <div className="min-h-screen bg-brand-black flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-accent rounded-2xl mb-4 shadow-lg">
-            <HardHat className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Opal Track</h1>
-          <p className="text-zinc-400">Sign in with your Google account</p>
-        </div>
+    <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
+      <div className="w-full max-w-[360px] bg-surface border border-hairline rounded-2xl shadow-whisper px-10 py-12 text-center">
+        <BrandMark size={44} icon={22} className="mx-auto mb-6" />
+        <h1 className="text-[21px] font-semibold tracking-tight text-ink">Welcome back</h1>
+        <p className="text-[13.5px] text-slate-600 mt-1.5 mb-7">Sign in to Opal Track</p>
 
-        <div className="bg-white border border-zinc-200 rounded-2xl p-8 shadow-xl">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-6">
-              <p className="text-red-600 text-sm">{error}</p>
-            </div>
+        {error && (
+          <div className="bg-accent-tint border border-hairline rounded-ot-sm p-3 mb-5 text-left">
+            <p className="text-neg text-sm">{error}</p>
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={handleGoogle}
+          disabled={loading}
+          className="pressable w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-[10px] border border-hairline bg-surface text-[14px] font-medium text-ink whitespace-nowrap disabled:opacity-50"
+        >
+          {loading ? (
+            <>
+              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-ink" />
+              Opening Google…
+            </>
+          ) : (
+            <>
+              <GoogleMark />
+              Continue with Google
+            </>
           )}
+        </button>
 
-          <button
-            type="button"
-            onClick={handleGoogle}
-            disabled={loading}
-            className="w-full bg-white hover:bg-zinc-50 text-zinc-800 font-semibold py-3 px-4 rounded-lg border border-zinc-300 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-zinc-700"></div>
-                Opening Google…
-              </>
-            ) : (
-              <>
-                <GoogleMark />
-                Continue with Google
-              </>
-            )}
-          </button>
-
-          <div className="mt-6 pt-6 border-t border-zinc-200">
-            <p className="text-sm text-zinc-600 text-center">
-              Only invited family Gmail addresses can open the jobs. A wrong account will not create a new empty folder.
-            </p>
-          </div>
-        </div>
+        <p className="text-[11px] text-slate-400 mt-7 leading-relaxed">
+          Only invited family Gmail addresses can open the jobs. A wrong account will not create a new empty folder.
+        </p>
       </div>
     </div>
   );

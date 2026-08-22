@@ -3,6 +3,17 @@ import { X, Download, Eye, EyeOff, RotateCcw, FileText } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
+function formatPreviewDate(value) {
+  if (!value) return '—';
+  try {
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch (error) {
+    return '—';
+  }
+}
+
 const InvoicePreview = ({ 
   invoice, 
   isOpen, 
@@ -96,17 +107,16 @@ const InvoicePreview = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
+    <div className="fixed inset-0 bg-steel-900/40 z-50 flex items-center justify-center p-4">
+      <div className="bg-surface rounded-ot w-full max-w-6xl h-[90vh] flex flex-col shadow-whisper border border-hairline">
+        <div className="flex items-center justify-between p-5 border-b border-hairline">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-              <FileText className="w-5 h-5 text-white" />
+            <div className="w-10 h-10 rounded-[9px] bg-canvas border border-hairline grid place-items-center">
+              <FileText className="w-5 h-5 text-ink" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">
-                Invoice Preview
+              <h2 className="text-[15px] font-semibold text-ink">
+                Invoice preview
               </h2>
               <p className="text-slate-400 text-sm">
                 {isNewInvoice ? 'Review before saving' : 'Invoice details'}
@@ -118,7 +128,7 @@ const InvoicePreview = ({
             {/* Toggle Raw Data */}
             <button
               onClick={() => setShowRawData(!showRawData)}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              className="w-8 h-8 grid place-items-center rounded-ot-sm border border-hairline text-slate-600 hover:text-ink"
               title={showRawData ? 'Hide raw data' : 'Show raw data'}
             >
               {showRawData ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -128,7 +138,7 @@ const InvoicePreview = ({
             <button
               onClick={generatePDF}
               disabled={isGenerating}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
+              className="w-8 h-8 grid place-items-center rounded-ot-sm border border-hairline text-slate-600 hover:text-ink disabled:opacity-50"
               title="Generate PDF"
             >
               {isGenerating ? (
@@ -142,7 +152,7 @@ const InvoicePreview = ({
             {pdfUrl && (
               <button
                 onClick={downloadPDF}
-                className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                className="px-3 py-2 rounded-ot-sm bg-accent hover:bg-accent-600 text-white text-sm font-medium"
               >
                 Download PDF
               </button>
@@ -152,7 +162,7 @@ const InvoicePreview = ({
             {showSaveButton && isNewInvoice && (
               <button
                 onClick={handleSave}
-                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-medium transition-colors"
+                className="px-3.5 py-2 rounded-ot-sm bg-accent hover:bg-accent-600 text-white text-sm font-medium"
               >
                 Save Invoice
               </button>
@@ -161,7 +171,7 @@ const InvoicePreview = ({
             {/* Close Button */}
             <button
               onClick={onClose}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+              className="w-8 h-8 grid place-items-center rounded-ot-sm border border-hairline text-slate-600 hover:text-ink"
             >
               <X className="w-4 h-4" />
             </button>
@@ -173,9 +183,9 @@ const InvoicePreview = ({
           {showRawData ? (
             /* Raw Data View */
             <div className="h-full overflow-auto p-6">
-              <div className="bg-slate-800 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-white mb-4">Invoice Data</h3>
-                <pre className="text-sm text-slate-300 overflow-auto">
+              <div className="bg-canvas rounded-ot p-6 border border-hairline">
+                <h3 className="text-sm font-semibold text-ink mb-4">Invoice data</h3>
+                <pre className="text-sm text-slate-600 overflow-auto">
                   {JSON.stringify(invoice, null, 2)}
                 </pre>
               </div>
@@ -193,10 +203,10 @@ const InvoicePreview = ({
                     <h1 className="text-3xl font-bold text-gray-800 mb-2">INVOICE</h1>
                     <p className="text-gray-600 mb-1">Invoice #: {invoice.invoiceNumber || 'Draft'}</p>
                     <p className="text-gray-600 mb-1">
-                      Date: {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : 'Not set'}
+                      Date: {formatPreviewDate(invoice.invoiceDate)}
                     </p>
                     <p className="text-gray-600">
-                      Due: {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'Not set'}
+                      Due: {formatPreviewDate(invoice.dueDate)}
                     </p>
                   </div>
                   <div className="text-right">

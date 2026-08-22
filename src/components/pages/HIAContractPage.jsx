@@ -297,23 +297,24 @@ const HIAContractPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-950 to-gray-900 text-white p-4">
+    <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
       <div className="max-w-4xl mx-auto">
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-6">
-          <h1 className="text-3xl font-bold text-white mb-6">HIA Contract Processing</h1>
+        <div className="bg-surface rounded-ot p-6 border border-hairline shadow-whisper mb-4">
+          <div className="eyebrow mb-1">Progress payments</div>
+          <h1 className="text-[26px] font-semibold tracking-tight mb-6">HIA contracts</h1>
           
           {/* Step Navigation */}
           <div className="flex items-center justify-center mb-8">
             {[1, 2, 3, 4].map((step) => (
               <div key={step} className="flex items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  currentStep >= step ? 'bg-blue-600 text-white' : 'bg-gray-600 text-gray-300'
+                  currentStep >= step ? 'bg-accent text-white' : 'bg-canvas text-slate-400 border border-hairline'
                 }`}>
                   {step}
                 </div>
                 {step < 4 && (
                   <div className={`w-16 h-1 mx-2 ${
-                    currentStep > step ? 'bg-blue-600' : 'bg-gray-600'
+                    currentStep > step ? 'bg-accent' : 'bg-hairline'
                   }`} />
                 )}
               </div>
@@ -324,11 +325,11 @@ const HIAContractPage = () => {
           {currentStep === 1 && (
             <div className="text-center">
               <h2 className="text-2xl font-semibold mb-4">Upload HIA Contract</h2>
-              <p className="text-gray-400 mb-6">Upload an image of your HIA contract to extract progress payment stages</p>
+              <p className="text-slate-400 mb-6">Upload an image of your HIA contract to extract progress payment stages</p>
               
-              <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 mb-6">
-                <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-400 mb-4">Click to upload or drag and drop</p>
+              <div className="border-2 border-dashed border-hairline rounded-lg p-8 mb-6">
+                <Upload className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <p className="text-slate-400 mb-4">Click to upload or drag and drop</p>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -338,7 +339,7 @@ const HIAContractPage = () => {
                 />
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  className="bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                 >
                   Choose File
                 </button>
@@ -346,8 +347,8 @@ const HIAContractPage = () => {
               
               {isProcessing && (
                 <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                  <p className="text-gray-400">Processing HIA contract...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-2"></div>
+                  <p className="text-slate-400">Processing HIA contract...</p>
                 </div>
               )}
             </div>
@@ -360,52 +361,52 @@ const HIAContractPage = () => {
               <form onSubmit={handleClientSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Project Name</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">Project Name</label>
                     <input
                       type="text"
                       value={clientForm.projectName}
                       onChange={(e) => setClientForm({...clientForm, projectName: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Client Name</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">Client Name</label>
                     <input
                       type="text"
                       value={clientForm.clientName}
                       onChange={(e) => setClientForm({...clientForm, clientName: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Client Email</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">Client Email</label>
                     <input
                       type="email"
                       value={clientForm.clientEmail}
                       onChange={(e) => setClientForm({...clientForm, clientEmail: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Client Phone</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">Client Phone</label>
                     <input
                       type="tel"
                       value={clientForm.clientPhone}
                       onChange={(e) => setClientForm({...clientForm, clientPhone: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                       required
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Client Address</label>
+                  <label className="block text-sm font-medium text-slate-600 mb-2">Client Address</label>
                   <textarea
                     value={clientForm.clientAddress}
                     onChange={(e) => setClientForm({...clientForm, clientAddress: e.target.value})}
-                    className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                     rows="3"
                     required
                   />
@@ -414,13 +415,13 @@ const HIAContractPage = () => {
                   <button
                     type="button"
                     onClick={prevStep}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                    className="bg-surface border border-hairline hover:border-[#D6D9DD] text-ink px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                   >
                     Previous
                   </button>
                   <button
                     type="submit"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                    className="bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                   >
                     Save & Continue
                   </button>
@@ -436,33 +437,33 @@ const HIAContractPage = () => {
               <form onSubmit={handleBankSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">BSB</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">BSB</label>
                     <input
                       type="text"
                       value={bankForm.bsb}
                       onChange={(e) => setBankForm({...bankForm, bsb: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                       placeholder="000-000"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Account Name</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">Account Name</label>
                     <input
                       type="text"
                       value={bankForm.accountName}
                       onChange={(e) => setBankForm({...bankForm, accountName: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Account Number</label>
+                    <label className="block text-sm font-medium text-slate-600 mb-2">Account Number</label>
                     <input
                       type="text"
                       value={bankForm.accountNumber}
                       onChange={(e) => setBankForm({...bankForm, accountNumber: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                       required
                     />
                   </div>
@@ -471,13 +472,13 @@ const HIAContractPage = () => {
                   <button
                     type="button"
                     onClick={prevStep}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                    className="bg-surface border border-hairline hover:border-[#D6D9DD] text-ink px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                   >
                     Previous
                   </button>
                   <button
                     type="submit"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                    className="bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                   >
                     Save & Continue
                   </button>
@@ -491,7 +492,7 @@ const HIAContractPage = () => {
             <div>
               <h2 className="text-2xl font-semibold mb-4">Review & Generate Progress Payments</h2>
               
-              <div className="bg-gray-700 rounded-lg p-4 mb-6">
+              <div className="bg-canvas rounded-lg p-4 mb-6">
                 <h3 className="text-lg font-medium mb-2">Project Summary</h3>
                 <p><strong>Project:</strong> {clientForm.projectName}</p>
                 <p><strong>Client:</strong> {clientForm.clientName}</p>
@@ -501,20 +502,20 @@ const HIAContractPage = () => {
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Progress Payment Stages</h3>
                 {extractedStages.map((stage, index) => (
-                  <div key={index} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                  <div key={index} className="bg-canvas rounded-lg p-4 border border-hairline">
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h4 className="font-medium">Stage {stage.stage}</h4>
-                        <p className="text-gray-400 text-sm">{stage.description}</p>
+                        <p className="text-slate-400 text-sm">{stage.description}</p>
                       </div>
                       <div className="text-right">
                         <p className="font-medium">${stage.amount.toLocaleString()}</p>
-                        <p className="text-gray-400 text-sm">{stage.percent}%</p>
+                        <p className="text-slate-400 text-sm">{stage.percent}%</p>
                       </div>
                     </div>
                     <button
                       onClick={() => generateProgressPaymentPDF(stage)}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2"
+                      className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3 py-1.5 rounded-ot-sm text-sm"
                     >
                       <Download className="w-4 h-4" />
                       Generate PDF
@@ -526,13 +527,13 @@ const HIAContractPage = () => {
               <div className="flex justify-between mt-6">
                 <button
                   onClick={prevStep}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                  className="bg-surface border border-hairline hover:border-[#D6D9DD] text-ink px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                 >
                   Previous
                 </button>
                 <button
                   onClick={saveContractToFirebase}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+                  className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                 >
                   <Save className="w-4 h-4" />
                   Save Contract
@@ -544,16 +545,16 @@ const HIAContractPage = () => {
 
         {/* Saved Contracts Section */}
         {hiaContracts.length > 0 && (
-          <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
-            <h2 className="text-2xl font-bold text-white mb-6">Saved HIA Contracts</h2>
+          <div className="bg-surface rounded-ot p-6 border border-hairline shadow-whisper">
+            <h2 className="text-lg font-semibold text-ink mb-6">Saved HIA contracts</h2>
             <div className="space-y-4">
               {hiaContracts.map((contract, index) => (
-                <div key={index} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
+                <div key={index} className="bg-canvas rounded-lg p-4 border border-hairline">
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="font-medium">{contract.projectName}</h3>
-                      <p className="text-gray-400 text-sm">Total: ${contract.totalAmount?.toLocaleString()}</p>
-                      <p className="text-gray-400 text-sm">{contract.stages?.length || 0} stages</p>
+                      <p className="text-slate-400 text-sm">Total: ${contract.totalAmount?.toLocaleString()}</p>
+                      <p className="text-slate-400 text-sm">{contract.stages?.length || 0} stages</p>
                     </div>
 
                   </div>

@@ -1,25 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  PlusCircle, 
-  FileText, 
+import {
+  PlusCircle,
+  FileText,
   FileCheck,
-  TrendingUp, 
-  Clock, 
-  DollarSign, 
-  AlertTriangle, 
+  Clock,
+  AlertTriangle,
   Bug,
   ArrowUpRight,
-  ArrowDownRight,
-  Sparkles,
   Target,
-  Calendar,
-  Building
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
 import CategoryChartCard from '../dashboard/CategoryChartCard';
+import CategoryChip from '../ui/CategoryChip';
 
-// Helper functions
 function isValidDate(date) {
   return date instanceof Date && !isNaN(date);
 }
@@ -28,16 +22,10 @@ function isThisMonth(timestamp) {
   try {
     const now = new Date();
     const expenseDate = new Date(timestamp);
-    
-    if (!isValidDate(expenseDate)) {
-      console.warn('Invalid date in isThisMonth:', timestamp);
-      return false;
-    }
-    
-    return expenseDate.getMonth() === now.getMonth() && 
-           expenseDate.getFullYear() === now.getFullYear();
+    if (!isValidDate(expenseDate)) return false;
+    return expenseDate.getMonth() === now.getMonth() &&
+      expenseDate.getFullYear() === now.getFullYear();
   } catch (error) {
-    console.error('Error in isThisMonth:', error);
     return false;
   }
 }
@@ -55,29 +43,21 @@ function getExpenseTotal(expense) {
 function formatDate(dateString) {
   try {
     const date = new Date(dateString);
-    if (!isValidDate(date)) {
-      console.warn('Invalid date in formatDate:', dateString);
-      return 'Invalid Date';
-    }
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+    if (!isValidDate(date)) return '—';
+    return date.toLocaleDateString('en-AU', {
+      month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   } catch (error) {
-    console.error('Error in formatDate:', error);
-    return 'Invalid Date';
+    return '—';
   }
 }
 
 function getDateKey(dateString, groupBy = 'day') {
   try {
     const date = new Date(dateString);
-    if (!isValidDate(date)) {
-      console.warn('Invalid date in getDateKey:', dateString);
-      return 'invalid';
-    }
-    
+    if (!isValidDate(date)) return 'invalid';
     if (groupBy === 'month') {
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
     }
@@ -88,38 +68,37 @@ function getDateKey(dateString, groupBy = 'day') {
     }
     return date.toISOString().split('T')[0];
   } catch (error) {
-    console.error('Error in getDateKey:', error);
     return 'invalid';
   }
 }
 
-const COLORS = ['#ea580c', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#0ea5e9'];
+function money(n) {
+  return `$${Number(n || 0).toLocaleString('en-AU', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function expenseLabel(expense) {
+  return expense.description || expense.tradeName || expense.itemName || expense.category || 'Expense';
+}
 
 export default function DashboardPage() {
-  const { 
-    expenses, 
-    invoices, 
-    setCurrentPage
-  } = useApp();
-
+  const { expenses, invoices, setCurrentPage } = useApp();
   const [showDebug, setShowDebug] = useState(false);
   const [timeGrouping, setTimeGrouping] = useState('day');
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate loading state for better UX
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 800); // Show loading for 800ms to prevent flash
-
+    const timer = setTimeout(() => setIsLoading(false), 800);
     return () => clearTimeout(timer);
   }, [expenses, invoices]);
 
-  // Calculate budget from paid invoices
-  const budget = invoices.filter(inv => inv.status === 'paid').reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
+  const budget = invoices
+    .filter((inv) => inv.status === 'paid')
+    .reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
 
-  // Process dashboard data
   const dashboardData = useMemo(() => {
     try {
       if (!expenses || expenses.length === 0) {
@@ -130,74 +109,67 @@ export default function DashboardPage() {
           categoryData: [],
           trendChartData: [],
           dateRange: { start: new Date(), end: new Date() },
-          alerts: { unreviewedCount: 0, uncategorizedCount: 0 }
+          alerts: { unreviewedCount: 0, uncategorizedCount: 0 },
         };
       }
 
       const totalExpenses = expenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
       const thisMonthExpenses = expenses
-        .filter(expense => isThisMonth(expense.timestamp || expense.date))
+        .filter((expense) => isThisMonth(expense.timestamp || expense.date))
         .reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
 
-    // Group by trade/category
-    const tradeMap = new Map();
-    expenses.forEach(expense => {
-      const trade = expense.tradeName || expense.category || 'Uncategorized';
-      const amount = getExpenseTotal(expense);
-      tradeMap.set(trade, (tradeMap.get(trade) || 0) + amount);
-    });
+      const tradeMap = new Map();
+      expenses.forEach((expense) => {
+        const trade = expense.tradeName || expense.category || 'Uncategorized';
+        const amount = getExpenseTotal(expense);
+        tradeMap.set(trade, (tradeMap.get(trade) || 0) + amount);
+      });
 
-    const trades = Array.from(tradeMap.entries()).map(([name, amount]) => ({
-      name,
-      amount,
-      percentage: (amount / totalExpenses) * 100
-    })).sort((a, b) => b.amount - a.amount);
+      const trades = Array.from(tradeMap.entries())
+        .map(([name, amount]) => ({
+          name,
+          amount,
+          percentage: totalExpenses ? (amount / totalExpenses) * 100 : 0,
+        }))
+        .sort((a, b) => b.amount - a.amount);
 
-    // Prepare category data for pie chart
-    const categoryData = trades.slice(0, 6).map((trade, index) => ({
-      name: trade.name,
-      value: trade.amount,
-      color: COLORS[index % COLORS.length]
-    }));
+      const categoryData = trades.slice(0, 6).map((trade) => ({
+        name: trade.name,
+        value: trade.amount,
+      }));
 
-    // Prepare trend data for bar chart
-    const trendMap = new Map();
-    expenses.forEach(expense => {
-      const dateKey = getDateKey(expense.timestamp || expense.date, timeGrouping);
-      const amount = getExpenseTotal(expense);
-      trendMap.set(dateKey, (trendMap.get(dateKey) || 0) + amount);
-    });
+      const trendMap = new Map();
+      expenses.forEach((expense) => {
+        const dateKey = getDateKey(expense.timestamp || expense.date, timeGrouping);
+        const amount = getExpenseTotal(expense);
+        trendMap.set(dateKey, (trendMap.get(dateKey) || 0) + amount);
+      });
 
-    const trendChartData = Array.from(trendMap.entries())
-      .map(([date, amount]) => ({
-        date: formatDate(date),
-        amount: parseFloat(amount.toFixed(2))
-      }))
-      .sort((a, b) => new Date(a.date) - new Date(b.date));
+      const trendChartData = Array.from(trendMap.entries())
+        .map(([date, amount]) => ({
+          date: formatDate(date),
+          amount: parseFloat(amount.toFixed(2)),
+        }))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // Calculate date range
-    const dates = expenses.map(expense => new Date(expense.timestamp || expense.date));
-    const dateRange = {
-      start: new Date(Math.min(...dates)),
-      end: new Date(Math.max(...dates))
-    };
+      const dates = expenses.map((expense) => new Date(expense.timestamp || expense.date));
+      const dateRange = {
+        start: new Date(Math.min(...dates)),
+        end: new Date(Math.max(...dates)),
+      };
 
-    // Count alerts
-    const unreviewedCount = expenses.filter(expense => !expense.reviewed).length;
-    const uncategorizedCount = expenses.filter(expense => !expense.category && !expense.tradeName).length;
+      const unreviewedCount = expenses.filter((expense) => !expense.reviewed).length;
+      const uncategorizedCount = expenses.filter((expense) => !expense.category && !expense.tradeName).length;
 
-    return {
-      totalExpenses,
-      thisMonthExpenses,
-      trades,
-      categoryData,
-      trendChartData,
-      dateRange,
-      alerts: {
-        unreviewedCount,
-        uncategorizedCount
-      }
-    };
+      return {
+        totalExpenses,
+        thisMonthExpenses,
+        trades,
+        categoryData,
+        trendChartData,
+        dateRange,
+        alerts: { unreviewedCount, uncategorizedCount },
+      };
     } catch (error) {
       console.error('Error processing dashboard data:', error);
       return {
@@ -207,357 +179,245 @@ export default function DashboardPage() {
         categoryData: [],
         trendChartData: [],
         dateRange: { start: new Date(), end: new Date() },
-        alerts: { unreviewedCount: 0, uncategorizedCount: 0 }
+        alerts: { unreviewedCount: 0, uncategorizedCount: 0 },
       };
     }
   }, [expenses, timeGrouping]);
 
-  const budgetRemaining = budget > 0 ? ((budget - dashboardData.totalExpenses) / budget) * 100 : 0;
+  const totalInvoiced = invoices.reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
+  const totalPaid = invoices
+    .filter((inv) => inv.status === 'paid')
+    .reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
+  const outstanding = totalInvoiced - totalPaid;
+  const budgetUnset = !budget;
 
-  // Navigation handlers
-  const handleNavigate = (page) => {
-    setCurrentPage(page);
-  };
+  const handleNavigate = (page) => setCurrentPage(page);
 
-  const navigationCards = [
-    {
-      title: 'Add Expense',
-      description: 'Record new expenses and track spending',
-      icon: PlusCircle,
-      gradient: 'from-blue-500 to-blue-600',
-      hoverGradient: 'from-blue-400 to-blue-500',
-      page: 'add-expense',
-      accent: 'blue'
-    },
-    {
-      title: 'Invoices',
-      description: 'Manage & track invoices',
-      icon: FileText,
-      gradient: 'from-emerald-500 to-emerald-600',
-      hoverGradient: 'from-emerald-400 to-emerald-500',
-      page: 'new-invoice',
-      accent: 'emerald'
-    },
-    {
-      title: 'HIA Contracts',
-      description: 'Process HIA contracts & generate progress payments',
-      icon: FileCheck,
-      gradient: 'from-purple-500 to-purple-600',
-      hoverGradient: 'from-purple-400 to-purple-500',
-      page: 'hia-contract',
-      accent: 'purple'
-    },
-    {
-      title: 'Budget Tracking',
-      description: 'Monitor budget vs expenses',
-      icon: TrendingUp,
-      gradient: 'from-orange-500 to-orange-600',
-      hoverGradient: 'from-orange-400 to-orange-500',
-      page: 'budget-tracking',
-      accent: 'orange'
-    },
-    {
-      title: 'History',
-      description: 'View all past transactions',
-      icon: Clock,
-      gradient: 'from-slate-500 to-slate-600',
-      hoverGradient: 'from-slate-400 to-slate-500',
-      page: 'history',
-      accent: 'slate'
-    }
+  const quickActions = [
+    { title: 'Add expense', description: 'Record new spend', icon: PlusCircle, page: 'add-expense' },
+    { title: 'Invoices', description: 'Manage & track', icon: FileText, page: 'new-invoice' },
+    { title: 'HIA contracts', description: 'Progress payments', icon: FileCheck, page: 'hia-contract' },
+    { title: 'Budget tracking', description: 'Target vs actual', icon: Target, page: 'budget-tracking' },
+    { title: 'History', description: 'Past transactions', icon: Clock, page: 'history' },
   ];
 
+  const recent = (expenses || []).slice(0, 3);
+
   return (
-    <div className="min-h-screen text-zinc-900 p-4 md:p-6 lg:p-8 animate-fadeIn">
-      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-accent flex items-center justify-center shadow-lg">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 tracking-tight">Dashboard</h1>
-                <p className="text-zinc-500 font-medium">Project overview & financial insights</p>
-              </div>
-            </div>
+    <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5 mb-[22px]">
+          <div>
+            <div className="eyebrow">Project overview</div>
+            <h1 className="text-[26px] font-bold tracking-tight mt-1">Dashboard</h1>
+            <p className="text-[13.5px] text-slate-600 mt-0.5">Where this job stands this month.</p>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-zinc-100 border border-zinc-200 rounded-xl p-2">
+          <div className="flex items-center gap-2">
+            <div className="inline-flex bg-surface border border-hairline rounded-[9px] p-[3px]">
               {['week', 'month', 'quarter'].map((period) => (
                 <button
                   key={period}
                   onClick={() => setSelectedPeriod(period)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    selectedPeriod === period
-                      ? 'bg-accent text-white shadow-sm'
-                      : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200'
+                  className={`px-3.5 py-1.5 rounded-md text-[12.5px] font-medium capitalize ${
+                    selectedPeriod === period ? 'bg-accent text-white' : 'text-slate-600 hover:text-ink'
                   }`}
                 >
-                  {period.charAt(0).toUpperCase() + period.slice(1)}
+                  {period}
                 </button>
               ))}
             </div>
-            
             <button
               onClick={() => setShowDebug(!showDebug)}
-              className="p-3 bg-zinc-100 border border-zinc-200 rounded-xl hover:bg-zinc-200 transition-all duration-300"
+              className="w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm bg-surface text-slate-600 hover:text-ink"
+              title="Debug"
             >
-              <Bug className="w-5 h-5 text-zinc-500" />
+              <Bug className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Debug Section */}
         {showDebug && (
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-zinc-900 mb-4 flex items-center gap-2">
-              <Bug className="w-5 h-5 text-accent" />
-              Debug Information
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-3">
-                <h4 className="font-medium text-zinc-700">Data Overview</h4>
-                <div className="space-y-2 text-sm text-zinc-600">
-                  <p>Expense Count: <span className="text-zinc-900 font-medium">{expenses.length}</span></p>
-                  <p>Total: <span className="text-zinc-900 font-medium">${dashboardData.totalExpenses.toFixed(2)}</span></p>
-                  <p>This Month: <span className="text-zinc-900 font-medium">${dashboardData.thisMonthExpenses.toFixed(2)}</span></p>
-                  <p>Budget: <span className="text-zinc-900 font-medium">${budget.toFixed(2)}</span></p>
-                  <p>Remaining: <span className="text-zinc-900 font-medium">${(budget - dashboardData.totalExpenses).toFixed(2)}</span></p>
-                </div>
+          <div className="bg-surface border border-hairline rounded-ot shadow-whisper p-5 mb-4">
+            <h3 className="text-sm font-semibold mb-3">Debug</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-600">
+              <div className="space-y-1">
+                <p>Expense count: <span className="tabular text-ink">{expenses.length}</span></p>
+                <p>Total: <span className="tabular text-ink">{money(dashboardData.totalExpenses)}</span></p>
+                <p>This month: <span className="tabular text-ink">{money(dashboardData.thisMonthExpenses)}</span></p>
+                <p>Budget: <span className="tabular text-ink">{money(budget)}</span></p>
               </div>
-              <div className="space-y-3">
-                <h4 className="font-medium text-zinc-700">Chart Settings</h4>
-                <select
-                  value={timeGrouping}
-                  onChange={(e) => setTimeGrouping(e.target.value)}
-                  className="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-xl text-zinc-900 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none transition-all"
-                >
-                  <option value="day">Group by Day</option>
-                  <option value="week">Group by Week</option>
-                  <option value="month">Group by Month</option>
-                </select>
-              </div>
+              <select
+                value={timeGrouping}
+                onChange={(e) => setTimeGrouping(e.target.value)}
+                className="h-10 px-3 bg-canvas border border-hairline rounded-ot-sm text-ink focus:border-accent outline-none"
+              >
+                <option value="day">Group by Day</option>
+                <option value="week">Group by Week</option>
+                <option value="month">Group by Month</option>
+              </select>
             </div>
           </div>
         )}
 
-        {/* Quick Stats Cards */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-4">
             {Array.from({ length: 4 }).map((_, index) => (
               <LoadingSkeleton key={index} type="card" lines={2} />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            <div className="group relative overflow-hidden bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm hover:border-zinc-300 transition-all duration-300">
-              <div className="relative flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-zinc-500 text-sm font-medium">Total Expenses</p>
-                  <p className="text-2xl md:text-3xl font-bold text-zinc-900">${dashboardData.totalExpenses.toLocaleString()}</p>
-                  <div className="flex items-center gap-1 text-sm">
-                    <ArrowUpRight className="w-4 h-4 text-red-500" />
-                    <span className="text-red-600 font-medium">+12.5%</span>
-                    <span className="text-zinc-500">vs last month</span>
-                  </div>
-                </div>
-                <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
-                  <DollarSign className="w-6 h-6 text-red-500" />
-                </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-4">
+            <div className="relative bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
+              <span className="absolute left-[18px] right-[18px] top-0 h-0.5 bg-accent rounded-b" />
+              <div className="text-xs text-slate-400 font-medium">Total expenses</div>
+              <div className="tabular font-semibold text-[25px] tracking-tight my-2.5">{money(dashboardData.totalExpenses)}</div>
+              <div className="text-xs text-slate-600">
+                <span className="tabular">{expenses.length}</span> recorded
               </div>
             </div>
-
-            <div className="group relative overflow-hidden bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm hover:border-zinc-300 transition-all duration-300">
-              <div className="relative flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-zinc-500 text-sm font-medium">This Month</p>
-                  <p className="text-2xl md:text-3xl font-bold text-zinc-900">${dashboardData.thisMonthExpenses.toLocaleString()}</p>
-                  <div className="flex items-center gap-1 text-sm">
-                    <ArrowUpRight className="w-4 h-4 text-accent" />
-                    <span className="text-accent font-medium">+8.2%</span>
-                    <span className="text-zinc-500">vs last month</span>
-                  </div>
-                </div>
-                <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
-                  <Calendar className="w-6 h-6 text-accent" />
-                </div>
+            <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
+              <div className="text-xs text-slate-400 font-medium">This month</div>
+              <div className="tabular font-semibold text-[25px] tracking-tight my-2.5">{money(dashboardData.thisMonthExpenses)}</div>
+              <div className="text-xs text-slate-600">Spend in the current month</div>
+            </div>
+            <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
+              <div className="text-xs text-slate-400 font-medium">Invoiced</div>
+              <div className="tabular font-semibold text-[25px] tracking-tight my-2.5">{money(totalInvoiced)}</div>
+              <div className="text-xs text-slate-600">
+                <span className="tabular text-pos">{money(totalPaid)}</span> paid
               </div>
             </div>
-
-            <div className="group relative overflow-hidden bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm hover:border-zinc-300 transition-all duration-300">
-              <div className="relative flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-zinc-500 text-sm font-medium">Budget</p>
-                  <p className="text-2xl md:text-3xl font-bold text-emerald-600">${budget.toLocaleString()}</p>
-                  <div className="flex items-center gap-1 text-sm">
-                    <Target className="w-4 h-4 text-emerald-500" />
-                    <span className="text-emerald-600 font-medium">Available</span>
-                  </div>
-                </div>
-                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                  <TrendingUp className="w-6 h-6 text-emerald-500" />
-                </div>
-              </div>
-            </div>
-
-            <div className="group relative overflow-hidden bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm hover:border-zinc-300 transition-all duration-300">
-              <div className="relative flex items-center justify-between">
-                <div className="space-y-2">
-                  <p className="text-zinc-500 text-sm font-medium">Remaining</p>
-                  <p className={`text-2xl md:text-3xl font-bold ${budgetRemaining >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                    ${(budget - dashboardData.totalExpenses).toLocaleString()}
-                  </p>
-                  <div className="flex items-center gap-1 text-sm">
-                    {budgetRemaining >= 0 ? (
-                      <>
-                        <ArrowDownRight className="w-4 h-4 text-emerald-500" />
-                        <span className="text-emerald-600 font-medium">{budgetRemaining.toFixed(1)}%</span>
-                      </>
-                    ) : (
-                      <>
-                        <ArrowUpRight className="w-4 h-4 text-red-500" />
-                        <span className="text-red-600 font-medium">Over budget</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
-                  <AlertTriangle className="w-6 h-6 text-accent" />
-                </div>
+            <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
+              <div className="text-xs text-slate-400 font-medium">Outstanding</div>
+              <div className="tabular font-semibold text-[25px] tracking-tight my-2.5">{money(outstanding)}</div>
+              <div className="text-xs text-slate-400">
+                {outstanding === 0 ? '• nothing overdue' : 'unpaid invoices'}
               </div>
             </div>
           </div>
         )}
 
-        {/* Navigation Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-3.5 mb-4">
+          <CategoryChartCard expenses={expenses} onViewAll={() => handleNavigate('history')} />
+          <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
+            <h3 className="text-sm font-semibold">Budget</h3>
+            {budgetUnset ? (
+              <div className="flex items-center justify-between gap-4 mt-3.5 p-4 border border-dashed border-[#D7DADF] rounded-ot-sm bg-[#FBFBFC]">
+                <div>
+                  <b className="block text-[13.5px] font-semibold">No budget set</b>
+                  <p className="text-[13px] text-slate-600 mt-0.5">Set one to track spend against a target.</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleNavigate('budget-tracking')}
+                  className="shrink-0 inline-flex items-center bg-accent hover:bg-accent-600 text-white text-[12.5px] font-medium px-3.5 py-2 rounded-ot-sm"
+                >
+                  Set budget
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3.5 p-4 border border-hairline rounded-ot-sm">
+                <div className="flex justify-between text-[13px]">
+                  <span className="text-slate-600">From paid invoices</span>
+                  <span className="tabular font-medium">{money(budget)}</span>
+                </div>
+                <div className="flex justify-between text-[13px] mt-2">
+                  <span className="text-slate-600">Spent</span>
+                  <span className="tabular">{money(dashboardData.totalExpenses)}</span>
+                </div>
+                <div className="flex justify-between text-[13px] mt-2">
+                  <span className="text-slate-600">Remaining</span>
+                  <span className={`tabular ${budget - dashboardData.totalExpenses < 0 ? 'text-neg' : 'text-pos'}`}>
+                    {money(budget - dashboardData.totalExpenses)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <h3 className="text-sm font-semibold mt-5">Recent</h3>
+            {recent.length === 0 ? (
+              <p className="text-[13px] text-slate-400 mt-3">No expenses yet.</p>
+            ) : (
+              <div className="mt-1.5">
+                {recent.map((expense, index) => (
+                  <div key={expense.id || index} className="flex items-center gap-3 mt-3">
+                    <span className="flex-1 text-[12.5px] text-slate-600 truncate">
+                      {expenseLabel(expense)}
+                    </span>
+                    {expense.category && <CategoryChip category={expense.category} />}
+                    <span className="tabular text-xs text-slate-400">{money(getExpenseTotal(expense))}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="text-sm font-semibold mt-1.5 mb-3">Quick actions</div>
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <LoadingSkeleton key={index} type="card" lines={2} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <LoadingSkeleton key={index} type="card" lines={1} />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {navigationCards.map((card, index) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            {quickActions.map((card) => {
               const Icon = card.icon;
               return (
                 <button
-                  key={index}
+                  key={card.page}
                   onClick={() => handleNavigate(card.page)}
-                  className="group relative overflow-hidden bg-white border border-zinc-200 rounded-2xl p-6 text-left transition-all duration-300 hover:border-accent/30 hover:shadow-md"
+                  className="pressable flex items-center gap-3.5 text-left bg-surface border border-hairline rounded-ot p-4"
                 >
-                  <div className="relative flex items-center gap-4">
-                    <div className={`p-4 bg-gradient-to-br ${card.gradient} rounded-2xl shadow-sm`}>
-                      <Icon className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-zinc-900 mb-1">{card.title}</h3>
-                      <p className="text-sm text-zinc-500">{card.description}</p>
-                    </div>
-                    <ArrowUpRight className="w-5 h-5 text-zinc-400 group-hover:text-accent transition-colors duration-300" />
-                  </div>
+                  <span className="w-[38px] h-[38px] rounded-[9px] bg-canvas border border-hairline grid place-items-center text-ink shrink-0">
+                    <Icon className="w-[18px] h-[18px]" strokeWidth={1.6} />
+                  </span>
+                  <span className="min-w-0">
+                    <b className="block text-[13.5px] font-semibold text-ink">{card.title}</b>
+                    <small className="block text-xs text-slate-400">{card.description}</small>
+                  </span>
+                  <ArrowUpRight className="w-[15px] h-[15px] text-slate-400 ml-auto shrink-0" strokeWidth={1.6} />
                 </button>
               );
             })}
           </div>
         )}
 
-        {/* Category Spending Chart Card */}
-        <div className="mb-6">
-          <CategoryChartCard expenses={expenses} />
-        </div>
-
-        {/* Alerts Section */}
         {(dashboardData.alerts.unreviewedCount > 0 || dashboardData.alerts.uncategorizedCount > 0) && (
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-orange-50 rounded-xl border border-orange-100">
-                <AlertTriangle className="w-5 h-5 text-accent" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-zinc-900">Action Required</h3>
-                <p className="text-sm text-zinc-500">Items that need your attention</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper mt-4">
+            <h3 className="text-sm font-semibold mb-3">Needs attention</h3>
+            <div className="space-y-2">
               {dashboardData.alerts.unreviewedCount > 0 && (
-                <div className="group flex items-center gap-4 p-4 bg-orange-50 border border-orange-100 rounded-xl hover:bg-orange-100/50 transition-all duration-300 cursor-pointer">
-                  <div className="p-3 bg-orange-100 rounded-xl border border-orange-200">
-                    <AlertTriangle className="w-5 h-5 text-accent" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-zinc-900">{dashboardData.alerts.unreviewedCount} expenses need review</p>
-                    <p className="text-sm text-zinc-500">Click to review and categorize</p>
-                  </div>
-                  <ArrowUpRight className="w-5 h-5 text-accent group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300" />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleNavigate('history')}
+                  className="pressable w-full flex items-center gap-3 p-3 rounded-ot-sm border border-hairline text-left"
+                >
+                  <AlertTriangle className="w-4 h-4 text-accent shrink-0" />
+                  <span className="flex-1 text-[13px] text-ink">
+                    {dashboardData.alerts.unreviewedCount} expenses need review
+                  </span>
+                  <ArrowUpRight className="w-4 h-4 text-slate-400" />
+                </button>
               )}
               {dashboardData.alerts.uncategorizedCount > 0 && (
-                <div className="group flex items-center gap-4 p-4 bg-amber-50 border border-amber-100 rounded-xl hover:bg-amber-100/50 transition-all duration-300 cursor-pointer">
-                  <div className="p-3 bg-amber-100 rounded-xl border border-amber-200">
-                    <Building className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-zinc-900">{dashboardData.alerts.uncategorizedCount} uncategorized expenses</p>
-                    <p className="text-sm text-zinc-500">Add categories for better tracking</p>
-                  </div>
-                  <ArrowUpRight className="w-5 h-5 text-amber-600 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300" />
-                </div>
+                <button
+                  type="button"
+                  onClick={() => handleNavigate('history')}
+                  className="pressable w-full flex items-center gap-3 p-3 rounded-ot-sm border border-hairline text-left"
+                >
+                  <AlertTriangle className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="flex-1 text-[13px] text-ink">
+                    {dashboardData.alerts.uncategorizedCount} uncategorized expenses
+                  </span>
+                  <ArrowUpRight className="w-4 h-4 text-slate-400" />
+                </button>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* Recent Activity */}
-        {expenses.length > 0 && (
-          <div className="bg-white border border-zinc-200 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-violet-50 rounded-xl border border-violet-100">
-                  <Clock className="w-5 h-5 text-violet-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-zinc-900">Recent Activity</h3>
-                  <p className="text-sm text-zinc-500">Latest expense transactions</p>
-                </div>
-              </div>
-              <button className="flex items-center gap-2 px-4 py-2 bg-zinc-100 border border-zinc-200 rounded-xl text-sm text-zinc-700 hover:bg-zinc-200 hover:text-zinc-900 transition-all duration-300">
-                <ArrowUpRight className="w-4 h-4" />
-                View All
-              </button>
-            </div>
-            <div className="space-y-3">
-              {expenses.slice(0, 5).map((expense, index) => (
-                <div key={index} className="group flex items-center justify-between p-4 bg-zinc-50 border border-zinc-200 rounded-xl hover:bg-zinc-100 hover:border-zinc-300 transition-all duration-300">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-zinc-200/80 rounded-xl border border-zinc-300">
-                      <DollarSign className="w-4 h-4 text-zinc-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-zinc-900">
-                        {expense.description || expense.tradeName || 'Expense'}
-                      </p>
-                      <p className="text-sm text-zinc-500">
-                        {formatDate(expense.timestamp || expense.date)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium text-zinc-900">${getExpenseTotal(expense).toFixed(2)}</p>
-                    <p className="text-sm text-zinc-500">
-                      {expense.tradeName || expense.category || 'Uncategorized'}
-                    </p>
-                  </div>
-                </div>
-              ))}
             </div>
           </div>
         )}
       </div>
     </div>
   );
-} 
+}

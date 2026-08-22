@@ -1,3 +1,5 @@
+@import './styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,6 +15,9 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  font-family: var(--ui);
+  background: var(--canvas);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
@@ -112,8 +117,8 @@ input[type="number"]:focus {
 }
 
 .react-select__control--is-focused {
-  border-color: #ea580c !important;
-  box-shadow: 0 0 0 1px #ea580c !important;
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent) !important;
 }
 
 .react-select__menu {
@@ -123,28 +128,28 @@ input[type="number"]:focus {
 
 .react-select__option {
   background-color: #ffffff !important;
-  color: #0a0a0a !important;
+  color: var(--ink) !important;
 }
 
 .react-select__option:hover {
-  background-color: #fff7ed !important;
+  background-color: var(--accent-tint) !important;
 }
 
 .react-select__option--is-focused {
-  background-color: #fff7ed !important;
+  background-color: var(--accent-tint) !important;
 }
 
 .react-select__option--is-selected {
-  background-color: #ea580c !important;
+  background-color: var(--accent) !important;
   color: #ffffff !important;
 }
 
 .react-select__single-value {
-  color: #0a0a0a !important;
+  color: var(--ink) !important;
 }
 
 .react-select__input-container {
-  color: #0a0a0a !important;
+  color: var(--ink) !important;
 }
 
 .react-select__placeholder {
@@ -152,16 +157,16 @@ input[type="number"]:focus {
 }
 
 .react-select__multi-value {
-  background-color: #fff7ed !important;
+  background-color: var(--accent-tint) !important;
   border: 1px solid #fed7aa !important;
 }
 
 .react-select__multi-value__label {
-  color: #0a0a0a !important;
+  color: var(--ink) !important;
 }
 
 .react-select__multi-value__remove:hover {
-  background-color: #c2410c !important;
+  background-color: var(--accent-600) !important;
   color: #ffffff !important;
 }
 
@@ -169,11 +174,11 @@ input[type="number"]:focus {
 .react-datepicker {
   background-color: #ffffff !important;
   border: 1px solid #e5e7eb !important;
-  color: #0a0a0a !important;
+  color: var(--ink) !important;
 }
 
 .react-datepicker__header {
-  background-color: #0a0a0a !important;
+  background-color: var(--steel-900) !important;
   border-bottom: 1px solid #e5e7eb !important;
 }
 
@@ -186,20 +191,20 @@ input[type="number"]:focus {
 }
 
 .react-datepicker__day {
-  color: #0a0a0a !important;
+  color: var(--ink) !important;
 }
 
 .react-datepicker__day:hover {
-  background-color: #fff7ed !important;
+  background-color: var(--accent-tint) !important;
 }
 
 .react-datepicker__day--selected {
-  background-color: #ea580c !important;
+  background-color: var(--accent) !important;
   color: #ffffff !important;
 }
 
 .react-datepicker__day--keyboard-selected {
-  background-color: #ea580c !important;
+  background-color: var(--accent) !important;
   color: #ffffff !important;
 }
 
@@ -223,18 +228,18 @@ input[type="number"]:focus {
 
 .react-datepicker__year-option,
 .react-datepicker__month-option {
-  color: #0a0a0a !important;
+  color: var(--ink) !important;
 }
 
 .react-datepicker__year-option:hover,
 .react-datepicker__month-option:hover {
-  background-color: #fff7ed !important;
+  background-color: var(--accent-tint) !important;
 }
 
 /* React Quill – white/black + orange accent */
 .ql-editor {
   background-color: #ffffff !important;
-  color: #0a0a0a !important;
+  color: var(--ink) !important;
 }
 
 .ql-toolbar {
@@ -243,15 +248,15 @@ input[type="number"]:focus {
 }
 
 .ql-toolbar button {
-  color: #0a0a0a !important;
+  color: var(--ink) !important;
 }
 
 .ql-toolbar button:hover {
-  color: #ea580c !important;
+  color: var(--accent) !important;
 }
 
 .ql-toolbar .ql-active {
-  color: #ea580c !important;
+  color: var(--accent) !important;
 }
 
 .ql-container {
@@ -341,7 +346,7 @@ input[type="number"]:focus {
 /* Focus styles – orange accent */
 .focus-ring:focus {
   outline: none;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #ea580c;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent);
 }
 
 /* Loading states */

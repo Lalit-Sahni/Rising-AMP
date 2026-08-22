@@ -7,7 +7,7 @@ import MainContent from './components/MainContent';
 import CommandPalette from './components/CommandPalette';
 import LoginScreen from './components/LoginScreen';
 import NotInvitedScreen from './components/NotInvitedScreen';
-import ProjectPicker from './components/ProjectPicker';
+import ProjectPicker, { ChooserSkeleton } from './components/ProjectPicker';
 import { listOrgProjects } from './firebase/projectCatalog';
 import { clearSession, readSession, resolveInvitation, writeSession } from './firebase/tenancy';
 import './styles/premium-animations.css';
@@ -124,10 +124,10 @@ function App() {
 
   if (authUser === undefined) {
     return (
-      <div className="min-h-screen bg-slate-700 flex items-center justify-center">
+      <div className="min-h-screen bg-canvas flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
-          <p className="text-zinc-400">Loading...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4" />
+          <p className="text-slate-400 font-mono text-sm">Loading…</p>
         </div>
       </div>
     );
@@ -138,14 +138,7 @@ function App() {
   }
 
   if (membershipLoading || !membership) {
-    return (
-      <div className="min-h-screen bg-slate-700 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent mx-auto mb-4"></div>
-          <p className="text-zinc-400">Checking invite…</p>
-        </div>
-      </div>
-    );
+    return <ChooserSkeleton />;
   }
 
   if (!membership.invited) {
@@ -170,8 +163,12 @@ function App() {
 
   return (
     <AppProvider projectId={projectId} storageKey={workspaceId}>
-      <div className="flex h-screen bg-slate-700 text-white overflow-hidden">
-        <Sidebar />
+      <div className="flex h-screen bg-canvas text-ink overflow-hidden">
+        <Sidebar
+          user={authUser}
+          projectName={projectName}
+          onSwitchProject={handleSwitchProject}
+        />
         <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
           <Header
             onLogout={handleLogout}

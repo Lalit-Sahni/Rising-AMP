@@ -881,7 +881,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                   {...getRootProps()}
                   className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
                     isDragActive 
-                      ? 'border-accent bg-orange-50' 
+                      ? 'border-accent bg-accent-tint' 
                       : 'border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50'
                   }`}
                 >
@@ -912,7 +912,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-accent hover:bg-accent-dark disabled:bg-zinc-400 text-white font-medium rounded-lg transition-colors"
+                className="px-6 py-2 bg-accent hover:bg-accent-600 disabled:bg-slate-400 text-white font-medium rounded-ot-sm transition-colors"
               >
                 {isSubmitting ? 'Adding...' : 'Add Expense'}
               </button>

@@ -4,9 +4,6 @@ import {
   Plus, 
   Download, 
   Trash2, 
-  DollarSign,
-  Calendar,
-  User,
   Search,
   Filter,
   Eye
@@ -14,6 +11,17 @@ import {
 import { useApp } from '../../context/AppContext';
 import NewInvoicePage from './NewInvoicePage';
 import InvoicePreview from '../ui/InvoicePreview';
+
+function formatInvoiceDate(value) {
+  if (!value) return '—';
+  try {
+    const date = value.toDate ? value.toDate() : new Date(value);
+    if (Number.isNaN(date.getTime())) return '—';
+    return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  } catch (error) {
+    return '—';
+  }
+}
 
 const InvoiceManagementPage = () => {
   const { invoices, deleteInvoiceFromFirebase, updateInvoiceStatus, showToast } = useApp();
@@ -92,8 +100,8 @@ const InvoiceManagementPage = () => {
             <div>
               <h1 style="font-size: 32px; font-weight: bold; color: #1f2937; margin-bottom: 8px;">INVOICE</h1>
               <p style="color: #6b7280; margin: 4px 0;">Invoice #: ${invoice.invoiceNumber}</p>
-              <p style="color: #6b7280; margin: 4px 0;">Date: ${invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : 'Invalid Date'}</p>
-              <p style="color: #6b7280; margin: 4px 0;">Due: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'Invalid Date'}</p>
+              <p style="color: #6b7280; margin: 4px 0;">Date: ${formatInvoiceDate(invoice.invoiceDate)}</p>
+              <p style="color: #6b7280; margin: 4px 0;">Due: ${formatInvoiceDate(invoice.dueDate)}</p>
             </div>
             <div style="text-align: right;">
               <div style="width: 64px; height: 64px; background-color: #2563eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
@@ -244,14 +252,17 @@ const InvoiceManagementPage = () => {
   }
 
   return (
-    <div className="min-h-screen text-zinc-900 p-4">
+    <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-zinc-900">Invoice Management</h1>
+        <div className="flex justify-between items-start mb-[22px] gap-4">
+          <div>
+            <div className="eyebrow">Billing</div>
+            <h1 className="text-[26px] font-bold tracking-tight mt-1">Invoices</h1>
+            <p className="text-[13.5px] text-slate-600 mt-0.5">Manage and track job invoices.</p>
+          </div>
           <button
             onClick={() => setShowNewInvoice(true)}
-            className="bg-accent hover:bg-accent-dark text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+            className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[12.5px] font-medium"
           >
             <Plus className="w-5 h-5" />
             New Invoice
@@ -259,63 +270,42 @@ const InvoiceManagementPage = () => {
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-zinc-500 text-sm">Total Invoiced</p>
-                <p className="text-2xl font-bold text-zinc-900">${totalInvoiced.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-orange-50 rounded-lg border border-orange-100">
-                <DollarSign className="w-6 h-6 text-accent" />
-              </div>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 mb-4">
+          <div className="relative bg-surface rounded-ot p-[18px] border border-hairline shadow-whisper">
+            <span className="absolute left-[18px] right-[18px] top-0 h-0.5 bg-accent rounded-b" />
+            <p className="text-slate-400 text-xs font-medium">Total invoiced</p>
+            <p className="tabular text-[25px] font-semibold text-ink mt-2.5">${totalInvoiced.toLocaleString()}</p>
           </div>
-
-          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-zinc-500 text-sm">Total Paid</p>
-                <p className="text-2xl font-bold text-emerald-600">${totalPaid.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100">
-                <Calendar className="w-6 h-6 text-emerald-600" />
-              </div>
-            </div>
+          <div className="bg-surface rounded-ot p-[18px] border border-hairline shadow-whisper">
+            <p className="text-slate-400 text-xs font-medium">Paid</p>
+            <p className="tabular text-[25px] font-semibold text-ink mt-2.5">${totalPaid.toLocaleString()}</p>
+            <p className="text-xs text-pos mt-2">received</p>
           </div>
-
-          <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-zinc-500 text-sm">Pending</p>
-                <p className="text-2xl font-bold text-amber-600">${totalPending.toLocaleString()}</p>
-              </div>
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-                <User className="w-6 h-6 text-amber-600" />
-              </div>
-            </div>
+          <div className="bg-surface rounded-ot p-[18px] border border-hairline shadow-whisper">
+            <p className="text-slate-400 text-xs font-medium">Pending</p>
+            <p className="tabular text-[25px] font-semibold text-ink mt-2.5">${totalPending.toLocaleString()}</p>
           </div>
         </div>
 
         {/* Search and Filter */}
-        <div className="bg-white rounded-xl p-6 border border-zinc-200 shadow-sm mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-surface rounded-ot p-4 md:p-5 border border-hairline shadow-whisper mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search invoices..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2.5 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
               />
             </div>
             <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400" />
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-300 rounded-lg text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent appearance-none"
+                className="w-full pl-10 pr-4 py-2.5 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent appearance-none"
               >
                 <option value="all">All Status</option>
                 <option value="draft">Draft</option>
@@ -328,47 +318,47 @@ const InvoiceManagementPage = () => {
         </div>
 
         {/* Invoices Table */}
-        <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
+        <div className="bg-surface rounded-ot border border-hairline shadow-whisper overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-zinc-100">
+              <thead className="bg-canvas">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Invoice #</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Client</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Project</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Date</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-zinc-700">Due</th>
-                  <th className="px-6 py-4 text-right text-sm font-medium text-zinc-700">Amount</th>
-                  <th className="px-6 py-4 text-center text-sm font-medium text-zinc-700">Status</th>
-                  <th className="px-6 py-4 text-center text-sm font-medium text-zinc-700">Actions</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-mono uppercase tracking-wide text-slate-600">Invoice #</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-mono uppercase tracking-wide text-slate-600">Client</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-mono uppercase tracking-wide text-slate-600">Project</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-mono uppercase tracking-wide text-slate-600">Date</th>
+                  <th className="px-5 py-3 text-left text-[11px] font-mono uppercase tracking-wide text-slate-600">Due</th>
+                  <th className="px-5 py-3 text-right text-[11px] font-mono uppercase tracking-wide text-slate-600">Amount</th>
+                  <th className="px-5 py-3 text-center text-[11px] font-mono uppercase tracking-wide text-slate-600">Status</th>
+                  <th className="px-5 py-3 text-center text-[11px] font-mono uppercase tracking-wide text-slate-600">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-zinc-200">
+              <tbody className="divide-y divide-hairline">
                 {filteredInvoices.map((invoice, index) => (
-                  <tr key={index} className="hover:bg-zinc-50 transition-colors">
-                    <td className="px-6 py-4 text-sm text-zinc-900 font-medium">
+                  <tr key={index} className="hover:bg-canvas transition-colors">
+                    <td className="px-5 py-3.5 text-sm text-ink font-medium font-mono">
                       {invoice.invoiceNumber}
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-600">
+                    <td className="px-5 py-3.5 text-sm text-slate-600">
                       {invoice.clientName}
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-600">
+                    <td className="px-5 py-3.5 text-sm text-slate-600">
                       {invoice.projectName}
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-600">
-                      {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString() : 'Invalid Date'}
+                    <td className="px-5 py-3.5 text-sm text-slate-600 font-mono">
+                      {formatInvoiceDate(invoice.invoiceDate)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-600">
-                      {invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'Invalid Date'}
+                    <td className="px-5 py-3.5 text-sm text-slate-600 font-mono">
+                      {formatInvoiceDate(invoice.dueDate)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-zinc-900 text-right font-medium">
+                    <td className="px-5 py-3.5 text-sm text-ink text-right tabular font-medium">
                       ${(parseFloat(invoice.total) || 0).toLocaleString()}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-5 py-3.5 text-center">
                       <select
                         value={invoice.status || 'draft'}
                         onChange={(e) => handleStatusUpdate(invoice.id, e.target.value)}
-                        className="px-3 py-1 bg-white border border-zinc-300 rounded text-sm text-zinc-900 focus:outline-none focus:ring-2 focus:ring-accent"
+                        className="px-2.5 py-1 bg-surface border border-hairline rounded-ot-sm text-sm text-ink focus:outline-none focus:border-accent"
                       >
                         <option value="draft">Draft</option>
                         <option value="sent">Sent</option>
@@ -376,30 +366,28 @@ const InvoiceManagementPage = () => {
                         <option value="overdue">Overdue</option>
                       </select>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
+                    <td className="px-5 py-3.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
                         <button
                           onClick={() => handlePreviewInvoice(invoice)}
-                          className="p-2 bg-emerald-500 hover:bg-emerald-600 rounded-lg transition-colors"
+                          className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm text-slate-600 hover:text-ink"
                           title="Preview Invoice"
                         >
-                          <Eye className="w-4 h-4 text-white" />
+                          <Eye className="w-4 h-4" />
                         </button>
-
                         <button
                           onClick={() => downloadInvoice(invoice)}
-                          className="p-2 bg-accent hover:bg-accent-dark rounded-lg transition-colors"
+                          className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm text-slate-600 hover:text-ink"
                           title="Download PDF"
                         >
-                          <Download className="w-4 h-4 text-white" />
+                          <Download className="w-4 h-4" />
                         </button>
-
                         <button
                           onClick={() => handleDeleteInvoice(invoice.id)}
-                          className="p-2 bg-red-500 hover:bg-red-600 rounded-lg transition-colors"
+                          className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm text-slate-600 hover:text-neg"
                           title="Delete Invoice"
                         >
-                          <Trash2 className="w-4 h-4 text-white" />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -411,11 +399,11 @@ const InvoiceManagementPage = () => {
           
           {filteredInvoices.length === 0 && (
             <div className="text-center py-12">
-              <FileText className="w-12 h-12 text-zinc-400 mx-auto mb-4" />
-              <p className="text-zinc-500">No invoices found</p>
+              <FileText className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+              <p className="text-slate-600">No invoices found</p>
               <button
                 onClick={() => setShowNewInvoice(true)}
-                className="mt-4 bg-accent hover:bg-accent-dark text-white px-6 py-3 rounded-lg font-medium transition-colors"
+                className="mt-4 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[12.5px] font-medium"
               >
                 Create Your First Invoice
               </button>

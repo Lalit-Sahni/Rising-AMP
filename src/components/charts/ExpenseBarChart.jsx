@@ -129,7 +129,7 @@ const ExpenseBarChart = ({ expenses = [], timeGrouping = 'week' }) => {
       // Check if the date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date for formatting in ExpenseBarChart:', dateString);
-        return 'Invalid Date';
+        return '—';
       }
       
       switch (timeGrouping) {
@@ -144,7 +144,7 @@ const ExpenseBarChart = ({ expenses = [], timeGrouping = 'week' }) => {
       }
     } catch (error) {
       console.error('Error formatting date in ExpenseBarChart:', dateString, error);
-      return 'Invalid Date';
+      return '—';
     }
   };
 
@@ -418,7 +418,7 @@ const ExpenseBarChart = ({ expenses = [], timeGrouping = 'week' }) => {
       // Check if the date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date for formatting in ExpenseBarChart:', dateString);
-        return 'Invalid Date';
+        return '—';
       }
       
       switch (timeGrouping) {
@@ -433,7 +433,7 @@ const ExpenseBarChart = ({ expenses = [], timeGrouping = 'week' }) => {
       }
     } catch (error) {
       console.error('Error formatting date in ExpenseBarChart:', dateString, error);
-      return 'Invalid Date';
+      return '—';
     }
   };
 
@@ -707,7 +707,7 @@ const ExpenseBarChart = ({ expenses = [], timeGrouping = 'week' }) => {
       // Check if the date is valid
       if (isNaN(date.getTime())) {
         console.warn('Invalid date for formatting in ExpenseBarChart:', dateString);
-        return 'Invalid Date';
+        return '—';
       }
       
       switch (timeGrouping) {
@@ -722,7 +722,7 @@ const ExpenseBarChart = ({ expenses = [], timeGrouping = 'week' }) => {
       }
     } catch (error) {
       console.error('Error formatting date in ExpenseBarChart:', dateString, error);
-      return 'Invalid Date';
+      return '—';
     }
   };
 
