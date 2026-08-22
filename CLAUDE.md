@@ -4,6 +4,17 @@ Read this file at the start of every session. It beats anything said in chat.
 
 This is a live production app for Opal SS Constructions. It holds real, irreplaceable business data. Prefer shipping nothing over risking what already exists.
 
+## Next agent — start here (do this first)
+
+1. Confirm git branch is `phase-1-foundation`. Restore tag if you need to unwind code: `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next step), then `PLAN.md`, then `ARCHITECTURE.md`.
+3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
+4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
+5. **Next work is Phase 1 B:** Google / Gmail login on staging. Phase 1 A (Site Log / Weekly Report) is done on this branch and on staging. Phase 1 C (org migration) waits until B works.
+6. Owner (Lalit) writes in plain language. Explain in plain language. Other family Gmails can wait; start with his Gmail only.
+
+If you are unsure whether a command writes to production, do not run it.
+
 ## Prime directive
 
 - Do not run any destructive or irreversible operation against production Firestore or Storage. No hard deletes, no in-place data mutation, no schema changes against production.
@@ -27,31 +38,32 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 | Alias | Firebase project ID | Role |
 |--------|---------------------|------|
 | production | `rising-amp-467702-b5` | Live family app. Read-only until final cutover. |
-| staging | `rising-amp-staging` | Empty copy target. All cleanup, auth, and migration work. `.firebaserc` default is staging so an accidental deploy cannot hit production. |
+| staging | `rising-amp-staging` | Copy of production data. All cleanup, auth, and migration work. `.firebaserc` default is staging so an accidental deploy cannot hit production. |
 
-What matters is **which database the app points at**, not local vs deployed.
+What matters is **which database the app points at**, not local versus deployed.
 
-## Current access model (being replaced in Phase 1)
+## Current access model (being replaced in Phase 1 B)
 
-There is no per-person login. A shared 4–8 character code is the Firestore document ID under `users/{accessCode}`. Anyone who knows the code is in. A mistyped code silently creates a new empty workspace. Do not treat this as secure.
+There is no per-person login. A shared 4–8 character code is the Firestore document ID under `users/{accessCode}`. Anyone who knows the code is in. A mistyped code silently creates a new empty workspace. Do not treat this as secure. Staging still uses this until B lands.
 
 ## Phase 1 scope (only this)
 
-A. Remove Site Log and Weekly Report (export to cold JSON first, then delete feature code; production data delete only at the end).
-B. Replace the shared code with per-person email login. Prefer Google / Gmail via Firebase Auth. After login: list projects → select one → project dashboard.
-C. Promote the family's real code-keyed workspace into one organisation. Attach four family Gmail accounts. Organisation owns projects; users belong to an organisation. Leave stray/orphan code spaces untouched.
+A. Remove Site Log and Weekly Report — **done on this branch and on staging.** Production still has the old data and the old live UI until cutover.
+B. Replace the shared code with per-person email login. Prefer Google / Gmail via Firebase Auth. After login: list projects → select one → project dashboard. **This is the current work.**
+C. Promote the family's two real code-keyed workspaces into one organisation. Attach the owner Gmail now; other family Gmails later. Organisation owns projects; users belong to an organisation. Leave stray/orphan code spaces untouched.
 
 Keep the account / organisation / tenancy layer product-agnostic. Do not bake tracker-specific assumptions into auth or orgs. Do not build, stub, or mention a second product. No billing or Stripe.
 
 ## Out of scope
 
-Billing, Stripe, any second product, design/3D/takeoff, any feature not named above, new dependencies without asking first.
+Billing, Stripe, any second product, design/3D/takeoff, any feature not named above, new dependencies without asking first. Do not big-bang-refactor the tracker UI in Phase 1.
 
 ## Continuity
 
-- `PLAN.md` — proposed approach. Re-read at session start.
+- `AGENTS.md` — pointer for Cursor agents. Same instruction: read this file, then `PROGRESS.md`.
+- `PLAN.md` — proposed approach and remaining checkpoints.
 - `PROGRESS.md` — what was done, what is in flight, next concrete step. Update at session end.
-- `ARCHITECTURE.md` — how the app actually works today.
+- `ARCHITECTURE.md` — how the app actually works (and what was removed).
 - Small sessions: one checklist item, then commit on the branch.
 
 ## Owner working style

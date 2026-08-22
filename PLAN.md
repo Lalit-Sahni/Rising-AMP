@@ -1,6 +1,7 @@
 # Phase 1 plan
 
-Status: **proposed**. Nothing in A/B/C has been executed. Owner approval required before each side-effect step.
+Status: **in progress on branch `phase-1-foundation`.**  
+A is done on the branch and on staging. B is next. C has not started. Production has not been cut over.
 
 This plan is written so Lalit can say yes/no to each block without needing to be an engineer. Technical detail is here so the next agent can execute it.
 
@@ -28,7 +29,7 @@ Restore point if we ever need to unwind code: git tag `pre-phase1-2026-08-22`.
 | Usable production backup | **Taken 2026-08-22** (read-only). Folder gitignored under `backups/production-*`. Includes Storage files. | Keep this folder. Do not commit it. |
 | Production deploy protection | `.firebaserc` default is **staging**. Production is the named alias `production`. | Accidental `firebase deploy` hits empty-then-copied staging, not live. |
 
-**Safety scaffolding is in place.** Cleanup and auth work still wait for Lalit to confirm localhost looks right.
+**Safety scaffolding is in place.** Phase 1 A is done on staging. Next is B (Google login).
 
 The old Oct 2025 backup file is unused. Do not write to production. Do not delete leftover test/typo workspaces.
 
@@ -130,9 +131,9 @@ Owner Gmail is confirmed. Other family Gmails can wait. Both real access codes a
 1. Production read-only backup + Firestore copy into staging (done 2026-08-22). Receipt files saved locally; not yet on staging Storage.
 2. Lalit confirmed localhost looks like the live jobs (PIN screen colour differs; expected).
 3. Site Log / Weekly Report removed from the app; cold export taken; staging site logs deleted. Production still has the old data.
-4. Google Auth on staging + login UI + project picker (still may show old data shape until step 5).
-6. Ownership migration script on staging, dry-run then apply. You and family (or just you) verify projects.
-7. Only after all of that: production backup, production migration, production deploy — each with a written yes.
+4. Google Auth on staging + login UI + project picker (still may show old data shape until step 5). **Next.**
+5. Ownership migration script on staging, dry-run then apply. You and family (or just you) verify projects.
+6. Only after all of that: production backup, production migration, production deploy — each with a written yes.
 
 ---
 

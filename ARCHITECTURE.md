@@ -1,6 +1,6 @@
 # Rising AMP — Architecture (as of `pre-phase1-2026-08-22`)
 
-This describes the **running production app**, not the target design. Phase 1 target design lives in `PLAN.md`.
+This describes the **running production app**, plus notes for what this branch has already changed. Phase 1 target design lives in `PLAN.md`.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Default git branch in use: `master` (`main` is an old initial-commit only).  
@@ -173,6 +173,29 @@ Do not use these unless we confirm what they are:
 
 Production is **`rising-amp-467702-b5`** (display name “My First Project”).
 
-Staging (created 2026-08-22, empty): **`rising-amp-staging`**. Default Firestore exists. Storage bucket not created yet (billing not attached). Auth not Get-started yet.
+Staging: **`rising-amp-staging`**. Default Firestore holds a copy of production data (minus staging-only site-log delete). Storage bucket not created yet. Auth Get started is done; anonymous sign-in is on; Google provider is **not** on yet (Phase 1 B).
 
-Production also has a second Firestore database named `cost-tracker` besides `(default)`. The app uses `getFirestore(app)` which is `(default)`. Do not delete `cost-tracker`; note it when writing the real backup script and check whether it holds anything.
+Production also has a second Firestore database named `cost-tracker` besides `(default)`. The app uses `getFirestore(app)` which is `(default)`. That named database was empty at backup time. Do not delete it.
+
+---
+
+## 13. Honest shape of the codebase (not a cleanup list)
+
+This is a working family tool, not a tidy platform. Phase 1 is **not** a rewrite.
+
+What is fine for now:
+
+- A real folder layout (`pages`, `firebase`, `hooks`, `utils`).
+- One live data path that we understand: `users/{accessCode}/…`.
+- Staging + branch + restore tag so we can change things without touching the family site.
+
+What is messy, and we are **not** fixing in Phase 1 unless it blocks B or C:
+
+- Two Firestore helper files (`data.js` and `firebaseService.js`) that overlap.
+- `AppContext.js` loads almost everything for every screen.
+- Leftover files not wired in: `ConstructionExpenseTracker.js`, `PurchaseOrdersPage.js`, OCR test pages, `Fab.js`.
+- No react-router; a `currentPage` string.
+- Almost no tests. Firestore/Storage rules are open (`if true`) under each access code.
+- Projects are a name on expenses, not a real container. That is why C has to invent an org/project tree.
+
+Do not “organise the repo” as a side quest. Auth and tenancy (B then C) are what make it scalable later.
