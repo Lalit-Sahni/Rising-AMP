@@ -6,19 +6,40 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Base: black & white
-        brand: {
-          black: '#0a0a0a',
-          white: '#fafafa',
+        steel: {
+          900: 'var(--steel-900)',
+          800: 'var(--steel-800)',
+          700: 'var(--steel-700)',
         },
-        // Orange accent (primary actions, active states, focus)
+        ink: 'var(--ink)',
+        hairline: 'var(--hairline)',
+        canvas: 'var(--canvas)',
+        surface: 'var(--surface)',
         accent: {
-          DEFAULT: '#ea580c',
-          light: '#f97316',
-          dark: '#c2410c',
+          DEFAULT: 'var(--accent)',
+          600: 'var(--accent-600)',
+          tint: 'var(--accent-tint)',
+          dark: 'var(--accent-600)',
         },
+        pos: 'var(--pos)',
+        neg: 'var(--neg)',
+        slate: {
+          400: 'var(--slate-400)',
+          600: 'var(--slate-600)',
+        },
+      },
+      fontFamily: {
+        sans: ['Manrope', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: [['Manrope', 'system-ui', '-apple-system', 'sans-serif'], { fontVariantNumeric: 'tabular-nums' }],
+      },
+      borderRadius: {
+        ot: 'var(--radius)',
+        'ot-sm': 'var(--radius-sm)',
+      },
+      boxShadow: {
+        whisper: 'var(--shadow)',
       },
     },
   },
   plugins: [],
-} 
+}

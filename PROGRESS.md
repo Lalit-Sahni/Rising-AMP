@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-1-foundation` (Phase 1, live). **Start Phase 2 on a new branch:** `git checkout -b phase-2-visual` from `phase-1-foundation`.
+`phase-2-visual` (from `phase-1-foundation`). Visual restyle only. Localhost / staging. Do not deploy to production until Lalit asks.
 
 Restore tag (Phase 1 unwind): `pre-phase1-2026-08-22`
 
@@ -10,25 +10,19 @@ Production: `rising-amp-467702-b5` — https://rising-amp-467702-b5.web.app
 Staging: `rising-amp-staging` — localhost / `.env.local`  
 `.firebaserc` default is **staging**.
 
-## Where we are (2026-08-23 night)
+## Where we are (2026-08-23)
 
-**Phase 1 is closed** (Google login, two job lists, per-job invites). Lalit confirmed live works.
+**Phase 1 is closed.** **Phase 2 visual restyle is on localhost**, waiting for Lalit to look at http://localhost:3000.
 
-**Phase 2 is briefed, not started.** Visual overhaul only. Source of truth: `PHASE2.md` + `design/opal-track-redesign.html`.
+Look source: `design/opal-track-reference.html` (Manrope + Palette 1). Tokens, Manrope, steel chrome, category colour only as data ink (dots / icons / bars). Invalid dates show "—". Empty budget is an empty state, not a green remaining. Same buttons and numbers. No production deploy.
 
-Localhost still talks to staging. Do not swap env files. Do not deploy Phase 2 to production until Lalit asks.
+## Next
 
-## Next (Phase 2, one step)
-
-- [ ] Create branch `phase-2-visual` from `phase-1-foundation`
-- [ ] **Step 0:** tokens in Tailwind + CSS `:root`, load Geist + Geist Mono. No screen restyle yet. Show Lalit, wait for yes
-- [ ] Shell (sidebar + header)
-- [ ] Sign-in + job picker + not-invited (restyle only; Google already works)
-- [ ] Dashboard (kill rainbow tiles; empty budget state; money in mono)
-- [ ] Add Expense
-- [ ] Invoices (no “Invalid Date” string)
-- [ ] History
-- [ ] Budget
+- [x] Create branch `phase-2-visual` from `phase-1-foundation`
+- [x] Tokens + Manrope (everything; tabular figures for money)
+- [x] Shell, sign-in, picker, dashboard, add expense, invoices, history, budget (localhost)
+- [x] Strip tinted category cards / side bars / filled pills — colour on data only
+- [ ] Lalit reviews localhost
 - [ ] Production hosting deploy only when Lalit asks after the restyle looks right
 
 ## Phase 1 leftovers (not Phase 2 unless he asks)
@@ -42,7 +36,8 @@ Localhost still talks to staging. Do not swap env files. Do not deploy Phase 2 t
 
 - Change behaviour, data, auth, or calculations
 - Add email/password login, “new job list”, or a Reports page because they appear in the mockup
-- Paste `design/opal-track-redesign.html` into the React app
+- Paste `design/opal-track-reference.html` into the React app
+- Tint card backgrounds or put category colour on chrome
 - `firebase deploy` to production without `--project production` and an explicit `--only`
 - Commit `.env*`, `.phase1-local.json`, or `backups/`
 - Billing, Stripe, a second product

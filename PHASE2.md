@@ -1,6 +1,8 @@
 # Phase 2 — Visual overhaul (agent brief)
 
-Read `CLAUDE.md` then `PROGRESS.md` then this file. Open `design/opal-track-redesign.html` in a browser before touching CSS.
+Read `CLAUDE.md` then `PROGRESS.md` then this file. Open `design/opal-track-reference.html` in a browser before touching CSS. That file is the Manrope + Palette 1 look (`opal-track-MANROPE_P1.html` is the same mockup).
+
+This is a **restyle, not a rewrite.** Behaviour, data, routes, auth, Firestore, and calculations must not change. If a change alters what the app does rather than how it looks, it is out of scope.
 
 This is a **restyle, not a rewrite.** Behaviour, data, routes, auth, Firestore, and calculations must not change. If a change alters what the app does rather than how it looks, it is out of scope.
 
@@ -14,17 +16,17 @@ Put Opal Track onto one disciplined design system taken from the mockup. Same sc
 
 ## The design reference
 
-`design/opal-track-redesign.html` is the look source of truth.
+`design/opal-track-reference.html` is the look source of truth (Manrope + Palette 1).
 
 - Its `:root` block is the token system. Copy those values. Do not invent extra colours.
-- Its sections (sidebar, stat cards, quick actions, sign-in, job-list picker) show the target treatment.
+- Its sections (sidebar, stat cards, category cards, quick actions) show the target treatment.
 - It is a **reference to match**, not code to paste into React. Recreate the language with the app’s own components.
 
 The mockup is a concept. It includes things the live app does **not** do. Do not add those (see “Mockup vs live app” below).
 
 ---
 
-## Tokens (from the mockup `:root`)
+## Tokens (from the reference `:root`)
 
 ```
 --steel-900: #17181C    sidebar, headings on dark
@@ -36,29 +38,33 @@ The mockup is a concept. It includes things the live app does **not** do. Do not
 --hairline:  #E7E9EC    borders
 --canvas:    #F5F6F8    page background
 --surface:   #FFFFFF    cards
---accent:    #E85D1A    hi-vis orange — the only accent
+--accent:    #E85D1A    hi-vis orange — the only brand accent
 --accent-600:#C64E12    hover
 --accent-tint:#FCEEE4   selected fill
---pos:       #2E7D57    whispered positive (paid, etc.)
+--pos:       #2E7D57    whispered positive (paid, remaining)
 --neg:       #C0392B    whispered negative (over budget)
+--c-labour:  #5E82A6    data ink only
+--c-trade:   #C08A3E
+--c-materials:#B5654A
+--c-service: #4E8C82
+--c-equipment:#7E9B63
 --radius:    12px
 --radius-sm: 8px
 --shadow:    0 1px 2px rgba(23,24,28,.04), 0 1px 3px rgba(23,24,28,.03)
---ui:        Geist, system-ui, sans-serif
---mono:      Geist Mono, ui-monospace, monospace
+--ui:        Manrope, system-ui, sans-serif
 ```
 
 Rules of the look:
 
-- **One accent only.** Orange for primary buttons, the active nav marking line, the primary metric’s thin top line, selected states. Everything else stays steel / ink / hairline.
-- **Removing the rainbow is the most important change.** No blue / green / purple / amber icon tiles, gradient nav cards, or coloured category chips as the main language. Status is a small dot or muted `--pos` / `--neg` text, not a large coloured pill.
+- **One brand accent only.** Orange for primary buttons, the active nav marking line, the primary metric’s thin top line, selected states. Everything else stays steel / ink / hairline.
+- **Colour lives in the data, never on the furniture.** Category colour appears only in dots, icons, and chart bars. Cards, panels and backgrounds stay white or canvas. No tinted card fills. No coloured bars down the side of cards. No filled bright category pills — a 7px dot plus the label is enough.
 - **Borders over shadows.** Hairline `#E7E9EC`. The mockup’s `--shadow` is a whisper, not a glow.
-- **Type.** Geist for UI, Geist Mono + `font-variant-numeric: tabular-nums` for money, counts, dates, emails, eyebrow labels. Money is always mono.
+- **Type.** Manrope for everything. Money, counts, and dates use `font-variant-numeric: tabular-nums` (the `.tabular` class). Do not load a second display font.
 - **Signature.** A 2–3px orange marking line: active sidebar item (left edge) and the primary stat card (top edge). Keep every accent thin.
 
 Current Tailwind already has a different orange (`#ea580c`) and `brand-black`. Phase 2 replaces those with the tokens above. Do not keep both systems.
 
-Prefer loading Geist / Geist Mono via Google Fonts in `public/index.html` (no new npm package). Keep **lucide-react** (already in the app). Do not add another icon library.
+Prefer loading Manrope via Google Fonts in `public/index.html` (no new npm package). Keep **lucide-react** (already in the app). Do not add another icon library.
 
 ---
 
@@ -85,7 +91,7 @@ Work on branch **`phase-2-visual`** created from `phase-1-foundation`. One revie
 
 1. Create `phase-2-visual` from `phase-1-foundation`.
 2. Put tokens in **one** place the whole app can read: `tailwind.config.js` theme extend **and** CSS variables on `:root` in `src/index.css` (or a small `src/styles/tokens.css` imported from there). Map Tailwind names to the mockup (`accent` → `#E85D1A`, etc.).
-3. Load Geist + Geist Mono in `public/index.html`.
+3. Load Manrope in `public/index.html`.
 4. Change nothing else visual. Show Lalit the token file + fonts loaded. Get yes.
 
 ### Then restyle screen by screen
@@ -126,7 +132,7 @@ These are visual bugs, not data bugs. Do not change how budget or dates are stor
 
 ## How to preview
 
-`npm start` → http://localhost:3000 → **staging**. Open the mockup next to it (`design/opal-track-redesign.html`). Live site stays as it is until an explicit production deploy of hosting only.
+`npm start` → http://localhost:3000 → **staging**. Open the mockup next to it (`design/opal-track-reference.html`). Live site stays as it is until an explicit production deploy of hosting only.
 
 ## Continuity
 

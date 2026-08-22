@@ -7,10 +7,10 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 ## Next agent — start here (do this first)
 
 1. Confirm git branch. Phase 1 landed on `phase-1-foundation` (live 2026-08-23). Restore tag if you need to unwind that work: `pre-phase1-2026-08-22`. **Phase 2 starts on a new branch `phase-2-visual` from `phase-1-foundation`.** Never commit to `master` or `main`.
-2. Read `PROGRESS.md` (next concrete step), then `PHASE2.md` (the visual brief), then `ARCHITECTURE.md`. Open `design/opal-track-redesign.html` in a browser. `PLAN.md` is the Phase 1 record only.
+2. Read `PROGRESS.md` (next concrete step), then `PHASE2.md` (the visual brief), then `ARCHITECTURE.md`. Open `design/opal-track-reference.html` in a browser. `PLAN.md` is the Phase 1 record only.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 2 step 0 — tokens + Geist fonts only, on `phase-2-visual`. Show Lalit, get yes, then restyle screen by screen. Do not change behaviour. Do not deploy to production until he asks after the restyle is done.
+5. **Next:** Phase 2 restyle is on `phase-2-visual` against `design/opal-track-reference.html` (Manrope, Palette 1, colour only as data ink). Show Lalit localhost. Do not change behaviour. Do not deploy to production until he asks after the restyle is done.
 6. Owner (Lalit) writes in plain language. Explain in plain language.
 
 If you are unsure whether a command writes to production, do not run it.
@@ -29,7 +29,7 @@ If you are unsure whether a command writes to production, do not run it.
 
 - Day-to-day: `npm start` → http://localhost:3000 (staging).
 - Live: https://rising-amp-467702-b5.web.app (production).
-- Design mockup: `design/opal-track-redesign.html` (open as a file in the browser).
+- Design mockup: `design/opal-track-reference.html` (open as a file in the browser).
 - Never run `firebase deploy` against production unless the owner explicitly asks after sign-off.
 
 ## Environments
@@ -51,7 +51,7 @@ Google login, one org, two named job lists, per-job invites, Site Log / Weekly R
 
 ## Phase 2 (current)
 
-Visual overhaul only. Brief: `PHASE2.md`. Mockup: `design/opal-track-redesign.html`. Restyle, do not rewrite. No behaviour, data, auth, or schema changes.
+Visual overhaul only. Brief: `PHASE2.md`. Mockup: `design/opal-track-reference.html`. Restyle, do not rewrite. No behaviour, data, auth, or schema changes. Colour lives in the data (dots, icons, bars), never on card furniture.
 
 ## Out of scope until asked
 

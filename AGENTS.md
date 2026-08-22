@@ -5,7 +5,7 @@ Read these files **in this order** before touching anything:
 1. `CLAUDE.md` — prime directive, environments, what is in scope
 2. `PROGRESS.md` — where we stopped and the **next concrete step**
 3. `PHASE2.md` — Phase 2 visual brief (if doing Phase 2)
-4. Open `design/opal-track-redesign.html` in a browser
+4. Open `design/opal-track-reference.html` in a browser
 5. `ARCHITECTURE.md` — how the running app is actually built
 6. `PLAN.md` — Phase 1 record only (complete)
 
