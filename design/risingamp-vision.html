@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RisingAMP — the best version</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --steel-900:#17181C; --steel-800:#1F2127; --steel-700:#2A2D34;
+    --ink:#1C1E23; --slate-600:#565B64; --slate-500:#6B7079; --slate-400:#8A9099;
+    --hairline:#E7E9EC; --canvas:#F5F6F8; --surface:#FFFFFF;
+    --accent:#E85D1A; --accent-600:#C64E12; --accent-tint:#FCEEE4;
+    --pos:#2E7D57; --pos-tint:#E7F1EC; --warn:#B7862B; --warn-tint:#F7F0DF; --neg:#C0392B;
+    --c-labour:#5E82A6; --c-trade:#C08A3E; --c-materials:#B5654A; --c-service:#4E8C82; --c-equipment:#7E9B63;
+    --radius:12px; --radius-sm:8px;
+    --shadow:0 1px 2px rgba(23,24,28,.04),0 1px 3px rgba(23,24,28,.03);
+    --ui:'Manrope',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--ui);background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5;padding:44px 24px 90px}
+  .tab{font-variant-numeric:tabular-nums}
+  .wrap{max-width:1180px;margin:0 auto}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--slate-400)}
+
+  /* vision intro */
+  .intro{max-width:760px;margin-bottom:6px}
+  .intro .logo{display:inline-flex;align-items:center;gap:11px;margin-bottom:20px}
+  .intro .logo i{width:38px;height:38px;border-radius:10px;background:var(--accent);display:grid;place-items:center;color:#fff}
+  .intro .logo b{font-size:18px;font-weight:800;letter-spacing:-.02em}
+  .intro h1{font-size:33px;font-weight:800;letter-spacing:-.03em;line-height:1.12;margin-bottom:14px}
+  .intro h1 .u{color:var(--accent)}
+  .intro p{font-size:15.5px;color:var(--slate-600);line-height:1.6}
+  .caption{font-size:12.5px;color:var(--slate-400);margin:30px 0 10px;display:flex;align-items:center;gap:8px}
+  .caption .n{width:20px;height:20px;border-radius:50%;background:var(--steel-900);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+
+  /* window */
+  .win{background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden;box-shadow:0 12px 44px rgba(23,24,28,.09);margin-top:14px}
+  .chrome{display:flex;align-items:center;gap:8px;padding:11px 15px;background:var(--steel-900)}
+  .chrome i{width:11px;height:11px;border-radius:50%;background:#3A3D44}
+  .chrome span{margin-left:10px;font-size:11px;color:#7A7F88;letter-spacing:.02em}
+  .app{display:flex;min-height:560px}
+
+  /* sidebar */
+  .side{width:210px;background:var(--steel-900);color:#C9CDD4;flex-shrink:0;display:flex;flex-direction:column;padding:16px 12px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 18px}
+  .brand .logo{width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:#fff}
+  .brand b{font-size:14.5px;font-weight:800;color:#fff;letter-spacing:-.01em}
+  .navlabel{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#5B606A;padding:10px 8px 8px;font-weight:700}
+  .nav a{display:flex;align-items:center;gap:11px;position:relative;padding:8px 10px;border-radius:8px;color:#B4B9C1;font-size:13px;font-weight:500;text-decoration:none;margin-bottom:2px}
+  .nav a svg{width:16px;height:16px;stroke-width:1.6;opacity:.9}
+  .nav a:hover{background:var(--steel-800);color:#EDEFF2}
+  .nav a.active{background:var(--steel-800);color:#fff}
+  .nav a.active::before{content:"";position:absolute;left:-12px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
+  .foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--steel-700)}
+  .chip{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer}
+  .chip:hover{background:var(--steel-800)}
+  .chip .av{width:24px;height:24px;border-radius:50%;background:var(--steel-700);display:grid;place-items:center;font-size:10px;color:#C9CDD4;font-weight:700;flex-shrink:0}
+  .chip .who{min-width:0;flex:1}
+  .chip .who b{font-size:12px;color:#E5E7EA;font-weight:600;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip .who small{display:block;color:#767B84;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip .car svg{width:14px;height:14px;stroke-width:1.7;color:#767B84}
+
+  .main{flex:1;background:var(--canvas);display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:13px 24px;border-bottom:1px solid var(--hairline);background:var(--surface)}
+  .crumb{font-size:13px;color:var(--ink);font-weight:600;display:flex;align-items:center;gap:8px}
+  .crumb .mut{color:var(--slate-400);font-weight:500}
+  .tb-right{display:flex;align-items:center;gap:8px}
+  .proj{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--hairline);border-radius:20px;font-size:12.5px;font-weight:600}
+  .proj .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .iconbtn{width:32px;height:32px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface);display:grid;place-items:center;color:var(--slate-600);cursor:pointer}
+  .iconbtn svg{width:16px;height:16px;stroke-width:1.6}
+  .content{padding:24px;overflow:auto}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:20px}
+  .head h2{font-size:25px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
+  .head p{color:var(--slate-600);font-size:13.5px;margin-top:3px}
+  .qbtn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:0;font-family:inherit;font-weight:700;font-size:13px;padding:9px 15px;border-radius:9px;cursor:pointer}
+  .qbtn:hover{background:var(--accent-600)}
+  .ghostbtn{display:inline-flex;align-items:center;gap:6px;background:var(--surface);color:var(--ink);border:1px solid var(--hairline);font-family:inherit;font-weight:600;font-size:12px;padding:7px 12px;border-radius:8px;cursor:pointer}
+  .ghostbtn:hover{border-color:#D6D9DD}
+
+  /* portfolio summary strip */
+  .pstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .pcell{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:15px 17px;box-shadow:var(--shadow)}
+  .pcell .k{font-size:11.5px;color:var(--slate-400);font-weight:600}
+  .pcell .v{font-size:21px;font-weight:800;letter-spacing:-.02em;margin-top:6px}
+  .pcell .v small{font-size:12px;font-weight:600;color:var(--slate-400)}
+  .pcell .v .g{color:var(--pos)}
+
+  /* job rows */
+  .jobs{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .jhead,.jrow{display:grid;grid-template-columns:2.3fr 1.5fr 1.2fr 1fr 28px;gap:14px;align-items:center;padding:14px 18px}
+  .jhead{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--slate-400);border-bottom:1px solid var(--hairline)}
+  .jrow{border-bottom:1px solid var(--hairline);cursor:pointer}
+  .jrow:last-child{border-bottom:0}
+  .jrow:hover{background:#FCFCFD}
+  .jrow .job{display:flex;align-items:center;gap:12px;min-width:0}
+  .jrow .mk{width:38px;height:38px;border-radius:9px;background:var(--canvas);border:1px solid var(--hairline);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--ink);flex-shrink:0}
+  .jrow .job b{font-size:14px;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .jrow .job small{font-size:12px;color:var(--slate-400)}
+  .marg{display:flex;align-items:center;gap:10px}
+  .marg .bar{flex:1;height:7px;background:#EEF0F2;border-radius:5px;overflow:hidden;min-width:60px}
+  .marg .bar i{display:block;height:100%;border-radius:5px}
+  .marg .pct{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;width:44px;text-align:right}
+  .verdict{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600}
+  .verdict .d{width:8px;height:8px;border-radius:50%}
+  .v-ok{color:var(--pos)} .v-ok .d{background:var(--pos)}
+  .v-warn{color:var(--warn)} .v-warn .d{background:var(--warn)}
+  .v-new{color:var(--slate-500)} .v-new .d{background:var(--slate-400)}
+  .att{font-size:12.5px;color:var(--slate-500);font-weight:600;font-variant-numeric:tabular-nums}
+  .att .z{color:var(--slate-400);font-weight:500}
+  .chev svg{width:16px;height:16px;stroke-width:1.7;color:var(--slate-400)}
+  .newjob{display:flex;align-items:center;gap:10px;padding:14px 18px;color:var(--slate-500);font-size:13px;font-weight:600;cursor:pointer;border-top:1px dashed var(--hairline)}
+  .newjob:hover{color:var(--accent)}
+  .newjob svg{width:17px;height:17px;stroke-width:1.8}
+
+  /* verdict banner (job dashboard) */
+  .banner{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--hairline);border-left:3px solid var(--pos);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow);margin-bottom:16px}
+  .banner .bd{width:34px;height:34px;border-radius:9px;background:var(--pos-tint);display:grid;place-items:center;color:var(--pos);flex-shrink:0}
+  .banner .bd svg{width:18px;height:18px;stroke-width:2}
+  .banner .txt{flex:1}
+  .banner .txt b{font-size:14.5px;font-weight:800}
+  .banner .txt p{font-size:13px;color:var(--slate-600);margin-top:1px}
+  .banner .txt p .g{color:var(--pos);font-weight:700}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .stat{position:relative;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:17px;box-shadow:var(--shadow)}
+  .stat.primary::before{content:"";position:absolute;left:17px;right:17px;top:0;height:2px;background:var(--accent);border-radius:0 0 2px 2px}
+  .stat .lab{font-size:11.5px;color:var(--slate-400);font-weight:600}
+  .stat .fig{font-weight:800;font-size:23px;letter-spacing:-.025em;margin:9px 0 6px}
+  .stat .sub{font-size:12px;color:var(--slate-600);display:flex;align-items:center;gap:6px}
+  .stat .sub .pct{font-weight:700;color:var(--pos)}
+  .spark{display:block;margin-top:2px}
+
+  .row2{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-bottom:16px}
+  .panel{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+  .panel h3{font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+  .panel h3 .cnt{font-size:11px;font-weight:700;color:var(--warn);background:var(--warn-tint);padding:2px 8px;border-radius:20px}
+  .panel h3 .link{font-size:11px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
+
+  /* what needs you */
+  .todo .t{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--hairline)}
+  .todo .t:last-child{border-bottom:0}
+  .todo .ic{width:34px;height:34px;border-radius:9px;background:var(--canvas);border:1px solid var(--hairline);display:grid;place-items:center;color:var(--slate-600);flex-shrink:0}
+  .todo .ic svg{width:16px;height:16px;stroke-width:1.7}
+  .todo .ic.warn{background:var(--warn-tint);border-color:transparent;color:var(--warn)}
+  .todo .m{flex:1}
+  .todo .m b{font-size:13.5px;font-weight:700;display:block}
+  .todo .m small{font-size:12px;color:var(--slate-400)}
+
+  .bars .brow{display:flex;align-items:center;gap:12px;margin-top:13px}
+  .bars .bn{width:82px;font-size:12.5px;color:var(--slate-600);display:flex;align-items:center;gap:8px}
+  .bars .bn .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .bars .bt{flex:1;height:8px;background:#EEF0F2;border-radius:5px;overflow:hidden}
+  .bars .bt i{display:block;height:100%;border-radius:5px}
+  .bars .bv{width:64px;text-align:right;font-size:12px;color:var(--slate-500);font-weight:600;font-variant-numeric:tabular-nums}
+
+  .cash{margin-top:6px}
+  .cash .c{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--hairline);font-size:13px}
+  .cash .c:last-child{border-bottom:0}
+  .cash .c .k{color:var(--slate-600)} .cash .c .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .cash .c .v.g{color:var(--pos)}
+
+  .qa{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:2px}
+  .qa a{display:flex;align-items:center;gap:13px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow)}
+  .qa a:hover{border-color:#D6D9DD}
+  .qa .ic{width:36px;height:36px;border-radius:9px;background:var(--canvas);border:1px solid var(--hairline);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+  .qa .ic svg{width:17px;height:17px;stroke-width:1.6}
+  .qa b{font-size:13.5px;font-weight:700;display:block}
+  .qa small{font-size:12px;color:var(--slate-400)}
+
+  /* capture card */
+  .capwrap{display:grid;grid-template-columns:1fr 1.2fr;gap:24px;align-items:center;margin-top:14px;background:var(--surface);border:1px solid var(--hairline);border-radius:16px;box-shadow:var(--shadow);padding:26px}
+  .capwrap .say h4{font-size:17px;font-weight:800;letter-spacing:-.01em;margin-bottom:8px}
+  .capwrap .say p{font-size:13.5px;color:var(--slate-600);line-height:1.6}
+  .capcard{background:var(--canvas);border:1px solid var(--hairline);border-radius:14px;padding:18px}
+  .capcard .ch{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .capcard .ch .ci{width:34px;height:34px;border-radius:9px;background:var(--surface);border:1px solid var(--hairline);display:grid;place-items:center;color:var(--slate-600)}
+  .capcard .ch .ci svg{width:17px;height:17px;stroke-width:1.7}
+  .capcard .ch b{font-size:14px;font-weight:700}
+  .capcard .ch small{font-size:11.5px;color:var(--slate-400);display:block}
+  .field{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--hairline);border-radius:9px;padding:11px 13px;margin-bottom:8px}
+  .field .fk{font-size:11px;color:var(--slate-400);font-weight:600}
+  .field .fv{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+  .field .fv.cat{display:flex;align-items:center;gap:7px;font-weight:700}
+  .field .fv.cat .dot{width:8px;height:8px;border-radius:50%;background:var(--c-materials)}
+  .field.flag{border-color:var(--warn);background:var(--warn-tint)}
+  .field.flag .chk{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--warn)}
+  .field.flag .chk svg{width:13px;height:13px;stroke-width:2}
+  .capcard .save{width:100%;margin-top:10px;background:var(--accent);color:#fff;border:0;font-family:inherit;font-weight:700;font-size:13px;padding:11px;border-radius:9px;cursor:pointer}
+
+  .close{max-width:760px;margin:44px auto 0;text-align:center}
+  .close h3{font-size:19px;font-weight:800;letter-spacing:-.01em;margin-bottom:10px}
+  .close p{font-size:14px;color:var(--slate-600);line-height:1.65}
+  .note{font-size:12px;color:var(--slate-400);text-align:center;margin-top:22px}
+  @media(max-width:900px){.pstrip,.stats,.qa{grid-template-columns:repeat(2,1fr)}.row2,.capwrap{grid-template-columns:1fr}.side{display:none}.jhead,.jrow{grid-template-columns:2fr 1.4fr 28px}.jhead .h-v,.jhead .h-a,.jrow .verdict,.jrow .att{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- INTRO -->
+  <div class="intro">
+    <div class="logo"><i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="21" height="21" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></i><b>RisingAMP</b></div>
+    <h1>Know where every dollar goes,<br>and <span class="u">what needs you today.</span></h1>
+    <p>The tracker you have records the past. This version reads it back to you. It leads with one honest answer, is this job making money, then shows you the handful of things worth your attention, so a builder on a site with one bar of signal opens it and knows exactly where he stands.</p>
+  </div>
+
+  <!-- SCREEN 1: JOBS -->
+  <div class="caption"><span class="n">1</span> Open to your jobs, and how each one is tracking</div>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span>risingamp.app / jobs</span></div>
+    <div class="app">
+      <aside class="side">
+        <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="17" height="17" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span><b>RisingAMP</b></div>
+        <div class="navlabel">Main</div>
+        <nav class="nav">
+          <a class="active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6"/></svg>Jobs</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add expense</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>Invoices</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</a>
+        </nav>
+        <div class="foot"><div class="chip"><span class="av">LS</span><span class="who"><b>Lalit Sahni</b><small>Opal SS Constructions</small></span><span class="car"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></span></div></div>
+      </aside>
+      <div class="main">
+        <div class="topbar"><div class="crumb">Jobs</div><div class="tb-right"><button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button><button class="qbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="15" height="15" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>New job</button></div></div>
+        <div class="content">
+          <div class="head"><div><div class="eyebrow">Portfolio</div><h2>Jobs</h2><p>Every job, and how each one is tracking.</p></div></div>
+          <div class="pstrip">
+            <div class="pcell"><div class="k">Active jobs</div><div class="v tab">3</div></div>
+            <div class="pcell"><div class="k">Contracts</div><div class="v tab">$1.34M</div></div>
+            <div class="pcell"><div class="k">Combined margin</div><div class="v tab"><span class="g">$121k</span> <small>10.4%</small></div></div>
+            <div class="pcell"><div class="k">Need attention</div><div class="v tab">5</div></div>
+          </div>
+          <div class="jobs">
+            <div class="jhead"><span>Job</span><span>Margin</span><span class="h-v">Status</span><span class="h-a">Needs you</span><span></span></div>
+            <div class="jrow">
+              <div class="job"><span class="mk">72</span><div><b>72 Centenary Dr</b><small>Vaneet Khera &middot; Wentworthville</small></div></div>
+              <div class="marg"><span class="bar"><i style="width:60%;background:var(--pos)"></i></span><span class="pct">11.9%</span></div>
+              <div><span class="verdict v-ok"><span class="d"></span>On track</span></div>
+              <div class="att">3 items</div>
+              <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 6 6 6-6 6"/></svg></div>
+            </div>
+            <div class="jrow">
+              <div class="job"><span class="mk">BH</span><div><b>Baulkham Hills Extension</b><small>M. Grewal &middot; Baulkham Hills</small></div></div>
+              <div class="marg"><span class="bar"><i style="width:22%;background:var(--warn)"></i></span><span class="pct" style="color:var(--warn)">4.2%</span></div>
+              <div><span class="verdict v-warn"><span class="d"></span>Margin at risk</span></div>
+              <div class="att">2 items</div>
+              <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 6 6 6-6 6"/></svg></div>
+            </div>
+            <div class="jrow">
+              <div class="job"><span class="mk">GS</span><div><b>Gurner St</b><small>New &middot; 5 expenses so far</small></div></div>
+              <div class="marg"><span class="bar"><i style="width:0%"></i></span><span class="pct" style="color:var(--slate-400)">&mdash;</span></div>
+              <div><span class="verdict v-new"><span class="d"></span>Getting started</span></div>
+              <div class="att"><span class="z">All clear</span></div>
+              <div class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 6 6 6-6 6"/></svg></div>
+            </div>
+            <div class="newjob"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>New job</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: JOB DASHBOARD -->
+  <div class="caption"><span class="n">2</span> Inside a job, the answer first, then only what matters</div>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span>risingamp.app / jobs / 72-centenary-dr</span></div>
+    <div class="app">
+      <aside class="side">
+        <div class="brand"><span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="17" height="17" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span><b>RisingAMP</b></div>
+        <div class="navlabel">72 Centenary Dr</div>
+        <nav class="nav">
+          <a class="active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add expense</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>Invoices</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</a>
+        </nav>
+        <div class="foot"><div class="chip"><span class="av">LS</span><span class="who"><b>Lalit Sahni</b><small>Opal SS Constructions</small></span><span class="car"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></span></div></div>
+      </aside>
+      <div class="main">
+        <div class="topbar"><div class="crumb"><span class="mut">Jobs</span> / 72 Centenary Dr</div><div class="tb-right"><span class="proj"><span class="dot"></span>Month</span><button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button></div></div>
+        <div class="content">
+          <div class="head"><div><div class="eyebrow">Project overview</div><h2>72 Centenary Dr</h2><p>Vaneet Khera &middot; Wentworthville</p></div><button class="qbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="15" height="15" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add expense</button></div>
+
+          <div class="banner">
+            <div class="bd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg></div>
+            <div class="txt"><b>On track</b><p>You are making <span class="g">$97,033 (11.9%)</span> on this job, and nothing is overdue. Three small things need tidying up.</p></div>
+            <button class="ghostbtn">Review 3 items</button>
+          </div>
+
+          <div class="stats">
+            <div class="stat"><div class="lab">Contract</div><div class="fig tab">$812,500</div><div class="sub">Invoiced, fully paid</div></div>
+            <div class="stat"><div class="lab">Cost to date</div><div class="fig tab">$715,467</div><div class="sub">119 expenses</div></div>
+            <div class="stat primary"><div class="lab">Margin</div><div class="fig tab">$97,033</div><div class="sub"><span class="pct">11.9%</span>
+              <svg class="spark" width="72" height="18" viewBox="0 0 72 18" fill="none"><polyline points="0,4 18,3 36,7 54,9 72,11" stroke="#2E7D57" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div></div>
+            <div class="stat"><div class="lab">This month</div><div class="fig tab">$20,356</div><div class="sub">Spend so far</div></div>
+          </div>
+
+          <div class="row2">
+            <div class="panel todo">
+              <h3>What needs you today <span class="cnt">3</span></h3>
+              <div class="t"><span class="ic warn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4M12 13v3"/></svg></span><div class="m"><b>3 invoices are missing dates</b><small>They can't age or be reported until dated</small></div><button class="ghostbtn">Add dates</button></div>
+              <div class="t"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.2"/><path d="M8 6l1.5-2h5L16 6"/></svg></span><div class="m"><b>2 expenses have no receipt</b><small>$4,120 across Materials and Trade</small></div><button class="ghostbtn">Upload</button></div>
+              <div class="t"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V5M4 19h16M8 14l3-4 3 2 4-6"/></svg></span><div class="m"><b>Materials spend is up 18% this month</b><small>Mostly bricks and LED, worth a look</small></div><button class="ghostbtn">Review</button></div>
+            </div>
+            <div class="panel">
+              <h3>Cash</h3>
+              <div class="cash">
+                <div class="c"><span class="k">Invoiced</span><span class="v tab">$812,500</span></div>
+                <div class="c"><span class="k">Paid in</span><span class="v g tab">$812,500</span></div>
+                <div class="c"><span class="k">Outstanding</span><span class="v tab">$0</span></div>
+                <div class="c"><span class="k">Spent out</span><span class="v tab">$715,467</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row2">
+            <div class="panel">
+              <h3>Where the money's going <span class="link">View all</span></h3>
+              <div class="bars">
+                <div class="brow"><span class="bn"><span class="dot" style="background:var(--c-materials)"></span>Materials</span><span class="bt"><i style="width:100%;background:var(--c-materials)"></i></span><span class="bv tab">$302,140</span></div>
+                <div class="brow"><span class="bn"><span class="dot" style="background:var(--c-trade)"></span>Trade</span><span class="bt"><i style="width:74%;background:var(--c-trade)"></i></span><span class="bv tab">$224,300</span></div>
+                <div class="brow"><span class="bn"><span class="dot" style="background:var(--c-labour)"></span>Labour</span><span class="bt"><i style="width:41%;background:var(--c-labour)"></i></span><span class="bv tab">$124,880</span></div>
+                <div class="brow"><span class="bn"><span class="dot" style="background:var(--c-service)"></span>Service</span><span class="bt"><i style="width:16%;background:var(--c-service)"></i></span><span class="bv tab">$47,900</span></div>
+                <div class="brow"><span class="bn"><span class="dot" style="background:var(--c-equipment)"></span>Equipment</span><span class="bt"><i style="width:6%;background:var(--c-equipment)"></i></span><span class="bv tab">$16,247</span></div>
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Recent</h3>
+              <div class="cash">
+                <div class="c"><span class="k">Bricks &middot; <span style="color:var(--c-materials)">Materials</span></span><span class="v tab">$18,253.12</span></div>
+                <div class="c"><span class="k">Electrician &middot; <span style="color:var(--c-trade)">Trade</span></span><span class="v tab">$3,480.00</span></div>
+                <div class="c"><span class="k">Service &middot; <span style="color:var(--c-service)">Service</span></span><span class="v tab">$1,265.00</span></div>
+                <div class="c"><span class="k">LED channels &middot; <span style="color:var(--c-materials)">Materials</span></span><span class="v tab">$666.00</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="qa">
+            <a href="#"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.2"/><path d="M8 6l1.5-2h5L16 6"/></svg></span><div><b>Scan a receipt</b><small>Snap it, we read it</small></div></a>
+            <a href="#"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg></span><div><b>Invoices</b><small>All paid, nothing due</small></div></a>
+            <a href="#"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></span><div><b>Export</b><small>For your accountant</small></div></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: CAPTURE -->
+  <div class="caption"><span class="n">3</span> Capture is one photo, and it never guesses silently</div>
+  <div class="capwrap">
+    <div class="say">
+      <h4>Snap the receipt. We read it. You confirm.</h4>
+      <p>A tradie on site adds an expense in seconds, not a form. The scan fills in the vendor, amount and category on its own. When it isn't sure about something, it says so and asks you to check, rather than saving a wrong number quietly. That single habit is what makes the totals trustworthy.</p>
+    </div>
+    <div class="capcard">
+      <div class="ch"><span class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.2"/><path d="M8 6l1.5-2h5L16 6"/></svg></span><div><b>Receipt read</b><small>Bunnings Warehouse</small></div></div>
+      <div class="field"><span class="fk">Amount</span><span class="fv tab">$412.90</span></div>
+      <div class="field"><span class="fk">Category</span><span class="fv cat"><span class="dot"></span>Materials</span></div>
+      <div class="field flag"><span><span class="fk">Date</span><br><span class="fv tab">14 Aug 2026</span></span><span class="chk"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>Check this</span></div>
+      <button class="save">Save expense</button>
+    </div>
+  </div>
+
+  <!-- CLOSE -->
+  <div class="close">
+    <h3>Same data. A tool that has your back.</h3>
+    <p>Every number here already lives in what you built. The difference is that this version leads with the answer, protects you from being quietly wrong, and points at the few things worth your time. That is the line between a spreadsheet people tolerate and a tool a scaffolder, and his accountant, are glad to pay for.</p>
+  </div>
+  <div class="note">A vision mock for RisingAMP, not the live app.</div>
+
+</div>
+</body>
+</html>

@@ -6,12 +6,16 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. **Phase 2 is live** on `phase-2-visual` (hosting deployed 2026-08-23). Phase 1 is on `phase-1-foundation`. Restore tag if you need to unwind Phase 1: `pre-phase1-2026-08-22`. Never commit to `master` or `main`.
-2. Read `PROGRESS.md` (next concrete step). `PHASE2.md` is the closed visual brief. `PLAN.md` is the Phase 1 record only. `ARCHITECTURE.md` is how the running app is built.
+1. Confirm git branch. **Phase 2 is live** on `phase-2-visual` (hosting deployed 2026-08-23). Phase 1 is on `phase-1-foundation`. **Phase 3 is on `phase-3-vision` (from `phase-2-visual`). Step 0 is parked — wait for a yes on the mockup-vs-live table before any `src/` work.** Never commit to `master` or `main`. Restore tag if you need to unwind Phase 1: `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next concrete step), then `PHASE3.md` (the vision brief). `PHASE2.md` and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. Open `design/risingamp-vision.html` in a browser.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Wait for Lalit. Do not restyle again unless he asks. Do not deploy Cloud Functions. Do not write to production Firestore. Do not build `risingamp-vision.html` (local concept only, not the live app).
+5. **Next:** Wait for Lalit to approve the mockup-vs-live table in `PHASE3.md`. Do not change `src/`. Do not add “New job”. Do not rename Opal Track to RisingAMP. Do not deploy.
 6. Owner (Lalit) writes in plain language. Explain in plain language.
+
+**Paste this to start a new chat:**
+
+> Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.html. Step 0 is done on phase-3-vision. Wait for a yes on the mockup-vs-live table. Do not change src/ until then.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -29,7 +33,8 @@ If you are unsure whether a command writes to production, do not run it.
 
 - Day-to-day: `npm start` → http://localhost:3000 (staging).
 - Live: https://rising-amp-467702-b5.web.app (production).
-- Design mockup: `design/opal-track-reference.html` (open as a file in the browser).
+- Design mockup (Phase 3): `design/risingamp-vision.html`
+- Live look (Phase 2): `design/opal-track-reference.html`
 - Never run `firebase deploy` against production unless the owner explicitly asks. Hosting only: `firebase deploy --project production --only hosting`. Do not deploy functions, Firestore rules, or Storage unless he names them.
 
 ## Environments
@@ -53,6 +58,10 @@ Google login, one org, two named job lists, per-job invites, Site Log / Weekly R
 
 Visual overhaul is live on production hosting. Brief: `PHASE2.md`. Look: `design/opal-track-reference.html` (Manrope, Palette 1). Colour lives in the data (dots, icons, bars), never on card furniture. Do not re-run the restyle. Do not add mockup-only features.
 
+## Phase 3 (current)
+
+Same app, same data. Brief: `PHASE3.md`. Mockup: `design/risingamp-vision.html`. Lead with “is this job making money”, then what needs attention. Step 0 is parked on `phase-3-vision` — no app code, no New job, no live rename, no production deploy until Lalit says yes.
+
 ## Out of scope until asked
 
 Billing, Stripe, a second product, deleting leftover PIN folders, deploying functions, new npm packages (fonts via Google Fonts are OK), changing what the app calculates or who can see which job.
@@ -60,7 +69,8 @@ Billing, Stripe, a second product, deleting leftover PIN folders, deploying func
 ## Continuity
 
 - `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
-- `PHASE2.md` — Phase 2 brief (tokens, screen order, mockup vs live).
+- `PHASE3.md` — Phase 3 vision brief (jobs portfolio, verdict, capture).
+- `PHASE2.md` — Phase 2 restyle record (complete).
 - `PROGRESS.md` — next concrete step. Update at session end.
 - `PLAN.md` — Phase 1 record (complete).
 - `ARCHITECTURE.md` — how the running app is built.
