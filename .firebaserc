@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "rising-amp-467702-b5"
+    "default": "rising-amp-staging",
+    "staging": "rising-amp-staging",
+    "production": "rising-amp-467702-b5"
   }
 }
