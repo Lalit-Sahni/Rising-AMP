@@ -6,13 +6,12 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. **Phase 1 is done** (live as of 2026-08-23). Do not re-run cutover scripts. Do not delete old PIN folders. Do not deploy Cloud Functions unless the owner explicitly asks (live still has unused `generateWeeklyReport`).
-2. Confirm git branch. Phase 1 landed on `phase-1-foundation`. Restore tag if you need to unwind that work: `pre-phase1-2026-08-22`. Start Phase 2 on a **new branch** from `phase-1-foundation`, never on `master` or `main`.
-3. Read `PROGRESS.md` (next step), then `PLAN.md` (Phase 1 record), then `ARCHITECTURE.md`.
-4. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
-5. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-6. **Next:** Phase 2. Wait for Lalit’s brief. Do not invent Phase 2 scope. Invite email still needs the live Google OAuth consent screen if they want auto-send from Gmail.
-7. Owner (Lalit) writes in plain language. Explain in plain language.
+1. Confirm git branch. Phase 1 landed on `phase-1-foundation` (live 2026-08-23). Restore tag if you need to unwind that work: `pre-phase1-2026-08-22`. **Phase 2 starts on a new branch `phase-2-visual` from `phase-1-foundation`.** Never commit to `master` or `main`.
+2. Read `PROGRESS.md` (next concrete step), then `PHASE2.md` (the visual brief), then `ARCHITECTURE.md`. Open `design/opal-track-redesign.html` in a browser. `PLAN.md` is the Phase 1 record only.
+3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
+4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
+5. **Next:** Phase 2 step 0 — tokens + Geist fonts only, on `phase-2-visual`. Show Lalit, get yes, then restyle screen by screen. Do not change behaviour. Do not deploy to production until he asks after the restyle is done.
+6. Owner (Lalit) writes in plain language. Explain in plain language.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -30,40 +29,41 @@ If you are unsure whether a command writes to production, do not run it.
 
 - Day-to-day: `npm start` → http://localhost:3000 (staging).
 - Live: https://rising-amp-467702-b5.web.app (production).
+- Design mockup: `design/opal-track-redesign.html` (open as a file in the browser).
 - Never run `firebase deploy` against production unless the owner explicitly asks after sign-off.
-- Optional: Firebase Hosting preview channels pointed at staging, for phone checks without overwriting the live site.
 
 ## Environments
 
 | Alias | Firebase project ID | Role |
 |--------|---------------------|------|
 | production | `rising-amp-467702-b5` | Live family app (Google login, org + job lists). |
-| staging | `rising-amp-staging` | Copy of production data. Localhost and experiments. `.firebaserc` default is staging so an accidental deploy cannot hit production. |
+| staging | `rising-amp-staging` | Copy of production data. Localhost and experiments. `.firebaserc` default is staging. |
 
 What matters is **which database the app points at**, not local versus deployed.
 
 ## Access model (live)
 
-Google / Gmail via Firebase Auth. After login: only invited addresses continue. The chooser lists **job lists that Gmail was invited to**, not every job in the company. Tracker data lives under `organizations/opal-ss-constructions/projects/{projectId}/…`. Old `users/{accessCode}` trees still exist as unused copies. Do not delete them unless the owner later asks.
+Google / Gmail via Firebase Auth. After login: only invited addresses continue. The chooser lists **job lists that Gmail was invited to**. Tracker data lives under `organizations/opal-ss-constructions/projects/{projectId}/…`. Old `users/{accessCode}` trees still exist as unused copies. Do not delete them unless the owner later asks.
 
 ## Phase 1 (closed 2026-08-23)
 
-A. Remove Site Log and Weekly Report from the UI — done. Old rows remain in production Firestore; staging site-log rows were deleted.
-B. Replace the shared PIN with per-person Google login, job-list chooser, per-job invites.
-C. Promote the two real PIN workspaces into one organisation with two named job lists. Owner Gmail attached; other family Gmails invited per job. Leftover PIN folders left untouched.
+Google login, one org, two named job lists, per-job invites, Site Log / Weekly Report removed from the UI. Do not re-run cutover scripts. Do not deploy Cloud Functions unless asked (live still has unused `generateWeeklyReport`).
 
-Keep the account / organisation / tenancy layer product-agnostic. Do not bake tracker-specific assumptions into auth or orgs. No billing or Stripe unless Lalit asks.
+## Phase 2 (current)
+
+Visual overhaul only. Brief: `PHASE2.md`. Mockup: `design/opal-track-redesign.html`. Restyle, do not rewrite. No behaviour, data, auth, or schema changes.
 
 ## Out of scope until asked
 
-Billing, Stripe, deleting leftover PIN folders, deploying functions, new dependencies, a big-bang tracker UI rewrite. Do not invent Phase 2.
+Billing, Stripe, a second product, deleting leftover PIN folders, deploying functions, new npm packages (fonts via Google Fonts are OK), changing what the app calculates or who can see which job.
 
 ## Continuity
 
-- `AGENTS.md` — pointer for Cursor agents. Same instruction: read this file, then `PROGRESS.md`.
+- `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
+- `PHASE2.md` — Phase 2 brief (tokens, screen order, mockup vs live).
+- `PROGRESS.md` — next concrete step. Update at session end.
 - `PLAN.md` — Phase 1 record (complete).
-- `PROGRESS.md` — what was done, what is in flight, next concrete step. Update at session end.
-- `ARCHITECTURE.md` — how the running app is actually built.
+- `ARCHITECTURE.md` — how the running app is built.
 - Small sessions: one checklist item, then commit on the branch.
 
 ## Owner working style

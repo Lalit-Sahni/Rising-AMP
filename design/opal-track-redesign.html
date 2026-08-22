@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opal Track — visual direction v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     DESIGN TOKENS  (also the spec for the agent)
+     Steel charcoal + single hi-vis orange + hairlines.
+     UI: Geist.  Figures: Geist Mono (tabular ledger).
+     ============================================================ */
+  :root{
+    --steel-900:#17181C; --steel-800:#1F2127; --steel-700:#2A2D34;
+    --ink:#1C1E23; --slate-600:#565B64; --slate-400:#8A9099;
+    --hairline:#E7E9EC; --canvas:#F5F6F8; --surface:#FFFFFF;
+    --accent:#E85D1A; --accent-600:#C64E12; --accent-tint:#FCEEE4;
+    --pos:#2E7D57; --neg:#C0392B;
+    --radius:12px; --radius-sm:8px;
+    --shadow:0 1px 2px rgba(23,24,28,.04), 0 1px 3px rgba(23,24,28,.03);
+    --ui:'Geist',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --mono:'Geist Mono',ui-monospace,'SF Mono',Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--ui);background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5;padding:40px 24px 80px}
+  .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .eyebrow{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--slate-400)}
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* identity strip */
+  .identity{margin-bottom:36px}
+  .identity h1{font-size:22px;font-weight:600;letter-spacing:-.015em;margin:6px 0 4px}
+  .identity p{color:var(--slate-600);font-size:14px;max-width:660px}
+  .specimen{display:flex;flex-wrap:wrap;gap:28px;margin-top:22px;padding:22px;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .swatches{display:flex;gap:10px}
+  .sw{width:56px}
+  .sw i{display:block;height:56px;border-radius:8px;border:1px solid var(--hairline)}
+  .sw span{display:block;font-family:var(--mono);font-size:10px;color:var(--slate-400);margin-top:6px;text-align:center}
+  .spec-col{border-left:1px solid var(--hairline);padding-left:28px}
+  .spec-col:first-child{border-left:0;padding-left:0}
+  .type-row{display:flex;align-items:baseline;gap:12px;margin-top:10px}
+  .type-row b{font-size:20px;font-weight:600}
+  .type-row .mono{font-size:16px;color:var(--accent);font-weight:500}
+
+  /* window frame */
+  .window{background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden;box-shadow:0 10px 40px rgba(23,24,28,.08);margin-top:28px}
+  .chrome{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--steel-900);border-bottom:1px solid #000}
+  .chrome i{width:11px;height:11px;border-radius:50%;background:#3A3D44}
+  .chrome span{margin-left:10px;font-family:var(--mono);font-size:11px;color:#7A7F88}
+  .app{display:flex;min-height:620px}
+
+  /* sidebar (skinnier: 208px, compact profile) */
+  .side{width:208px;background:var(--steel-900);color:#C9CDD4;flex-shrink:0;display:flex;flex-direction:column;padding:16px 12px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 20px}
+  .brand .logo{width:32px;height:32px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:#fff}
+  .brand b{font-size:14.5px;font-weight:600;color:#fff;letter-spacing:-.01em}
+  .navlabel{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#5B606A;padding:10px 8px 8px}
+  .nav a{display:flex;align-items:center;gap:11px;position:relative;padding:8px 10px;border-radius:8px;color:#B4B9C1;font-size:13px;font-weight:500;text-decoration:none;margin-bottom:2px;transition:background .12s,color .12s}
+  .nav a svg{width:16px;height:16px;stroke-width:1.6;opacity:.9}
+  .nav a:hover{background:var(--steel-800);color:#EDEFF2}
+  .nav a.active{background:var(--steel-800);color:#fff}
+  .nav a.active::before{content:"";position:absolute;left:-12px;top:7px;bottom:7px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
+  .side .foot{margin-top:auto;padding-top:12px;border-top:1px solid var(--steel-700)}
+  .chip{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:8px;cursor:pointer}
+  .chip:hover{background:var(--steel-800)}
+  .chip .av{width:24px;height:24px;border-radius:50%;background:var(--steel-700);display:grid;place-items:center;font-size:10px;color:#C9CDD4;font-weight:600;flex-shrink:0}
+  .chip .who{min-width:0;flex:1}
+  .chip .who b{font-size:12px;color:#E5E7EA;font-weight:500;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip .who small{display:block;color:#767B84;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
+  .chip .car{color:#767B84;flex-shrink:0}
+  .chip .car svg{width:14px;height:14px;stroke-width:1.7}
+
+  /* main */
+  .main{flex:1;background:var(--canvas);display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 26px;border-bottom:1px solid var(--hairline);background:var(--surface)}
+  .topbar .crumb{font-size:13px;color:var(--slate-600)}
+  .topbar .crumb b{color:var(--ink);font-weight:600}
+  .tb-right{display:flex;align-items:center;gap:8px}
+  .proj{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--hairline);border-radius:20px;font-size:12.5px;font-weight:500;color:var(--ink)}
+  .proj .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .iconbtn{width:32px;height:32px;border:1px solid var(--hairline);border-radius:8px;background:var(--surface);display:grid;place-items:center;color:var(--slate-600);cursor:pointer}
+  .iconbtn svg{width:16px;height:16px;stroke-width:1.6}
+  .iconbtn:hover{color:var(--ink);border-color:#D6D9DD}
+
+  .content{padding:26px;overflow:auto}
+  .head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:22px}
+  .head h2{font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:4px}
+  .head p{color:var(--slate-600);font-size:13.5px;margin-top:3px}
+  .seg{display:inline-flex;background:var(--surface);border:1px solid var(--hairline);border-radius:9px;padding:3px}
+  .seg button{border:0;background:transparent;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--slate-600);padding:6px 14px;border-radius:6px;cursor:pointer}
+  .seg button.on{background:var(--accent);color:#fff}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .stat{position:relative;background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+  .stat.primary::before{content:"";position:absolute;left:18px;right:18px;top:0;height:2px;background:var(--accent);border-radius:0 0 2px 2px}
+  .stat .lab{font-size:12px;color:var(--slate-400);font-weight:500}
+  .stat .fig{font-family:var(--mono);font-weight:600;font-size:25px;letter-spacing:-.02em;margin:10px 0 8px;color:var(--ink)}
+  .stat .trend{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--slate-600)}
+  .stat .trend .mono{font-size:12px}
+  .up{color:var(--accent)} .flat{color:var(--slate-400)}
+
+  .row2{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:16px}
+  .panel{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+  .panel h3{font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+  .panel h3 .link{font-family:var(--mono);font-size:11px;color:var(--accent);font-weight:500;text-transform:uppercase;letter-spacing:.08em;cursor:pointer}
+  .budget{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding:16px;border:1px dashed #D7DADF;border-radius:var(--radius-sm);background:#FBFBFC}
+  .budget div p{font-size:13px;color:var(--slate-600)} .budget div b{font-size:13.5px}
+  .btn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:0;font-family:inherit;font-weight:500;font-size:12.5px;padding:8px 14px;border-radius:8px;cursor:pointer}
+  .btn:hover{background:var(--accent-600)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--hairline)}
+  .cat{margin-top:6px}
+  .cat .line{display:flex;align-items:center;gap:12px;margin-top:13px}
+  .cat .nm{width:78px;font-size:12.5px;color:var(--slate-600)}
+  .cat .bar{flex:1;height:7px;background:#EEF0F2;border-radius:4px;overflow:hidden}
+  .cat .bar i{display:block;height:100%;background:var(--accent);border-radius:4px}
+  .cat .val{width:30px;text-align:right;font-family:var(--mono);font-size:12px;color:var(--slate-400)}
+
+  /* quick actions: uniform, ink text (no stray blue), calm hover */
+  .qa-title{font-size:14px;font-weight:600;margin:6px 0 12px}
+  .qa{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .qa a{display:flex;align-items:center;gap:13px;text-decoration:none;color:var(--ink);background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);transition:border-color .12s,transform .12s}
+  .qa a:hover{border-color:#D6D9DD;transform:translateY(-1px)}
+  .qa .ic{width:38px;height:38px;border-radius:9px;background:var(--canvas);border:1px solid var(--hairline);display:grid;place-items:center;color:var(--ink);flex-shrink:0}
+  .qa .ic svg{width:18px;height:18px;stroke-width:1.6}
+  .qa b{font-size:13.5px;font-weight:600;display:block;color:var(--ink)}
+  .qa small{font-size:12px;color:var(--slate-400)}
+  .qa .arr{margin-left:auto;color:var(--slate-400)}
+  .qa .arr svg{width:15px;height:15px;stroke-width:1.6}
+
+  /* ============ REIMAGINED SIGN-IN FLOW ============ */
+  .flow{display:grid;grid-template-columns:1fr 1.25fr;gap:24px;margin-top:28px;align-items:stretch}
+  .screen{background:var(--surface);border:1px solid var(--hairline);border-radius:16px;box-shadow:0 10px 40px rgba(23,24,28,.06);overflow:hidden;display:flex;flex-direction:column}
+  .screen .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--slate-400);padding:14px 18px;border-bottom:1px solid var(--hairline)}
+  .screen .tag b{color:var(--accent);font-weight:600}
+  .screen .body{flex:1;display:flex;flex-direction:column;padding:44px 40px}
+
+  /* step 1: sign in */
+  .signin{max-width:320px;margin:auto;width:100%;text-align:center}
+  .mark{width:44px;height:44px;border-radius:12px;background:var(--accent);display:grid;place-items:center;color:#fff;margin:0 auto 22px}
+  .signin h3{font-size:21px;font-weight:600;letter-spacing:-.015em}
+  .signin .s{color:var(--slate-600);font-size:13.5px;margin-top:6px;margin-bottom:26px}
+  .goog{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid var(--hairline);border-radius:10px;background:#fff;font-family:inherit;font-size:14px;font-weight:500;color:var(--ink);cursor:pointer}
+  .goog:hover{border-color:#D6D9DD;background:#FCFCFD}
+  .or{display:flex;align-items:center;gap:12px;color:var(--slate-400);font-size:11.5px;margin:18px 0}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:var(--hairline)}
+  .emailrow{display:flex;gap:8px}
+  .emailrow input{flex:1;border:1px solid var(--hairline);border-radius:10px;padding:11px 13px;font-family:inherit;font-size:13.5px;color:var(--ink)}
+  .emailrow input::placeholder{color:var(--slate-400)}
+  .emailrow input:focus{outline:2px solid var(--accent-tint);border-color:var(--accent)}
+  .emailrow .go{width:44px;border-radius:10px;background:var(--steel-900);color:#fff;border:0;cursor:pointer;display:grid;place-items:center}
+  .emailrow .go svg{width:17px;height:17px;stroke-width:1.8}
+  .fine{font-size:11px;color:var(--slate-400);margin-top:26px;line-height:1.6}
+  .fine a{color:var(--slate-600);text-decoration:underline}
+
+  /* step 2: choose a job list */
+  .picker{width:100%;max-width:440px;margin:0 auto;display:flex;flex-direction:column;height:100%}
+  .picker .org{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
+  .picker .org .name{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;color:var(--ink)}
+  .picker .org .name .h{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:#fff}
+  .acctchip{display:flex;align-items:center;gap:8px;padding:5px 6px 5px 8px;border:1px solid var(--hairline);border-radius:20px;cursor:pointer}
+  .acctchip:hover{border-color:#D6D9DD}
+  .acctchip small{font-family:var(--mono);font-size:11px;color:var(--slate-600)}
+  .acctchip .av{width:22px;height:22px;border-radius:50%;background:var(--steel-900);color:#fff;display:grid;place-items:center;font-size:10px;font-weight:600}
+  .acctchip .car{color:var(--slate-400)} .acctchip .car svg{width:13px;height:13px;stroke-width:1.8;display:block}
+  .picker h3{font-size:22px;font-weight:600;letter-spacing:-.02em;margin-bottom:16px}
+  .search{display:flex;align-items:center;gap:10px;border:1px solid var(--hairline);border-radius:10px;padding:11px 13px;margin-bottom:14px}
+  .search svg{width:16px;height:16px;stroke-width:1.7;color:var(--slate-400)}
+  .search input{flex:1;border:0;outline:0;font-family:inherit;font-size:13.5px;color:var(--ink);background:none}
+  .search input::placeholder{color:var(--slate-400)}
+  .search .k{font-family:var(--mono);font-size:11px;color:var(--slate-400);border:1px solid var(--hairline);border-radius:5px;padding:2px 6px}
+  .lists{display:flex;flex-direction:column;gap:6px}
+  .item{display:flex;align-items:center;gap:13px;position:relative;padding:13px 14px;border:1px solid var(--hairline);border-radius:11px;cursor:pointer;background:#fff;transition:border-color .12s,background .12s}
+  .item:hover{border-color:#D6D9DD;background:#FCFCFD}
+  .item.sel{border-color:var(--accent);background:var(--accent-tint)}
+  .item.sel::before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
+  .item .mk{width:38px;height:38px;border-radius:9px;background:var(--canvas);border:1px solid var(--hairline);display:grid;place-items:center;font-family:var(--mono);font-size:12px;font-weight:600;color:var(--ink);flex-shrink:0}
+  .item.sel .mk{background:#fff;border-color:#F0D3C2;color:var(--accent)}
+  .item .info{flex:1;min-width:0}
+  .item .info b{font-size:14px;font-weight:600;display:block}
+  .item .info small{font-size:12px;color:var(--slate-400);font-family:var(--mono)}
+  .item .chev{color:var(--slate-400)} .item .chev svg{width:16px;height:16px;stroke-width:1.7}
+  .newlist{display:flex;align-items:center;gap:11px;padding:13px 14px;border:1px dashed #D2D5DA;border-radius:11px;color:var(--slate-600);font-size:13.5px;font-weight:500;cursor:pointer;margin-top:2px}
+  .newlist:hover{border-color:var(--accent);color:var(--accent)}
+  .newlist .p{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;flex-shrink:0}
+  .newlist .p svg{width:18px;height:18px;stroke-width:1.7}
+  .khint{margin-top:auto;padding-top:18px;display:flex;gap:16px;color:var(--slate-400);font-size:11.5px;font-family:var(--mono)}
+  .khint kbd{border:1px solid var(--hairline);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:11px;color:var(--slate-600)}
+
+  .note{font-size:12px;color:var(--slate-400);text-align:center;margin-top:16px;font-family:var(--mono)}
+  @media(max-width:900px){.stats{grid-template-columns:repeat(2,1fr)}.row2,.qa,.flow{grid-template-columns:1fr}.side{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- IDENTITY -->
+  <div class="identity">
+    <div class="eyebrow">Opal Track / visual direction v2</div>
+    <h1>Steel &amp; hi-vis</h1>
+    <p>One accent, held with discipline. Deep steel charcoal for structure, hairline borders instead of heavy shadow, and a single safety orange used only where it means something. Interface set in Geist; money set in Geist Mono so figures line up like a site meter.</p>
+    <div class="specimen">
+      <div class="spec-col">
+        <div class="eyebrow">Palette</div>
+        <div class="swatches" style="margin-top:12px">
+          <div class="sw"><i style="background:#17181C"></i><span>17181C</span></div>
+          <div class="sw"><i style="background:#565B64"></i><span>565B64</span></div>
+          <div class="sw"><i style="background:#E7E9EC"></i><span>E7E9EC</span></div>
+          <div class="sw"><i style="background:#F5F6F8"></i><span>F5F6F8</span></div>
+          <div class="sw"><i style="background:#E85D1A"></i><span>E85D1A</span></div>
+        </div>
+      </div>
+      <div class="spec-col">
+        <div class="eyebrow">Type</div>
+        <div class="type-row"><b>Geist</b><span style="color:var(--slate-400);font-size:12px">interface</span></div>
+        <div class="type-row"><span class="mono">Geist Mono</span><span style="color:var(--slate-400);font-size:12px">figures</span></div>
+      </div>
+      <div class="spec-col">
+        <div class="eyebrow">Signature</div>
+        <div style="margin-top:12px;font-size:13px;color:var(--slate-600);max-width:220px">A thin orange marking line for active nav and the primary metric, echoing hi-vis site tape.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="window">
+    <div class="chrome"><i></i><i></i><i></i><span>opaltrack.app / dashboard</span></div>
+    <div class="app">
+      <aside class="side">
+        <div class="brand">
+          <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="17" height="17" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span>
+          <b>Opal Track</b>
+        </div>
+        <div class="navlabel">Main</div>
+        <nav class="nav">
+          <a class="active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Add expense</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>Invoices</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg>Budget tracking</a>
+        </nav>
+        <div class="foot">
+          <div class="chip">
+            <span class="av">S</span>
+            <span class="who"><b>Sahni Family Hub</b><small>sahnifamilyhub@gmail.com</small></span>
+            <span class="car"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></span>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main">
+        <div class="topbar">
+          <div class="crumb"><b>Dashboard</b></div>
+          <div class="tb-right">
+            <span class="proj"><span class="dot"></span>Gurner St</span>
+            <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+            <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg></button>
+            <button class="iconbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 4h5v16h-5M14 12H4M8 8l-4 4 4 4"/></svg></button>
+          </div>
+        </div>
+        <div class="content">
+          <div class="head">
+            <div>
+              <div class="eyebrow">Project overview</div>
+              <h2>Dashboard</h2>
+              <p>Where Gurner St stands this month.</p>
+            </div>
+            <div class="seg"><button>Week</button><button class="on">Month</button><button>Quarter</button></div>
+          </div>
+          <div class="stats">
+            <div class="stat primary"><div class="lab">Total expenses</div><div class="fig">$34,698.33</div><div class="trend"><span class="up">&#8599;</span><span class="mono up">+12.5%</span> vs last month</div></div>
+            <div class="stat"><div class="lab">This month</div><div class="fig">$1,026.33</div><div class="trend"><span class="up">&#8599;</span><span class="mono up">+8.2%</span> vs last month</div></div>
+            <div class="stat"><div class="lab">Invoiced</div><div class="fig">$812,500</div><div class="trend"><span class="mono" style="color:var(--pos)">$812,500</span>&nbsp;paid</div></div>
+            <div class="stat"><div class="lab">Outstanding</div><div class="fig">$0</div><div class="trend"><span class="flat">&#8226;</span> nothing overdue</div></div>
+          </div>
+          <div class="row2">
+            <div class="panel">
+              <h3>Spending by category <span class="link">View all</span></h3>
+              <div class="cat">
+                <div class="line"><span class="nm">Labour</span><span class="bar"><i style="width:100%"></i></span><span class="val mono">36</span></div>
+                <div class="line"><span class="nm">Materials</span><span class="bar"><i style="width:80%"></i></span><span class="val mono">29</span></div>
+                <div class="line"><span class="nm">Trade</span><span class="bar"><i style="width:78%"></i></span><span class="val mono">28</span></div>
+                <div class="line"><span class="nm">Service</span><span class="bar"><i style="width:47%"></i></span><span class="val mono">17</span></div>
+                <div class="line"><span class="nm">Equipment</span><span class="bar"><i style="width:25%"></i></span><span class="val mono">9</span></div>
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Budget</h3>
+              <div class="budget"><div><b>No budget set</b><p>Set one to track spend against a target.</p></div><button class="btn">Set budget</button></div>
+              <h3 style="margin-top:20px">Recent</h3>
+              <div class="cat">
+                <div class="line"><span class="nm" style="width:auto;flex:1">Bunnings, materials</span><span class="val mono" style="width:auto">$412.90</span></div>
+                <div class="line"><span class="nm" style="width:auto;flex:1">Electrician, trade</span><span class="val mono" style="width:auto">$1,240.00</span></div>
+                <div class="line"><span class="nm" style="width:auto;flex:1">Survey, service</span><span class="val mono" style="width:auto">$680.00</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="qa-title">Quick actions</div>
+          <div class="qa">
+            <a href="#"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg></span><div><b>Add expense</b><small>Record new spend</small></div><span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a>
+            <a href="#"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h4"/></svg></span><div><b>Invoices</b><small>Manage &amp; track</small></div><span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a>
+            <a href="#"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h9l3 3v15H6z"/><path d="m9 14 2 2 4-4"/></svg></span><div><b>HIA contracts</b><small>Progress payments</small></div><span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a>
+            <a href="#"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg></span><div><b>Budget tracking</b><small>Target vs actual</small></div><span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a>
+            <a href="#"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><div><b>History</b><small>Past transactions</small></div><span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a>
+            <a href="#"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 4-6"/></svg></span><div><b>Reports</b><small>Export &amp; share</small></div><span class="arr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M7 17 17 7M9 7h8v8"/></svg></span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REIMAGINED SIGN-IN FLOW -->
+  <div class="eyebrow" style="margin-top:40px;margin-bottom:2px">Sign-in, reimagined as two calm steps</div>
+  <div class="flow">
+
+    <!-- step 1 -->
+    <div class="screen">
+      <div class="tag"><b>Step 1</b> &nbsp;Sign in</div>
+      <div class="body">
+        <div class="signin">
+          <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="22" height="22" stroke-width="1.7"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></div>
+          <h3>Welcome back</h3>
+          <div class="s">Sign in to Opal Track</div>
+          <button class="goog">
+            <svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7C21.8 18.9 23 15.9 23 12.3z"/><path fill="#34A853" d="M12 24c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.5-2-6.4-4.8H1.8v3A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.6 14.6a7.2 7.2 0 0 1 0-4.6v-3H1.8a12 12 0 0 0 0 10.6l3.8-3z"/><path fill="#EA4335" d="M12 4.8c1.7 0 3.2.6 4.4 1.7l3.3-3.3A12 12 0 0 0 1.8 7l3.8 3c.9-2.8 3.4-4.8 6.4-4.8z"/></svg>
+            Continue with Google
+          </button>
+          <div class="or">or</div>
+          <div class="emailrow">
+            <input placeholder="name@company.com">
+            <button class="go"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+          </div>
+          <div class="fine">By continuing you agree to the <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- step 2 -->
+    <div class="screen">
+      <div class="tag"><b>Step 2</b> &nbsp;Choose a job list</div>
+      <div class="body">
+        <div class="picker">
+          <div class="org">
+            <span class="name"><span class="h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="15" height="15" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span>Opal SS Constructions</span>
+            <span class="acctchip"><span class="av">S</span><small>sahnifamilyhub</small><span class="car"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m6 9 6 6 6-6"/></svg></span></span>
+          </div>
+          <h3>Choose a job list</h3>
+          <div class="search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input placeholder="Search job lists">
+            <span class="k">&#8984;K</span>
+          </div>
+          <div class="lists">
+            <div class="item sel">
+              <span class="mk">72</span>
+              <span class="info"><b>72 Centenary Dr</b><small>119 expenses &middot; updated 2d ago</small></span>
+              <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 6 6 6-6 6"/></svg></span>
+            </div>
+            <div class="item">
+              <span class="mk">GS</span>
+              <span class="info"><b>Gurner St</b><small>5 expenses &middot; updated today</small></span>
+              <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m9 6 6 6-6 6"/></svg></span>
+            </div>
+            <div class="newlist">
+              <span class="p"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg></span>
+              New job list
+            </div>
+          </div>
+          <div class="khint"><span><kbd>&#8593;</kbd><kbd>&#8595;</kbd> navigate</span><span><kbd>&#8629;</kbd> open</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="note">concept mockup, not the live app</div>
+
+</div>
+</body>
+</html>

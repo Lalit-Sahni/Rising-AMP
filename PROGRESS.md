@@ -2,62 +2,51 @@
 
 ## Current branch
 
-`phase-1-foundation` (from `master` @ `fc82e01`)
+`phase-1-foundation` (Phase 1, live). **Start Phase 2 on a new branch:** `git checkout -b phase-2-visual` from `phase-1-foundation`.
 
-Restore tag: `pre-phase1-2026-08-22`
+Restore tag (Phase 1 unwind): `pre-phase1-2026-08-22`
 
-Production Firebase: `rising-amp-467702-b5` (display name **My First Project**)  
-Staging Firebase: `rising-amp-staging` (localhost / `.env.local`)
+Production: `rising-amp-467702-b5` — https://rising-amp-467702-b5.web.app  
+Staging: `rising-amp-staging` — localhost / `.env.local`  
+`.firebaserc` default is **staging**.
 
-`.firebaserc` default is **staging**. Accidental `firebase deploy` with no `--project` hits staging, not live.
+## Where we are (2026-08-23 night)
 
-Live URL: https://rising-amp-467702-b5.web.app
+**Phase 1 is closed** (Google login, two job lists, per-job invites). Lalit confirmed live works.
 
-## Where we are (2026-08-23)
+**Phase 2 is briefed, not started.** Visual overhaul only. Source of truth: `PHASE2.md` + `design/opal-track-redesign.html`.
 
-**Phase 1 is closed.** Lalit confirmed the live site works.
+Localhost still talks to staging. Do not swap env files. Do not deploy Phase 2 to production until Lalit asks.
 
-Live app: Google / Gmail login → job-list chooser → dashboard. Two jobs: **72 Centenary Dr** and **Gurner St**. Invite is per job. Org `organizations/opal-ss-constructions`. Old PIN folders were copied, not deleted. Site Log / Weekly Report are gone from the UI. Functions were not deployed.
+## Next (Phase 2, one step)
 
-Localhost (`npm start`) still talks to **staging**. Do not swap env files.
+- [ ] Create branch `phase-2-visual` from `phase-1-foundation`
+- [ ] **Step 0:** tokens in Tailwind + CSS `:root`, load Geist + Geist Mono. No screen restyle yet. Show Lalit, wait for yes
+- [ ] Shell (sidebar + header)
+- [ ] Sign-in + job picker + not-invited (restyle only; Google already works)
+- [ ] Dashboard (kill rainbow tiles; empty budget state; money in mono)
+- [ ] Add Expense
+- [ ] Invoices (no “Invalid Date” string)
+- [ ] History
+- [ ] Budget
+- [ ] Production hosting deploy only when Lalit asks after the restyle looks right
 
-## Next
+## Phase 1 leftovers (not Phase 2 unless he asks)
 
-Phase 2. Wait for Lalit’s brief. New git branch from `phase-1-foundation`. Do not invent the work.
-
-Known leftovers (not Phase 2 unless he asks):
-
-- Live OAuth consent screen for sending invite mail from Gmail
-- Unused `users/{code}` PIN folders on production (do not delete)
-- Unused live Cloud Function `generateWeeklyReport` (do not deploy functions)
+- Live OAuth consent for sending invite mail from Gmail
+- Unused `users/{code}` PIN folders (do not delete)
+- Unused live function `generateWeeklyReport` (do not deploy functions)
 - Staging has no Storage bucket (receipts missing on localhost)
-
-## Phase 1 checklist (all done)
-
-- [x] Staging project, localhost → staging, restore tag
-- [x] Production read-only backups
-- [x] Site Log / Weekly Report removed from the app
-- [x] Google sign-in on staging and production
-- [x] One org, two named job lists, per-job invites
-- [x] Live cutover: copy org + jobs, hosting + rules only
-- [x] Lalit confirmed live works
-- [x] Docs closed; commit on `phase-1-foundation`
-
-## Cutover record (do not repeat)
-
-1. Backup: `backups/production-2026-08-22T14-12-13-241Z` (gitignored).
-2. `scripts/cutover-production-org.js --apply --production` — 216 docs copied. Leftover PIN folders untouched.
-3. Build with `.env.production.local`. Gmail API enabled on production.
-4. `firebase deploy --project production --only hosting,firestore:rules`. Did **not** deploy functions.
 
 ## Do not do
 
+- Change behaviour, data, auth, or calculations
+- Add email/password login, “new job list”, or a Reports page because they appear in the mockup
+- Paste `design/opal-track-redesign.html` into the React app
 - `firebase deploy` to production without `--project production` and an explicit `--only`
-- Any delete of leftover PIN folders or production Site Log rows
 - Commit `.env*`, `.phase1-local.json`, or `backups/`
-- Deploy functions unless Lalit asks (would risk removing live `generateWeeklyReport`)
-- Billing, Stripe, or a new product unless Lalit asks
+- Billing, Stripe, a second product
 
 ## How to talk to Lalit
 
-Civil engineer, not a full-time programmer. Everyday language. Propose live writes, then do them. Small steps on a branch.
+Civil engineer, not a full-time programmer. Everyday language. Show localhost. Propose, then do. Small steps.

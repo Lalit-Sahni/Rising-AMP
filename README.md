@@ -48,7 +48,8 @@ If you are an agent (or picking this up later), read in this order:
 
 1. `CLAUDE.md` — safety, environments, what is in scope
 2. `PROGRESS.md` — next concrete step
-3. `PLAN.md` — Phase 1 record (complete)
+3. `PHASE2.md` — visual overhaul brief (open `design/opal-track-redesign.html`)
 4. `ARCHITECTURE.md` — how the running app is built
+5. `PLAN.md` — Phase 1 record (complete)
 
-Phase 1 is **done**. Phase 2 starts when the owner describes it, on a new git branch from `phase-1-foundation`.
+Phase 1 is **done**. Phase 2 is a visual overhaul: read `PHASE2.md` and open `design/opal-track-redesign.html`. New git branch `phase-2-visual` from `phase-1-foundation`.
