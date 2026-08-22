@@ -11,4 +11,4 @@ Read these files **in this order** before touching anything:
 
 Do not rely on chat history. If chat and these files disagree, these files win.
 
-Phase 1 is **done** and live. Do not re-run cutover. Phase 2 is a restyle on branch `phase-2-visual` from `phase-1-foundation`. Never commit to `master` or `main`. Never write to production Firebase (`rising-amp-467702-b5`) unless `PROGRESS.md` and the owner explicitly say so.
+Phase 1 and Phase 2 are **done** and live. Do not re-run cutover. Do not restyle unless Lalit asks. Work on a branch, never `master` or `main`. Never write to production Firebase (`rising-amp-467702-b5`) unless `PROGRESS.md` and the owner explicitly say so. Hosting deploy is `firebase deploy --project production --only hosting`.

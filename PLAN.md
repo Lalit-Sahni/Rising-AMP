@@ -4,7 +4,7 @@ Status: **done.** Landed on branch `phase-1-foundation` and on the live site 202
 
 This file is the Phase 1 record. Do not re-run the cutover.
 
-**Phase 2 (visual overhaul):** read `PHASE2.md` and open `design/opal-track-reference.html`. Branch `phase-2-visual`.
+**Phase 2 (visual overhaul):** **done** and live 2026-08-23. Record: `PHASE2.md`. Look: `design/opal-track-reference.html`. Branch `phase-2-visual`.
 
 Live URL: https://rising-amp-467702-b5.web.app  
 Localhost: http://localhost:3000 → staging (`rising-amp-staging`)  

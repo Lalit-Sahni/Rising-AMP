@@ -6,11 +6,11 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Phase 1 landed on `phase-1-foundation` (live 2026-08-23). Restore tag if you need to unwind that work: `pre-phase1-2026-08-22`. **Phase 2 starts on a new branch `phase-2-visual` from `phase-1-foundation`.** Never commit to `master` or `main`.
-2. Read `PROGRESS.md` (next concrete step), then `PHASE2.md` (the visual brief), then `ARCHITECTURE.md`. Open `design/opal-track-reference.html` in a browser. `PLAN.md` is the Phase 1 record only.
+1. Confirm git branch. **Phase 2 is live** on `phase-2-visual` (hosting deployed 2026-08-23). Phase 1 is on `phase-1-foundation`. Restore tag if you need to unwind Phase 1: `pre-phase1-2026-08-22`. Never commit to `master` or `main`.
+2. Read `PROGRESS.md` (next concrete step). `PHASE2.md` is the closed visual brief. `PLAN.md` is the Phase 1 record only. `ARCHITECTURE.md` is how the running app is built.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 2 restyle is on `phase-2-visual` against `design/opal-track-reference.html` (Manrope, Palette 1, colour only as data ink). Show Lalit localhost. Do not change behaviour. Do not deploy to production until he asks after the restyle is done.
+5. **Next:** Wait for Lalit. Do not restyle again unless he asks. Do not deploy Cloud Functions. Do not write to production Firestore. Do not build `risingamp-vision.html` (local concept only, not the live app).
 6. Owner (Lalit) writes in plain language. Explain in plain language.
 
 If you are unsure whether a command writes to production, do not run it.
@@ -30,7 +30,7 @@ If you are unsure whether a command writes to production, do not run it.
 - Day-to-day: `npm start` → http://localhost:3000 (staging).
 - Live: https://rising-amp-467702-b5.web.app (production).
 - Design mockup: `design/opal-track-reference.html` (open as a file in the browser).
-- Never run `firebase deploy` against production unless the owner explicitly asks after sign-off.
+- Never run `firebase deploy` against production unless the owner explicitly asks. Hosting only: `firebase deploy --project production --only hosting`. Do not deploy functions, Firestore rules, or Storage unless he names them.
 
 ## Environments
 
@@ -49,9 +49,9 @@ Google / Gmail via Firebase Auth. After login: only invited addresses continue. 
 
 Google login, one org, two named job lists, per-job invites, Site Log / Weekly Report removed from the UI. Do not re-run cutover scripts. Do not deploy Cloud Functions unless asked (live still has unused `generateWeeklyReport`).
 
-## Phase 2 (current)
+## Phase 2 (closed 2026-08-23)
 
-Visual overhaul only. Brief: `PHASE2.md`. Mockup: `design/opal-track-reference.html`. Restyle, do not rewrite. No behaviour, data, auth, or schema changes. Colour lives in the data (dots, icons, bars), never on card furniture.
+Visual overhaul is live on production hosting. Brief: `PHASE2.md`. Look: `design/opal-track-reference.html` (Manrope, Palette 1). Colour lives in the data (dots, icons, bars), never on card furniture. Do not re-run the restyle. Do not add mockup-only features.
 
 ## Out of scope until asked
 

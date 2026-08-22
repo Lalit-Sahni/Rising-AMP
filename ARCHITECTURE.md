@@ -1,12 +1,12 @@
-# Rising AMP — Architecture (after Phase 1, 2026-08-23)
+# Rising AMP — Architecture (after Phase 2, 2026-08-23)
 
-This describes the **running live app**. Phase 1 record is `PLAN.md`.
+This describes the **running live app**. Phase 1 record is `PLAN.md`. Phase 2 visual record is `PHASE2.md`.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://rising-amp-467702-b5.web.app  
 Staging (localhost): `rising-amp-staging`  
-Default git branch in use was `master`; Phase 1 landed on `phase-1-foundation`.  
-App name in the sidebar: “Opal Track”.
+Default git branch in use was `master`; Phase 1 landed on `phase-1-foundation`; Phase 2 (live look) is `phase-2-visual`.  
+App name in the sidebar: “Opal Track”. Look: Manrope, Palette 1, category colour as data ink only.
 
 ---
 

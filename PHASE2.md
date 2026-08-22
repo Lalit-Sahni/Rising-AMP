@@ -1,10 +1,10 @@
-# Phase 2 — Visual overhaul (agent brief)
+# Phase 2 — Visual overhaul (closed)
 
-Read `CLAUDE.md` then `PROGRESS.md` then this file. Open `design/opal-track-reference.html` in a browser before touching CSS. That file is the Manrope + Palette 1 look (`opal-track-MANROPE_P1.html` is the same mockup).
+Status: **done.** Live on production hosting 2026-08-23, branch `phase-2-visual`.
 
-This is a **restyle, not a rewrite.** Behaviour, data, routes, auth, Firestore, and calculations must not change. If a change alters what the app does rather than how it looks, it is out of scope.
+Read `CLAUDE.md` then `PROGRESS.md` then this file. This is the record of the restyle, not a job still to do. Open `design/opal-track-reference.html` if you need the look (Manrope + Palette 1; same mockup as `opal-track-MANROPE_P1.html`).
 
-This is a **restyle, not a rewrite.** Behaviour, data, routes, auth, Firestore, and calculations must not change. If a change alters what the app does rather than how it looks, it is out of scope.
+This was a **restyle, not a rewrite.** Behaviour, data, routes, auth, Firestore, and calculations did not change. Do not add mockup-only features. Do not tint card backgrounds.
 
 Phase 1 is already live (Google login, org, job picker, per-job invites). Do not rebuild auth. Do not re-run cutover.
 
@@ -85,7 +85,7 @@ Prefer loading Manrope via Google Fonts in `public/index.html` (no new npm packa
 
 ## Scope and order (propose, then do)
 
-Work on branch **`phase-2-visual`** created from `phase-1-foundation`. One reviewable step at a time. Show localhost, wait for Lalit’s yes, then the next step. Same branch is fine (Phase 1 working style). Do not deploy to production until he asks after the restyle is done.
+Work on branch **`phase-2-visual`** created from `phase-1-foundation`. This restyle is live on production hosting. Do not deploy functions, Firestore rules, or Storage with a visual change.
 
 ### Step 0 — Theme only (no screen restyle yet)
 
@@ -132,7 +132,7 @@ These are visual bugs, not data bugs. Do not change how budget or dates are stor
 
 ## How to preview
 
-`npm start` → http://localhost:3000 → **staging**. Open the mockup next to it (`design/opal-track-reference.html`). Live site stays as it is until an explicit production deploy of hosting only.
+`npm start` → http://localhost:3000 → **staging**. Live: https://rising-amp-467702-b5.web.app (production hosting). Mockup: `design/opal-track-reference.html`.
 
 ## Continuity
 
