@@ -10,15 +10,18 @@ Production: `rising-amp-467702-b5` — https://rising-amp-467702-b5.web.app
 Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_PROJECT_ID=rising-amp-staging`)  
 `.firebaserc` default is **staging**. Git push does not deploy. Live hosting changes only on `firebase deploy --project production --only hosting`.
 
-## Where we are (2026-08-23)
+## Where we are (2026-08-24)
 
 **Phase 1, 2, 3 are closed.** Phase 4 is in progress on `phase-4-domain-email`.
 
-**Done in this session (code on the branch, ready to ship):**
-- Task 1 — public `/privacy` and `/terms` from the owner’s docs in `PRIVACY AND TERMS/`. Placeholders filled with Opal SS Constructions Pty Ltd, ABN 32 162 378 190 (from ABR), `privacy@risingamp.com.au`, 23 August 2026, NSW 2212. Sign-in/sign-up link to those pages. **Live on production hosting** (2026-08-23): https://rising-amp-467702-b5.web.app/privacy and `/terms`. Gmail send is still described in the privacy policy because that path is still the fallback.
-- Task 2 (code only) — callable Cloud Function `sendJobInviteEmail` sends the existing invite HTML from `invites@risingamp.com.au` via Resend. No new npm package (Node 22 `fetch`). Key stays in Secret Manager. Client tries Resend first, falls back to Gmail if the function is not deployed yet. **Not deployed** — secret is not set.
-- Task 3 — **not done.** Gmail OAuth for invites stays until Resend is proven on staging and the owner says yes.
-- Task 4 — `risingamp.com.au` was added on production Hosting. Ownership is missing until Crazy Domains DNS is updated (exact records in “When you get back”). SSL comes after DNS. `.web.app` keeps working.
+**Done:**
+- Task 1 — `/privacy` and `/terms` live on production hosting.
+- Task 2 staging — `sendJobInviteEmail` is live on staging. Owner confirmed a real invite arrived from `invites@risingamp.com.au` with no Gmail popup. **Production function still not deployed.**
+- Task 3 — **not done.** Keep Gmail fallback until the owner says yes to production function + removing `gmail.send`.
+- Task 4 — `risingamp.com.au` added on production Hosting. A record should be `199.36.158.100`. TXT `hosting-site=rising-amp-467702-b5` at the root still needed for SSL. `.web.app` keeps working.
+- Profile setup loop — **live on production hosting 2026-08-24.** Same email should land on Jobs after close/reopen or a new device. Production invite function still not deployed.
+
+**Profile patch (live hosting 2026-08-24):** do not create empty profile stubs on sign-in; copy a finished profile onto a new login uid for the same email; remember the finished profile on the device; do not send the person back through setup if that record exists.
 
 **Owner already has:**
 - Domain `risingamp.com.au`, DNS at Crazy Domains.
@@ -32,21 +35,13 @@ Chose a **hand-written callable Cloud Function**, not the Firebase Trigger Email
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE4.md. Open design/risingamp-vision.html. Work is on branch phase-4-domain-email (from phase-3-vision). Domain is risingamp.com.au, DNS at Crazy Domains, Resend account already set up. Localhost stays on staging. Never accept a pasted API key — have the owner set Firebase secrets himself. Do not deploy Cloud Functions beyond what PHASE4.md explicitly asks for.
 
-The owner is back. Secret is the remaining step: have him run the two firebase functions:secrets:set commands in PROGRESS.md (he types the key at the hidden prompt). Then deploy only functions:sendJobInviteEmail to staging and send a test invite. Do not deploy a full functions set to production (that would delete generateWeeklyReport). Do not remove Gmail until a real Resend invite lands.
+Staging invite is proven. Profile setup loop is live on production hosting (2026-08-24). Do not deploy the production invite function unless the owner asks. Do not deploy a full functions set to production (that would delete generateWeeklyReport). Do not remove Gmail until the production Resend function is live.
 ```
 
-## When you get back (this is the remaining work)
+## Remaining work
 
-1. In Terminal, from this repo, run these **one at a time**. Each one asks for the key; it will not show what you type. Do not paste the key into chat.
-
-```
-firebase functions:secrets:set RESEND_API_KEY --project rising-amp-staging
-firebase functions:secrets:set RESEND_API_KEY --project production
-```
-
-2. Tell the next chat: **“secret is set — deploy the invite function to staging and I’ll send a test invite.”**
-
-3. At Crazy Domains DNS for `risingamp.com.au`, Firebase is waiting on these exact records (do not guess others). The current A record `103.67.235.120` is a parking address and must come off:
+1. Deploy `sendJobInviteEmail` to production **by name only** when the owner asks. Then Task 3 (remove Gmail send) only if he asks.
+2. At Crazy Domains DNS for `risingamp.com.au`, Firebase still needs the site TXT if SSL is not green yet. A record must be `199.36.158.100`, not the old parking address:
 
 | Type | Name / host | Value | Action |
 |------|-------------|-------|--------|
@@ -75,7 +70,9 @@ Then wait for `https://risingamp.com.au` (SSL can take hours). The old `.web.app
 - [x] Enable email/password on production Auth
 - [x] Phase 4 Task 1 — `/privacy` and `/terms` pages, real links from sign-in/sign-up (live on production hosting 2026-08-23)
 - [ ] Phase 4 Task 4 — `risingamp.com.au` on Firebase Hosting (DNS at Crazy Domains)
-- [ ] Phase 4 Task 2 — owner sets `RESEND_API_KEY`, then deploy `sendJobInviteEmail` to staging only, prove a real invite arrives
+- [x] Phase 4 Task 2 — `RESEND_API_KEY` set; `sendJobInviteEmail` deployed to staging only
+- [x] Phase 4 Task 2 — prove a real invite arrives from localhost (From: invites@risingamp.com.au, no Gmail popup)
+- [x] Profile setup no longer repeats after close / new device (live hosting 2026-08-24)
 - [ ] Phase 4 Task 2b — after staging proof and owner yes, deploy `sendJobInviteEmail` to production (named function only)
 - [ ] Phase 4 Task 3 — remove `gmail.send` OAuth popup from invites (only after Task 2 is live)
 - [ ] Do not deploy Cloud Functions beyond the single Phase 4 invite-email function

@@ -10,7 +10,7 @@ import ProfileSetupScreen from './components/ProfileSetupScreen';
 import BootScreen from './components/BootScreen';
 import { listInvitedProjects } from './firebase/projectCatalog';
 import { sendNewSignInNotice } from './firebase/email';
-import { loadProfile, profileNeedsSetup, recordSignIn } from './firebase/profiles';
+import { loadProfile, profileIsComplete, profileNeedsSetup, readProfileCache, recordSignIn } from './firebase/profiles';
 import { clearSession, readSession, resolveInvitation, writeSession } from './firebase/tenancy';
 import './styles/premium-animations.css';
 
@@ -40,9 +40,9 @@ function App() {
 function AppShell() {
   const [authUser, setAuthUser] = useState(undefined);
   const [membership, setMembership] = useState(null);
-  const [membershipLoading, setMembershipLoading] = useState(false);
+  const [membershipLoading, setMembershipLoading] = useState(true);
   const [profile, setProfile] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [projectId, setProjectId] = useState(() => readSession().projectId);
   const [workspaceId, setWorkspaceId] = useState(() => readSession().workspaceId);
   const [projectName, setProjectName] = useState(() => readSession().projectName);
@@ -61,9 +61,13 @@ function AppShell() {
     return () => unsubscribe();
   }, []);
 
+  const authUid = authUser === undefined ? undefined : (authUser && authUser.uid) || null;
+  const authEmail = (authUser && authUser.email) || '';
+
   useEffect(() => {
     let cancelled = false;
-    if (!authUser) {
+    if (authUid === undefined) return undefined;
+    if (!authUid) {
       setMembership(null);
       setMembershipLoading(false);
       setProfile(null);
@@ -71,20 +75,28 @@ function AppShell() {
       return undefined;
     }
 
+    const cachedProfile = readProfileCache(authUid);
+    if (profileIsComplete(cachedProfile)) {
+      setProfile(cachedProfile);
+    }
     setMembershipLoading(true);
     setProfileLoading(true);
 
     Promise.all([
-      resolveInvitation(authUser),
-      loadProfile(authUser.uid).catch((err) => {
+      resolveInvitation({ email: authEmail }),
+      loadProfile(authUid, authEmail).catch((err) => {
         console.error('Profile load failed:', err);
-        return null;
+        return readProfileCache(authUid);
       }),
     ])
       .then(async ([invite, savedProfile]) => {
         if (cancelled) return;
         setMembership(invite);
-        setProfile(savedProfile);
+        setProfile((current) => {
+          if (profileIsComplete(savedProfile)) return savedProfile;
+          if (profileIsComplete(current)) return current;
+          return savedProfile;
+        });
         setProfileLoading(false);
 
         if (!invite.invited) {
@@ -127,7 +139,7 @@ function AppShell() {
           setMembership({
             invited: false,
             reason: 'lookup-failed',
-            email: authUser.email || '',
+            email: authEmail,
           });
           setMembershipLoading(false);
           setProfileLoading(false);
@@ -137,10 +149,11 @@ function AppShell() {
     return () => {
       cancelled = true;
     };
-  }, [authUser]);
+  }, [authUid, authEmail]);
 
   useEffect(() => {
     if (!authUser || !authUser.uid || profileLoading) return undefined;
+    if (profileNeedsSetup(profile)) return undefined;
     const key = `risingAmp.signInNotice.${authUser.uid}`;
     if (sessionStorage.getItem(key)) return undefined;
     sessionStorage.setItem(key, '1');
@@ -201,15 +214,20 @@ function AppShell() {
     return <LoginScreen />;
   }
 
-  if (membershipLoading || profileLoading || !membership) {
+  const cachedProfile = authUid ? readProfileCache(authUid) : null;
+  const shownProfile = profileIsComplete(profile)
+    ? profile
+    : (profileIsComplete(cachedProfile) ? cachedProfile : profile);
+
+  if (membershipLoading || !membership || (profileLoading && !profileIsComplete(shownProfile))) {
     return <BootScreen />;
   }
 
-  if (profileNeedsSetup(profile)) {
+  if (profileNeedsSetup(shownProfile)) {
     return (
       <ProfileSetupScreen
         user={authUser}
-        initialProfile={profile}
+        initialProfile={shownProfile}
         onComplete={setProfile}
         onSignOut={handleLogout}
       />
@@ -224,7 +242,7 @@ function AppShell() {
       membership={membership}
       onOpenJob={handlePickProject}
       authUser={authUser}
-      profile={profile}
+      profile={shownProfile}
       setProfile={setProfile}
       jobInvitedEmails={jobInvitedEmails}
     >

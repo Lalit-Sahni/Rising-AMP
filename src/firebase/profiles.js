@@ -1,8 +1,10 @@
-import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './config';
-import { normalizeEmail } from './email';
+import { emailsMatch, normalizeEmail } from './email';
+import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile } from './profileGate';
 
+export { profileIsComplete, profileNeedsSetup, toClientProfile };
 export const ROLES = ['Owner', 'Director', 'Site manager', 'Estimator', 'Bookkeeper', 'Other'];
 export const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
@@ -26,36 +28,84 @@ export function emptyProfile(user) {
   };
 }
 
-export function profileNeedsSetup(profile) {
-  if (!profile) return true;
-  if (profile.setupComplete === true) return false;
-  return !String(profile.displayName || '').trim() || !String(profile.businessName || '').trim();
+function profileCacheKey(uid) {
+  return `risingAmp.profile.${uid}`;
 }
 
-export async function loadProfile(uid) {
+export function readProfileCache(uid) {
+  if (!uid || typeof localStorage === 'undefined') return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(profileCacheKey(uid)) || 'null');
+    if (!parsed || parsed.uid !== uid) return null;
+    return toClientProfile(uid, parsed);
+  } catch (error) {
+    return null;
+  }
+}
+
+export function writeProfileCache(profile) {
+  if (!profile || !profile.uid || typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(profileCacheKey(profile.uid), JSON.stringify(toClientProfile(profile.uid, profile)));
+  } catch (error) {
+    // Private mode can block localStorage.
+  }
+}
+
+async function findProfileByEmail(email, exceptUid) {
+  if (!email) return null;
+  const snap = await getDocs(collection(db, 'profiles'));
+  let fallback = null;
+  let sameUidComplete = null;
+  for (const row of snap.docs) {
+    const candidate = { uid: row.id, ...row.data() };
+    if (!emailsMatch(candidate.email, email)) continue;
+    if (!profileIsComplete(candidate)) {
+      if (!fallback) fallback = candidate;
+      continue;
+    }
+    if (exceptUid && row.id === exceptUid) {
+      sameUidComplete = candidate;
+      continue;
+    }
+    return candidate;
+  }
+  return sameUidComplete || fallback;
+}
+
+export async function loadProfile(uid, email) {
   if (!uid) return null;
+
   const snap = await getDoc(doc(db, 'profiles', uid));
-  if (!snap.exists()) return null;
-  return { uid, ...snap.data() };
+  const uidDoc = snap.exists() ? snap.data() : null;
+  const emailProfile = email ? await findProfileByEmail(email, uid) : null;
+  const resolved = resolveLoadedProfile({
+    uid,
+    email,
+    uidDoc,
+    emailProfile,
+    cached: readProfileCache(uid),
+  });
+
+  if (resolved.profile && profileIsComplete(resolved.profile)) {
+    if (resolved.write) {
+      await setDoc(doc(db, 'profiles', uid), {
+        ...resolved.profile,
+        createdAt: uidDoc && uidDoc.createdAt ? uidDoc.createdAt : serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+    writeProfileCache(resolved.profile);
+  }
+
+  return resolved.profile;
 }
 
 export async function saveProfile(uid, data) {
   if (!uid) throw new Error('Missing account.');
-  const email = normalizeEmail(data.email);
+  const saved = toClientProfile(uid, data);
   const payload = {
-    uid,
-    email,
-    displayName: String(data.displayName || '').trim(),
-    role: String(data.role || 'Owner').trim(),
-    mobile: String(data.mobile || '').trim(),
-    businessName: String(data.businessName || '').trim(),
-    abn: String(data.abn || '').trim(),
-    street: String(data.street || '').trim(),
-    suburb: String(data.suburb || '').trim(),
-    state: String(data.state || 'NSW').trim(),
-    postcode: String(data.postcode || '').trim(),
-    photoUrl: data.photoUrl || '',
-    setupComplete: Boolean(data.setupComplete),
+    ...saved,
     updatedAt: serverTimestamp(),
   };
   const existing = await getDoc(doc(db, 'profiles', uid));
@@ -63,21 +113,23 @@ export async function saveProfile(uid, data) {
     payload.createdAt = serverTimestamp();
   }
   await setDoc(doc(db, 'profiles', uid), payload, { merge: true });
-  return { ...payload, uid };
+  writeProfileCache(saved);
+  return saved;
 }
 
 export async function recordSignIn(uid, extra = {}) {
   if (!uid) return;
-  await setDoc(
-    doc(db, 'profiles', uid),
-    {
+  try {
+    await updateDoc(doc(db, 'profiles', uid), {
       lastSignInAt: serverTimestamp(),
       lastSignInUserAgent: String(extra.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : '')).slice(0, 240),
       lastSignInPlatform: String(extra.platform || (typeof navigator !== 'undefined' ? navigator.platform : '')).slice(0, 80),
       updatedAt: serverTimestamp(),
-    },
-    { merge: true }
-  );
+    });
+  } catch (error) {
+    if (error && error.code === 'not-found') return;
+    console.error('Sign-in stamp failed:', error);
+  }
 }
 
 export async function uploadProfilePhoto(uid, file) {
