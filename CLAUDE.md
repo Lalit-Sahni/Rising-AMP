@@ -6,16 +6,17 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. **Phase 3 is live** on hosting (`phase-3-vision`, deployed 2026-08-23). Phase 2 look is in that UI. Phase 1 is on `phase-1-foundation`. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tag if you need to unwind Phase 1: `pre-phase1-2026-08-22`.
-2. Read `PROGRESS.md` (next concrete step), then `PHASE3.md` (the vision brief). `PHASE2.md` and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. Open `design/risingamp-vision.html` in a browser.
+1. Confirm git branch. Work is on **`phase-4-domain-email`** (created from `phase-3-vision`, 2026-08-23). Phase 3 is live on hosting (`phase-3-vision`, deployed 2026-08-23). Phase 2 look is in that UI. Phase 1 is on `phase-1-foundation`. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tag if you need to unwind Phase 1: `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next concrete step), then `PHASE4.md` (current phase: legal pages, invites off Gmail onto Resend, custom domain). `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. Open `design/risingamp-vision.html` in a browser.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Family users on live will be asked to set up a profile once (name + business). Do not add a working “New job” create. Do not deploy Cloud Functions.
-6. Owner (Lalit) writes in plain language. Explain in plain language.
+5. **Next:** Phase 4 — publish `/privacy` and `/terms`, move invite email off personal Gmail onto Resend (domain `risingamp.com.au`, DNS at Crazy Domains), then put the app on that custom domain. See `PHASE4.md` for exact task order. Do not add a working "New job" create. Do not deploy Cloud Functions except the single, narrowly-scoped invite-email function Phase 4 explicitly asks for.
+6. **Never accept a raw API key or secret pasted into chat.** For the Resend key, have the owner run `firebase functions:secrets:set RESEND_API_KEY --project <production|rising-amp-staging>` themselves at a masked prompt — see `PHASE4.md` Task 2.
+7. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.html. Phase 3 is live on hosting from phase-3-vision. Localhost stays on staging. Do not deploy Cloud Functions.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE4.md. Open design/risingamp-vision.html. Work is on branch phase-4-domain-email (from phase-3-vision). Domain is risingamp.com.au, DNS at Crazy Domains, Resend account already set up. Localhost stays on staging. Never accept a pasted API key — have the owner set Firebase secrets himself. Do not deploy Cloud Functions beyond what PHASE4.md explicitly asks for.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -59,18 +60,23 @@ Google login, one org, two named job lists, per-job invites, Site Log / Weekly R
 
 Visual overhaul is live on production hosting. Brief: `PHASE2.md`. Look: `design/opal-track-reference.html` (Manrope, Palette 1). Colour lives in the data (dots, icons, bars), never on card furniture. Do not re-run the restyle. Do not add mockup-only features.
 
-## Phase 3 (live hosting 2026-08-23; localhost still staging)
+## Phase 3 (closed 2026-08-23; live hosting; localhost still staging)
 
-Same app, same data. Brief: `PHASE3.md`. Mockup: `design/risingamp-vision.html`. Jobs home, job overview (verdict + what needs you), RisingAMP naming, OCR “Check this”, open sign-up + profiles. **No New job write. Do not deploy Cloud Functions.**
+Same app, same data. Brief: `PHASE3.md`. Mockup: `design/risingamp-vision.html`. Jobs home, job overview (verdict + what needs you), RisingAMP naming, OCR “Check this”, open sign-up + profiles. **No New job write.**
+
+## Phase 4 (in progress, branch `phase-4-domain-email`)
+
+Brief: `PHASE4.md`. Legal pages (`/privacy`, `/terms`), invite email moves off personal Gmail OAuth onto Resend (domain `risingamp.com.au`, sent from `invites@risingamp.com.au`), then remove the `gmail.send` popup once proven, then point `risingamp.com.au` at Firebase Hosting. Requires one narrowly-scoped Cloud Function (or the Firebase Trigger Email extension) for the Resend send path — that is the one exception to "do not deploy Cloud Functions" and only for this. Google sign-in is untouched.
 
 ## Out of scope until asked
 
-- Creating job lists, billing, Stripe, a second product, deleting leftover PIN folders, deploying functions, new npm packages (fonts via Google Fonts are OK)
+- Creating job lists, billing, Stripe, a second product, deleting leftover PIN folders, deploying functions beyond the Phase 4 email send path, new npm packages (fonts via Google Fonts are OK)
 
 ## Continuity
 
 - `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
-- `PHASE3.md` — Phase 3 vision brief (jobs portfolio, verdict, capture).
+- `PHASE4.md` — current phase brief (domain, invites off Gmail, legal pages).
+- `PHASE3.md` — Phase 3 vision brief (jobs portfolio, verdict, capture) — closed record.
 - `PHASE2.md` — Phase 2 restyle record (complete).
 - `PROGRESS.md` — next concrete step. Update at session end.
 - `PLAN.md` — Phase 1 record (complete).

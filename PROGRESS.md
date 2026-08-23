@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-3-vision` (from `phase-2-visual`). **Phase 3 hosting is live** on production (deployed 2026-08-23): hosting + Firestore `profiles/` rules + Storage avatar rules. Email/password is on for production Auth. Functions were **not** deployed. Localhost still uses `.env.local` → staging.
+`phase-4-domain-email` (from `phase-3-vision`). Phase 3 hosting is live on production (deployed 2026-08-23): hosting + Firestore `profiles/` rules + Storage avatar rules. Email/password is on for production Auth. Functions were **not** deployed yet. Localhost still uses `.env.local` → staging.
 
 Restore tag (Phase 1 unwind): `pre-phase1-2026-08-22`
 
@@ -12,12 +12,19 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 ## Where we are (2026-08-23)
 
-**Phase 1 and Phase 2 are closed.** Phase 3 is live on hosting. Localhost remains staging.
+**Phase 1, 2, 3 are closed.** Phase 4 is starting on `phase-4-domain-email`: legal pages, invite email off personal Gmail onto Resend, then a custom domain. Full brief in `PHASE4.md`.
+
+**Owner already has, ready to use:**
+- Domain `risingamp.com.au`, DNS managed at Crazy Domains.
+- A Resend account + API key for that domain (SPF/DKIM records already added at Crazy Domains — confirm "Verified" in the Resend dashboard before sending).
+- Not yet provided: the filled-in privacy policy / terms of service text (needed for Task 1 in `PHASE4.md` — ask for it, don't invent legal text).
+
+**Do not accept the Resend API key pasted into chat.** Have the owner run `firebase functions:secrets:set RESEND_API_KEY --project <production|rising-amp-staging>` himself at the masked prompt.
 
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.html. Phase 3 is live on hosting from phase-3-vision. Localhost stays on staging. Do not deploy Cloud Functions.
+Read CLAUDE.md, then PROGRESS.md, then PHASE4.md. Open design/risingamp-vision.html. Work is on branch phase-4-domain-email (from phase-3-vision). Domain is risingamp.com.au, DNS at Crazy Domains, Resend account already set up. Localhost stays on staging. Never accept a pasted API key — have the owner set Firebase secrets himself. Do not deploy Cloud Functions beyond what PHASE4.md explicitly asks for.
 ```
 
 ## Next
@@ -35,7 +42,11 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.h
 - [x] Stop the old “Choose a job list” card flashing before Jobs
 - [x] Production hosting deploy (2026-08-23) plus `profiles/` Firestore rules and avatar Storage rules
 - [x] Enable email/password on production Auth
-- [ ] Do not deploy Cloud Functions
+- [ ] Phase 4 Task 1 — `/privacy` and `/terms` pages, real links from sign-in/sign-up (blocked on owner providing filled-in legal text)
+- [ ] Phase 4 Task 4 — `risingamp.com.au` on Firebase Hosting (can start any time, low risk)
+- [ ] Phase 4 Task 2 — invite email via Resend, proven on staging, owner approval before default
+- [ ] Phase 4 Task 3 — remove `gmail.send` OAuth popup from invites (only after Task 2 is live)
+- [ ] Do not deploy Cloud Functions beyond the single Phase 4 invite-email function
 - [ ] Do not write to production job data unless he asks after a backup
 
 ## What shipped (localhost / staging)
@@ -88,7 +99,7 @@ OCR “Check this” **was** implemented, but only from real signals: missing/in
 
 ## Phase 1 leftovers (not unless he asks)
 
-- Live OAuth consent for sending invite mail from Gmail
+- ~~Live OAuth consent for sending invite mail from Gmail~~ — **superseded by Phase 4.** Owner decided to move invite email off `gmail.send` entirely onto Resend instead of pursuing Google verification for that scope. Google sign-in itself needs no verification and is untouched.
 - Unused `users/{code}` PIN folders (do not delete)
 - Unused live function `generateWeeklyReport` (do not deploy functions)
 - Staging has no Storage bucket (receipts missing on localhost)
