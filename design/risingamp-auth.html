@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RisingAMP — auth (desktop + mobile)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --steel-900:#17181C; --ink:#1C1E23; --slate-600:#565B64; --slate-500:#6B7079; --slate-400:#8A9099;
+    --hairline:#E7E9EC; --canvas:#F5F6F8; --surface:#FFFFFF;
+    --accent:#E85D1A; --accent-600:#C64E12; --accent-tint:#FCEEE4;
+    --pos:#2E7D57; --pos-tint:#E7F1EC; --warn:#B7862B; --warn-tint:#F7F0DF;
+    --c-labour:#5E82A6; --c-trade:#C08A3E; --c-materials:#B5654A; --c-service:#4E8C82;
+    --radius:12px; --shadow:0 1px 2px rgba(23,24,28,.04),0 1px 3px rgba(23,24,28,.03);
+    --ui:'Manrope',system-ui,-apple-system,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--ui);background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5;padding:44px 24px 90px}
+  .wrap{max-width:1080px;margin:0 auto}
+  .tab{font-variant-numeric:tabular-nums}
+  .caption{font-size:12.5px;color:var(--slate-400);font-weight:600;margin:34px 0 10px;display:flex;align-items:center;gap:8px}
+  .caption:first-child{margin-top:0}
+  .caption .n{width:20px;height:20px;border-radius:50%;background:var(--steel-900);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700}
+
+  .win{background:var(--surface);border:1px solid var(--hairline);border-radius:16px;overflow:hidden;box-shadow:0 12px 44px rgba(23,24,28,.09)}
+  .chrome{display:flex;align-items:center;gap:8px;padding:11px 15px;background:var(--steel-900)}
+  .chrome i{width:11px;height:11px;border-radius:50%;background:#3A3D44}
+  .chrome span{margin-left:10px;font-size:11px;color:#7A7F88}
+
+  .split{display:grid;grid-template-columns:1fr 1.05fr;min-height:620px}
+  .formside{padding:52px 56px;display:flex;flex-direction:column}
+  .brandline{display:flex;align-items:center;gap:10px;margin-bottom:auto}
+  .brandline .lg{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center;color:#fff}
+  .brandline b{font-size:16px;font-weight:800;letter-spacing:-.01em}
+  .formbox{margin:36px 0 auto;max-width:360px;width:100%}
+  .formbox h2{font-size:25px;font-weight:800;letter-spacing:-.02em}
+  .formbox .sub{color:var(--slate-600);font-size:14px;margin-top:6px;margin-bottom:26px}
+
+  .goog{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px;border:1px solid var(--hairline);border-radius:10px;background:#fff;font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer}
+  .goog:hover{border-color:#D6D9DD;background:#FCFCFD}
+  .or{display:flex;align-items:center;gap:12px;color:var(--slate-400);font-size:11.5px;margin:20px 0;font-weight:600}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:var(--hairline)}
+
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:12.5px;font-weight:600;margin-bottom:6px}
+  .field .in{display:flex;align-items:center;border:1px solid var(--hairline);border-radius:10px;padding:0 12px;background:#fff}
+  .field .in:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+  .field .in input{flex:1;border:0;outline:0;font-family:inherit;font-size:14px;color:var(--ink);padding:12px 0;background:none}
+  .field .in input::placeholder{color:var(--slate-400)}
+  .field .in .lead{margin-right:9px;color:var(--slate-400);display:grid;place-items:center}
+  .field .in .eye{margin-left:9px;color:var(--slate-400);cursor:pointer;display:grid;place-items:center}
+  .field .in svg{width:17px;height:17px;stroke-width:1.7}
+  .rowlabel{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .rowlabel label{margin:0}
+  .rowlabel a{font-size:12px;color:var(--accent);text-decoration:none;font-weight:600}
+  .hint{font-size:11.5px;color:var(--slate-400);margin-top:6px}
+  .primary{width:100%;margin-top:8px;background:var(--accent);color:#fff;border:0;font-family:inherit;font-weight:700;font-size:14px;padding:13px;border-radius:10px;cursor:pointer}
+  .primary:hover{background:var(--accent-600)}
+  .swap{text-align:center;font-size:13px;color:var(--slate-600);margin-top:20px}
+  .swap a{color:var(--accent);text-decoration:none;font-weight:700}
+  .terms{font-size:11px;color:var(--slate-400);margin-top:26px;line-height:1.6}
+  .terms a{color:var(--slate-600);text-decoration:underline}
+
+  /* steel panel */
+  .panel{position:relative;background:radial-gradient(120% 100% at 100% 0,#26303B 0%,#191B20 55%,#141518 100%);color:#fff;padding:48px;display:flex;flex-direction:column;overflow:hidden}
+  .panel::before{content:"";position:absolute;inset:0;background-image:linear-gradient(#ffffff0d 1px,transparent 1px),linear-gradient(90deg,#ffffff0d 1px,transparent 1px);background-size:34px 34px;-webkit-mask-image:radial-gradient(90% 80% at 60% 15%,#000 0%,transparent 75%);mask-image:radial-gradient(90% 80% at 60% 15%,#000 0%,transparent 75%)}
+  .panel .pbrand{position:relative;display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px}
+  .panel .pbrand .lg{width:28px;height:28px;border-radius:8px;background:var(--accent);display:grid;place-items:center}
+  .panel .tag{position:relative;margin-top:auto;font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.2;max-width:380px}
+  .panel .tag .u{color:#F2A176}
+  .panel .trust{position:relative;margin-top:18px;font-size:13px;color:#98A0AA;max-width:340px;line-height:1.6}
+
+  /* fanned card cascade (spread out, each visible) */
+  .stack{position:absolute;top:132px;right:48px;width:250px;height:250px}
+  .stack .card{position:absolute;top:0;left:0;width:250px;background:#fff;color:var(--ink);border-radius:14px;padding:16px;transform-origin:bottom right}
+  .cardback{box-shadow:0 22px 44px rgba(0,0,0,.32);transform:translate(-236px,-64px) rotate(-11deg) scale(.93);z-index:1;background:#FBFBFC}
+  .cardmid{box-shadow:0 24px 48px rgba(0,0,0,.34);transform:translate(-120px,-32px) rotate(-6deg) scale(.965);z-index:2}
+  .cardfront{box-shadow:0 28px 56px rgba(0,0,0,.40);transform:rotate(-2deg);z-index:3}
+  .mini-h{display:flex;align-items:center;gap:9px}
+  .mini-h .d{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex-shrink:0}
+  .mini-h .d.ok{background:var(--pos-tint);color:var(--pos)} .mini-h .d.ok svg{width:15px;height:15px;stroke-width:2.2}
+  .mini-h .d.doc{background:var(--canvas);border:1px solid var(--hairline);color:var(--slate-600)} .mini-h .d.doc svg{width:15px;height:15px;stroke-width:1.7}
+  .mini-h b{font-size:13px;font-weight:800}
+  .mini-h small{display:block;font-size:11px;color:var(--slate-400)}
+  .mini-h .r{margin-left:auto;font-size:11px;font-weight:700;color:var(--pos);background:var(--pos-tint);padding:3px 8px;border-radius:20px}
+  .mrg{font-size:11px;color:var(--slate-400);font-weight:600;margin-top:14px}
+  .val{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:3px}
+  .val .pct{font-size:13px;color:var(--pos);font-weight:700}
+  .barwrap{margin-top:12px}
+  .barwrap .bl{display:flex;align-items:center;gap:8px;margin-top:7px;font-size:11px;color:var(--slate-500)}
+  .barwrap .bl .bar{flex:1;height:6px;background:#EEF0F2;border-radius:4px;overflow:hidden}
+  .barwrap .bl .bar i{display:block;height:100%;border-radius:4px}
+  .kvline{display:flex;align-items:center;justify-content:space-between;margin-top:11px;font-size:12px}
+  .kvline .k{color:var(--slate-500)} .kvline .v{font-weight:700}
+
+  /* profile setup */
+  .setup{background:var(--canvas);padding:40px;display:flex;justify-content:center}
+  .card2{width:100%;max-width:600px}
+  .setup-head{display:flex;align-items:center;justify-content:space-between}
+  .setup-head .pb{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px}
+  .setup-head .pb .lg{width:28px;height:28px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#fff}
+  .step{font-size:11px;font-weight:700;color:var(--slate-500);background:var(--surface);border:1px solid var(--hairline);padding:5px 11px;border-radius:20px}
+  .setup h2{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-top:24px}
+  .setup .lead{color:var(--slate-600);font-size:14px;margin-top:6px;margin-bottom:26px}
+  .avatar-row{display:flex;align-items:center;gap:16px;margin-bottom:26px}
+  .avatar{position:relative;width:76px;height:76px;border-radius:50%;background:var(--canvas);border:1px solid var(--hairline);display:grid;place-items:center;color:var(--slate-400)}
+  .avatar svg{width:26px;height:26px;stroke-width:1.6}
+  .avatar .badge{position:absolute;right:-2px;bottom:-2px;width:26px;height:26px;border-radius:50%;background:var(--accent);border:2px solid #fff;display:grid;place-items:center;color:#fff}
+  .avatar .badge svg{width:13px;height:13px;stroke-width:2}
+  .avatar-row .at b{font-size:14px;font-weight:700;display:block}
+  .avatar-row .at small{font-size:12px;color:var(--slate-400)}
+  .section{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);margin-bottom:16px}
+  .section .st{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--slate-400);margin-bottom:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:1.4fr .8fr .8fr;gap:14px}
+  .full{grid-column:1 / -1}
+  .sel{position:relative}
+  .sel::after{content:"";position:absolute;right:14px;top:50%;width:8px;height:8px;border-right:1.6px solid var(--slate-400);border-bottom:1.6px solid var(--slate-400);transform:translateY(-70%) rotate(45deg)}
+  .sel select{width:100%;-webkit-appearance:none;appearance:none;border:1px solid var(--hairline);border-radius:10px;padding:12px 34px 12px 12px;font-family:inherit;font-size:14px;color:var(--ink);background:#fff;cursor:pointer}
+  .sel select:focus{outline:0;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-tint)}
+  .setup-foot{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+  .setup-foot small{font-size:12px;color:var(--slate-400)}
+  .setup-foot .primary{width:auto;padding:12px 22px;margin:0}
+
+  /* PHONES */
+  .phones{display:flex;gap:26px;flex-wrap:wrap;justify-content:center;background:var(--surface);border:1px solid var(--hairline);border-radius:16px;box-shadow:var(--shadow);padding:36px 24px}
+  .phone{width:300px;flex-shrink:0;background:#0E0F12;border-radius:44px;padding:11px;box-shadow:0 22px 50px rgba(23,24,28,.22)}
+  .pscreen{position:relative;background:#fff;border-radius:34px;overflow:hidden;height:600px}
+  .island{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:96px;height:26px;background:#0E0F12;border-radius:16px;z-index:5}
+  .statusbar{display:flex;align-items:center;justify-content:space-between;padding:12px 24px 0;font-size:12px;font-weight:700}
+  .statusbar .r{display:flex;align-items:center;gap:5px;color:var(--ink)}
+  .statusbar .r svg{width:15px;height:15px}
+  .mbody{padding:30px 24px 24px;display:flex;flex-direction:column;height:calc(100% - 34px);overflow:hidden}
+  .mbrand{display:flex;flex-direction:column;align-items:center;text-align:center;margin-top:6px}
+  .mbrand .lg{width:44px;height:44px;border-radius:12px;background:var(--accent);display:grid;place-items:center;color:#fff;margin-bottom:14px}
+  .mbrand h3{font-size:21px;font-weight:800;letter-spacing:-.02em}
+  .mbrand p{font-size:13px;color:var(--slate-600);margin-top:4px}
+  .mform{margin-top:24px}
+  .mswap{text-align:center;font-size:13px;color:var(--slate-600);margin-top:auto;padding-top:18px}
+  .mswap a{color:var(--accent);font-weight:700;text-decoration:none}
+  .mavatar{display:flex;justify-content:center;margin:8px 0 20px}
+
+  .note{font-size:12px;color:var(--slate-400);text-align:center;margin-top:22px}
+  @media(max-width:860px){.split{grid-template-columns:1fr}.panel{display:none}.formside{padding:40px 28px}.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- SIGN IN -->
+  <div class="caption"><span class="n">1</span> Sign in</div>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span>risingamp.app / sign-in</span></div>
+    <div class="split">
+      <div class="formside">
+        <div class="brandline"><span class="lg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="19" height="19" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span><b>RisingAMP</b></div>
+        <div class="formbox">
+          <h2>Welcome back</h2>
+          <div class="sub">Sign in to keep your jobs in the black.</div>
+          <button class="goog"><svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7C21.8 18.9 23 15.9 23 12.3z"/><path fill="#34A853" d="M12 24c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.5-2-6.4-4.8H1.8v3A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.6 14.6a7.2 7.2 0 0 1 0-4.6v-3H1.8a12 12 0 0 0 0 10.6l3.8-3z"/><path fill="#EA4335" d="M12 4.8c1.7 0 3.2.6 4.4 1.7l3.3-3.3A12 12 0 0 0 1.8 7l3.8 3c.9-2.8 3.4-4.8 6.4-4.8z"/></svg>Continue with Google</button>
+          <div class="or">or</div>
+          <div class="field"><label>Email</label><div class="in"><span class="lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span><input type="email" placeholder="you@company.com.au"></div></div>
+          <div class="field"><div class="rowlabel"><label>Password</label><a href="#">Forgot password?</a></div><div class="in"><span class="lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><input type="password" value="••••••••"><span class="eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+          <button class="primary">Sign in</button>
+          <div class="swap">New to RisingAMP? <a href="#">Create an account</a></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="pbrand"><span class="lg"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" width="16" height="16" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span>RisingAMP</div>
+        <div class="stack">
+          <div class="card cardback">
+            <div class="mini-h"><span class="d doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6"/></svg></span><div><b>Invoices</b><small>Nothing overdue</small></div><span class="r">All paid</span></div>
+            <div class="kvline"><span class="k">Invoiced</span><span class="v tab">$812,500</span></div>
+          </div>
+          <div class="card cardmid">
+            <div class="mini-h"><span class="d ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg></span><div><b>Receipt saved</b><small>Bunnings Warehouse</small></div></div>
+            <div class="kvline"><span class="k"><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c-materials);margin-right:6px"></span>Materials</span><span class="v tab">$412.90</span></div>
+          </div>
+          <div class="card cardfront">
+            <div class="mini-h"><span class="d ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg></span><div><b>72 Centenary Dr</b><small>On track</small></div></div>
+            <div class="mrg">Margin</div>
+            <div class="val tab">$97,033 <span class="pct">11.9%</span></div>
+            <div class="barwrap">
+              <div class="bl"><span style="width:56px">Materials</span><span class="bar"><i style="width:100%;background:var(--c-materials)"></i></span></div>
+              <div class="bl"><span style="width:56px">Trade</span><span class="bar"><i style="width:74%;background:var(--c-trade)"></i></span></div>
+              <div class="bl"><span style="width:56px">Labour</span><span class="bar"><i style="width:41%;background:var(--c-labour)"></i></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="tag">Know where every dollar goes, and <span class="u">what needs you today.</span></div>
+        <div class="trust">Built on a site, for people who work on them. Your numbers, read back to you in plain English.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGN UP -->
+  <div class="caption"><span class="n">2</span> Sign up</div>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span>risingamp.app / sign-up</span></div>
+    <div class="split">
+      <div class="formside">
+        <div class="brandline"><span class="lg"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" width="19" height="19" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span><b>RisingAMP</b></div>
+        <div class="formbox">
+          <h2>Create your account</h2>
+          <div class="sub">Start tracking your jobs in a couple of minutes.</div>
+          <button class="goog"><svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7C21.8 18.9 23 15.9 23 12.3z"/><path fill="#34A853" d="M12 24c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.5-2-6.4-4.8H1.8v3A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.6 14.6a7.2 7.2 0 0 1 0-4.6v-3H1.8a12 12 0 0 0 0 10.6l3.8-3z"/><path fill="#EA4335" d="M12 4.8c1.7 0 3.2.6 4.4 1.7l3.3-3.3A12 12 0 0 0 1.8 7l3.8 3c.9-2.8 3.4-4.8 6.4-4.8z"/></svg>Sign up with Google</button>
+          <div class="or">or</div>
+          <div class="field"><label>Email</label><div class="in"><span class="lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span><input type="email" placeholder="you@company.com.au"></div></div>
+          <div class="field"><label>Password</label><div class="in"><span class="lead"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span><input type="password" placeholder="Create a password"><span class="eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span></div><div class="hint">At least 8 characters, with a number.</div></div>
+          <button class="primary">Create account</button>
+          <div class="swap">Already have an account? <a href="#">Sign in</a></div>
+          <div class="terms">By creating an account you agree to the <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="pbrand"><span class="lg"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" width="16" height="16" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span>RisingAMP</div>
+        <div class="stack">
+          <div class="card cardback">
+            <div class="mini-h"><span class="d doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 19V5M4 19h16M8 14l3-4 3 2 4-6"/></svg></span><div><b>This month</b><small>Spend so far</small></div></div>
+            <div class="val tab" style="font-size:20px">$20,356</div>
+          </div>
+          <div class="card cardmid">
+            <div class="mini-h"><span class="d ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="m5 13 4 4L19 7"/></svg></span><div><b>Baulkham Hills</b><small>Margin at risk</small></div><span class="r" style="color:var(--warn);background:var(--warn-tint)">4.2%</span></div>
+            <div class="kvline"><span class="k">Cost to date</span><span class="v tab">$286,400</span></div>
+          </div>
+          <div class="card cardfront">
+            <div class="mini-h"><span class="d doc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21h18M5 21V8l7-5 7 5v13"/></svg></span><div><b>3 jobs</b><small>All tracking</small></div></div>
+            <div class="mrg">Combined margin</div>
+            <div class="val tab">$121k <span class="pct">10.4%</span></div>
+            <div class="barwrap">
+              <div class="bl"><span style="width:74px">72 Centenary</span><span class="bar"><i style="width:60%;background:var(--pos)"></i></span></div>
+              <div class="bl"><span style="width:74px">Baulkham Hl</span><span class="bar"><i style="width:22%;background:var(--warn)"></i></span></div>
+              <div class="bl"><span style="width:74px">Gurner St</span><span class="bar"><i style="width:8%;background:var(--slate-400)"></i></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="tag">Turn your receipts into <span class="u">a business you can see.</span></div>
+        <div class="trust">Every expense, every invoice, every job, and the one number that matters: are you making money.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROFILE SETUP -->
+  <div class="caption"><span class="n">3</span> Set up profile (right after sign up)</div>
+  <div class="win">
+    <div class="chrome"><i></i><i></i><i></i><span>risingamp.app / welcome</span></div>
+    <div class="setup">
+      <div class="card2">
+        <div class="setup-head">
+          <div class="pb"><span class="lg"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" width="16" height="16" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span>RisingAMP</div>
+          <span class="step">Step 2 of 2</span>
+        </div>
+        <h2>Set up your account</h2>
+        <div class="lead">A few details so your invoices and reports are ready to go. You can change any of it later.</div>
+        <div class="avatar-row">
+          <div class="avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="9" r="3.5"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg></span></div>
+          <div class="at"><b>Add a photo</b><small>JPG or PNG, optional</small></div>
+        </div>
+        <div class="section">
+          <div class="st">Your details</div>
+          <div class="grid2">
+            <div class="field full"><label>Full name</label><div class="in"><input placeholder="Lalit Sahni"></div></div>
+            <div class="field"><label>Role</label><div class="sel"><select><option>Owner</option><option>Director</option><option>Site manager</option><option>Estimator</option><option>Bookkeeper</option><option>Other</option></select></div></div>
+            <div class="field"><label>Mobile</label><div class="in"><span class="lead" style="font-size:13px;color:var(--slate-500);font-weight:600">+61</span><input placeholder="4XX XXX XXX"></div></div>
+          </div>
+        </div>
+        <div class="section">
+          <div class="st">Your business</div>
+          <div class="grid2">
+            <div class="field full"><label>Business name</label><div class="in"><input placeholder="Opal SS Constructions"></div></div>
+            <div class="field full"><label>ABN</label><div class="in"><input placeholder="12 345 678 901"></div><div class="hint">Shows on the invoices you send.</div></div>
+            <div class="field full"><label>Street address</label><div class="in"><input placeholder="Unit / Street"></div></div>
+          </div>
+          <div class="grid3">
+            <div class="field"><label>Suburb</label><div class="in"><input placeholder="Wentworthville"></div></div>
+            <div class="field"><label>State</label><div class="sel"><select><option>NSW</option><option>VIC</option><option>QLD</option><option>WA</option><option>SA</option><option>TAS</option><option>ACT</option><option>NT</option></select></div></div>
+            <div class="field"><label>Postcode</label><div class="in"><input placeholder="2145"></div></div>
+          </div>
+        </div>
+        <div class="setup-foot"><small>You can change these later in Settings.</small><button class="primary">Finish setup</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHONES -->
+  <div class="caption"><span class="n">4</span> On a phone</div>
+  <div class="phones">
+
+    <!-- mobile sign in -->
+    <div class="phone"><div class="pscreen"><div class="island"></div>
+      <div class="statusbar"><span>9:41</span><span class="r"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v3H2zM6 13h2v7H6zM10 9h2v11h-2zM14 5h2v15h-2z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 3 7 1 11l11 9 11-9c-2-4-6-7-11-7z" opacity=".9"/></svg><svg viewBox="0 0 26 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="8" width="18" height="10" rx="2.5"/><rect x="4" y="10" width="12" height="6" rx="1" fill="currentColor"/><path d="M22 11v4"/></svg></span></div>
+      <div class="mbody">
+        <div class="mbrand"><span class="lg"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" width="22" height="22" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span><h3>Welcome back</h3><p>Sign in to RisingAMP</p></div>
+        <div class="mform">
+          <button class="goog" style="margin-bottom:16px"><svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7C21.8 18.9 23 15.9 23 12.3z"/><path fill="#34A853" d="M12 24c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.5-2-6.4-4.8H1.8v3A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.6 14.6a7.2 7.2 0 0 1 0-4.6v-3H1.8a12 12 0 0 0 0 10.6l3.8-3z"/><path fill="#EA4335" d="M12 4.8c1.7 0 3.2.6 4.4 1.7l3.3-3.3A12 12 0 0 0 1.8 7l3.8 3c.9-2.8 3.4-4.8 6.4-4.8z"/></svg>Continue with Google</button>
+          <div class="or">or</div>
+          <div class="field"><label>Email</label><div class="in"><input type="email" placeholder="you@company.com.au"></div></div>
+          <div class="field"><div class="rowlabel"><label>Password</label><a href="#">Forgot?</a></div><div class="in"><input type="password" value="••••••••"><span class="eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+          <button class="primary">Sign in</button>
+        </div>
+        <div class="mswap">New here? <a href="#">Create an account</a></div>
+      </div>
+    </div></div>
+
+    <!-- mobile sign up -->
+    <div class="phone"><div class="pscreen"><div class="island"></div>
+      <div class="statusbar"><span>9:41</span><span class="r"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v3H2zM6 13h2v7H6zM10 9h2v11h-2zM14 5h2v15h-2z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 3 7 1 11l11 9 11-9c-2-4-6-7-11-7z" opacity=".9"/></svg><svg viewBox="0 0 26 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="8" width="18" height="10" rx="2.5"/><rect x="4" y="10" width="12" height="6" rx="1" fill="currentColor"/><path d="M22 11v4"/></svg></span></div>
+      <div class="mbody">
+        <div class="mbrand"><span class="lg"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" width="22" height="22" stroke-width="1.8"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg></span><h3>Create account</h3><p>Track your jobs in minutes</p></div>
+        <div class="mform">
+          <button class="goog" style="margin-bottom:16px"><svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7C21.8 18.9 23 15.9 23 12.3z"/><path fill="#34A853" d="M12 24c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.5-2-6.4-4.8H1.8v3A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.6 14.6a7.2 7.2 0 0 1 0-4.6v-3H1.8a12 12 0 0 0 0 10.6l3.8-3z"/><path fill="#EA4335" d="M12 4.8c1.7 0 3.2.6 4.4 1.7l3.3-3.3A12 12 0 0 0 1.8 7l3.8 3c.9-2.8 3.4-4.8 6.4-4.8z"/></svg>Sign up with Google</button>
+          <div class="or">or</div>
+          <div class="field"><label>Email</label><div class="in"><input type="email" placeholder="you@company.com.au"></div></div>
+          <div class="field"><label>Password</label><div class="in"><input type="password" placeholder="Create a password"><span class="eye"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span></div></div>
+          <button class="primary">Create account</button>
+        </div>
+        <div class="mswap">Have an account? <a href="#">Sign in</a></div>
+      </div>
+    </div></div>
+
+    <!-- mobile profile setup -->
+    <div class="phone"><div class="pscreen"><div class="island"></div>
+      <div class="statusbar"><span>9:41</span><span class="r"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 17h2v3H2zM6 13h2v7H6zM10 9h2v11h-2zM14 5h2v15h-2z"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 4C7 4 3 7 1 11l11 9 11-9c-2-4-6-7-11-7z" opacity=".9"/></svg><svg viewBox="0 0 26 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="8" width="18" height="10" rx="2.5"/><rect x="4" y="10" width="12" height="6" rx="1" fill="currentColor"/><path d="M22 11v4"/></svg></span></div>
+      <div class="mbody" style="padding-top:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:15px">Set up account</b><span class="step">2 of 2</span></div>
+        <div class="mavatar"><div class="avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="9" r="3.5"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg></span></div></div>
+        <div class="field"><label>Full name</label><div class="in"><input placeholder="Lalit Sahni"></div></div>
+        <div class="field"><label>Business name</label><div class="in"><input placeholder="Opal SS Constructions"></div></div>
+        <div class="field"><label>ABN</label><div class="in"><input placeholder="12 345 678 901"></div></div>
+        <div class="field"><label>Mobile</label><div class="in"><span class="lead" style="font-size:13px;color:var(--slate-500);font-weight:600">+61</span><input placeholder="4XX XXX XXX"></div></div>
+        <button class="primary" style="margin-top:14px">Finish setup</button>
+      </div>
+    </div></div>
+
+  </div>
+
+  <div class="note">Concept mockups for RisingAMP, not the live app.</div>
+</div>
+</body>
+</html>

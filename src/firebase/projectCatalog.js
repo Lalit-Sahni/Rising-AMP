@@ -24,9 +24,9 @@ async function queryProjectsForEmail(email) {
 }
 
 /**
- * List job lists this Gmail is invited to (not every job in the company).
+ * Job lists this email is invited to (no subcollection counts).
  */
-export async function listOrgProjects(email) {
+export async function listInvitedProjects(email) {
   const variants = emailInviteVariants(email);
   if (variants.length === 0) return [];
 
@@ -48,19 +48,32 @@ export async function listOrgProjects(email) {
     throw lastError;
   }
 
-  const rows = [];
-  for (const projectDoc of docsById.values()) {
+  return Array.from(docsById.values()).map((projectDoc) => {
     const data = projectDoc.data() || {};
-    const expenses = await countSubcollection(projectDoc.ref, 'expenses');
-    const invoices = await countSubcollection(projectDoc.ref, 'invoices');
-    rows.push({
+    return {
       id: projectDoc.id,
       projectId: projectDoc.id,
       workspaceId: data.legacyWorkspaceId || '',
       name: (data.name && String(data.name).trim()) || 'Untitled job list',
+      invitedEmails: (data.invitedEmails || []).map((value) => normalizeEmail(value)),
+    };
+  });
+}
+
+/**
+ * Job lists this email is invited to (not every job in the company).
+ */
+export async function listOrgProjects(email) {
+  const listed = await listInvitedProjects(email);
+  const rows = [];
+  for (const project of listed) {
+    const projectRef = doc(db, 'organizations', FAMILY_ORG_ID, 'projects', project.projectId);
+    const expenses = await countSubcollection(projectRef, 'expenses');
+    const invoices = await countSubcollection(projectRef, 'invoices');
+    rows.push({
+      ...project,
       expenseCount: expenses,
       invoiceCount: invoices,
-      invitedEmails: (data.invitedEmails || []).map((value) => normalizeEmail(value)),
     });
   }
 
@@ -88,7 +101,7 @@ export async function renameOrgProject(projectId, name, legacyWorkspaceId) {
 export async function inviteEmailToProject(projectId, email) {
   const variants = emailInviteVariants(email);
   if (variants.length === 0 || !variants[0].includes('@')) {
-    throw new Error('Enter a Gmail address.');
+    throw new Error('Enter an email address.');
   }
   if (!projectId) {
     throw new Error('Missing job list.');

@@ -122,6 +122,13 @@ service cloud.firestore {
       }
     }
 
+    // Signed-in user profiles (name, company, photo). Own write, any signed-in read.
+    match /profiles/{uid} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;

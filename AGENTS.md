@@ -15,4 +15,4 @@ Phase 1 and Phase 2 are **done** and live. Phase 3 starts on `phase-3-vision` fr
 
 **Paste this to start a new chat:**
 
-Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.html. Step 0 is done on phase-3-vision. Wait for a yes on the mockup-vs-live table. Do not change src/ until then.
+Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.html. Phase 3 UI is on localhost/staging on phase-3-vision. Do not deploy production until Lalit asks.

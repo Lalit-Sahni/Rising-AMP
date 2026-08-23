@@ -1,4 +1,4 @@
-/* Opal Track tokens — from design/opal-track-reference.html (Manrope + Palette 1). */
+/* RisingAMP tokens — from design/opal-track-reference.html (Manrope + Palette 1). */
 :root {
   --steel-900: #17181C;
   --steel-800: #1F2127;
@@ -13,7 +13,11 @@
   --accent-600: #C64E12;
   --accent-tint: #FCEEE4;
   --pos: #2E7D57;
+  --pos-tint: #E7F1EC;
+  --warn: #B7862B;
+  --warn-tint: #F7F0DF;
   --neg: #C0392B;
+  --slate-500: #6B7079;
   --c-labour: #5E82A6;
   --c-trade: #C08A3E;
   --c-materials: #B5654A;

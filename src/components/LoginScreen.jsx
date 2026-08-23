@@ -1,102 +1,242 @@
 import React, { useState } from 'react';
-import { loginWithGoogle } from '../firebase/auth';
-import BrandMark from './BrandMark';
+import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
+import {
+  friendlyAuthError,
+  isValidEmail,
+  isValidPassword,
+  loginWithGoogle,
+  sendResetPassword,
+  signInWithEmail,
+  signUpWithEmail,
+} from '../firebase/auth';
+import { GoogleMark } from './BrandMark';
+import AuthShell, { AuthField, AuthInput } from './AuthShell';
 
-const GoogleMark = () => (
-  <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      fill="#4285F4"
-      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-    />
-    <path
-      fill="#34A853"
-      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-    />
-    <path
-      fill="#FBBC05"
-      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z"
-    />
-    <path
-      fill="#EA4335"
-      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-    />
-  </svg>
-);
-
-function friendlyAuthError(code, message) {
-  if (code === 'auth/operation-not-allowed') {
-    return 'Google sign-in is not turned on for the copy yet. Enable it on Rising AMP Staging in Firebase Authentication.';
-  }
-  if (code === 'auth/popup-blocked') {
-    return 'The sign-in window was blocked. Allow pop-ups for this page and try again.';
-  }
-  if (code === 'auth/unauthorized-domain') {
-    return 'This site is not allowed to use Google sign-in yet.';
-  }
-  return message || 'Could not sign in with Google.';
+function modeFromLocation(fallback = 'signin') {
+  if (typeof window === 'undefined') return fallback;
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('reset')) return 'forgot';
+  if (params.get('mode') === 'signup' || params.has('signup')) return 'signup';
+  return fallback;
 }
 
-const LoginScreen = () => {
+export default function LoginScreen({ initialMode = 'signin' }) {
+  const [mode, setMode] = useState(() => modeFromLocation(initialMode));
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [info, setInfo] = useState('');
+
+  const switchMode = (next) => {
+    setMode(next);
+    setError('');
+    setInfo('');
+    setPassword('');
+  };
 
   const handleGoogle = async () => {
     setLoading(true);
     setError('');
+    setInfo('');
     try {
       const result = await loginWithGoogle();
-      if (result.cancelled) {
-        return;
-      }
+      if (result.cancelled) return;
       if (!result.success) {
-        setError(friendlyAuthError(result.code, result.error));
+        setError(friendlyAuthError(result.code, result.error, mode));
       }
     } catch (err) {
-      console.error('Login error details:', err);
-      setError(friendlyAuthError(err.code, err.message));
+      setError(friendlyAuthError(err.code, err.message, mode));
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
-      <div className="w-full max-w-[360px] bg-surface border border-hairline rounded-2xl shadow-whisper px-10 py-12 text-center">
-        <BrandMark size={44} icon={22} className="mx-auto mb-6" />
-        <h1 className="text-[21px] font-semibold tracking-tight text-ink">Welcome back</h1>
-        <p className="text-[13.5px] text-slate-600 mt-1.5 mb-7">Sign in to Opal Track</p>
+  const handleEmail = async (event) => {
+    event.preventDefault();
+    setError('');
+    setInfo('');
+    if (!isValidEmail(email)) {
+      setError('Enter a real email address — any domain is fine.');
+      return;
+    }
+    if (mode !== 'forgot' && !isValidPassword(password)) {
+      setError('Use at least 8 characters, and include a number.');
+      return;
+    }
 
-        {error && (
-          <div className="bg-accent-tint border border-hairline rounded-ot-sm p-3 mb-5 text-left">
-            <p className="text-neg text-sm">{error}</p>
+    setLoading(true);
+    try {
+      if (mode === 'forgot') {
+        const result = await sendResetPassword(email);
+        if (!result.success) {
+          setError(friendlyAuthError(result.code, result.error, 'signin'));
+        } else {
+          setInfo('If that email has an account, we sent a reset link. Check your inbox.');
+        }
+        return;
+      }
+      const result = mode === 'signup'
+        ? await signUpWithEmail(email, password)
+        : await signInWithEmail(email, password);
+      if (!result.success) {
+        setError(friendlyAuthError(result.code, result.error, mode));
+      }
+    } catch (err) {
+      setError(friendlyAuthError(err.code, err.message, mode));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isForgot = mode === 'forgot';
+  const isSignup = mode === 'signup';
+  const panelMode = isSignup ? 'signup' : 'signin';
+
+  return (
+    <AuthShell mode={panelMode}>
+      <h1 className="text-[25px] font-extrabold tracking-tight max-[859px]:text-center">
+        {isForgot ? 'Reset your password' : isSignup ? 'Create your account' : 'Welcome back'}
+      </h1>
+      <p className="text-slate-600 text-sm mt-1.5 mb-[26px] max-[859px]:text-center">
+        {isForgot
+          ? 'We’ll send a reset link to any email you signed up with.'
+          : isSignup
+            ? 'Start tracking your jobs in a couple of minutes.'
+            : 'Sign in to keep your jobs in the black.'}
+      </p>
+
+      {error && (
+        <div className="bg-accent-tint border border-hairline rounded-[10px] p-3 mb-4">
+          <p className="text-neg text-sm">{error}</p>
+        </div>
+      )}
+      {info && (
+        <div className="bg-pos-tint border border-hairline rounded-[10px] p-3 mb-4">
+          <p className="text-pos text-sm">{info}</p>
+        </div>
+      )}
+
+      {!isForgot && (
+        <>
+          <button
+            type="button"
+            onClick={handleGoogle}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-[10px] border border-hairline bg-white text-sm font-semibold text-ink hover:bg-[#FCFCFD] hover:border-[#D6D9DD] disabled:opacity-50"
+          >
+            {loading ? (
+              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-ink" />
+            ) : (
+              <GoogleMark />
+            )}
+            {isSignup ? 'Sign up with Google' : 'Continue with Google'}
+          </button>
+          <div className="flex items-center gap-3 text-[11.5px] text-slate-400 font-semibold my-5">
+            <span className="flex-1 h-px bg-hairline" />
+            or
+            <span className="flex-1 h-px bg-hairline" />
           </div>
+        </>
+      )}
+
+      <form onSubmit={handleEmail}>
+        <AuthField label="Email">
+          <AuthInput
+            lead={<Mail className="w-[17px] h-[17px]" strokeWidth={1.7} />}
+            type="email"
+            autoComplete="email"
+            placeholder="you@company.com.au"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </AuthField>
+
+        {!isForgot && (
+          <AuthField
+            label="Password"
+            extra={
+              !isSignup && (
+                <button
+                  type="button"
+                  className="text-xs text-accent font-semibold"
+                  onClick={() => switchMode('forgot')}
+                >
+                  Forgot password?
+                </button>
+              )
+            }
+            hint={isSignup ? 'At least 8 characters, with a number.' : undefined}
+          >
+            <AuthInput
+              lead={<Lock className="w-[17px] h-[17px]" strokeWidth={1.7} />}
+              type={showPassword ? 'text' : 'password'}
+              autoComplete={isSignup ? 'new-password' : 'current-password'}
+              placeholder={isSignup ? 'Create a password' : 'Your password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              trail={(
+                <button
+                  type="button"
+                  className="ml-2.5 text-slate-400 grid place-items-center"
+                  onClick={() => setShowPassword((open) => !open)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword
+                    ? <EyeOff className="w-[17px] h-[17px]" strokeWidth={1.7} />
+                    : <Eye className="w-[17px] h-[17px]" strokeWidth={1.7} />}
+                </button>
+              )}
+            />
+          </AuthField>
         )}
 
         <button
-          type="button"
-          onClick={handleGoogle}
+          type="submit"
           disabled={loading}
-          className="pressable w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-[10px] border border-hairline bg-surface text-[14px] font-medium text-ink whitespace-nowrap disabled:opacity-50"
+          className="w-full mt-2 bg-accent hover:bg-accent-600 text-white font-bold text-sm py-[13px] rounded-[10px] disabled:opacity-50"
         >
-          {loading ? (
-            <>
-              <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-ink" />
-              Opening Google…
-            </>
-          ) : (
-            <>
-              <GoogleMark />
-              Continue with Google
-            </>
-          )}
+          {loading
+            ? 'Please wait…'
+            : isForgot
+              ? 'Send reset link'
+              : isSignup
+                ? 'Create account'
+                : 'Sign in'}
         </button>
+      </form>
 
-        <p className="text-[11px] text-slate-400 mt-7 leading-relaxed">
-          Only invited family Gmail addresses can open the jobs. A wrong account will not create a new empty folder.
+      <p className="text-center text-[13px] text-slate-600 mt-5 max-[859px]:mt-auto max-[859px]:pt-[18px]">
+        {isForgot ? (
+          <>
+            Remembered it?{' '}
+            <button type="button" className="text-accent font-bold" onClick={() => switchMode('signin')}>
+              Sign in
+            </button>
+          </>
+        ) : isSignup ? (
+          <>
+            Already have an account?{' '}
+            <button type="button" className="text-accent font-bold" onClick={() => switchMode('signin')}>
+              Sign in
+            </button>
+          </>
+        ) : (
+          <>
+            New to RisingAMP?{' '}
+            <button type="button" className="text-accent font-bold" onClick={() => switchMode('signup')}>
+              Create an account
+            </button>
+          </>
+        )}
+      </p>
+
+      {isSignup && (
+        <p className="text-[11px] text-slate-400 mt-[26px] leading-relaxed">
+          By creating an account you agree to the Terms and Privacy Policy. You can add jobs when you are ready — billing comes later.
         </p>
-      </div>
-    </div>
+      )}
+    </AuthShell>
   );
-};
-
-export default LoginScreen;
+}

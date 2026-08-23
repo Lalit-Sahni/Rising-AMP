@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { useApp } from '../context/AppContext';
 import LoadingSkeleton from './ui/LoadingSkeleton';
+import JobsHomePage from './pages/JobsHomePage';
 
 // Lazy load components for better performance
 const AddExpensePage = lazy(() => import('./pages/AddExpensePage'));
@@ -8,6 +9,7 @@ const InvoiceManagementPage = lazy(() => import('./pages/InvoiceManagementPage')
 const HIAContractPage = lazy(() => import('./pages/HIAContractPage'));
 const ClientManagerPage = lazy(() => import('./pages/ClientManagerPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const BudgetTrackingPage = lazy(() => import('./pages/BudgetTrackingPage'));
 const OCRTest = lazy(() => import('./OCRTest'));
@@ -18,6 +20,10 @@ export default function MainContent() {
   
   const renderPage = () => {
     switch (currentPage) {
+      case 'jobs':
+        return <JobsHomePage />;
+      case 'profile':
+        return <ProfilePage />;
       case 'dashboard':
         return <DashboardPage />;
       case 'add-expense':
@@ -37,17 +43,17 @@ export default function MainContent() {
       case 'enhanced-ocr-test':
         return <EnhancedOCRTest />;
       default:
-        return <DashboardPage />;
+        return <JobsHomePage />;
     }
   };
 
   return (
     <div className="content flex-1 overflow-y-auto bg-canvas text-ink">
       <Suspense fallback={
-        <div className="space-y-6">
-          <LoadingSkeleton type="card" lines={4} />
-          <LoadingSkeleton type="card" lines={3} />
-          <LoadingSkeleton type="card" lines={2} />
+        <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
+          <div className="max-w-7xl mx-auto space-y-4">
+            <LoadingSkeleton type="job" lines={4} />
+          </div>
         </div>
       }>
         {renderPage()}

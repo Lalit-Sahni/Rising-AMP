@@ -1,12 +1,13 @@
 import React, { useRef, useEffect } from 'react';
-import { PlusCircle, Scan, Download, Settings } from 'lucide-react';
+import { PlusCircle, Scan, Download, Settings, Briefcase } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 const commands = [
+  { label: 'Jobs', icon: Briefcase, action: ctx => { ctx.setCurrentPage('jobs'); } },
   { label: 'Add new expense', icon: PlusCircle, action: ctx => { ctx.setCurrentPage('add-expense'); ctx.showToast('Quick add expense opened', 'info'); } },
   { label: 'Scan invoice', icon: Scan, action: ctx => ctx.showToast('Use the Scan Invoice button in the Add Expense page!', 'info') },
   { label: 'Export to Excel', icon: Download, action: ctx => ctx.showToast('Exporting data...', 'info') },
-  { label: 'Settings', icon: Settings, action: ctx => ctx.showToast('Settings panel coming soon', 'info') },
+  { label: 'Profile', icon: Settings, action: ctx => { ctx.setCurrentPage('profile'); } },
 ];
 
 export default function CommandPalette() {

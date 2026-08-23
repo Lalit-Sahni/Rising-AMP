@@ -21,10 +21,18 @@ module.exports = {
           tint: 'var(--accent-tint)',
           dark: 'var(--accent-600)',
         },
-        pos: 'var(--pos)',
+        pos: {
+          DEFAULT: 'var(--pos)',
+          tint: 'var(--pos-tint)',
+        },
+        warn: {
+          DEFAULT: 'var(--warn)',
+          tint: 'var(--warn-tint)',
+        },
         neg: 'var(--neg)',
         slate: {
           400: 'var(--slate-400)',
+          500: 'var(--slate-500)',
           600: 'var(--slate-600)',
         },
       },

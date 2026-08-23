@@ -6,7 +6,7 @@ Firebase project (production): `rising-amp-467702-b5`
 Live URL: https://rising-amp-467702-b5.web.app  
 Staging (localhost): `rising-amp-staging`  
 Default git branch in use was `master`; Phase 1 landed on `phase-1-foundation`; Phase 2 (live look) is `phase-2-visual`.  
-App name in the sidebar: “Opal Track”. Look: Manrope, Palette 1, category colour as data ink only.
+App name in the sidebar: “RisingAMP” (Phase 3 UI on localhost/staging). Production hosting is still the Phase 2 restyle until a hosting deploy is asked for. Look: Manrope, Palette 1, category colour as data ink only.
 
 ---
 
@@ -33,13 +33,15 @@ Wired in `src/components/MainContent.js`:
 
 | `currentPage` key | In sidebar? | File |
 |-------------------|-------------|------|
-| `dashboard` | Yes | `src/components/pages/DashboardPage.js` |
+| `jobs` | Yes | `src/components/pages/JobsHomePage.js` |
+| `dashboard` | Yes (“Overview” when a job is open) | `src/components/pages/DashboardPage.js` |
 | `add-expense` | Yes | `src/components/pages/AddExpensePage.js` |
 | `new-invoice` | Yes (“Invoices”) | `src/components/pages/InvoiceManagementPage.jsx` |
 | `history` | Yes | `src/components/pages/HistoryPage.js` |
-| `budget-tracking` | Yes | `src/components/pages/BudgetTrackingPage.js` |
-| `hia-contract` | Dashboard card only | `src/components/pages/HIAContractPage.jsx` |
-| `client-manager` | Switch only | `src/components/pages/ClientManagerPage.jsx` |
+| `budget-tracking` | More | `src/components/pages/BudgetTrackingPage.js` |
+| `hia-contract` | More | `src/components/pages/HIAContractPage.jsx` |
+| `client-manager` | More | `src/components/pages/ClientManagerPage.jsx` |
+| `profile` | Sidebar chip | `src/components/pages/ProfilePage.js` |
 | `ocr-test` | Hidden | `src/components/OCRTest.jsx` |
 | `enhanced-ocr-test` | Hidden | `src/components/EnhancedOCRTest.jsx` |
 
@@ -47,20 +49,20 @@ Removed: Site Log, Weekly Report.
 
 Present but **not wired**: `PurchaseOrdersPage.js`, `ConstructionExpenseTracker.js` (legacy monolith), `Fab.js`.
 
-Login / chooser (not `currentPage`): `LoginScreen.jsx`, `NotInvitedScreen.jsx`, `ProjectPicker.jsx`.
+Login (not `currentPage`): `LoginScreen.jsx` (Google or email/password), `ProfileSetupScreen.jsx`. After setup, **Jobs** is home. `NotInvitedScreen.jsx` is unused. `ProjectPicker.jsx` still exports the loading skeleton; invite/rename live on each job row.
 
 ---
 
 ## 3. Access model
 
-Google sign-in via Firebase Auth. After sign-in:
+Google or email/password via Firebase Auth (email/password enabled on **staging**). After sign-in:
 
-1. Read `organizations/opal-ss-constructions`. If the Gmail is not on org `invitedEmails`, show Not invited. Nothing new is created.
-2. List `organizations/…/projects` where `invitedEmails` array-contains that Gmail (dotted/undotted Gmail spellings are stored as variants).
-3. Owner sees every job they are on (both family jobs). An invitee sees only the jobs they were added to.
+1. If the profile is incomplete, show **Set up your account**. Saved at `profiles/{uid}`.
+2. Anyone signed in can use the app. Jobs home lists only projects where `invitedEmails` contains that email. A new signup sees an empty list until they are added to a job.
+3. Family jobs are still protected by rules: you cannot read Opal data unless your email is on that job.
 4. Tracker reads/writes `organizations/{orgId}/projects/{projectId}/…`. Receipt Storage still uses the legacy workspace id (`storageKey`) so live photos keep working.
 
-Invite: owner taps the person icon on a job card. That Gmail is added to that project (and to the org door list). The app tries to send mail from the inviter’s Gmail via the Gmail API. Live OAuth consent may still need a Console pass.
+Invite: owner taps the person icon on a job card. That email (any domain) is added to that project (and to the org door list). Live can send a professional HTML invite from the inviter’s Google account. Staging usually cannot send mail.
 
 Old PIN trees `users/{accessCode}/…` still exist. The live app does not use them. Do not delete them unless asked. `users/` rules are still `if true` for those leftover trees.
 
@@ -71,7 +73,8 @@ Old PIN trees `users/{accessCode}/…` still exist. The live app does not use th
 `firestore.rules`:
 
 - `users/{accessCode}/**` — still `if true` (legacy PIN copies).
-- `organizations/{orgId}` — signed-in Gmail must be in `invitedEmails`.
+- `profiles/{uid}` — signed-in users can read; only the owner of that uid can write (staging rules).
+- `organizations/{orgId}` — signed-in email must be in `invitedEmails`.
 - `organizations/{orgId}/projects/{projectId}` — signed-in Gmail must be in that project’s `invitedEmails`. List queries use `resource.data.invitedEmails` so they match `array-contains`.
 - Project subcollections use a `get()` of the parent project’s `invitedEmails`.
 
@@ -85,7 +88,7 @@ One organisation: Opal SS Constructions.
 
 Two projects (job lists): **72 Centenary Dr**, **Gurner St**. Each is a Firestore document under `organizations/opal-ss-constructions/projects/{projectId}` with tracker subcollections copied from the old PIN folders.
 
-The dashboard is **one job list at a time**, chosen on the picker (or restored from `localStorage`).
+The dashboard is **one job list at a time**, opened from the Jobs home (or restored from `localStorage` so Add expense still has a job).
 
 ---
 
@@ -95,6 +98,7 @@ The dashboard is **one job list at a time**, chosen on the picker (or restored f
 organizations/opal-ss-constructions
   projects/{projectId}
     expenses, invoices, clients, labour, trades, …
+profiles/{uid}         # name, company, photo (staging)
 users/{accessCode}     # leftover copies, unused by the app
 ```
 

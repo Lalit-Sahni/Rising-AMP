@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Camera, Upload, X, AlertCircle, Loader2, User, Wrench, HardHat, FileText, DollarSign, Sparkles } from 'lucide-react';
 import EnhancedOCRService from '../utils/EnhancedOCRService';
 import { categoryIconWell, getCategoryStyle } from '../utils/categoryStyle';
+import { detectUncertainFields } from '../utils/ocrUncertainty';
 
 const CATEGORIES = [
   { key: 'labour',   label: 'Labour',    icon: User,      description: 'Worker wages & hours' },
@@ -79,14 +80,14 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
       const editable = {
         amount:   data.formData?.amount || data.formData?.unitCost || data.formData?.cost || data.extractedData?.totalAmount || null,
-        date:     data.formData?.date   || data.extractedData?.date || new Date(),
+        date:     data.formData?.date   || data.extractedData?.date || null,
         supplier: data.formData?.supplier || data.formData?.workerName || data.formData?.tradeName || data.formData?.provider || data.extractedData?.vendor || null,
         itemName: data.formData?.itemName || data.formData?.equipmentName || data.formData?.serviceName || data.formData?.task || null,
         notes:    data.formData?.notes || '',
       };
+      const uncertainFields = detectUncertainFields(data);
 
-      // Show category confirmation step instead of immediately closing
-      setPendingData({ data, editable });
+      setPendingData({ data, editable, uncertainFields });
       setSelectedCategory(data.category || 'purchase');
 
     } catch (err) {
@@ -100,12 +101,13 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
   const confirmCategory = () => {
     if (!pendingData || !selectedCategory) return;
-    const { data, editable } = pendingData;
+    const { data, editable, uncertainFields } = pendingData;
     if (onScanComplete) {
       onScanComplete({
         ...data,
         category: selectedCategory,
         formData: buildFormData(selectedCategory, editable, data.formData || {}),
+        uncertainFields: uncertainFields || {},
       });
     }
     handleClose();
@@ -183,6 +185,13 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
   // ── Category confirmation screen ──────────────────────────────────────────
   if (pendingData) {
     const aiCategory = pendingData.data.category;
+    const uncertain = pendingData.uncertainFields || {};
+    const amountValue = pendingData.editable.amount;
+    const dateValue = pendingData.editable.date;
+    const dateLabel = dateValue ? new Date(dateValue).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+    const amountLabel = amountValue != null && amountValue !== ''
+      ? `$${Number(amountValue).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : '—';
 
     return (
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -190,8 +199,10 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
           <div className="flex items-center justify-between p-5 border-b border-zinc-200">
             <div>
-              <h2 className="text-lg font-bold text-zinc-900">What type of expense?</h2>
-              <p className="text-sm text-zinc-500 mt-0.5">Invoice scanned — confirm the category</p>
+              <h2 className="text-lg font-bold text-zinc-900">Receipt read</h2>
+              <p className="text-sm text-zinc-500 mt-0.5">
+                {pendingData.editable.supplier || 'Confirm the details before saving'}
+              </p>
             </div>
             <button onClick={handleClose} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
               <X className="w-5 h-5 text-zinc-400" />
@@ -199,7 +210,31 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
           </div>
 
           <div className="p-5 space-y-3">
-            {/* AI suggestion badge */}
+            <div className={`flex items-center justify-between rounded-[9px] border px-3.5 py-2.5 ${uncertain.amount ? 'border-warn bg-warn-tint' : 'border-hairline bg-surface'}`}>
+              <span>
+                <span className="block text-[11px] text-slate-400 font-semibold">Amount</span>
+                <span className="tabular text-sm font-bold">{amountLabel}</span>
+              </span>
+              {uncertain.amount && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-warn">
+                  <AlertCircle className="w-[13px] h-[13px]" strokeWidth={2} />
+                  Check this
+                </span>
+              )}
+            </div>
+            <div className={`flex items-center justify-between rounded-[9px] border px-3.5 py-2.5 ${uncertain.date ? 'border-warn bg-warn-tint' : 'border-hairline bg-surface'}`}>
+              <span>
+                <span className="block text-[11px] text-slate-400 font-semibold">Date</span>
+                <span className="tabular text-sm font-bold">{Number.isNaN(new Date(dateValue).getTime()) ? '—' : dateLabel}</span>
+              </span>
+              {uncertain.date && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-warn">
+                  <AlertCircle className="w-[13px] h-[13px]" strokeWidth={2} />
+                  Check this
+                </span>
+              )}
+            </div>
+
             {aiCategory && (
               <div className="flex items-center gap-2 text-xs text-zinc-500 mb-1">
                 <Sparkles className="w-3.5 h-3.5 text-accent" />

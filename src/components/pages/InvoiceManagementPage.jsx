@@ -107,7 +107,7 @@ const InvoiceManagementPage = () => {
               <div style="width: 64px; height: 64px; background-color: #2563eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
                 <span style="color: white; font-size: 24px;">OT</span>
               </div>
-              <p style="font-size: 14px; color: #6b7280; margin: 2px 0;">Opal Track</p>
+              <p style="font-size: 14px; color: #6b7280; margin: 2px 0;">RisingAMP</p>
               <p style="font-size: 14px; color: #6b7280; margin: 2px 0;">Construction Management</p>
             </div>
           </div>

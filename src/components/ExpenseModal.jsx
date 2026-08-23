@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Database, Upload, Image, Trash2, Eye } from 'lucide-react';
+import { X, Database, Upload, Image, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import SavedDataSelector from './SavedDataSelector';
 import CreatableSelect from 'react-select/creatable';
@@ -77,7 +77,7 @@ function calculateTotal(category, data) {
   }
 }
 
-const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId = null }) => {
+const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId = null, uncertainFields = {} }) => {
   const {
     addExpenseToFirebase,
     updateExpenseInFirebase,
@@ -102,6 +102,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
   const [receiptPreview, setReceiptPreview] = useState(null);
   const [receiptViewerOpen, setReceiptViewerOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [checkFields, setCheckFields] = useState({});
 
   // Initialize form data
   useEffect(() => {
@@ -125,6 +126,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
       initialFormData['paidBy'] = initialData['paidBy'] ?? '';
       setFormData(initialFormData);
       setValidationErrors({});
+      setCheckFields(uncertainFields || {});
       
       // Handle receipt from OCR scanner
       if (initialData.imageFile) {
@@ -134,7 +136,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
         reader.readAsDataURL(initialData.imageFile);
       }
     }
-  }, [isOpen, category, initialData]);
+  }, [isOpen, category, initialData, uncertainFields]);
 
   // Worker management functions
   const getWorkerOptions = () => {
@@ -287,10 +289,11 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Clear validation error when user starts typing
     if (validationErrors[field]) {
       setValidationErrors(prev => ({ ...prev, [field]: '' }));
+    }
+    if (checkFields[field]) {
+      setCheckFields(prev => ({ ...prev, [field]: false }));
     }
   };
 
@@ -546,10 +549,19 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
             {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {fields.map((field) => (
-                <div key={field.name} className="relative">
+                <div
+                  key={field.name}
+                  className={`relative ${checkFields[field.name] ? 'rounded-[9px] border border-warn bg-warn-tint p-3' : ''}`}
+                >
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
                     {field.label}
                     {field.required && <span className="text-red-400 ml-1">*</span>}
+                    {checkFields[field.name] && (
+                      <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-bold text-warn">
+                        <AlertTriangle className="w-3 h-3" strokeWidth={2} />
+                        Check this
+                      </span>
+                    )}
                   </label>
                   
                   {/* Worker Name Dropdown */}

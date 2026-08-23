@@ -10,18 +10,26 @@ const SESSION_KEYS = {
   workspaceId: 'risingAmp.workspaceId',
   projectName: 'risingAmp.projectName',
   orgId: 'risingAmp.orgId',
+  invitedEmails: 'risingAmp.invitedEmails',
 };
 
 export function readSession() {
+  let invitedEmails = [];
+  try {
+    invitedEmails = JSON.parse(localStorage.getItem(SESSION_KEYS.invitedEmails) || '[]');
+  } catch (error) {
+    invitedEmails = [];
+  }
   return {
     projectId: localStorage.getItem(SESSION_KEYS.projectId),
     workspaceId: localStorage.getItem(SESSION_KEYS.workspaceId),
     projectName: localStorage.getItem(SESSION_KEYS.projectName),
     orgId: localStorage.getItem(SESSION_KEYS.orgId),
+    invitedEmails: Array.isArray(invitedEmails) ? invitedEmails : [],
   };
 }
 
-export function writeSession({ projectId, workspaceId, projectName, orgId }) {
+export function writeSession({ projectId, workspaceId, projectName, orgId, invitedEmails }) {
   if (projectId) localStorage.setItem(SESSION_KEYS.projectId, projectId);
   else localStorage.removeItem(SESSION_KEYS.projectId);
 
@@ -33,6 +41,9 @@ export function writeSession({ projectId, workspaceId, projectName, orgId }) {
 
   if (orgId) localStorage.setItem(SESSION_KEYS.orgId, orgId);
   else localStorage.removeItem(SESSION_KEYS.orgId);
+
+  if (invitedEmails) localStorage.setItem(SESSION_KEYS.invitedEmails, JSON.stringify(invitedEmails));
+  else localStorage.removeItem(SESSION_KEYS.invitedEmails);
 
   localStorage.removeItem('accessCode');
 }

@@ -47,8 +47,20 @@ export const useApp = () => {
   return context;
 };
 
-export const AppProvider = ({ children, projectId: jobListId, storageKey }) => {
-  const [currentPage, setCurrentPage] = useState('dashboard');
+export const AppProvider = ({
+  children,
+  projectId: jobListId,
+  storageKey,
+  projectName = '',
+  membership = null,
+  onOpenJob = null,
+  authUser = null,
+  profile = null,
+  setProfile = () => {},
+  jobInvitedEmails = [],
+}) => {
+  const [currentPage, setCurrentPage] = useState('jobs');
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [expenses, setExpenses] = useState([]);
   const [budget, setBudget] = useState(0);
   const [savedLabour, setSavedLabour] = useState([]);
@@ -904,7 +916,17 @@ export const AppProvider = ({ children, projectId: jobListId, storageKey }) => {
 
   const value = {
     accessCode: jobListId,
+    projectId: jobListId,
     storageKey,
+    projectName,
+    membership,
+    onOpenJob,
+    authUser,
+    profile,
+    setProfile,
+    jobInvitedEmails,
+    commandPaletteOpen,
+    setCommandPaletteOpen,
     currentPage,
     setCurrentPage,
     expenses,

@@ -1,218 +1,125 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
-  PlusCircle,
-  FileText,
-  FileCheck,
-  Clock,
   AlertTriangle,
-  Bug,
-  ArrowUpRight,
-  Target,
+  CalendarDays,
+  Camera,
+  Check,
+  Download,
+  FileText,
+  PlusCircle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import LoadingSkeleton from '../ui/LoadingSkeleton';
-import CategoryChartCard from '../dashboard/CategoryChartCard';
-import CategoryChip from '../ui/CategoryChip';
-
-function isValidDate(date) {
-  return date instanceof Date && !isNaN(date);
-}
-
-function isThisMonth(timestamp) {
-  try {
-    const now = new Date();
-    const expenseDate = new Date(timestamp);
-    if (!isValidDate(expenseDate)) return false;
-    return expenseDate.getMonth() === now.getMonth() &&
-      expenseDate.getFullYear() === now.getFullYear();
-  } catch (error) {
-    return false;
-  }
-}
-
-function getExpenseTotal(expense) {
-  if (expense.total) return parseFloat(expense.total);
-  if (expense.amount) return parseFloat(expense.amount);
-  if (expense.cost) return parseFloat(expense.cost);
-  if (expense.quantity && expense.unitCost) {
-    return parseFloat(expense.quantity) * parseFloat(expense.unitCost);
-  }
-  return 0;
-}
-
-function formatDate(dateString) {
-  try {
-    const date = new Date(dateString);
-    if (!isValidDate(date)) return '—';
-    return date.toLocaleDateString('en-AU', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
-  } catch (error) {
-    return '—';
-  }
-}
-
-function getDateKey(dateString, groupBy = 'day') {
-  try {
-    const date = new Date(dateString);
-    if (!isValidDate(date)) return 'invalid';
-    if (groupBy === 'month') {
-      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    }
-    if (groupBy === 'week') {
-      const weekStart = new Date(date);
-      weekStart.setDate(date.getDate() - date.getDay());
-      return weekStart.toISOString().split('T')[0];
-    }
-    return date.toISOString().split('T')[0];
-  } catch (error) {
-    return 'invalid';
-  }
-}
-
-function money(n) {
-  return `$${Number(n || 0).toLocaleString('en-AU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
+import ExportDialog from '../ExportDialog';
+import JobPeople from '../JobPeople';
+import { exportExpensesToExcel } from '../../utils/excelExport';
+import { getCategoryStyle } from '../../utils/categoryStyle';
+import {
+  VERDICT,
+  bannerMessage,
+  contractSubtitle,
+  deriveJobMetrics,
+  formatMoney,
+  formatPercent,
+  getExpenseTotal,
+  jobSubtitle,
+  periodLabel,
+} from '../../utils/jobMetrics';
 
 function expenseLabel(expense) {
-  return expense.description || expense.tradeName || expense.itemName || expense.category || 'Expense';
+  return expense.description || expense.itemName || expense.tradeName || expense.supplier || expense.category || 'Expense';
+}
+
+function marginBarWidth(marginPct) {
+  if (marginPct == null || !Number.isFinite(marginPct)) return 0;
+  return Math.max(0, Math.min(100, marginPct));
 }
 
 export default function DashboardPage() {
-  const { expenses, invoices, setCurrentPage } = useApp();
-  const [showDebug, setShowDebug] = useState(false);
-  const [timeGrouping, setTimeGrouping] = useState('day');
+  const {
+    expenses,
+    invoices,
+    clients,
+    projectName,
+    projectId,
+    setCurrentPage,
+    showToast,
+    jobInvitedEmails,
+  } = useApp();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
-  const [isLoading, setIsLoading] = useState(true);
+  const [showExport, setShowExport] = useState(false);
+  const attentionRef = useRef(null);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 800);
-    return () => clearTimeout(timer);
-  }, [expenses, invoices]);
+  const metrics = useMemo(
+    () => deriveJobMetrics({ expenses, invoices }, { period: selectedPeriod }),
+    [expenses, invoices, selectedPeriod]
+  );
+  const banner = bannerMessage(metrics);
+  const subtitle = jobSubtitle({ clients, invoices, metrics });
+  const maxCategory = metrics.categories[0]?.amount || 1;
 
-  const budget = invoices
-    .filter((inv) => inv.status === 'paid')
-    .reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
+  const handleNavigate = (page) => {
+    if (!page) return;
+    setCurrentPage(page);
+  };
 
-  const dashboardData = useMemo(() => {
-    try {
-      if (!expenses || expenses.length === 0) {
-        return {
-          totalExpenses: 0,
-          thisMonthExpenses: 0,
-          trades: [],
-          categoryData: [],
-          trendChartData: [],
-          dateRange: { start: new Date(), end: new Date() },
-          alerts: { unreviewedCount: 0, uncategorizedCount: 0 },
-        };
-      }
-
-      const totalExpenses = expenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
-      const thisMonthExpenses = expenses
-        .filter((expense) => isThisMonth(expense.timestamp || expense.date))
-        .reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
-
-      const tradeMap = new Map();
-      expenses.forEach((expense) => {
-        const trade = expense.tradeName || expense.category || 'Uncategorized';
-        const amount = getExpenseTotal(expense);
-        tradeMap.set(trade, (tradeMap.get(trade) || 0) + amount);
-      });
-
-      const trades = Array.from(tradeMap.entries())
-        .map(([name, amount]) => ({
-          name,
-          amount,
-          percentage: totalExpenses ? (amount / totalExpenses) * 100 : 0,
-        }))
-        .sort((a, b) => b.amount - a.amount);
-
-      const categoryData = trades.slice(0, 6).map((trade) => ({
-        name: trade.name,
-        value: trade.amount,
-      }));
-
-      const trendMap = new Map();
-      expenses.forEach((expense) => {
-        const dateKey = getDateKey(expense.timestamp || expense.date, timeGrouping);
-        const amount = getExpenseTotal(expense);
-        trendMap.set(dateKey, (trendMap.get(dateKey) || 0) + amount);
-      });
-
-      const trendChartData = Array.from(trendMap.entries())
-        .map(([date, amount]) => ({
-          date: formatDate(date),
-          amount: parseFloat(amount.toFixed(2)),
-        }))
-        .sort((a, b) => new Date(a.date) - new Date(b.date));
-
-      const dates = expenses.map((expense) => new Date(expense.timestamp || expense.date));
-      const dateRange = {
-        start: new Date(Math.min(...dates)),
-        end: new Date(Math.max(...dates)),
-      };
-
-      const unreviewedCount = expenses.filter((expense) => !expense.reviewed).length;
-      const uncategorizedCount = expenses.filter((expense) => !expense.category && !expense.tradeName).length;
-
-      return {
-        totalExpenses,
-        thisMonthExpenses,
-        trades,
-        categoryData,
-        trendChartData,
-        dateRange,
-        alerts: { unreviewedCount, uncategorizedCount },
-      };
-    } catch (error) {
-      console.error('Error processing dashboard data:', error);
-      return {
-        totalExpenses: 0,
-        thisMonthExpenses: 0,
-        trades: [],
-        categoryData: [],
-        trendChartData: [],
-        dateRange: { start: new Date(), end: new Date() },
-        alerts: { unreviewedCount: 0, uncategorizedCount: 0 },
-      };
+  const handleExport = async (filename) => {
+    const result = await exportExpensesToExcel(expenses || [], filename);
+    if (result.success) {
+      showToast('Excel file exported.', 'success');
+    } else {
+      showToast(result.error || 'Export failed.', 'error');
     }
-  }, [expenses, timeGrouping]);
+  };
 
-  const totalInvoiced = invoices.reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
-  const totalPaid = invoices
-    .filter((inv) => inv.status === 'paid')
-    .reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
-  const outstanding = totalInvoiced - totalPaid;
-  const budgetUnset = !budget;
+  const scrollToAttention = () => {
+    if (attentionRef.current) {
+      attentionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
-  const handleNavigate = (page) => setCurrentPage(page);
+  if (!projectId) {
+    return (
+      <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
+        <div className="max-w-xl">
+          <div className="eyebrow">Project overview</div>
+          <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Open a job</h1>
+          <p className="text-[13.5px] text-slate-600 mt-2">
+            Pick a job from the list to see margin, cash, and what needs you today.
+          </p>
+          <button
+            type="button"
+            onClick={() => setCurrentPage('jobs')}
+            className="mt-4 inline-flex items-center bg-accent hover:bg-accent-600 text-white text-[13px] font-bold px-[15px] py-[9px] rounded-[9px]"
+          >
+            Jobs
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const quickActions = [
-    { title: 'Add expense', description: 'Record new spend', icon: PlusCircle, page: 'add-expense' },
-    { title: 'Invoices', description: 'Manage & track', icon: FileText, page: 'new-invoice' },
-    { title: 'HIA contracts', description: 'Progress payments', icon: FileCheck, page: 'hia-contract' },
-    { title: 'Budget tracking', description: 'Target vs actual', icon: Target, page: 'budget-tracking' },
-    { title: 'History', description: 'Past transactions', icon: Clock, page: 'history' },
-  ];
-
-  const recent = (expenses || []).slice(0, 3);
+  const leftTone = {
+    ok: 'border-l-pos',
+    warn: 'border-l-warn',
+    new: 'border-l-slate-400',
+  }[banner.tone];
+  const iconTone = {
+    ok: 'bg-pos-tint text-pos',
+    warn: 'bg-warn-tint text-warn',
+    new: 'bg-canvas text-slate-500',
+  }[banner.tone];
 
   return (
     <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5 mb-[22px]">
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-5 mb-5">
           <div>
             <div className="eyebrow">Project overview</div>
-            <h1 className="text-[26px] font-bold tracking-tight mt-1">Dashboard</h1>
-            <p className="text-[13.5px] text-slate-600 mt-0.5">Where this job stands this month.</p>
+            <h1 className="text-[25px] font-extrabold tracking-tight mt-1">{projectName || 'Job'}</h1>
+            <p className="text-[13.5px] text-slate-600 mt-0.5">{subtitle}</p>
+            <JobPeople emails={jobInvitedEmails} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex bg-surface border border-hairline rounded-[9px] p-[3px]">
               {['week', 'month', 'quarter'].map((period) => (
                 <button
@@ -227,197 +134,281 @@ export default function DashboardPage() {
               ))}
             </div>
             <button
-              onClick={() => setShowDebug(!showDebug)}
-              className="w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm bg-surface text-slate-600 hover:text-ink"
-              title="Debug"
+              type="button"
+              onClick={() => handleNavigate('add-expense')}
+              className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent-600 text-white text-[13px] font-bold px-[15px] py-[9px] rounded-[9px]"
             >
-              <Bug className="w-4 h-4" />
+              <PlusCircle className="w-4 h-4" strokeWidth={2} />
+              Add expense
             </button>
           </div>
         </div>
 
-        {showDebug && (
-          <div className="bg-surface border border-hairline rounded-ot shadow-whisper p-5 mb-4">
-            <h3 className="text-sm font-semibold mb-3">Debug</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-600">
-              <div className="space-y-1">
-                <p>Expense count: <span className="tabular text-ink">{expenses.length}</span></p>
-                <p>Total: <span className="tabular text-ink">{money(dashboardData.totalExpenses)}</span></p>
-                <p>This month: <span className="tabular text-ink">{money(dashboardData.thisMonthExpenses)}</span></p>
-                <p>Budget: <span className="tabular text-ink">{money(budget)}</span></p>
-              </div>
-              <select
-                value={timeGrouping}
-                onChange={(e) => setTimeGrouping(e.target.value)}
-                className="h-10 px-3 bg-canvas border border-hairline rounded-ot-sm text-ink focus:border-accent outline-none"
-              >
-                <option value="day">Group by Day</option>
-                <option value="week">Group by Week</option>
-                <option value="month">Group by Month</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-4">
-            {Array.from({ length: 4 }).map((_, index) => (
-              <LoadingSkeleton key={index} type="card" lines={2} />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-4">
-            <div className="relative bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
-              <span className="absolute left-[18px] right-[18px] top-0 h-0.5 bg-accent rounded-b" />
-              <div className="text-xs text-slate-400 font-medium">Total expenses</div>
-              <div className="tabular font-semibold text-[25px] tracking-tight my-2.5">{money(dashboardData.totalExpenses)}</div>
-              <div className="text-xs text-slate-600">
-                <span className="tabular">{expenses.length}</span> recorded
-              </div>
-            </div>
-            <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
-              <div className="text-xs text-slate-400 font-medium">This month</div>
-              <div className="tabular font-semibold text-[25px] tracking-tight my-2.5">{money(dashboardData.thisMonthExpenses)}</div>
-              <div className="text-xs text-slate-600">Spend in the current month</div>
-            </div>
-            <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
-              <div className="text-xs text-slate-400 font-medium">Invoiced</div>
-              <div className="tabular font-semibold text-[25px] tracking-tight my-2.5">{money(totalInvoiced)}</div>
-              <div className="text-xs text-slate-600">
-                <span className="tabular text-pos">{money(totalPaid)}</span> paid
-              </div>
-            </div>
-            <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
-              <div className="text-xs text-slate-400 font-medium">Outstanding</div>
-              <div className="tabular font-semibold text-[25px] tracking-tight my-2.5">{money(outstanding)}</div>
-              <div className="text-xs text-slate-400">
-                {outstanding === 0 ? '• nothing overdue' : 'unpaid invoices'}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-3.5 mb-4">
-          <CategoryChartCard expenses={expenses} onViewAll={() => handleNavigate('history')} />
-          <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper">
-            <h3 className="text-sm font-semibold">Budget</h3>
-            {budgetUnset ? (
-              <div className="flex items-center justify-between gap-4 mt-3.5 p-4 border border-dashed border-[#D7DADF] rounded-ot-sm bg-[#FBFBFC]">
-                <div>
-                  <b className="block text-[13.5px] font-semibold">No budget set</b>
-                  <p className="text-[13px] text-slate-600 mt-0.5">Set one to track spend against a target.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleNavigate('budget-tracking')}
-                  className="shrink-0 inline-flex items-center bg-accent hover:bg-accent-600 text-white text-[12.5px] font-medium px-3.5 py-2 rounded-ot-sm"
-                >
-                  Set budget
-                </button>
-              </div>
+        <div className={`flex items-center gap-4 bg-surface border border-hairline ${leftTone} border-l-[3px] rounded-ot p-4 md:px-5 shadow-whisper mb-4`}>
+          <span className={`w-[34px] h-[34px] rounded-[9px] grid place-items-center shrink-0 ${iconTone}`}>
+            {metrics.verdict === VERDICT.ON_TRACK ? (
+              <Check className="w-[18px] h-[18px]" strokeWidth={2} />
             ) : (
-              <div className="mt-3.5 p-4 border border-hairline rounded-ot-sm">
-                <div className="flex justify-between text-[13px]">
-                  <span className="text-slate-600">From paid invoices</span>
-                  <span className="tabular font-medium">{money(budget)}</span>
-                </div>
-                <div className="flex justify-between text-[13px] mt-2">
-                  <span className="text-slate-600">Spent</span>
-                  <span className="tabular">{money(dashboardData.totalExpenses)}</span>
-                </div>
-                <div className="flex justify-between text-[13px] mt-2">
-                  <span className="text-slate-600">Remaining</span>
-                  <span className={`tabular ${budget - dashboardData.totalExpenses < 0 ? 'text-neg' : 'text-pos'}`}>
-                    {money(budget - dashboardData.totalExpenses)}
-                  </span>
-                </div>
-              </div>
+              <AlertTriangle className="w-[18px] h-[18px]" strokeWidth={2} />
             )}
+          </span>
+          <div className="flex-1 min-w-0">
+            <b className="block text-[14.5px] font-extrabold">{banner.label}</b>
+            <p className="text-[13px] text-slate-600 mt-0.5">
+              {metrics.hasMargin ? (
+                <>
+                  You are {metrics.margin < 0 ? 'behind' : 'making'}{' '}
+                  <span className={`font-bold ${metrics.margin < 0 ? 'text-neg' : 'text-pos'}`}>
+                    {formatMoney(Math.abs(metrics.margin))} ({formatPercent(metrics.marginPct)})
+                  </span>{' '}
+                  on this job, and {metrics.overdueCount > 0
+                    ? `${metrics.overdueCount} invoice${metrics.overdueCount === 1 ? ' is' : 's are'} overdue`
+                    : 'nothing is overdue'}
+                  . {metrics.attentionCount === 0
+                    ? 'Nothing else needs tidying up.'
+                    : metrics.attentionCount === 1
+                      ? 'One small thing needs tidying up.'
+                      : `${metrics.attentionCount} small things need tidying up.`}
+                </>
+              ) : (
+                banner.line
+              )}
+            </p>
+          </div>
+          {metrics.attentionCount > 0 && (
+            <button
+              type="button"
+              onClick={scrollToAttention}
+              className="shrink-0 hidden sm:inline-flex items-center gap-1.5 bg-surface text-ink border border-hairline text-xs font-semibold px-3 py-1.5 rounded-ot-sm hover:border-[#D6D9DD]"
+            >
+              Review {metrics.attentionCount} item{metrics.attentionCount === 1 ? '' : 's'}
+            </button>
+          )}
+        </div>
 
-            <h3 className="text-sm font-semibold mt-5">Recent</h3>
-            {recent.length === 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-4">
+          <div className="bg-surface border border-hairline rounded-ot p-[17px] shadow-whisper">
+            <div className="text-[11.5px] text-slate-400 font-semibold">Contract</div>
+            <div className="tabular font-extrabold text-[23px] tracking-tight my-2">
+              {metrics.cash.paid > 0 ? formatMoney(metrics.cash.paid) : '—'}
+            </div>
+            <div className="text-xs text-slate-600">{contractSubtitle(metrics.cash)}</div>
+          </div>
+          <div className="bg-surface border border-hairline rounded-ot p-[17px] shadow-whisper">
+            <div className="text-[11.5px] text-slate-400 font-semibold">Cost to date</div>
+            <div className="tabular font-extrabold text-[23px] tracking-tight my-2">
+              {formatMoney(metrics.cash.cost)}
+            </div>
+            <div className="text-xs text-slate-600">
+              <span className="tabular">{metrics.expenseCount}</span> expense{metrics.expenseCount === 1 ? '' : 's'}
+            </div>
+          </div>
+          <div className="relative bg-surface border border-hairline rounded-ot p-[17px] shadow-whisper">
+            <span className="absolute left-[17px] right-[17px] top-0 h-0.5 bg-accent rounded-b" />
+            <div className="text-[11.5px] text-slate-400 font-semibold">Margin</div>
+            <div className="tabular font-extrabold text-[23px] tracking-tight my-2">
+              {metrics.hasMargin ? formatMoney(metrics.margin) : '—'}
+            </div>
+            <div className="text-xs text-slate-600 flex items-center gap-1.5">
+              {metrics.hasMargin ? (
+                <>
+                  <span className={`font-bold ${metrics.margin < 0 ? 'text-neg' : metrics.verdict === VERDICT.MARGIN_AT_RISK ? 'text-warn' : 'text-pos'}`}>
+                    {formatPercent(metrics.marginPct)}
+                  </span>
+                  <span className="flex-1 h-[7px] bg-[#EEF0F2] rounded overflow-hidden max-w-[72px]">
+                    <span
+                      className="block h-full rounded"
+                      style={{
+                        width: `${marginBarWidth(metrics.marginPct)}%`,
+                        background: metrics.verdict === VERDICT.MARGIN_AT_RISK ? 'var(--warn)' : 'var(--pos)',
+                      }}
+                    />
+                  </span>
+                </>
+              ) : (
+                <span>Needs a paid invoice total</span>
+              )}
+            </div>
+          </div>
+          <div className="bg-surface border border-hairline rounded-ot p-[17px] shadow-whisper">
+            <div className="text-[11.5px] text-slate-400 font-semibold">{periodLabel(selectedPeriod)}</div>
+            <div className="tabular font-extrabold text-[23px] tracking-tight my-2">
+              {formatMoney(metrics.periodSpend)}
+            </div>
+            <div className="text-xs text-slate-600">
+              {metrics.periodCount === 0 ? 'No dated spend in this period' : 'Spend so far'}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-3.5 mb-4">
+          <div ref={attentionRef} className="bg-surface border border-hairline rounded-ot px-5 py-[18px] shadow-whisper">
+            <h3 className="text-sm font-extrabold flex items-center justify-between mb-1">
+              What needs you today
+              {metrics.attentionCount > 0 && (
+                <span className="text-[11px] font-bold text-warn bg-warn-tint px-2 py-0.5 rounded-full">
+                  {metrics.attentionCount}
+                </span>
+              )}
+            </h3>
+            {metrics.attentionItems.length === 0 ? (
+              <p className="text-[13px] text-slate-400 mt-3">All clear. Nothing on this job needs you right now.</p>
+            ) : (
+              metrics.attentionItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 py-3 border-b border-hairline last:border-0">
+                  <span
+                    className={`w-[34px] h-[34px] rounded-[9px] grid place-items-center shrink-0 ${
+                      item.tone === 'warn'
+                        ? 'bg-warn-tint text-warn border-0'
+                        : 'bg-canvas border border-hairline text-slate-600'
+                    }`}
+                  >
+                    {item.id.startsWith('invoices') ? (
+                      <CalendarDays className="w-4 h-4" strokeWidth={1.7} />
+                    ) : item.id === 'expenses-no-receipt' ? (
+                      <Camera className="w-4 h-4" strokeWidth={1.7} />
+                    ) : (
+                      <AlertTriangle className="w-4 h-4" strokeWidth={1.7} />
+                    )}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <b className="block text-[13.5px] font-bold">{item.title}</b>
+                    <small className="block text-xs text-slate-400">{item.detail}</small>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate(item.page)}
+                    className="shrink-0 inline-flex items-center bg-surface text-ink border border-hairline text-xs font-semibold px-3 py-1.5 rounded-ot-sm hover:border-[#D6D9DD]"
+                  >
+                    {item.action}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          <div className="bg-surface border border-hairline rounded-ot px-5 py-[18px] shadow-whisper">
+            <h3 className="text-sm font-extrabold mb-1">Cash</h3>
+            <div className="mt-1.5">
+              {[
+                { k: 'Invoiced', v: metrics.cash.invoiced },
+                { k: 'Paid in', v: metrics.cash.paid, pos: metrics.cash.paid > 0 },
+                { k: 'Outstanding', v: metrics.cash.outstanding },
+                { k: 'Spent out', v: metrics.cash.cost },
+              ].map((row) => (
+                <div key={row.k} className="flex items-center justify-between py-2.5 border-b border-hairline last:border-0 text-[13px]">
+                  <span className="text-slate-600">{row.k}</span>
+                  <span className={`tabular font-bold ${row.pos ? 'text-pos' : ''}`}>{formatMoney(row.v)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-3.5 mb-4">
+          <div className="bg-surface border border-hairline rounded-ot px-5 py-[18px] shadow-whisper">
+            <h3 className="text-sm font-extrabold flex items-center justify-between">
+              Where the money&apos;s going
+              <button
+                type="button"
+                onClick={() => handleNavigate('history')}
+                className="text-[11px] text-accent font-bold uppercase tracking-[0.08em]"
+              >
+                View all
+              </button>
+            </h3>
+            {metrics.categories.length === 0 ? (
+              <p className="text-[13px] text-slate-400 mt-4">Add expenses to see a breakdown.</p>
+            ) : (
+              metrics.categories.slice(0, 5).map((row) => {
+                const style = getCategoryStyle(row.key);
+                return (
+                  <div key={row.key} className="flex items-center gap-3 mt-3.5">
+                    <span className="w-[82px] flex items-center gap-2 text-[12.5px] text-slate-600 truncate">
+                      <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: style.hex }} />
+                      {style.label}
+                    </span>
+                    <span className="flex-1 h-2 bg-[#EEF0F2] rounded overflow-hidden">
+                      <span
+                        className="block h-full rounded"
+                        style={{ width: `${Math.max(6, (row.amount / maxCategory) * 100)}%`, backgroundColor: style.hex }}
+                      />
+                    </span>
+                    <span className="w-16 text-right tabular text-xs text-slate-500 font-semibold">
+                      {formatMoney(row.amount)}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="bg-surface border border-hairline rounded-ot px-5 py-[18px] shadow-whisper">
+            <h3 className="text-sm font-extrabold">Recent</h3>
+            {metrics.recent.length === 0 ? (
               <p className="text-[13px] text-slate-400 mt-3">No expenses yet.</p>
             ) : (
               <div className="mt-1.5">
-                {recent.map((expense, index) => (
-                  <div key={expense.id || index} className="flex items-center gap-3 mt-3">
-                    <span className="flex-1 text-[12.5px] text-slate-600 truncate">
-                      {expenseLabel(expense)}
-                    </span>
-                    {expense.category && <CategoryChip category={expense.category} />}
-                    <span className="tabular text-xs text-slate-400">{money(getExpenseTotal(expense))}</span>
-                  </div>
-                ))}
+                {metrics.recent.map((expense, index) => {
+                  const style = getCategoryStyle(expense.category);
+                  return (
+                    <div key={expense.id || index} className="flex items-center justify-between py-2.5 border-b border-hairline last:border-0 text-[13px] gap-3">
+                      <span className="text-slate-600 truncate">
+                        {expenseLabel(expense)}
+                        {expense.category && (
+                          <>
+                            {' · '}
+                            <span style={{ color: style.hex }}>{style.label}</span>
+                          </>
+                        )}
+                      </span>
+                      <span className="tabular font-bold shrink-0">{formatMoney(getExpenseTotal(expense), { cents: true })}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
         </div>
 
-        <div className="text-sm font-semibold mt-1.5 mb-3">Quick actions</div>
-        {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <LoadingSkeleton key={index} type="card" lines={1} />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {quickActions.map((card) => {
-              const Icon = card.icon;
-              return (
-                <button
-                  key={card.page}
-                  onClick={() => handleNavigate(card.page)}
-                  className="pressable flex items-center gap-3.5 text-left bg-surface border border-hairline rounded-ot p-4"
-                >
-                  <span className="w-[38px] h-[38px] rounded-[9px] bg-canvas border border-hairline grid place-items-center text-ink shrink-0">
-                    <Icon className="w-[18px] h-[18px]" strokeWidth={1.6} />
-                  </span>
-                  <span className="min-w-0">
-                    <b className="block text-[13.5px] font-semibold text-ink">{card.title}</b>
-                    <small className="block text-xs text-slate-400">{card.description}</small>
-                  </span>
-                  <ArrowUpRight className="w-[15px] h-[15px] text-slate-400 ml-auto shrink-0" strokeWidth={1.6} />
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {(dashboardData.alerts.unreviewedCount > 0 || dashboardData.alerts.uncategorizedCount > 0) && (
-          <div className="bg-surface border border-hairline rounded-ot p-[18px] shadow-whisper mt-4">
-            <h3 className="text-sm font-semibold mb-3">Needs attention</h3>
-            <div className="space-y-2">
-              {dashboardData.alerts.unreviewedCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => handleNavigate('history')}
-                  className="pressable w-full flex items-center gap-3 p-3 rounded-ot-sm border border-hairline text-left"
-                >
-                  <AlertTriangle className="w-4 h-4 text-accent shrink-0" />
-                  <span className="flex-1 text-[13px] text-ink">
-                    {dashboardData.alerts.unreviewedCount} expenses need review
-                  </span>
-                  <ArrowUpRight className="w-4 h-4 text-slate-400" />
-                </button>
-              )}
-              {dashboardData.alerts.uncategorizedCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => handleNavigate('history')}
-                  className="pressable w-full flex items-center gap-3 p-3 rounded-ot-sm border border-hairline text-left"
-                >
-                  <AlertTriangle className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span className="flex-1 text-[13px] text-ink">
-                    {dashboardData.alerts.uncategorizedCount} uncategorized expenses
-                  </span>
-                  <ArrowUpRight className="w-4 h-4 text-slate-400" />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+          {[
+            { title: 'Scan a receipt', description: 'Snap it, we read it', icon: Camera, page: 'add-expense' },
+            {
+              title: 'Invoices',
+              description: metrics.cash.outstanding === 0 && metrics.cash.invoiced > 0 ? 'All paid, nothing due' : 'Manage & track',
+              icon: FileText,
+              page: 'new-invoice',
+            },
+            { title: 'Export', description: 'For your accountant', icon: Download, page: 'export' },
+          ].map((card) => {
+            const Icon = card.icon;
+            return (
+              <button
+                key={card.title}
+                type="button"
+                onClick={() => (card.page === 'export' ? setShowExport(true) : handleNavigate(card.page))}
+                className="pressable flex items-center gap-3.5 text-left bg-surface border border-hairline rounded-ot p-4"
+              >
+                <span className="w-9 h-9 rounded-[9px] bg-canvas border border-hairline grid place-items-center text-ink shrink-0">
+                  <Icon className="w-[17px] h-[17px]" strokeWidth={1.6} />
+                </span>
+                <span className="min-w-0">
+                  <b className="block text-[13.5px] font-bold text-ink">{card.title}</b>
+                  <small className="block text-xs text-slate-400">{card.description}</small>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      <ExportDialog
+        isOpen={showExport}
+        onClose={() => setShowExport(false)}
+        onExport={handleExport}
+        expenseCount={(expenses || []).length}
+      />
     </div>
   );
 }

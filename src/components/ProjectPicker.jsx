@@ -131,7 +131,7 @@ const ProjectPicker = ({ membership, onPick, onSignOut }) => {
     if (event) event.stopPropagation();
     const nextEmail = draftEmail.trim();
     if (!nextEmail) {
-      setError('Enter a Gmail address.');
+      setError('Enter an email address.');
       return;
     }
 
@@ -159,7 +159,7 @@ const ProjectPicker = ({ membership, onPick, onSignOut }) => {
         setError(
           closed
             ? `${saved} is on ${project.name}. Google asked to send the email and that window was closed — tap Invite again to send it.`
-            : `${saved} is on ${project.name}, but the email did not send. Ask them to open this same page and sign in with that Gmail.`
+            : `${saved} is on ${project.name}, but the invite email did not send. Ask them to open this same page and sign in with that email.`
         );
       }
     } catch (err) {
@@ -176,7 +176,7 @@ const ProjectPicker = ({ membership, onPick, onSignOut }) => {
         <div className="flex items-center justify-between mb-6">
           <span className="flex items-center gap-2 text-[13px] font-semibold text-ink">
             <BrandMark size={26} icon={14} />
-            {membership.orgName || 'Opal Track'}
+            {membership.orgName || 'RisingAMP'}
           </span>
           <button
             type="button"
@@ -274,7 +274,7 @@ const ProjectPicker = ({ membership, onPick, onSignOut }) => {
                     <div className="relative px-3.5 py-3 rounded-[11px] border border-accent bg-accent-tint">
                       <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-accent" />
                       <p className="text-sm text-ink mb-2">
-                        Invite someone to <span className="font-medium">{project.name}</span> only. They will not see your other jobs. We will email them a link from your Gmail.
+                        Invite someone to <span className="font-medium">{project.name}</span> only. They will not see your other jobs.
                       </p>
                       {displayInviteEmails(project.invitedEmails).length > 0 && (
                         <p className="text-xs font-mono text-slate-400 mb-2">
@@ -286,7 +286,7 @@ const ProjectPicker = ({ membership, onPick, onSignOut }) => {
                         type="email"
                         value={draftEmail}
                         disabled={isSaving}
-                        placeholder="name@gmail.com"
+                        placeholder="you@company.com.au"
                         onChange={(event) => setDraftEmail(event.target.value)}
                         onClick={(event) => event.stopPropagation()}
                         onKeyDown={(event) => {
@@ -361,25 +361,18 @@ const ProjectPicker = ({ membership, onPick, onSignOut }) => {
         )}
 
         <p className="mt-auto pt-6 text-[11.5px] font-mono text-slate-400 leading-relaxed">
-          Invite is per job list. Type their Gmail and tap Invite — they get an email from you with a link.
+          Invite is per job list. Type their email and tap Invite — they get a link to this job only.
         </p>
       </div>
     </div>
   );
 };
 
-export function ChooserSkeleton({ orgName = 'Opal Track' }) {
+export function ChooserSkeleton() {
   return (
-    <div className="min-h-screen bg-canvas flex items-center justify-center p-6">
-      <div className="w-full max-w-[440px] bg-surface border border-hairline rounded-2xl shadow-whisper p-8 min-h-[480px] flex flex-col">
-        <div className="flex items-center gap-2 text-[13px] font-semibold text-ink mb-6">
-          <BrandMark size={26} icon={14} />
-          {orgName}
-        </div>
-        <h1 className="text-[22px] font-semibold tracking-tight text-ink mb-4">Choose a job list</h1>
-        <div className="h-[42px] border border-hairline rounded-[10px] mb-3.5 skeleton-bar" />
-        <LoadingSkeleton type="job" lines={3} />
-      </div>
+    <div className="min-h-screen bg-canvas text-ink flex flex-col items-center justify-center">
+      <BrandMark size={40} icon={21} />
+      <p className="mt-4 text-sm text-slate-400">Loading…</p>
     </div>
   );
 }

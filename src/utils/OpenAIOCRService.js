@@ -96,7 +96,7 @@ class OpenAIOCRService {
         rawText: extractedData.rawText || '',
         category: extractedData.category,
         formData,
-        confidence: extractedData.confidence || 85,
+        confidence: extractedData.confidence,
         extractedData,
         aiService: 'OpenAI',
         suggestions: this.generateSuggestions(extractedData),
@@ -181,11 +181,18 @@ Return ONLY the JSON object, no additional text.`;
       }
 
       const parsed = JSON.parse(cleanContent);
-      
-      // Validate and clean the data
+      const date = this.parseDate(parsed.date);
+      const warnings = Array.isArray(parsed.warnings) ? [...parsed.warnings] : [];
+      if (!date) {
+        warnings.push('Date could not be read from the receipt');
+      }
+      if (parsed.totalAmount == null || parsed.totalAmount === '') {
+        warnings.push('Total amount could not be determined');
+      }
+
       return {
         vendor: parsed.vendor || null,
-        date: this.parseDate(parsed.date),
+        date,
         totalAmount: this.parseAmount(parsed.totalAmount),
         tax: this.parseAmount(parsed.tax),
         subtotal: this.parseAmount(parsed.subtotal),
@@ -197,9 +204,11 @@ Return ONLY the JSON object, no additional text.`;
           totalPrice: this.parseAmount(item.totalPrice)
         })) : [],
         category: this.validateCategory(parsed.category),
-        confidence: Math.min(Math.max(parsed.confidence || 85, 0), 100),
+        confidence: typeof parsed.confidence === 'number'
+          ? Math.min(Math.max(parsed.confidence, 0), 100)
+          : null,
         rawText: parsed.rawText || '',
-        warnings: Array.isArray(parsed.warnings) ? parsed.warnings : []
+        warnings
       };
 
     } catch (error) {
@@ -214,16 +223,16 @@ Return ONLY the JSON object, no additional text.`;
    * @returns {Date|null} Parsed date or null
    */
   parseDate(dateInput) {
-    if (!dateInput) return new Date();
-    
+    if (!dateInput) return null;
+
     try {
       const date = new Date(dateInput);
       if (isNaN(date.getTime())) {
-        return new Date();
+        return null;
       }
       return date;
     } catch {
-      return new Date();
+      return null;
     }
   }
 

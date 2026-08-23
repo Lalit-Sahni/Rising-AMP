@@ -6,9 +6,11 @@ import Header from './components/Header';
 import MainContent from './components/MainContent';
 import CommandPalette from './components/CommandPalette';
 import LoginScreen from './components/LoginScreen';
-import NotInvitedScreen from './components/NotInvitedScreen';
-import ProjectPicker, { ChooserSkeleton } from './components/ProjectPicker';
-import { listOrgProjects } from './firebase/projectCatalog';
+import ProfileSetupScreen from './components/ProfileSetupScreen';
+import BootScreen from './components/BootScreen';
+import { listInvitedProjects } from './firebase/projectCatalog';
+import { sendNewSignInNotice } from './firebase/email';
+import { loadProfile, profileNeedsSetup, recordSignIn } from './firebase/profiles';
 import { clearSession, readSession, resolveInvitation, writeSession } from './firebase/tenancy';
 import './styles/premium-animations.css';
 
@@ -16,9 +18,12 @@ function App() {
   const [authUser, setAuthUser] = useState(undefined);
   const [membership, setMembership] = useState(null);
   const [membershipLoading, setMembershipLoading] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
   const [projectId, setProjectId] = useState(() => readSession().projectId);
   const [workspaceId, setWorkspaceId] = useState(() => readSession().workspaceId);
   const [projectName, setProjectName] = useState(() => readSession().projectName);
+  const [jobInvitedEmails, setJobInvitedEmails] = useState(() => readSession().invitedEmails || []);
 
   useEffect(() => {
     localStorage.removeItem('accessCode');
@@ -38,25 +43,38 @@ function App() {
     if (!authUser) {
       setMembership(null);
       setMembershipLoading(false);
+      setProfile(null);
+      setProfileLoading(false);
       return undefined;
     }
 
     setMembershipLoading(true);
-    resolveInvitation(authUser)
-      .then(async (result) => {
-        if (cancelled) return;
-        setMembership(result);
+    setProfileLoading(true);
 
-        if (!result.invited) {
+    Promise.all([
+      resolveInvitation(authUser),
+      loadProfile(authUser.uid).catch((err) => {
+        console.error('Profile load failed:', err);
+        return null;
+      }),
+    ])
+      .then(async ([invite, savedProfile]) => {
+        if (cancelled) return;
+        setMembership(invite);
+        setProfile(savedProfile);
+        setProfileLoading(false);
+
+        if (!invite.invited) {
           clearSession();
           setProjectId(null);
           setWorkspaceId(null);
           setProjectName(null);
+          setJobInvitedEmails([]);
           setMembershipLoading(false);
           return;
         }
 
-        const allowed = await listOrgProjects(result.email);
+        const allowed = await listInvitedProjects(invite.email);
         if (cancelled) return;
         const session = readSession();
         const current = allowed.find((row) => row.projectId === session.projectId);
@@ -64,22 +82,33 @@ function App() {
           setProjectId(current.projectId);
           setWorkspaceId(current.workspaceId);
           setProjectName(current.name);
+          setJobInvitedEmails(current.invitedEmails || []);
         } else {
           writeSession({
             projectId: null,
             workspaceId: null,
             projectName: null,
-            orgId: result.orgId,
+            orgId: invite.orgId,
+            invitedEmails: [],
           });
           setProjectId(null);
           setWorkspaceId(null);
           setProjectName(null);
+          setJobInvitedEmails([]);
         }
         setMembershipLoading(false);
       })
       .catch((err) => {
-        console.error('Invite check failed:', err);
-        if (!cancelled) setMembershipLoading(false);
+        console.error('Sign-in setup failed:', err);
+        if (!cancelled) {
+          setMembership({
+            invited: false,
+            reason: 'lookup-failed',
+            email: authUser.email || '',
+          });
+          setMembershipLoading(false);
+          setProfileLoading(false);
+        }
       });
 
     return () => {
@@ -87,12 +116,27 @@ function App() {
     };
   }, [authUser]);
 
+  useEffect(() => {
+    if (!authUser || !authUser.uid || profileLoading) return undefined;
+    const key = `risingAmp.signInNotice.${authUser.uid}`;
+    if (sessionStorage.getItem(key)) return undefined;
+    sessionStorage.setItem(key, '1');
+    recordSignIn(authUser.uid).catch(() => {});
+    sendNewSignInNotice({
+      profile,
+      to: authUser.email,
+    }).catch(() => {});
+    return undefined;
+  }, [authUser, profile, profileLoading]);
+
   const handleLogout = async () => {
     await signOut();
     setMembership(null);
+    setProfile(null);
     setProjectId(null);
     setWorkspaceId(null);
     setProjectName(null);
+    setJobInvitedEmails([]);
   };
 
   const handlePickProject = (project) => {
@@ -103,11 +147,13 @@ function App() {
       projectId: project.projectId,
       workspaceId: project.workspaceId,
       projectName: project.name,
-      orgId: membership.orgId,
+      orgId: membership && membership.orgId,
+      invitedEmails: project.invitedEmails || [],
     });
     setProjectId(project.projectId);
     setWorkspaceId(project.workspaceId);
     setProjectName(project.name);
+    setJobInvitedEmails(project.invitedEmails || []);
   };
 
   const handleSwitchProject = () => {
@@ -116,53 +162,49 @@ function App() {
       workspaceId: null,
       projectName: null,
       orgId: membership ? membership.orgId : null,
+      invitedEmails: [],
     });
     setProjectId(null);
     setWorkspaceId(null);
     setProjectName(null);
+    setJobInvitedEmails([]);
   };
 
   if (authUser === undefined) {
-    return (
-      <div className="min-h-screen bg-canvas flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-4" />
-          <p className="text-slate-400 font-mono text-sm">Loading…</p>
-        </div>
-      </div>
-    );
+    return <BootScreen />;
   }
 
   if (!authUser) {
     return <LoginScreen />;
   }
 
-  if (membershipLoading || !membership) {
-    return <ChooserSkeleton />;
+  if (membershipLoading || profileLoading || !membership) {
+    return <BootScreen />;
   }
 
-  if (!membership.invited) {
+  if (profileNeedsSetup(profile)) {
     return (
-      <NotInvitedScreen
-        email={authUser.email || membership.email}
-        reason={membership.reason}
-        onSignOut={handleLogout}
-      />
-    );
-  }
-
-  if (!projectId) {
-    return (
-      <ProjectPicker
-        membership={membership}
-        onPick={handlePickProject}
+      <ProfileSetupScreen
+        user={authUser}
+        initialProfile={profile}
+        onComplete={setProfile}
         onSignOut={handleLogout}
       />
     );
   }
 
   return (
-    <AppProvider projectId={projectId} storageKey={workspaceId}>
+    <AppProvider
+      projectId={projectId}
+      storageKey={workspaceId}
+      projectName={projectName}
+      membership={membership}
+      onOpenJob={handlePickProject}
+      authUser={authUser}
+      profile={profile}
+      setProfile={setProfile}
+      jobInvitedEmails={jobInvitedEmails}
+    >
       <div className="flex h-screen bg-canvas text-ink overflow-hidden">
         <Sidebar
           user={authUser}
