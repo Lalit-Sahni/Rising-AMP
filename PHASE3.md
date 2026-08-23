@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file. Open `design/risingamp-vision.html` in a browser before touching code.
 
-Phase 1 (login, org, job lists) and Phase 2 (Manrope restyle) are **live**. Phase 3 UI is on `phase-3-vision` against **staging / localhost** after Lalit’s GO (2026-08-23). Do not re-run cutover. Do not restyle tokens. Do not deploy to production until Lalit asks after this work is done.
+Phase 1 (login, org, job lists) and Phase 2 (Manrope restyle) are **live**. Phase 3 hosting is live from `phase-3-vision` (2026-08-23). Localhost still uses staging. Do not re-run cutover. Do not restyle tokens. Do not deploy Cloud Functions.
 
 This is the **same family app and the same data**. The vision is: lead with one honest answer (is this job making money), then the handful of things that need attention. It is not a second product, not billing, not Stripe.
 
@@ -45,7 +45,7 @@ Work on branch **`phase-3-vision`** created from **`phase-2-visual`** (the live 
 
 ### After yes (localhost / staging)
 
-**Done on this branch against staging.** Job overview, jobs home, RisingAMP naming, OCR check-this from real signals. New job create skipped. Production not deployed. See `PROGRESS.md`.
+**Done on this branch.** Job overview, jobs home, RisingAMP naming, OCR check-this from real signals, open sign-up + profiles. New job create skipped. Hosting is live. See `PROGRESS.md`.
 
 ---
 
@@ -54,17 +54,15 @@ Work on branch **`phase-3-vision`** created from **`phase-2-visual`** (the live 
 - Creating job lists, billing, Stripe, a second product
 - Deploying functions, deleting PIN folders
 - Pasting the vision HTML into the React app
-- Production hosting deploy until he asks after this phase looks right
-- Enabling email/password on **production** Auth (staging is already on)
 
 ---
 
 ## How to preview
 
 - Day-to-day: `npm start` → http://localhost:3000 → **staging**
-- Live (do not overwrite until asked): https://rising-amp-467702-b5.web.app
+- Live: https://rising-amp-467702-b5.web.app
 - Vision mockup: `design/risingamp-vision.html`
-- Phase 2 look (what is live now): `design/opal-track-reference.html`
+- Phase 2 look (tokens): `design/opal-track-reference.html`
 
 ## Continuity
 

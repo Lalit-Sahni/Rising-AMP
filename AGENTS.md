@@ -11,8 +11,8 @@ Read these files **in this order** before touching anything:
 
 Do not rely on chat history. If chat and these files disagree, these files win.
 
-Phase 1 and Phase 2 are **done** and live. Phase 3 starts on `phase-3-vision` from `phase-2-visual`. Never commit to `master` or `main`. Never write to production Firebase (`rising-amp-467702-b5`) unless `PROGRESS.md` and the owner explicitly say so. Hosting deploy is `firebase deploy --project production --only hosting`.
+Phase 1 and Phase 2 are **done** and live. Phase 3 is live on hosting from `phase-3-vision`. Never commit to `master` or `main`. Never write to production job data unless `PROGRESS.md` and the owner explicitly say so. Hosting deploy is `firebase deploy --project production --only hosting`. Do not deploy Cloud Functions.
 
 **Paste this to start a new chat:**
 
-Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.html. Phase 3 UI is on localhost/staging on phase-3-vision. Do not deploy production until Lalit asks.
+Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.html. Phase 3 is live on hosting from phase-3-vision. Localhost stays on staging. Do not deploy Cloud Functions.

@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-3-vision` (from `phase-2-visual`). **Phase 2 hosting is still what is live** on production. **Phase 3 UI is on this branch, localhost → staging only.** Nothing was deployed to production. No production Firestore/Storage writes. Functions were not deployed.
+`phase-3-vision` (from `phase-2-visual`). **Phase 3 hosting is live** on production (deployed 2026-08-23): hosting + Firestore `profiles/` rules + Storage avatar rules. Email/password is on for production Auth. Functions were **not** deployed. Localhost still uses `.env.local` → staging.
 
 Restore tag (Phase 1 unwind): `pre-phase1-2026-08-22`
 
@@ -12,12 +12,12 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 ## Where we are (2026-08-23)
 
-**Phase 1 and Phase 2 are closed and live.** Phase 3 vision from `design/risingamp-vision.html` is implemented in the React app on localhost/staging after an explicit GO from Lalit.
+**Phase 1 and Phase 2 are closed.** Phase 3 is live on hosting. Localhost remains staging.
 
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.html. Phase 3 UI is on localhost/staging on phase-3-vision. Do not deploy production until Lalit asks.
+Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.html. Phase 3 is live on hosting from phase-3-vision. Localhost stays on staging. Do not deploy Cloud Functions.
 ```
 
 ## Next
@@ -33,10 +33,10 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE3.md. Open design/risingamp-vision.h
 - [x] Capture “Check this” when OCR did not actually read date/amount (and labour hours, which the pipeline invents as 8)
 - [x] Sign in / sign up (Google + any email), profile setup, professional invite HTML
 - [x] Stop the old “Choose a job list” card flashing before Jobs
-- [ ] Production hosting deploy only when he asks after Phase 3 looks right
-- [ ] Enable email/password on **production** Auth only when he asks (staging already on)
+- [x] Production hosting deploy (2026-08-23) plus `profiles/` Firestore rules and avatar Storage rules
+- [x] Enable email/password on production Auth
 - [ ] Do not deploy Cloud Functions
-- [ ] Do not write to production Firestore or Storage unless he asks after a backup
+- [ ] Do not write to production job data unless he asks after a backup
 
 ## What shipped (localhost / staging)
 
