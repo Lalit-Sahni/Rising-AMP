@@ -46,7 +46,7 @@ function defaultAppOrigin() {
   if (projectId === 'rising-amp-staging') {
     return 'https://rising-amp-staging.web.app';
   }
-  return 'https://rising-amp-467702-b5.web.app';
+  return 'https://risingamp.com.au';
 }
 
 function safeAppUrl(value) {

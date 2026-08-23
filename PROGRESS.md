@@ -16,10 +16,9 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 **Done:**
 - Task 1 — `/privacy` and `/terms` live on production hosting.
-- Task 2 staging — `sendJobInviteEmail` is live on staging. Owner confirmed a real invite arrived from `invites@risingamp.com.au` with no Gmail popup. **Production function still not deployed.**
-- Task 3 — **not done.** Keep Gmail fallback until the owner says yes to production function + removing `gmail.send`.
-- Task 4 — `risingamp.com.au` added on production Hosting. A record should be `199.36.158.100`. TXT `hosting-site=rising-amp-467702-b5` at the root still needed for SSL. `.web.app` keeps working.
-- Profile setup loop — **live on production hosting 2026-08-24.** Same email should land on Jobs after close/reopen or a new device. Production invite function still not deployed.
+- Task 2 — `sendJobInviteEmail` is live on **staging and production** (named function only; leftover `generateWeeklyReport` is still there). Owner proved staging. Live invites try Resend first (`invites@risingamp.com.au`), Gmail only if that send fails. Task 3 (remove Gmail entirely) still waiting on a real live invite.
+- Task 4 — `https://risingamp.com.au` is serving the app. Google sign-in authorized domains include `risingamp.com.au`. Login popup **authDomain** is `risingamp.com.au`. Owner added `https://risingamp.com.au/__/auth/handler` on the Google OAuth client; Google login on the shopfront works (2026-08-24). `.web.app` is the same locked app, not a back door.
+- Profile setup loop — **live on production hosting 2026-08-24.**
 
 **Profile patch (live hosting 2026-08-24):** do not create empty profile stubs on sign-in; copy a finished profile onto a new login uid for the same email; remember the finished profile on the device; do not send the person back through setup if that record exists.
 
@@ -35,23 +34,14 @@ Chose a **hand-written callable Cloud Function**, not the Firebase Trigger Email
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE4.md. Open design/risingamp-vision.html. Work is on branch phase-4-domain-email (from phase-3-vision). Domain is risingamp.com.au, DNS at Crazy Domains, Resend account already set up. Localhost stays on staging. Never accept a pasted API key — have the owner set Firebase secrets himself. Do not deploy Cloud Functions beyond what PHASE4.md explicitly asks for.
 
-Staging invite is proven. Profile setup loop is live on production hosting (2026-08-24). Do not deploy the production invite function unless the owner asks. Do not deploy a full functions set to production (that would delete generateWeeklyReport). Do not remove Gmail until the production Resend function is live.
+Staging invite is proven. Profile setup loop is live. `sendJobInviteEmail` is now on production too (named function only). Do not deploy a full functions set to production (that would delete generateWeeklyReport). Do not remove the Gmail fallback until a real live invite from Resend lands. Shopfront URL: https://risingamp.com.au (same app as .web.app).
 ```
 
 ## Remaining work
 
-1. Deploy `sendJobInviteEmail` to production **by name only** when the owner asks. Then Task 3 (remove Gmail send) only if he asks.
-2. At Crazy Domains DNS for `risingamp.com.au`, Firebase still needs the site TXT if SSL is not green yet. A record must be `199.36.158.100`, not the old parking address:
-
-| Type | Name / host | Value | Action |
-|------|-------------|-------|--------|
-| A | `@` (root) | `103.67.235.120` | **Remove** |
-| A | `@` (root) | `199.36.158.100` | **Add** |
-| TXT | `@` (root) | `hosting-site=rising-amp-467702-b5` | **Add** |
-
-Then wait for `https://risingamp.com.au` (SSL can take hours). The old `.web.app` URL keeps working.
-
-4. Optional: at Crazy Domains, forward `privacy@risingamp.com.au` to your inbox so legal-page contact mail is received.
+1. Owner sends one invite from the **live** site and confirms it arrived from `invites@risingamp.com.au` with no Gmail popup. Then Task 3 (remove Gmail send) only if he asks.
+2. Optional: add `www.risingamp.com.au` as a Firebase Hosting custom domain if people type www (apex already works; Auth already allows www).
+3. Optional: at Crazy Domains, forward `privacy@risingamp.com.au` to your inbox so legal-page contact mail is received.
 
 ## Next
 
@@ -69,12 +59,13 @@ Then wait for `https://risingamp.com.au` (SSL can take hours). The old `.web.app
 - [x] Production hosting deploy (2026-08-23) plus `profiles/` Firestore rules and avatar Storage rules
 - [x] Enable email/password on production Auth
 - [x] Phase 4 Task 1 — `/privacy` and `/terms` pages, real links from sign-in/sign-up (live on production hosting 2026-08-23)
-- [ ] Phase 4 Task 4 — `risingamp.com.au` on Firebase Hosting (DNS at Crazy Domains)
+- [x] Phase 4 Task 4 — `risingamp.com.au` on Firebase Hosting (apex live; www SSL not added)
 - [x] Phase 4 Task 2 — `RESEND_API_KEY` set; `sendJobInviteEmail` deployed to staging only
 - [x] Phase 4 Task 2 — prove a real invite arrives from localhost (From: invites@risingamp.com.au, no Gmail popup)
 - [x] Profile setup no longer repeats after close / new device (live hosting 2026-08-24)
-- [ ] Phase 4 Task 2b — after staging proof and owner yes, deploy `sendJobInviteEmail` to production (named function only)
-- [ ] Phase 4 Task 3 — remove `gmail.send` OAuth popup from invites (only after Task 2 is live)
+- [x] Phase 4 Task 2b — deploy `sendJobInviteEmail` to production (named function only, 2026-08-24)
+- [ ] Phase 4 Task 2c — prove a real invite from the live site (Resend, no Gmail popup)
+- [ ] Phase 4 Task 3 — remove `gmail.send` OAuth popup from invites (only after a live Resend invite)
 - [ ] Do not deploy Cloud Functions beyond the single Phase 4 invite-email function
 - [ ] Do not write to production job data unless he asks after a backup
 
