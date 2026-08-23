@@ -49,7 +49,7 @@ Removed: Site Log, Weekly Report.
 
 Present but **not wired**: `PurchaseOrdersPage.js`, `ConstructionExpenseTracker.js` (legacy monolith), `Fab.js`.
 
-Login (not `currentPage`): `LoginScreen.jsx` (Google or email/password), `ProfileSetupScreen.jsx`. After setup, **Jobs** is home. `NotInvitedScreen.jsx` is unused. `ProjectPicker.jsx` still exports the loading skeleton; invite/rename live on each job row.
+Login (not `currentPage`): `LoginScreen.jsx` (Google or email/password), `ProfileSetupScreen.jsx`. While auth/membership loads, `BootScreen.jsx` (RisingAMP mark). After setup, **Jobs** is home. `NotInvitedScreen.jsx` is unused. Invite/rename live on each job row.
 
 ---
 
@@ -73,7 +73,7 @@ Old PIN trees `users/{accessCode}/…` still exist. The live app does not use th
 `firestore.rules`:
 
 - `users/{accessCode}/**` — still `if true` (legacy PIN copies).
-- `profiles/{uid}` — signed-in users can read; only the owner of that uid can write (staging rules).
+- `profiles/{uid}` — signed-in users can read; only the owner of that uid can write.
 - `organizations/{orgId}` — signed-in email must be in `invitedEmails`.
 - `organizations/{orgId}/projects/{projectId}` — signed-in Gmail must be in that project’s `invitedEmails`. List queries use `resource.data.invitedEmails` so they match `array-contains`.
 - Project subcollections use a `get()` of the parent project’s `invitedEmails`.
@@ -98,7 +98,7 @@ The dashboard is **one job list at a time**, opened from the Jobs home (or resto
 organizations/opal-ss-constructions
   projects/{projectId}
     expenses, invoices, clients, labour, trades, …
-profiles/{uid}         # name, company, photo (staging)
+profiles/{uid}         # name, company, photo
 users/{accessCode}     # leftover copies, unused by the app
 ```
 
