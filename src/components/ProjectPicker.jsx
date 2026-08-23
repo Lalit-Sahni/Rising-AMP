@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronRight, Pencil, Search, UserPlus, X } from 'lucide-react';
-import { canonicalEmail, emailInviteVariants, sendInviteFromSignedInGmail } from '../firebase/email';
+import { canonicalEmail, emailInviteVariants, sendJobInvite } from '../firebase/email';
 import { inviteEmailToProject, listOrgProjects, renameOrgProject } from '../firebase/projectCatalog';
 import BrandMark from './BrandMark';
 import LoadingSkeleton from './ui/LoadingSkeleton';
@@ -152,7 +152,7 @@ const ProjectPicker = ({ membership, onPick, onSignOut }) => {
       );
       cancelPanels();
       try {
-        await sendInviteFromSignedInGmail({ to: saved, projectName: project.name });
+        await sendJobInvite({ to: saved, projectId: project.projectId, projectName: project.name });
       } catch (mailErr) {
         console.error('Invite email failed:', mailErr);
         const closed = mailErr && mailErr.code === 'auth/popup-closed-by-user';

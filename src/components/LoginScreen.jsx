@@ -232,9 +232,19 @@ export default function LoginScreen({ initialMode = 'signin' }) {
         )}
       </p>
 
-      {isSignup && (
+      {!isForgot && (
         <p className="text-[11px] text-slate-400 mt-[26px] leading-relaxed">
-          By creating an account you agree to the Terms and Privacy Policy. You can add jobs when you are ready — billing comes later.
+          {isSignup
+            ? 'By creating an account you agree to the '
+            : 'By continuing you agree to the '}
+          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-slate-600 underline">
+            Terms
+          </a>
+          {' '}and{' '}
+          <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-slate-600 underline">
+            Privacy Policy
+          </a>
+          {isSignup ? '. You can add jobs when you are ready — billing comes later.' : '.'}
         </p>
       )}
     </AuthShell>

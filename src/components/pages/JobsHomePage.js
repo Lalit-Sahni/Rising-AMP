@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronRight, Pencil, Search, UserPlus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { canonicalEmail, emailInviteVariants, sendInviteFromSignedInGmail } from '../../firebase/email';
+import { canonicalEmail, emailInviteVariants, sendJobInvite } from '../../firebase/email';
 import { inviteEmailToProject, renameOrgProject } from '../../firebase/projectCatalog';
 import { loadInvitedJobSummaries } from '../../firebase/jobSummaries';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
@@ -151,7 +151,7 @@ export default function JobsHomePage() {
       );
       cancelPanels();
       try {
-        await sendInviteFromSignedInGmail({ to: saved, projectName: project.name });
+        await sendJobInvite({ to: saved, projectId: project.projectId, projectName: project.name });
       } catch (mailErr) {
         console.error('Invite email failed:', mailErr);
         const closed = mailErr && mailErr.code === 'auth/popup-closed-by-user';

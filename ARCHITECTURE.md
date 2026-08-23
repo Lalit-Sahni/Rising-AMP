@@ -3,10 +3,10 @@
 This describes the **running live app**. Phase 1 record is `PLAN.md`. Phase 2 visual record is `PHASE2.md`.
 
 Firebase project (production): `rising-amp-467702-b5`  
-Live URL: https://rising-amp-467702-b5.web.app  
+Live URL: https://rising-amp-467702-b5.web.app (custom domain `risingamp.com.au` is being added in Phase 4)  
 Staging (localhost): `rising-amp-staging`  
-Default git branch in use was `master`; Phase 1 landed on `phase-1-foundation`; Phase 2 (live look) is `phase-2-visual`.  
-App name in the sidebar: “RisingAMP” (Phase 3 UI on localhost/staging). Production hosting is still the Phase 2 restyle until a hosting deploy is asked for. Look: Manrope, Palette 1, category colour as data ink only.
+Default git branch in use was `master`; Phase 1 landed on `phase-1-foundation`; Phase 2 (live look) is `phase-2-visual`; Phase 3 vision is `phase-3-vision`; Phase 4 is `phase-4-domain-email`.  
+App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category colour as data ink only.
 
 ---
 
@@ -49,7 +49,7 @@ Removed: Site Log, Weekly Report.
 
 Present but **not wired**: `PurchaseOrdersPage.js`, `ConstructionExpenseTracker.js` (legacy monolith), `Fab.js`.
 
-Login (not `currentPage`): `LoginScreen.jsx` (Google or email/password), `ProfileSetupScreen.jsx`. While auth/membership loads, `BootScreen.jsx` (RisingAMP mark). After setup, **Jobs** is home. `NotInvitedScreen.jsx` is unused. Invite/rename live on each job row.
+Login (not `currentPage`): `LoginScreen.jsx` (Google or email/password), `ProfileSetupScreen.jsx`. Public static pages: `/privacy`, `/terms`. While auth/membership loads, `BootScreen.jsx` (RisingAMP mark). After setup, **Jobs** is home. `NotInvitedScreen.jsx` is unused. Invite/rename live on each job row.
 
 ---
 
@@ -62,7 +62,7 @@ Google or email/password via Firebase Auth (email/password enabled on **staging*
 3. Family jobs are still protected by rules: you cannot read Opal data unless your email is on that job.
 4. Tracker reads/writes `organizations/{orgId}/projects/{projectId}/…`. Receipt Storage still uses the legacy workspace id (`storageKey`) so live photos keep working.
 
-Invite: owner taps the person icon on a job card. That email (any domain) is added to that project (and to the org door list). Live can send a professional HTML invite from the inviter’s Google account. Staging usually cannot send mail.
+Invite: owner taps the person icon on a job card. That email (any domain) is added to that project (and to the org door list). Invite mail is the professional HTML from `design/risingamp-signin-email.html`, sent from `invites@risingamp.com.au` via Resend once `sendJobInviteEmail` is deployed. Until then the app falls back to the inviter’s Gmail send path. New-sign-in notices are still Gmail-only (no popup on login).
 
 Old PIN trees `users/{accessCode}/…` still exist. The live app does not use them. Do not delete them unless asked. `users/` rules are still `if true` for those leftover trees.
 
@@ -120,9 +120,20 @@ Staging has **no** Storage bucket; localhost receipts may be missing. Live recei
 
 ## 8. Cloud Functions
 
-Production still has `generateWeeklyReport`. The app UI does not call it.
+Production still has leftover `generateWeeklyReport`. The app UI does not call it.
 
-`functions/index.js` on this branch exports nothing. **Do not** `firebase deploy --only functions` to production; that would delete the live function.
+This branch adds **one** new callable: `sendJobInviteEmail` (us-central1). It sends job invites from `invites@risingamp.com.au` via Resend. The Resend API key lives in Secret Manager (`RESEND_API_KEY`), never in the client bundle.
+
+Deploy **only** that function by name, after the owner has set the secret:
+
+```
+firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
+firebase deploy --project production --only functions:sendJobInviteEmail
+```
+
+Do **not** run `firebase deploy --only functions` against production — that would delete `generateWeeklyReport`.
+
+Until the new function is deployed, the app falls back to the existing Gmail send path. `sendNewSignInNotice` is still Gmail and was not moved.
 
 ---
 

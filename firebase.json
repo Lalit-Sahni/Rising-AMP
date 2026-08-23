@@ -8,6 +8,22 @@
     ],
     "rewrites": [
       {
+        "source": "/privacy",
+        "destination": "/privacy.html"
+      },
+      {
+        "source": "/privacy/",
+        "destination": "/privacy.html"
+      },
+      {
+        "source": "/terms",
+        "destination": "/terms.html"
+      },
+      {
+        "source": "/terms/",
+        "destination": "/terms.html"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }
@@ -21,6 +37,9 @@
     "rules": "storage.rules"
   },
   "functions": {
-    "source": "functions"
+    "source": "functions",
+    "predeploy": [
+      "cp src/emails/risingAmpMail.js functions/emails/risingAmpMail.mjs"
+    ]
   }
 } 

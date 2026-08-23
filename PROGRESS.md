@@ -12,20 +12,51 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 ## Where we are (2026-08-23)
 
-**Phase 1, 2, 3 are closed.** Phase 4 is starting on `phase-4-domain-email`: legal pages, invite email off personal Gmail onto Resend, then a custom domain. Full brief in `PHASE4.md`.
+**Phase 1, 2, 3 are closed.** Phase 4 is in progress on `phase-4-domain-email`.
 
-**Owner already has, ready to use:**
-- Domain `risingamp.com.au`, DNS managed at Crazy Domains.
-- A Resend account + API key for that domain (SPF/DKIM records already added at Crazy Domains — confirm "Verified" in the Resend dashboard before sending).
-- Not yet provided: the filled-in privacy policy / terms of service text (needed for Task 1 in `PHASE4.md` — ask for it, don't invent legal text).
+**Done in this session (code on the branch, ready to ship):**
+- Task 1 — public `/privacy` and `/terms` from the owner’s docs in `PRIVACY AND TERMS/`. Placeholders filled with Opal SS Constructions Pty Ltd, ABN 32 162 378 190 (from ABR), `privacy@risingamp.com.au`, 23 August 2026, NSW 2212. Sign-in/sign-up link to those pages. **Live on production hosting** (2026-08-23): https://rising-amp-467702-b5.web.app/privacy and `/terms`. Gmail send is still described in the privacy policy because that path is still the fallback.
+- Task 2 (code only) — callable Cloud Function `sendJobInviteEmail` sends the existing invite HTML from `invites@risingamp.com.au` via Resend. No new npm package (Node 22 `fetch`). Key stays in Secret Manager. Client tries Resend first, falls back to Gmail if the function is not deployed yet. **Not deployed** — secret is not set.
+- Task 3 — **not done.** Gmail OAuth for invites stays until Resend is proven on staging and the owner says yes.
+- Task 4 — `risingamp.com.au` was added on production Hosting. Ownership is missing until Crazy Domains DNS is updated (exact records in “When you get back”). SSL comes after DNS. `.web.app` keeps working.
 
-**Do not accept the Resend API key pasted into chat.** Have the owner run `firebase functions:secrets:set RESEND_API_KEY --project <production|rising-amp-staging>` himself at the masked prompt.
+**Owner already has:**
+- Domain `risingamp.com.au`, DNS at Crazy Domains.
+- Resend account + API key for that domain. Confirm “Verified” in Resend before the first send.
+- **Do not paste the Resend API key into chat.** Set it at the masked prompt (commands below).
+
+Chose a **hand-written callable Cloud Function**, not the Firebase Trigger Email extension: the invite already happens in the app after writing membership, we already have the HTML template, and Resend’s HTTP API needs no extra Firestore `mail` collection and no extra npm package.
 
 ## Paste this to start the next chat
 
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE4.md. Open design/risingamp-vision.html. Work is on branch phase-4-domain-email (from phase-3-vision). Domain is risingamp.com.au, DNS at Crazy Domains, Resend account already set up. Localhost stays on staging. Never accept a pasted API key — have the owner set Firebase secrets himself. Do not deploy Cloud Functions beyond what PHASE4.md explicitly asks for.
+
+The owner is back. Secret is the remaining step: have him run the two firebase functions:secrets:set commands in PROGRESS.md (he types the key at the hidden prompt). Then deploy only functions:sendJobInviteEmail to staging and send a test invite. Do not deploy a full functions set to production (that would delete generateWeeklyReport). Do not remove Gmail until a real Resend invite lands.
 ```
+
+## When you get back (this is the remaining work)
+
+1. In Terminal, from this repo, run these **one at a time**. Each one asks for the key; it will not show what you type. Do not paste the key into chat.
+
+```
+firebase functions:secrets:set RESEND_API_KEY --project rising-amp-staging
+firebase functions:secrets:set RESEND_API_KEY --project production
+```
+
+2. Tell the next chat: **“secret is set — deploy the invite function to staging and I’ll send a test invite.”**
+
+3. At Crazy Domains DNS for `risingamp.com.au`, Firebase is waiting on these exact records (do not guess others). The current A record `103.67.235.120` is a parking address and must come off:
+
+| Type | Name / host | Value | Action |
+|------|-------------|-------|--------|
+| A | `@` (root) | `103.67.235.120` | **Remove** |
+| A | `@` (root) | `199.36.158.100` | **Add** |
+| TXT | `@` (root) | `hosting-site=rising-amp-467702-b5` | **Add** |
+
+Then wait for `https://risingamp.com.au` (SSL can take hours). The old `.web.app` URL keeps working.
+
+4. Optional: at Crazy Domains, forward `privacy@risingamp.com.au` to your inbox so legal-page contact mail is received.
 
 ## Next
 
@@ -42,9 +73,10 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE4.md. Open design/risingamp-vision.h
 - [x] Stop the old “Choose a job list” card flashing before Jobs
 - [x] Production hosting deploy (2026-08-23) plus `profiles/` Firestore rules and avatar Storage rules
 - [x] Enable email/password on production Auth
-- [ ] Phase 4 Task 1 — `/privacy` and `/terms` pages, real links from sign-in/sign-up (blocked on owner providing filled-in legal text)
-- [ ] Phase 4 Task 4 — `risingamp.com.au` on Firebase Hosting (can start any time, low risk)
-- [ ] Phase 4 Task 2 — invite email via Resend, proven on staging, owner approval before default
+- [x] Phase 4 Task 1 — `/privacy` and `/terms` pages, real links from sign-in/sign-up (live on production hosting 2026-08-23)
+- [ ] Phase 4 Task 4 — `risingamp.com.au` on Firebase Hosting (DNS at Crazy Domains)
+- [ ] Phase 4 Task 2 — owner sets `RESEND_API_KEY`, then deploy `sendJobInviteEmail` to staging only, prove a real invite arrives
+- [ ] Phase 4 Task 2b — after staging proof and owner yes, deploy `sendJobInviteEmail` to production (named function only)
 - [ ] Phase 4 Task 3 — remove `gmail.send` OAuth popup from invites (only after Task 2 is live)
 - [ ] Do not deploy Cloud Functions beyond the single Phase 4 invite-email function
 - [ ] Do not write to production job data unless he asks after a backup
@@ -82,7 +114,7 @@ Honest numbers, display only, no new stored verdict field, no document rewrites.
 - First visit (and existing users without a profile) get **Set up your account**: name, role, mobile, business, ABN, address, optional photo.
 - Profiles stored at `profiles/{uid}`. Staging Firestore rules allow a signed-in user to write their own profile.
 - Job overview shows people on the job from those profiles.
-- Invite mail is the professional HTML from `design/risingamp-signin-email.html` (dark header, job card, orange CTA). Staging can only send if the inviter allows Gmail send; there is no `security@risingamp.app` yet. Live job invites use that same HTML through the inviter’s Google send path. New-sign-in notices are skipped on staging; on live they send only if a Gmail token is already present (no popup on login).
+- Invite mail is the professional HTML from `design/risingamp-signin-email.html` (dark header, job card, orange CTA). The app tries Resend (`invites@risingamp.com.au` via `sendJobInviteEmail`) first; if that function is not deployed it falls back to the inviter’s Google send path. New-sign-in notices are skipped on staging; on live they send only if a Gmail token is already present (no popup on login).
 - Widget stack on auth uses fictional jobs (Ridge Road Pavilion, Harbour Kitchen), not Opal site numbers.
 - Boot screen is the RisingAMP mark on canvas. The old “Choose a job list” card does not flash before Jobs.
 

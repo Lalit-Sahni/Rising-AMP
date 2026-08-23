@@ -1,6 +1,8 @@
 import { GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
-import { auth } from './config';
+import { httpsCallable } from 'firebase/functions';
+import { auth, functions } from './config';
 import { isProductionProject } from './env';
+import { isInviteFunctionUnavailable } from './inviteSendSwitch';
 import {
   buildJobInviteEmail,
   buildNewSignInEmail,
@@ -176,6 +178,37 @@ export async function sendInviteFromSignedInGmail({ to, projectName }) {
     interactive: true,
     fromName: inviterName ? `${inviterName} via RisingAMP` : 'RisingAMP',
   });
+}
+
+export { isInviteFunctionUnavailable } from './inviteSendSwitch';
+
+async function sendInviteViaResend({ to, projectId, projectName }) {
+  const callable = httpsCallable(functions, 'sendJobInviteEmail');
+  await callable({
+    to,
+    projectId,
+    projectName,
+    appUrl: typeof window !== 'undefined' ? window.location.origin : '',
+  });
+}
+
+/**
+ * Prefer Resend (invites@risingamp.com.au). If the Cloud Function is not
+ * deployed or not configured yet, fall back to the existing Gmail send path.
+ * Do not remove Gmail until Resend is proven on staging.
+ */
+export async function sendJobInvite({ to, projectId, projectName }) {
+  try {
+    await sendInviteViaResend({ to, projectId, projectName });
+    return { via: 'resend' };
+  } catch (error) {
+    if (!isInviteFunctionUnavailable(error)) {
+      throw error;
+    }
+    console.warn('Resend invite path unavailable, falling back to Gmail:', error && error.code);
+    await sendInviteFromSignedInGmail({ to, projectName });
+    return { via: 'gmail' };
+  }
 }
 
 /**

@@ -1,0 +1,155 @@
+/* RisingAMP legal pages — Palette 1, same tokens as the app. */
+:root {
+  --steel-900: #17181C;
+  --ink: #1C1E23;
+  --slate-600: #565B64;
+  --slate-400: #8A9099;
+  --hairline: #E7E9EC;
+  --canvas: #F5F6F8;
+  --surface: #FFFFFF;
+  --accent: #E85D1A;
+  --accent-600: #C64E12;
+  --ui: "Manrope", system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  user-select: text;
+}
+
+a { color: var(--accent-600); }
+a:hover { color: var(--accent); }
+
+.top {
+  background: var(--steel-900);
+  color: #fff;
+  padding: 18px 22px;
+}
+
+.top-inner {
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+.mark {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--accent);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.nav a {
+  color: #B4B9C1;
+  text-decoration: none;
+}
+
+.nav a:hover,
+.nav a.active { color: #fff; }
+
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 36px 22px 64px;
+}
+
+.kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--slate-400);
+}
+
+h1 {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 8px 0 10px;
+}
+
+.updated {
+  font-size: 13.5px;
+  color: var(--slate-600);
+  margin: 0 0 28px;
+}
+
+.paper {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  padding: 32px 34px 40px;
+}
+
+.paper h2 {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 28px 0 10px;
+}
+
+.paper h2:first-child { margin-top: 0; }
+
+.paper p,
+.paper li {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.paper p { margin: 0 0 12px; }
+
+.paper ul {
+  margin: 0 0 12px;
+  padding-left: 1.15em;
+}
+
+.paper li { margin: 0 0 6px; }
+
+.foot {
+  margin-top: 28px;
+  font-size: 12.5px;
+  color: var(--slate-400);
+  line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+  h1 { font-size: 26px; }
+  .paper { padding: 22px 20px 28px; }
+  .nav { gap: 12px; font-size: 12.5px; }
+}

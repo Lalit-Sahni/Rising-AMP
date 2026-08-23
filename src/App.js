@@ -14,7 +14,30 @@ import { loadProfile, profileNeedsSetup, recordSignIn } from './firebase/profile
 import { clearSession, readSession, resolveInvitation, writeSession } from './firebase/tenancy';
 import './styles/premium-animations.css';
 
+function legalHtmlPath() {
+  if (typeof window === 'undefined') return null;
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (path === '/privacy') return '/privacy.html';
+  if (path === '/terms') return '/terms.html';
+  return null;
+}
+
+function LegalRedirect({ href }) {
+  useEffect(() => {
+    window.location.replace(href);
+  }, [href]);
+  return <BootScreen />;
+}
+
 function App() {
+  const legalHref = legalHtmlPath();
+  if (legalHref) {
+    return <LegalRedirect href={legalHref} />;
+  }
+  return <AppShell />;
+}
+
+function AppShell() {
   const [authUser, setAuthUser] = useState(undefined);
   const [membership, setMembership] = useState(null);
   const [membershipLoading, setMembershipLoading] = useState(false);
