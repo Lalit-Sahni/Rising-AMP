@@ -10,13 +10,13 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 2. Read `PROGRESS.md` (next concrete step), then `PHASE5.md` (current phase: database audit, then jobs as records and membership). `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. Open `design/risingamp-vision.html` in a browser.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 5 Part A — write `DATABASE-AUDIT.md` from the real database. **Change no records, rules, or schema until the owner approves the plan.** Then Part B (create / archive job, add / remove person) on staging behind a backup. See `PHASE5.md`.
+5. **Next:** Phase 5 Part A is approved (`DATABASE-AUDIT.md`, owner yes 2026-08-26). Part B is create / archive job, add / remove person, `jobId` backfill, and tighter rules — **staging first**, after a fresh production backup restore. Production job data waits for a second yes. See `PHASE5.md`.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is a written audit only — DATABASE-AUDIT.md — change no data. Do not run production schema or data writes without a backup, a staging run, and an explicit yes. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
+> Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is done and approved (DATABASE-AUDIT.md). Part B is in progress on staging only — fresh production backup restore, then jobId backfill, create / archive job, add / remove person, tighter rules. Do not run production schema or data writes without a backup, a staging run, and an explicit yes. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -89,7 +89,7 @@ Brief: `PHASE5.md`. Database audit first (`DATABASE-AUDIT.md`, no writes). Then,
 - `PROGRESS.md` — next concrete step. Update at session end.
 - `PLAN.md` — Phase 1 record (complete).
 - `ARCHITECTURE.md` — how the running app is built.
-- `DATABASE-AUDIT.md` — Phase 5 Part A deliverable (does not exist until Part A is done).
+- `DATABASE-AUDIT.md` — Phase 5 Part A deliverable (written 2026-08-26; plan approved).
 - Small sessions: one checklist item, then commit on the branch.
 
 ## Owner working style

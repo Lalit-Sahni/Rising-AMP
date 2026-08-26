@@ -16,7 +16,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 **Phase 4 leftovers (not Phase 5 unless he asks):** Gmail invite fallback still in the client; prove one live Resend invite then Task 3 if he wants it gone; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
 
-**Phase 5 next:** Part A — `DATABASE-AUDIT.md` from the real data. Change no records. Stop for owner approval before Part B (create / archive job, add / remove person).
+**Phase 5 next:** Part A is approved (`DATABASE-AUDIT.md`). Owner yes 2026-08-26: the job is `projects/{jobId}`; Part B starts on staging after a fresh production backup restore; close open `users/` and receipt Storage rules (keep the data); leave PIN trees, site logs, and `cost-tracker` alone. **Do not write production job data until a second yes.**
 
 **Owner already has:**
 - Shopfront `https://risingamp.com.au`, DNS at Crazy Domains.
@@ -26,13 +26,13 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is a written audit only — DATABASE-AUDIT.md — change no data. Do not run production schema or data writes without a backup, a staging run, and an explicit yes. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
+Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is done and approved (DATABASE-AUDIT.md). Part B is in progress on staging only — fresh production backup restore, then jobId backfill, create / archive job, add / remove person, tighter rules. Do not run production schema or data writes without a backup, a staging run, and an explicit yes. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
 ```
 
 ## Remaining work
 
-1. Phase 5 Part A — write `DATABASE-AUDIT.md` (read-only). Owner approves the plan.
-2. Phase 5 Part B — jobs as stable IDs; create / archive job; add / remove person; rules. Staging first, production behind a yes.
+1. Phase 5 Part A — `DATABASE-AUDIT.md` written. Owner approved the plan 2026-08-26.
+2. Phase 5 Part B — jobs as stable IDs; create / archive job; add / remove person; rules. Staging first (after production backup restore), production behind a second yes.
 3. Phase 5 Part C — integrity fixes (additive, reversible) and docs.
 4. Optional leftovers: live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`.
 
@@ -43,8 +43,8 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.h
 - [x] Phase 3 vision live (Jobs home, verdict, capture, profiles)
 - [x] Phase 4 — legal pages, Resend invites, shopfront `risingamp.com.au`, Google login on that domain
 - [x] Phase 5 Step 0 — branch `phase-5-jobs-members` + `PHASE5.md` + `CLAUDE.md` prime directive lifted under heightened process
-- [ ] Phase 5 Part A — `DATABASE-AUDIT.md` (no writes)
-- [ ] Phase 5 Part A — owner yes on the target model and migration plan
+- [x] Phase 5 Part A — `DATABASE-AUDIT.md` (no writes; scan 2026-08-26)
+- [x] Phase 5 Part A — owner yes on the target model and migration plan (2026-08-26)
 - [ ] Phase 5 Part B — staging migration + four operations + rules
 - [ ] Phase 5 Part B — production behind backup and owner yes
 - [ ] Phase 5 Part C — integrity + `ARCHITECTURE.md` / docs
