@@ -1,3 +1,11 @@
+# Phase 4 — Domain, Invites off Gmail, Legal Pages (closed record)
+
+**Closed 2026-08-26.** Live: legal pages, Resend invite function on staging and production, shopfront `https://risingamp.com.au`, Google login on that domain. Leftovers (not Phase 5 unless asked): Gmail invite fallback still in the client until a live Resend invite is proved and the owner says yes to Task 3; `www.risingamp.com.au` has no SSL; leftover `generateWeeklyReport` on production.
+
+Read `CLAUDE.md` then `PROGRESS.md` then `PHASE5.md` for current work.
+
+---
+
 # Phase 4 — Domain, Invites off Gmail, Legal Pages (agent brief)
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.

@@ -4,15 +4,15 @@ Read these files **in this order** before touching anything:
 
 1. `CLAUDE.md` — prime directive, environments, what is in scope
 2. `PROGRESS.md` — where we stopped and the **next concrete step**
-3. `PHASE4.md` — current phase brief (legal pages, invites off Gmail onto Resend, custom domain)
+3. `PHASE5.md` — current phase brief (database audit, then jobs and membership)
 4. Open `design/risingamp-vision.html` in a browser
 5. `ARCHITECTURE.md` — how the running app is actually built
-6. `PHASE3.md` / `PHASE2.md` / `PLAN.md` — closed records only
+6. `PHASE4.md` / `PHASE3.md` / `PHASE2.md` / `PLAN.md` — closed records only
 
 Do not rely on chat history. If chat and these files disagree, these files win.
 
-Phase 1, 2, and 3 are **done** and live. Phase 4 is in progress on branch `phase-4-domain-email` (from `phase-3-vision`). Never commit to `master` or `main`. Never write to production job data unless `PROGRESS.md` and the owner explicitly say so. Hosting deploy is `firebase deploy --project production --only hosting`. Do not deploy Cloud Functions beyond the single, narrowly-scoped invite-email function `PHASE4.md` asks for. Never accept a raw API key or secret pasted into chat — have the owner set Firebase secrets himself (`firebase functions:secrets:set ...`).
+Phases 1–4 are **done** and live. Phase 5 is in progress on branch `phase-5-jobs-members` (from `phase-4-domain-email`). Never commit to `master` or `main`. Part A is read-only (`DATABASE-AUDIT.md`). Do not write to production job data unless `PROGRESS.md` and the owner explicitly say so after a backup. Hosting deploy is `firebase deploy --project production --only hosting`. Never `firebase deploy --only functions` to production (would delete leftover `generateWeeklyReport`). Never accept a raw API key or secret pasted into chat.
 
 **Paste this to start a new chat:**
 
-Read CLAUDE.md, then PROGRESS.md, then PHASE4.md. Open design/risingamp-vision.html. Work is on branch phase-4-domain-email (from phase-3-vision). Domain is risingamp.com.au, DNS at Crazy Domains, Resend account already set up. Localhost stays on staging. Never accept a pasted API key — have the owner set Firebase secrets himself. Do not deploy Cloud Functions beyond what PHASE4.md explicitly asks for.
+Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is a written audit only — DATABASE-AUDIT.md — change no data. Do not run production schema or data writes without a backup, a staging run, and an explicit yes. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).

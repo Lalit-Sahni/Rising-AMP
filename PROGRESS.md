@@ -2,72 +2,54 @@
 
 ## Current branch
 
-`phase-4-domain-email` (from `phase-3-vision`). Phase 3 hosting is live on production (deployed 2026-08-23): hosting + Firestore `profiles/` rules + Storage avatar rules. Email/password is on for production Auth. Functions were **not** deployed yet. Localhost still uses `.env.local` → staging.
+`phase-5-jobs-members` (from `phase-4-domain-email`, 2026-08-26). Phases 1–4 are live. Localhost still uses `.env.local` → staging.
 
 Restore tag (Phase 1 unwind): `pre-phase1-2026-08-22`
 
-Production: `rising-amp-467702-b5` — https://rising-amp-467702-b5.web.app  
+Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_PROJECT_ID=rising-amp-staging`)  
 `.firebaserc` default is **staging**. Git push does not deploy. Live hosting changes only on `firebase deploy --project production --only hosting`.
 
-## Where we are (2026-08-24)
+## Where we are (2026-08-26)
 
-**Phase 1, 2, 3 are closed.** Phase 4 is in progress on `phase-4-domain-email`.
+**Phase 1, 2, 3, and 4 are closed.** Phase 5 is in progress on `phase-5-jobs-members`.
 
-**Done:**
-- Task 1 — `/privacy` and `/terms` live on production hosting.
-- Task 2 — `sendJobInviteEmail` is live on **staging and production** (named function only; leftover `generateWeeklyReport` is still there). Owner proved staging. Live invites try Resend first (`invites@risingamp.com.au`), Gmail only if that send fails. Task 3 (remove Gmail entirely) still waiting on a real live invite.
-- Task 4 — `https://risingamp.com.au` is serving the app. Google sign-in authorized domains include `risingamp.com.au`. Login popup **authDomain** is `risingamp.com.au`. Owner added `https://risingamp.com.au/__/auth/handler` on the Google OAuth client; Google login on the shopfront works (2026-08-24). `.web.app` is the same locked app, not a back door.
-- Profile setup loop — **live on production hosting 2026-08-24.**
+**Phase 4 leftovers (not Phase 5 unless he asks):** Gmail invite fallback still in the client; prove one live Resend invite then Task 3 if he wants it gone; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
 
-**Profile patch (live hosting 2026-08-24):** do not create empty profile stubs on sign-in; copy a finished profile onto a new login uid for the same email; remember the finished profile on the device; do not send the person back through setup if that record exists.
+**Phase 5 next:** Part A — `DATABASE-AUDIT.md` from the real data. Change no records. Stop for owner approval before Part B (create / archive job, add / remove person).
 
 **Owner already has:**
-- Domain `risingamp.com.au`, DNS at Crazy Domains.
-- Resend account + API key for that domain. Confirm “Verified” in Resend before the first send.
-- **Do not paste the Resend API key into chat.** Set it at the masked prompt (commands below).
-
-Chose a **hand-written callable Cloud Function**, not the Firebase Trigger Email extension: the invite already happens in the app after writing membership, we already have the HTML template, and Resend’s HTTP API needs no extra Firestore `mail` collection and no extra npm package.
+- Shopfront `https://risingamp.com.au`, DNS at Crazy Domains.
+- Resend sending from `invites@risingamp.com.au`.
+- **Do not paste API keys into chat.**
 
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE4.md. Open design/risingamp-vision.html. Work is on branch phase-4-domain-email (from phase-3-vision). Domain is risingamp.com.au, DNS at Crazy Domains, Resend account already set up. Localhost stays on staging. Never accept a pasted API key — have the owner set Firebase secrets himself. Do not deploy Cloud Functions beyond what PHASE4.md explicitly asks for.
-
-Staging invite is proven. Profile setup loop is live. `sendJobInviteEmail` is now on production too (named function only). Do not deploy a full functions set to production (that would delete generateWeeklyReport). Do not remove the Gmail fallback until a real live invite from Resend lands. Shopfront URL: https://risingamp.com.au (same app as .web.app).
+Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is a written audit only — DATABASE-AUDIT.md — change no data. Do not run production schema or data writes without a backup, a staging run, and an explicit yes. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
 ```
 
 ## Remaining work
 
-1. Owner sends one invite from the **live** site and confirms it arrived from `invites@risingamp.com.au` with no Gmail popup. Then Task 3 (remove Gmail send) only if he asks.
-2. Optional: add `www.risingamp.com.au` as a Firebase Hosting custom domain if people type www (apex already works; Auth already allows www).
-3. Optional: at Crazy Domains, forward `privacy@risingamp.com.au` to your inbox so legal-page contact mail is received.
+1. Phase 5 Part A — write `DATABASE-AUDIT.md` (read-only). Owner approves the plan.
+2. Phase 5 Part B — jobs as stable IDs; create / archive job; add / remove person; rules. Staging first, production behind a yes.
+3. Phase 5 Part C — integrity fixes (additive, reversible) and docs.
+4. Optional leftovers: live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`.
 
 ## Next
 
 - [x] Phase 1 live
 - [x] Phase 2 restyle live (Manrope, Palette 1)
-- [x] Phase 3 Step 0 — branch + mockup
-- [x] Lalit GO to match the mockup on localhost/staging
-- [x] Derived metrics module (read-only)
-- [x] Job overview verdict, stats, what needs you, cash, categories, recent
-- [x] Jobs home (all invited jobs, portfolio strip)
-- [x] RisingAMP naming in the UI
-- [x] Capture “Check this” when OCR did not actually read date/amount (and labour hours, which the pipeline invents as 8)
-- [x] Sign in / sign up (Google + any email), profile setup, professional invite HTML
-- [x] Stop the old “Choose a job list” card flashing before Jobs
-- [x] Production hosting deploy (2026-08-23) plus `profiles/` Firestore rules and avatar Storage rules
-- [x] Enable email/password on production Auth
-- [x] Phase 4 Task 1 — `/privacy` and `/terms` pages, real links from sign-in/sign-up (live on production hosting 2026-08-23)
-- [x] Phase 4 Task 4 — `risingamp.com.au` on Firebase Hosting (apex live; www SSL not added)
-- [x] Phase 4 Task 2 — `RESEND_API_KEY` set; `sendJobInviteEmail` deployed to staging only
-- [x] Phase 4 Task 2 — prove a real invite arrives from localhost (From: invites@risingamp.com.au, no Gmail popup)
-- [x] Profile setup no longer repeats after close / new device (live hosting 2026-08-24)
-- [x] Phase 4 Task 2b — deploy `sendJobInviteEmail` to production (named function only, 2026-08-24)
-- [ ] Phase 4 Task 2c — prove a real invite from the live site (Resend, no Gmail popup)
-- [ ] Phase 4 Task 3 — remove `gmail.send` OAuth popup from invites (only after a live Resend invite)
-- [ ] Do not deploy Cloud Functions beyond the single Phase 4 invite-email function
+- [x] Phase 3 vision live (Jobs home, verdict, capture, profiles)
+- [x] Phase 4 — legal pages, Resend invites, shopfront `risingamp.com.au`, Google login on that domain
+- [x] Phase 5 Step 0 — branch `phase-5-jobs-members` + `PHASE5.md` + `CLAUDE.md` prime directive lifted under heightened process
+- [ ] Phase 5 Part A — `DATABASE-AUDIT.md` (no writes)
+- [ ] Phase 5 Part A — owner yes on the target model and migration plan
+- [ ] Phase 5 Part B — staging migration + four operations + rules
+- [ ] Phase 5 Part B — production behind backup and owner yes
+- [ ] Phase 5 Part C — integrity + `ARCHITECTURE.md` / docs
 - [ ] Do not write to production job data unless he asks after a backup
+
 
 ## What shipped (localhost / staging)
 
@@ -134,7 +116,7 @@ OCR “Check this” **was** implemented, but only from real signals: missing/in
 
 - `firebase deploy` without `--project production` and an explicit `--only`, and only when Lalit asks
 - Point localhost at production to make receipts appear
-- Add a working New job write
+- Add a working New job write **until Phase 5 Part B is approved**
 - Commit `.env*`, `.phase1-local.json`, or `backups/`
 - Billing, Stripe, a second product
 

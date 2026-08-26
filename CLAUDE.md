@@ -6,38 +6,41 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Work is on **`phase-4-domain-email`** (created from `phase-3-vision`, 2026-08-23). Phase 3 is live on hosting (`phase-3-vision`, deployed 2026-08-23). Phase 2 look is in that UI. Phase 1 is on `phase-1-foundation`. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tag if you need to unwind Phase 1: `pre-phase1-2026-08-22`.
-2. Read `PROGRESS.md` (next concrete step), then `PHASE4.md` (current phase: legal pages, invites off Gmail onto Resend, custom domain). `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. Open `design/risingamp-vision.html` in a browser.
+1. Confirm git branch. Work is on **`phase-5-jobs-members`** (created from `phase-4-domain-email`, 2026-08-26). Phases 1–4 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tag if you need to unwind Phase 1: `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next concrete step), then `PHASE5.md` (current phase: database audit, then jobs as records and membership). `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. Open `design/risingamp-vision.html` in a browser.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 4 — `/privacy` and `/terms` are in the app. Remaining: owner sets `RESEND_API_KEY` (masked prompt, never chat), then deploy only `sendJobInviteEmail` to staging, prove an invite, then custom domain DNS at Crazy Domains. See `PHASE4.md` and `PROGRESS.md`. Do not add a working "New job" create. Do not deploy Cloud Functions except that named invite-email function. Never `firebase deploy --only functions` to production (would delete leftover `generateWeeklyReport`).
-6. **Never accept a raw API key or secret pasted into chat.** For the Resend key, have the owner run `firebase functions:secrets:set RESEND_API_KEY --project <production|rising-amp-staging>` themselves at a masked prompt — see `PHASE4.md` Task 2.
+5. **Next:** Phase 5 Part A — write `DATABASE-AUDIT.md` from the real database. **Change no records, rules, or schema until the owner approves the plan.** Then Part B (create / archive job, add / remove person) on staging behind a backup. See `PHASE5.md`.
+6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE4.md. Open design/risingamp-vision.html. Work is on branch phase-4-domain-email (from phase-3-vision). Domain is risingamp.com.au, DNS at Crazy Domains, Resend account already set up. Localhost stays on staging. Never accept a pasted API key — have the owner set Firebase secrets himself. Do not deploy Cloud Functions beyond what PHASE4.md explicitly asks for.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is a written audit only — DATABASE-AUDIT.md — change no data. Do not run production schema or data writes without a backup, a staging run, and an explicit yes. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
 
 If you are unsure whether a command writes to production, do not run it.
 
 ## Prime directive
 
-- Do not run any destructive or irreversible operation against production Firestore or Storage. No hard deletes, no in-place data mutation, no schema changes against production unless the owner asked after a backup.
+- This is a live app with real, irreplaceable data. **Schema and data-structure changes are in scope for Phase 5**, and they are the highest-risk work in the project. They follow the heightened process in `PHASE5.md`, not a free-for-all.
+- Part A (`DATABASE-AUDIT.md`) is **read-only**. Do not migrate, rewrite, or delete anything until the owner approves that plan.
+- Nothing runs against **production** Firestore or Storage without a full backup and a tested restore first. Staging first, production only behind an explicit yes.
+- No hard deletes of user-created data. Archive a job; revoke a person’s access. Keep the records they entered.
 - Before any change that has side effects, stop, write a plan, and wait for explicit human approval. Propose first, execute second.
 - All work happens on a branch, never on `master` or `main`.
 - Day-to-day work uses **staging** (`rising-amp-staging`). Localhost must keep pointing there.
-- Production (`rising-amp-467702-b5`) is the live family app. Write to it only after a backup and an explicit yes. Git push does not deploy; live only changes on `firebase deploy --project production`.
+- Production (`rising-amp-467702-b5`) is the live family app. Git push does not deploy; live only changes on `firebase deploy --project production` with an explicit `--only` the owner named.
 - Every data migration is a reversible, idempotent, dry-runnable script, reviewed before it runs.
 - When unsure, ask. A withheld change is cheap. A broken production build is not.
 
 ## How to preview work
 
 - Day-to-day: `npm start` → http://localhost:3000 (staging). After Google or email login, complete profile if asked, then **Jobs**.
-- Live: https://rising-amp-467702-b5.web.app (production) — Phase 3 hosting as of 2026-08-23
+- Live shopfront: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)
 - Design mockup (Phase 3): `design/risingamp-vision.html`
 - Auth mockups: `design/risingamp-auth.html`, `design/risingamp-signin-email.html`
 - Live look (Phase 2): `design/opal-track-reference.html`
-- Never run `firebase deploy` against production unless the owner explicitly asks. Hosting only: `firebase deploy --project production --only hosting`. Do not deploy functions, Firestore rules, or Storage unless he names them.
+- Never run `firebase deploy` against production unless the owner explicitly asks. Hosting only: `firebase deploy --project production --only hosting`. Do not deploy functions, Firestore rules, or Storage unless he names them. Never `firebase deploy --only functions` to production (would delete leftover `generateWeeklyReport`).
 
 ## Environments
 
@@ -54,7 +57,7 @@ Google or email/password via Firebase Auth (email/password is on **staging and p
 
 ## Phase 1 (closed 2026-08-23)
 
-Google login, one org, two named job lists, per-job invites, Site Log / Weekly Report removed from the UI. Do not re-run cutover scripts. Do not deploy Cloud Functions unless asked (live still has unused `generateWeeklyReport`).
+Google login, one org, two named job lists, per-job invites, Site Log / Weekly Report removed from the UI. Do not re-run cutover scripts.
 
 ## Phase 2 (closed 2026-08-23)
 
@@ -62,25 +65,31 @@ Visual overhaul is live on production hosting. Brief: `PHASE2.md`. Look: `design
 
 ## Phase 3 (closed 2026-08-23; live hosting; localhost still staging)
 
-Same app, same data. Brief: `PHASE3.md`. Mockup: `design/risingamp-vision.html`. Jobs home, job overview (verdict + what needs you), RisingAMP naming, OCR “Check this”, open sign-up + profiles. **No New job write.**
+Same app, same data. Brief: `PHASE3.md`. Mockup: `design/risingamp-vision.html`. Jobs home, job overview (verdict + what needs you), RisingAMP naming, OCR “Check this”, open sign-up + profiles. **No New job write** until Phase 5 Part B.
 
-## Phase 4 (in progress, branch `phase-4-domain-email`)
+## Phase 4 (closed 2026-08-26; live)
 
-Brief: `PHASE4.md`. Legal pages (`/privacy`, `/terms`), invite email moves off personal Gmail OAuth onto Resend (domain `risingamp.com.au`, sent from `invites@risingamp.com.au`), then remove the `gmail.send` popup once proven, then point `risingamp.com.au` at Firebase Hosting. Requires one narrowly-scoped Cloud Function (or the Firebase Trigger Email extension) for the Resend send path — that is the one exception to "do not deploy Cloud Functions" and only for this. Google sign-in is untouched.
+Brief: `PHASE4.md`. Legal pages, Resend invite function on staging and production (`invites@risingamp.com.au`), shopfront `https://risingamp.com.au`, Google login on that domain. Gmail invite fallback still in the client until the owner asks to remove it. Unused `generateWeeklyReport` still on production — deploy functions **by name only**.
+
+## Phase 5 (in progress, branch `phase-5-jobs-members`)
+
+Brief: `PHASE5.md`. Database audit first (`DATABASE-AUDIT.md`, no writes). Then, only after owner yes: jobs as stable IDs, create / archive job, add / remove person, rules that follow membership. Soft deletes only.
 
 ## Out of scope until asked
 
-- Creating job lists, billing, Stripe, a second product, deleting leftover PIN folders, deploying functions beyond the Phase 4 email send path, new npm packages (fonts via Google Fonts are OK)
+- Billing, Stripe, a second product, deleting leftover PIN folders unless the approved Phase 5 plan says so, deploying functions beyond what `PHASE5.md` names, new npm packages (fonts via Google Fonts are OK), Phase 4 Gmail-fallback removal
 
 ## Continuity
 
 - `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
-- `PHASE4.md` — current phase brief (domain, invites off Gmail, legal pages).
-- `PHASE3.md` — Phase 3 vision brief (jobs portfolio, verdict, capture) — closed record.
+- `PHASE5.md` — current phase brief (audit, then jobs and membership).
+- `PHASE4.md` — domain, Resend, legal pages — closed record.
+- `PHASE3.md` — Phase 3 vision brief — closed record.
 - `PHASE2.md` — Phase 2 restyle record (complete).
 - `PROGRESS.md` — next concrete step. Update at session end.
 - `PLAN.md` — Phase 1 record (complete).
 - `ARCHITECTURE.md` — how the running app is built.
+- `DATABASE-AUDIT.md` — Phase 5 Part A deliverable (does not exist until Part A is done).
 - Small sessions: one checklist item, then commit on the branch.
 
 ## Owner working style

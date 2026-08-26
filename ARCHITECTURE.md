@@ -3,9 +3,9 @@
 This describes the **running live app**. Phase 1 record is `PLAN.md`. Phase 2 visual record is `PHASE2.md`.
 
 Firebase project (production): `rising-amp-467702-b5`  
-Live URL: https://rising-amp-467702-b5.web.app (custom domain `risingamp.com.au` is being added in Phase 4)  
+Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging (localhost): `rising-amp-staging`  
-Default git branch in use was `master`; Phase 1 landed on `phase-1-foundation`; Phase 2 (live look) is `phase-2-visual`; Phase 3 vision is `phase-3-vision`; Phase 4 is `phase-4-domain-email`.  
+Default git branch in use was `master`; Phase 1 landed on `phase-1-foundation`; Phase 2 (live look) is `phase-2-visual`; Phase 3 vision is `phase-3-vision`; Phase 4 is `phase-4-domain-email`; Phase 5 is `phase-5-jobs-members`.  
 App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category colour as data ink only.
 
 ---
