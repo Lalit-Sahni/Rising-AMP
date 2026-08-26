@@ -12,6 +12,20 @@ import {
 } from "firebase/firestore";
 import { db } from "./config";
 import { FAMILY_ORG_ID } from "./tenancy";
+import { saveClientInfo } from "./directories";
+
+export {
+  getClients,
+  getLabour,
+  getServiceProviders,
+  getSuppliers,
+  getTrades,
+  saveClientInfo,
+  saveLabourInfo,
+  saveServiceProviderInfo,
+  saveSupplierInfo,
+  saveTradeInfo,
+} from "./directories";
 
 // Collection names
 const COLLECTIONS = {
@@ -175,78 +189,6 @@ export const getProjectPhases = async (accessCode) => {
 };
 
 // ===== CLIENTS =====
-export const saveClientInfo = async (accessCode, clientData) => {
-  try {
-    const clientsCollectionRef = collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.CLIENTS}`);
-    
-    // Check if client with same email already exists (if email provided)
-    if (clientData.email) {
-      const existingQuery = query(
-        clientsCollectionRef,
-        where('email', '==', clientData.email)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        // Update existing record
-        const existingDoc = existingSnapshot.docs[0];
-        await updateDoc(existingDoc.ref, {
-          ...clientData,
-          updatedAt: serverTimestamp()
-        });
-        
-        return {
-          success: true,
-          client: {
-            id: existingDoc.id,
-            ...clientData,
-            updatedAt: new Date()
-          }
-        };
-      }
-    }
-    
-    // Add new record
-    const docRef = await addDoc(clientsCollectionRef, {
-      ...clientData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    return {
-      success: true,
-      client: {
-        id: docRef.id,
-        ...clientData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    };
-  } catch (error) {
-    console.error('Save client error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const getClients = async (accessCode) => {
-  try {
-    const q = query(
-      collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.CLIENTS}`),
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    const clients = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
-    return { success: true, clients };
-  } catch (error) {
-    console.error('Get clients error:', error);
-    return { success: false, error: error.message, clients: [] };
-  }
-};
-
 export const updateClient = async (accessCode, clientId, clientData) => {
   try {
     const clientRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.CLIENTS}`, clientId);
@@ -286,80 +228,6 @@ export const addClient = async (accessCode, clientData) => {
   return await saveClientInfo(accessCode, clientData);
 };
 
-// ===== LABOUR =====
-export const saveLabourInfo = async (accessCode, labourData) => {
-  try {
-    const labourCollectionRef = collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.LABOUR}`);
-    
-    // Check if labour with same name and role already exists
-    if (labourData.name && labourData.role) {
-      const existingQuery = query(
-        labourCollectionRef,
-        where('name', '==', labourData.name),
-        where('role', '==', labourData.role)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        // Update existing record
-        const existingDoc = existingSnapshot.docs[0];
-        await updateDoc(existingDoc.ref, {
-          ...labourData,
-          updatedAt: serverTimestamp()
-        });
-        
-        return {
-          success: true,
-          labour: {
-            id: existingDoc.id,
-            ...labourData,
-            updatedAt: new Date()
-          }
-        };
-      }
-    }
-    
-    // Add new record
-    const docRef = await addDoc(labourCollectionRef, {
-      ...labourData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    return {
-      success: true,
-      labour: {
-        id: docRef.id,
-        ...labourData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    };
-  } catch (error) {
-    console.error('Save labour error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const getLabour = async (accessCode) => {
-  try {
-    const q = query(
-      collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.LABOUR}`),
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    const labour = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
-    return { success: true, labour };
-  } catch (error) {
-    console.error('Get labour error:', error);
-    return { success: false, error: error.message, labour: [] };
-  }
-};
-
 export const updateLabour = async (accessCode, labourId, labourData) => {
   try {
     const labourRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.LABOUR}`, labourId);
@@ -391,80 +259,6 @@ export const deleteLabour = async (accessCode, labourId) => {
   } catch (error) {
     console.error('Delete labour error:', error);
     return { success: false, error: error.message };
-  }
-};
-
-// ===== TRADES =====
-export const saveTradeInfo = async (accessCode, tradeData) => {
-  try {
-    const tradesCollectionRef = collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.TRADES}`);
-    
-    // Check if trade with same name and category already exists
-    if (tradeData.tradeName && tradeData.tradeCategory) {
-      const existingQuery = query(
-        tradesCollectionRef,
-        where('tradeName', '==', tradeData.tradeName),
-        where('tradeCategory', '==', tradeData.tradeCategory)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        // Update existing record
-        const existingDoc = existingSnapshot.docs[0];
-        await updateDoc(existingDoc.ref, {
-          ...tradeData,
-          updatedAt: serverTimestamp()
-        });
-        
-        return {
-          success: true,
-          trade: {
-            id: existingDoc.id,
-            ...tradeData,
-            updatedAt: new Date()
-          }
-        };
-      }
-    }
-    
-    // Add new record
-    const docRef = await addDoc(tradesCollectionRef, {
-      ...tradeData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    return {
-      success: true,
-      trade: {
-        id: docRef.id,
-        ...tradeData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    };
-  } catch (error) {
-    console.error('Save trade error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const getTrades = async (accessCode) => {
-  try {
-    const q = query(
-      collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.TRADES}`),
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    const trades = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
-    return { success: true, trades };
-  } catch (error) {
-    console.error('Get trades error:', error);
-    return { success: false, error: error.message, trades: [] };
   }
 };
 

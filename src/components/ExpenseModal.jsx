@@ -6,6 +6,7 @@ import CreatableSelect from 'react-select/creatable';
 import DatePicker from 'react-datepicker';
 import { useDropzone } from 'react-dropzone';
 import ReceiptViewer from './ReceiptViewer';
+import { uniqueByName } from '../firebase/partyName';
 import "react-datepicker/dist/react-datepicker.css";
 
 const categoryFields = {
@@ -85,11 +86,13 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
     savedLabour = [],
     savedTrades = [],
     savedCompanies = [],
+    savedServiceProviders = [],
     savedProjects = [],
     savedPayers = [],
     saveLabourToFirebase,
     saveTradeToFirebase,
     saveCompanyToFirebase,
+    saveServiceProviderToFirebase,
     saveProjectToFirebase,
     savePayerToFirebase,
     accessCode
@@ -140,26 +143,34 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
 
   // Worker management functions
   const getWorkerOptions = () => {
-    return savedLabour.map(worker => ({
+    return uniqueByName(savedLabour, (worker) => worker.name).map((worker) => ({
       value: worker.name,
-      label: `${worker.name} (${worker.role}) - $${worker.rate}/hr`,
+      label: `${worker.name} (${worker.role || 'Labour'}) - $${worker.rate || 0}/hr`,
       data: worker
     }));
   };
 
   const getTradeOptions = () => {
-    return savedTrades.map(trade => ({
+    return uniqueByName(savedTrades, (trade) => trade.tradeName).map((trade) => ({
       value: trade.tradeName,
-      label: `${trade.tradeName} (${trade.tradeCategory})`,
+      label: `${trade.tradeName} (${trade.tradeCategory || 'Trade'})`,
       data: trade
     }));
   };
 
   const getCompanyOptions = () => {
-    return savedCompanies.map(company => ({
+    return uniqueByName(savedCompanies, (company) => company.name).map((company) => ({
       value: company.name,
       label: company.name,
       data: company
+    }));
+  };
+
+  const getProviderOptions = () => {
+    return uniqueByName(savedServiceProviders, (provider) => provider.name).map((provider) => ({
+      value: provider.name,
+      label: provider.name,
+      data: provider
     }));
   };
 
@@ -244,9 +255,23 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
     }));
   };
 
+  const handleProviderSelect = (selectedOption) => {
+    if (selectedOption) {
+      setFormData(prev => ({
+        ...prev,
+        provider: selectedOption.value
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        provider: ''
+      }));
+    }
+  };
+
   const saveWorkerToFirebase = async (workerData) => {
     try {
-      await saveLabourToFirebase(workerData);
+      await saveLabourToFirebase(workerData, { quiet: true });
     } catch (error) {
       console.error('Error saving labour info:', error);
     }
@@ -394,27 +419,36 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
         }
       }
 
-      // Save trade information for autofill
       if (category === 'trade' && formData.tradeName) {
         try {
           await saveTradeToFirebase({
             tradeName: formData.tradeName,
             tradeCategory: formData.tradeCategory || '',
             task: formData.task || ''
-          });
+          }, { quiet: true });
         } catch (error) {
           console.error('Error saving trade info:', error);
         }
       }
 
-      // Save company information for autofill
-      if (formData.supplier) {
+      if (category === 'purchase' && formData.supplier) {
         try {
           await saveCompanyToFirebase({
             name: formData.supplier
-          });
+          }, { quiet: true });
         } catch (error) {
           console.error('Error saving company info:', error);
+        }
+      }
+
+      if (category === 'service' && formData.provider) {
+        try {
+          await saveServiceProviderToFirebase({
+            name: formData.provider,
+            lastServiceName: formData.serviceName || ''
+          }, { quiet: true });
+        } catch (error) {
+          console.error('Error saving service provider:', error);
         }
       }
 
@@ -528,8 +562,21 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                         supplier: item.name
                       }));
                     }}
-                    placeholder="Select saved company..."
+                    placeholder="Select saved supplier..."
                     showDelete={true}
+                  />
+                )}
+                {category === 'service' && (
+                  <SavedDataSelector
+                    type="serviceProvider"
+                    onSelect={(item) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        provider: item.name
+                      }));
+                    }}
+                    placeholder="Select saved provider..."
+                    showDelete={false}
                   />
                 )}
                 <SavedDataSelector
@@ -656,6 +703,48 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                       options={getCompanyOptions()}
                       isClearable
                       placeholder="Search or add supplier..."
+                      className="react-select-container"
+                      classNamePrefix="react-select"
+                      styles={{
+                        control: (base) => ({
+                          ...base,
+                          backgroundColor: '#334155',
+                          borderColor: validationErrors[field.name] ? '#EF4444' : '#475569',
+                          color: 'white',
+                          '&:hover': {
+                            borderColor: '#64748B'
+                          }
+                        }),
+                        menu: (base) => ({
+                          ...base,
+                          backgroundColor: '#334155',
+                          border: '1px solid #475569'
+                        }),
+                        option: (base, state) => ({
+                          ...base,
+                          backgroundColor: state.isFocused ? '#475569' : 'transparent',
+                          color: 'white',
+                          '&:hover': {
+                            backgroundColor: '#475569'
+                          }
+                        }),
+                        singleValue: (base) => ({
+                          ...base,
+                          color: 'white'
+                        }),
+                        input: (base) => ({
+                          ...base,
+                          color: 'white'
+                        })
+                      }}
+                    />
+                  ) : field.name === 'provider' && category === 'service' ? (
+                    <CreatableSelect
+                      value={formData[field.name] ? { value: formData[field.name], label: formData[field.name] } : null}
+                      onChange={handleProviderSelect}
+                      options={getProviderOptions()}
+                      isClearable
+                      placeholder="Search or add service provider..."
                       className="react-select-container"
                       classNamePrefix="react-select"
                       styles={{

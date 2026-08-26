@@ -2,6 +2,7 @@ import { fetchExpensesFromFirestore, fetchInvoicesFromFirestore } from './data';
 import { getClients } from './firebaseService';
 import { listInvitedProjects } from './projectCatalog';
 import { deriveJobMetrics, jobSubtitle } from '../utils/jobMetrics';
+import { uniqueByName } from './partyName';
 
 export async function loadInvitedJobSummaries(email, options = {}) {
   const projects = await listInvitedProjects(email);
@@ -16,7 +17,10 @@ export async function loadInvitedJobSummaries(email, options = {}) {
       ]);
       const expenses = (expenseResult && expenseResult.success && expenseResult.expenses) || [];
       const invoices = (invoiceResult && invoiceResult.success && invoiceResult.invoices) || [];
-      const clients = (clientResult && clientResult.success && clientResult.clients) || [];
+      const clients = uniqueByName(
+        (clientResult && clientResult.success && clientResult.clients) || [],
+        (row) => row.name || row.clientName
+      );
       const metrics = deriveJobMetrics({ expenses, invoices }, { now });
       return {
         ...project,

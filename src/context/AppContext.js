@@ -24,17 +24,22 @@ import {
 import { 
   getLabour, 
   getTrades, 
-  getClients, 
+  getClients,
+  getSuppliers,
+  getServiceProviders,
   getProjects,
   saveLabourInfo,
   saveTradeInfo,
   saveClientInfo,
+  saveSupplierInfo,
+  saveServiceProviderInfo,
   saveProjectInfo,
   deleteLabour,
   deleteTrade,
   deleteProject,
   deleteClient
 } from '../firebase/firebaseService';
+import { upsertNamedRow } from '../firebase/partyName';
 import logger from '../utils/logger';
 import { isPermissionDenied } from '../firebase/tenancy';
 
@@ -69,6 +74,8 @@ export const AppProvider = ({
   const [savedLabour, setSavedLabour] = useState([]);
   const [savedTrades, setSavedTrades] = useState([]);
   const [clients, setClients] = useState([]);
+  const [savedSuppliers, setSavedSuppliers] = useState([]);
+  const [savedServiceProviders, setSavedServiceProviders] = useState([]);
   const [savedProjects, setSavedProjects] = useState([]);
   const [progressPayments, setProgressPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -161,6 +168,34 @@ export const AppProvider = ({
         } catch (error) {
           console.error('Error loading saved companies:', error);
           setClients([]);
+        }
+      };
+
+      const loadSuppliers = async () => {
+        try {
+          const result = await getSuppliers(jobListId);
+          if (result.success) {
+            setSavedSuppliers(Array.isArray(result.suppliers) ? result.suppliers : []);
+          } else {
+            setSavedSuppliers([]);
+          }
+        } catch (error) {
+          console.error('Error loading suppliers:', error);
+          setSavedSuppliers([]);
+        }
+      };
+
+      const loadServiceProviders = async () => {
+        try {
+          const result = await getServiceProviders(jobListId);
+          if (result.success) {
+            setSavedServiceProviders(Array.isArray(result.providers) ? result.providers : []);
+          } else {
+            setSavedServiceProviders([]);
+          }
+        } catch (error) {
+          console.error('Error loading service providers:', error);
+          setSavedServiceProviders([]);
         }
       };
 
@@ -278,6 +313,8 @@ export const AppProvider = ({
         loadLabour(),
         loadTrades(),
         loadCompanies(),
+        loadSuppliers(),
+        loadServiceProviders(),
         loadProjects(),
         loadPayments(),
         loadInvoices(),
@@ -389,40 +426,44 @@ export const AppProvider = ({
   };
 
   // Saved data functions
-  const saveLabourToFirebase = async (labourData) => {
+  const saveLabourToFirebase = async (labourData, options = {}) => {
     try {
       const result = await saveLabourInfo(jobListId, labourData);
       if (result.success) {
         const labourItem = result.labour || result.savedLabour;
-        setSavedLabour(prev => [...prev, labourItem]);
-        showToast('Labour saved successfully', 'success');
+        setSavedLabour((prev) => upsertNamedRow(prev, labourItem, (row) => row.name));
+        if (!options.quiet && result.created) {
+          showToast('Labour saved successfully', 'success');
+        }
         return { success: true, savedLabour: labourItem };
       } else {
-        showToast('Failed to save labour', 'error');
+        if (!options.quiet) showToast('Failed to save labour', 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error saving labour:', error);
-      showToast('Error saving labour', 'error');
+      if (!options.quiet) showToast('Error saving labour', 'error');
       return { success: false, error: error.message };
     }
   };
 
-  const saveTradeToFirebase = async (tradeData) => {
+  const saveTradeToFirebase = async (tradeData, options = {}) => {
     try {
       const result = await saveTradeInfo(jobListId, tradeData);
       if (result.success) {
         const tradeItem = result.trade || result.savedTrade;
-        setSavedTrades(prev => [...prev, tradeItem]);
-        showToast('Trade saved successfully', 'success');
+        setSavedTrades((prev) => upsertNamedRow(prev, tradeItem, (row) => row.tradeName));
+        if (!options.quiet && result.created) {
+          showToast('Trade saved successfully', 'success');
+        }
         return { success: true, savedTrade: tradeItem };
       } else {
-        showToast('Failed to save trade', 'error');
+        if (!options.quiet) showToast('Failed to save trade', 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error saving trade:', error);
-      showToast('Error saving trade', 'error');
+      if (!options.quiet) showToast('Error saving trade', 'error');
       return { success: false, error: error.message };
     }
   };
@@ -622,20 +663,61 @@ export const AppProvider = ({
   };
 
   // Company and Project functions
-  const saveCompanyToFirebase = async (companyData) => {
+  const saveCompanyToFirebase = async (companyData, options = {}) => {
     try {
-      const result = await saveClientInfo(jobListId, companyData);
+      const result = await saveSupplierInfo(jobListId, companyData);
       if (result.success) {
-        setClients(prev => [...prev, result.client]);
-        showToast('Client saved successfully', 'success');
-        return { success: true, client: result.client };
+        setSavedSuppliers((prev) => upsertNamedRow(prev, result.supplier, (row) => row.name));
+        if (!options.quiet && result.created) {
+          showToast('Supplier saved', 'success');
+        }
+        return { success: true, supplier: result.supplier };
       } else {
-        showToast('Failed to save company', 'error');
+        if (!options.quiet) showToast('Failed to save supplier', 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('Error saving company:', error);
-      showToast('Error saving company', 'error');
+      console.error('Error saving supplier:', error);
+      if (!options.quiet) showToast('Error saving supplier', 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
+  const saveServiceProviderToFirebase = async (providerData, options = {}) => {
+    try {
+      const result = await saveServiceProviderInfo(jobListId, providerData);
+      if (result.success) {
+        setSavedServiceProviders((prev) => upsertNamedRow(prev, result.provider, (row) => row.name));
+        if (!options.quiet && result.created) {
+          showToast('Service provider saved', 'success');
+        }
+        return { success: true, provider: result.provider };
+      } else {
+        if (!options.quiet) showToast('Failed to save service provider', 'error');
+        return { success: false, error: result.error };
+      }
+    } catch (error) {
+      console.error('Error saving service provider:', error);
+      if (!options.quiet) showToast('Error saving service provider', 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
+  const saveClientToFirebase = async (clientData, options = {}) => {
+    try {
+      const result = await saveClientInfo(jobListId, clientData);
+      if (result.success) {
+        setClients((prev) => upsertNamedRow(prev, result.client, (row) => row.name));
+        if (!options.quiet && result.created) {
+          showToast('Client saved', 'success');
+        }
+        return { success: true, client: result.client };
+      }
+      if (!options.quiet) showToast('Failed to save client', 'error');
+      return { success: false, error: result.error };
+    } catch (error) {
+      console.error('Error saving client:', error);
+      if (!options.quiet) showToast('Error saving client', 'error');
       return { success: false, error: error.message };
     }
   };
@@ -838,7 +920,8 @@ export const AppProvider = ({
       const clientWithProject = { ...clientData, projectId };
       const result = await saveClientInfo(jobListId, clientWithProject);
       if (result.success) {
-        setClientDetails(prev => [...prev, result.client]);
+        setClientDetails((prev) => upsertNamedRow(prev, result.client, (row) => row.name));
+        setClients((prev) => upsertNamedRow(prev, result.client, (row) => row.name));
         showToast('Client details saved successfully', 'success');
         return { success: true, clientDetails: result.client };
       } else {
@@ -942,7 +1025,9 @@ export const AppProvider = ({
     savedLabour,
     savedTrades,
     clients,
-    savedCompanies: clients, // Alias for compatibility
+    savedCompanies: savedSuppliers,
+    savedSuppliers,
+    savedServiceProviders,
     savedProjects,
     progressPayments,
     invoices,
@@ -968,6 +1053,8 @@ export const AppProvider = ({
     loadInvoices,
     updateInvoiceStatus,
     saveCompanyToFirebase,
+    saveServiceProviderToFirebase,
+    saveClientToFirebase,
     saveProjectToFirebase,
     deleteLabourFromFirebase,
     deleteTradeFromFirebase,

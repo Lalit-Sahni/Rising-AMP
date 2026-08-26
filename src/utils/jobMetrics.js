@@ -431,10 +431,11 @@ export function verdictCopy(verdict) {
 }
 
 export function jobSubtitle({ clients = [], invoices = [], metrics } = {}) {
-  const client = (clients || []).find((row) => row && (row.name || row.clientName));
-  const clientName = (client && (client.name || client.clientName))
+  const billed = (clients || []).find((row) => row && String(row.email || '').includes('@'))
+    || (clients || []).find((row) => row && (row.name || row.clientName));
+  const clientName = (billed && (billed.name || billed.clientName))
     || (invoices || []).find((invoice) => invoice.clientName && String(invoice.clientName).trim())?.clientName;
-  const address = client && client.address ? String(client.address).trim() : '';
+  const address = billed && billed.address ? String(billed.address).trim() : '';
   const suburb = suburbFromAddress(address);
 
   if (clientName && suburb) return `${clientName} · ${suburb}`;

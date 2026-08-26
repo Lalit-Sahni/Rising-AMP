@@ -246,7 +246,7 @@ export default function JobsHomePage() {
     setSavingId(project.id);
     setError('');
     try {
-      await removeEmailFromProject(project.projectId, email);
+      await removeEmailFromProject(project.projectId, email, membership.email);
       const removed = new Set(emailInviteVariants(email).map((value) => value.toLowerCase()));
       setJobs((current) =>
         current.map((row) =>

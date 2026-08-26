@@ -25,6 +25,18 @@ export function canRemoveEmailFromJob({ email, ownerEmail }) {
   return canonicalEmail(email) !== canonicalEmail(ownerEmail);
 }
 
+/**
+ * Whether this email is still on any of the jobs the viewer can read.
+ * Firestore will not let you query another person's invite list.
+ */
+export function emailRemainsOnJobs(jobs, email) {
+  const wanted = canonicalEmail(email);
+  if (!wanted.includes('@')) return false;
+  return (jobs || []).some((job) =>
+    (job.invitedEmails || []).some((item) => canonicalEmail(item) === wanted)
+  );
+}
+
 export function newJobId() {
   const bytes = new Uint8Array(8);
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {

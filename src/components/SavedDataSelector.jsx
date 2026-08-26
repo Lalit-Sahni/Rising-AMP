@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, Search, User, Building, Briefcase, Wrench, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { uniqueByName } from '../firebase/partyName';
 
 const SavedDataSelector = ({ 
   type, // 'company', 'project', 'labour', 'trade'
@@ -14,6 +15,7 @@ const SavedDataSelector = ({
     savedProjects, 
     savedLabour, 
     savedTrades,
+    savedServiceProviders,
     deleteLabourFromFirebase,
     deleteTradeFromFirebase,
     deleteProjectFromFirebase,
@@ -28,13 +30,15 @@ const SavedDataSelector = ({
   const getData = () => {
     switch (type) {
       case 'company':
-        return savedCompanies || [];
+        return uniqueByName(savedCompanies || [], (item) => item.name);
       case 'project':
         return savedProjects || [];
       case 'labour':
-        return savedLabour || [];
+        return uniqueByName(savedLabour || [], (item) => item.name);
       case 'trade':
-        return savedTrades || [];
+        return uniqueByName(savedTrades || [], (item) => item.tradeName);
+      case 'serviceProvider':
+        return uniqueByName(savedServiceProviders || [], (item) => item.name);
       default:
         return [];
     }
@@ -51,6 +55,8 @@ const SavedDataSelector = ({
         return User;
       case 'trade':
         return Wrench;
+      case 'serviceProvider':
+        return Wrench;
       default:
         return Search;
     }
@@ -60,6 +66,8 @@ const SavedDataSelector = ({
   const getDisplayLabel = (item) => {
     switch (type) {
       case 'company':
+        return item.name;
+      case 'serviceProvider':
         return item.name;
       case 'project':
         return item.name;

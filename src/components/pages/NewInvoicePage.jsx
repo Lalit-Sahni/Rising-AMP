@@ -18,9 +18,10 @@ import "react-datepicker/dist/react-datepicker.css";
 import InvoicePreview from '../ui/InvoicePreview';
 import ClientManager from '../ui/ClientManager';
 import { getClients } from '../../firebase/firebaseService';
+import { uniqueByName } from '../../firebase/partyName';
 
 const NewInvoicePage = ({ onComplete }) => {
-  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, accessCode, projectName: jobName } = useApp();
+  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, accessCode, projectName: jobName, saveClientToFirebase } = useApp();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -67,7 +68,7 @@ const NewInvoicePage = ({ onComplete }) => {
       try {
         const result = await getClients(accessCode);
         if (result.success) {
-          setClients(result.clients);
+          setClients(uniqueByName(result.clients || [], (row) => row.name));
         } else {
           console.error('Error loading clients:', result.error);
           showToast('Failed to load clients', 'error');
@@ -273,6 +274,20 @@ const NewInvoicePage = ({ onComplete }) => {
       };
 
       const savedInvoice = await addInvoiceToFirebase(invoiceData);
+      try {
+        if (formData.clientName && formData.clientName.trim() && saveClientToFirebase) {
+          await saveClientToFirebase({
+            name: formData.clientName.trim(),
+            email: formData.clientEmail || '',
+            phone: formData.clientPhone || '',
+            address: formData.clientAddress || '',
+            company: formData.clientCompany || '',
+            abn: formData.clientABN || '',
+          }, { quiet: true });
+        }
+      } catch (error) {
+        console.error('Error saving invoice client:', error);
+      }
       showToast('Invoice saved successfully', 'success');
       
       const progressPaymentData = {
@@ -1048,7 +1063,7 @@ const NewInvoicePage = ({ onComplete }) => {
                         try {
                           const result = await getClients(accessCode);
                           if (result.success) {
-                            setClients(result.clients);
+                            setClients(uniqueByName(result.clients || [], (row) => row.name));
                           } else {
                             setClients([]);
                           }

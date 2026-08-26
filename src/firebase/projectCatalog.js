@@ -14,10 +14,10 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 import { canonicalEmail, emailInviteVariants, normalizeEmail } from './email';
-import { canRemoveEmailFromJob, isJobArchived, newJobId } from './jobIdentity';
+import { canRemoveEmailFromJob, emailRemainsOnJobs, isJobArchived, newJobId } from './jobIdentity';
 import { FAMILY_ORG_ID } from './tenancy';
 
-export { canRemoveEmailFromJob, isJobArchived, newJobId };
+export { canRemoveEmailFromJob, emailRemainsOnJobs, isJobArchived, newJobId };
 
 function mapProjectDoc(projectDoc) {
   const data = projectDoc.data() || {};
@@ -187,7 +187,7 @@ export async function inviteEmailToProject(projectId, email) {
   return variants[0];
 }
 
-export async function removeEmailFromProject(projectId, email) {
+export async function removeEmailFromProject(projectId, email, viewerEmail) {
   const variants = emailInviteVariants(email);
   if (variants.length === 0 || !variants[0].includes('@')) {
     throw new Error('Enter an email address.');
@@ -208,8 +208,10 @@ export async function removeEmailFromProject(projectId, email) {
     updatedAt: serverTimestamp(),
   });
 
-  const stillOnAJob = (await listInvitedProjects(email)).length > 0;
-  if (!stillOnAJob) {
+  // Rules only allow listing jobs *you* are on. Querying the removed
+  // person's email is denied even for the owner.
+  const visibleJobs = await listInvitedProjects(viewerEmail || ownerEmail);
+  if (!emailRemainsOnJobs(visibleJobs, email)) {
     await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID), {
       invitedEmails: arrayRemove(...variants),
       updatedAt: serverTimestamp(),

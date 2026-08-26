@@ -1,4 +1,4 @@
-import { canRemoveEmailFromJob, isJobArchived, newJobId } from './jobIdentity';
+import { canRemoveEmailFromJob, emailRemainsOnJobs, isJobArchived, newJobId } from './jobIdentity';
 
 test('treats missing status as active', () => {
   expect(isJobArchived({})).toBe(false);
@@ -19,4 +19,14 @@ test('refuses to remove the owner from a job', () => {
 
 test('new job ids look like the Phase 1 job documents', () => {
   expect(newJobId()).toMatch(/^job-[a-f0-9]{16}$/);
+});
+
+test('detects whether a removed email is still on another readable job', () => {
+  const jobs = [
+    { invitedEmails: ['owner@opal.test', 'bookkeeper@opal.test'] },
+    { invitedEmails: ['owner@opal.test'] },
+  ];
+  expect(emailRemainsOnJobs(jobs, 'bookkeeper@opal.test')).toBe(true);
+  expect(emailRemainsOnJobs(jobs, 'gone@opal.test')).toBe(false);
+  expect(emailRemainsOnJobs([{ invitedEmails: ['Owner.Name@gmail.com'] }], 'ownername@gmail.com')).toBe(true);
 });
