@@ -10,13 +10,13 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 2. Read `PROGRESS.md` (next concrete step), then `PHASE5.md` (current phase: database audit, then jobs as records and membership). `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. Open `design/risingamp-vision.html` in a browser.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 5 Part B and the clients/suppliers split are proven on staging. Owner yes to production 2026-08-27 (backup, `jobId` backfill, directory split, hosting + Firestore rules). Localhost still uses staging. See `PHASE5.md`.
+5. **Next:** Phase 5 Part B (jobs/members) and the clients vs suppliers split are **live on production** (2026-08-27). Localhost still uses staging. Part C is integrity + docs. See `PHASE5.md`.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is done and approved. Part B (jobs/members) and the clients vs suppliers split were proven on staging; owner yes to production 2026-08-27. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
+> Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is done and approved. Part B (jobs/members) and the clients vs suppliers split are live on production (2026-08-27). Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
 
 If you are unsure whether a command writes to production, do not run it.
 

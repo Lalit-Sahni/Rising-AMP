@@ -16,7 +16,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 **Phase 4 leftovers (not Phase 5 unless he asks):** Gmail invite fallback still in the client; prove one live Resend invite then Task 3 if he wants it gone; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
 
-**Phase 5 next:** Part B and the clients/suppliers split are proven on staging. **Owner yes to production 2026-08-27** (fresh backup, then `jobId` backfill, directory split, hosting + Firestore rules). Localhost still uses staging. Do not deploy functions.
+**Phase 5 next:** Part B (create/archive/remove person) and the clients vs suppliers split are **live** (2026-08-27). Hosting + Firestore rules deployed. `jobId` backfill and directory split applied on production. Localhost still uses staging. Part C is integrity + docs. Do not deploy functions.
 
 **Owner already has:**
 - Shopfront `https://risingamp.com.au`, DNS at Crazy Domains.
@@ -26,7 +26,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is done and approved. Part B (jobs/members) and the clients vs suppliers split were proven on staging; owner yes to production 2026-08-27. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
+Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is done and approved. Part B (jobs/members) and the clients vs suppliers split are live on production (2026-08-27). Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
 ```
 
 ## Remaining work
@@ -47,7 +47,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.h
 - [x] Phase 5 Part A — owner yes on the target model and migration plan (2026-08-26)
 - [x] Phase 5 Part B — staging migration + four operations + rules
 - [x] Phase 5 clients vs suppliers split — staging (owner checked 2026-08-27)
-- [ ] Phase 5 Part B + directory split — production (owner yes 2026-08-27)
+- [x] Phase 5 Part B + directory split — production (backup, jobId, split, hosting + rules, 2026-08-27)
 - [ ] Phase 5 Part C — integrity + `ARCHITECTURE.md` / docs
 
 
