@@ -11,6 +11,7 @@ const SESSION_KEYS = {
   projectName: 'risingAmp.projectName',
   orgId: 'risingAmp.orgId',
   invitedEmails: 'risingAmp.invitedEmails',
+  projectStatus: 'risingAmp.projectStatus',
 };
 
 export function readSession() {
@@ -26,10 +27,11 @@ export function readSession() {
     projectName: localStorage.getItem(SESSION_KEYS.projectName),
     orgId: localStorage.getItem(SESSION_KEYS.orgId),
     invitedEmails: Array.isArray(invitedEmails) ? invitedEmails : [],
+    projectStatus: localStorage.getItem(SESSION_KEYS.projectStatus) || 'active',
   };
 }
 
-export function writeSession({ projectId, workspaceId, projectName, orgId, invitedEmails }) {
+export function writeSession({ projectId, workspaceId, projectName, orgId, invitedEmails, projectStatus }) {
   if (projectId) localStorage.setItem(SESSION_KEYS.projectId, projectId);
   else localStorage.removeItem(SESSION_KEYS.projectId);
 
@@ -45,11 +47,20 @@ export function writeSession({ projectId, workspaceId, projectName, orgId, invit
   if (invitedEmails) localStorage.setItem(SESSION_KEYS.invitedEmails, JSON.stringify(invitedEmails));
   else localStorage.removeItem(SESSION_KEYS.invitedEmails);
 
+  if (projectStatus) localStorage.setItem(SESSION_KEYS.projectStatus, projectStatus);
+  else localStorage.removeItem(SESSION_KEYS.projectStatus);
+
   localStorage.removeItem('accessCode');
 }
 
 export function clearSession() {
-  writeSession({ projectId: null, workspaceId: null, projectName: null, orgId: null });
+  writeSession({ projectId: null, workspaceId: null, projectName: null, orgId: null, projectStatus: null });
+}
+
+export function isPermissionDenied(error) {
+  const code = error && error.code;
+  const message = String((error && error.message) || error || '');
+  return code === 'permission-denied' || /permission-denied|insufficient permissions/i.test(message);
 }
 
 /**

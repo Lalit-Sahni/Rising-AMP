@@ -36,6 +36,7 @@ import {
   deleteClient
 } from '../firebase/firebaseService';
 import logger from '../utils/logger';
+import { isPermissionDenied } from '../firebase/tenancy';
 
 const AppContext = createContext();
 
@@ -54,6 +55,8 @@ export const AppProvider = ({
   projectName = '',
   membership = null,
   onOpenJob = null,
+  onJobAccessLost = null,
+  jobStatus = 'active',
   authUser = null,
   profile = null,
   setProfile = () => {},
@@ -93,11 +96,15 @@ export const AppProvider = ({
             logger.firebase('LOAD_BUDGET', 'Loaded budget:', result.budget);
           } else if (!isMounted) {
             logger.debug('Component unmounted, skipping expense load');
+          } else if (isPermissionDenied({ code: result.code, message: result.error }) && onJobAccessLost) {
+            onJobAccessLost();
           } else {
             logger.error('Failed to load expenses and budget:', result.error);
           }
         } catch (error) {
-          if (isMounted) {
+          if (isMounted && isPermissionDenied(error) && onJobAccessLost) {
+            onJobAccessLost();
+          } else if (isMounted) {
             logger.error('Error loading expenses and budget:', error);
           }
         }
@@ -919,6 +926,7 @@ export const AppProvider = ({
     projectId: jobListId,
     storageKey,
     projectName,
+    jobStatus,
     membership,
     onOpenJob,
     authUser,

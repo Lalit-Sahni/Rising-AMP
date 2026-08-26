@@ -47,6 +47,7 @@ function AppShell() {
   const [workspaceId, setWorkspaceId] = useState(() => readSession().workspaceId);
   const [projectName, setProjectName] = useState(() => readSession().projectName);
   const [jobInvitedEmails, setJobInvitedEmails] = useState(() => readSession().invitedEmails || []);
+  const [projectStatus, setProjectStatus] = useState(() => readSession().projectStatus || 'active');
 
   useEffect(() => {
     localStorage.removeItem('accessCode');
@@ -105,6 +106,7 @@ function AppShell() {
           setWorkspaceId(null);
           setProjectName(null);
           setJobInvitedEmails([]);
+          setProjectStatus('active');
           setMembershipLoading(false);
           return;
         }
@@ -118,6 +120,7 @@ function AppShell() {
           setWorkspaceId(current.workspaceId);
           setProjectName(current.name);
           setJobInvitedEmails(current.invitedEmails || []);
+          setProjectStatus(current.status || 'active');
         } else {
           writeSession({
             projectId: null,
@@ -125,11 +128,13 @@ function AppShell() {
             projectName: null,
             orgId: invite.orgId,
             invitedEmails: [],
+            projectStatus: null,
           });
           setProjectId(null);
           setWorkspaceId(null);
           setProjectName(null);
           setJobInvitedEmails([]);
+          setProjectStatus('active');
         }
         setMembershipLoading(false);
       })
@@ -173,23 +178,43 @@ function AppShell() {
     setWorkspaceId(null);
     setProjectName(null);
     setJobInvitedEmails([]);
+    setProjectStatus('active');
   };
 
   const handlePickProject = (project) => {
     if (!project.projectId) {
       return;
     }
+    const status = project.status === 'archived' ? 'archived' : 'active';
     writeSession({
       projectId: project.projectId,
       workspaceId: project.workspaceId,
       projectName: project.name,
       orgId: membership && membership.orgId,
       invitedEmails: project.invitedEmails || [],
+      projectStatus: status,
     });
     setProjectId(project.projectId);
     setWorkspaceId(project.workspaceId);
     setProjectName(project.name);
     setJobInvitedEmails(project.invitedEmails || []);
+    setProjectStatus(status);
+  };
+
+  const handleJobAccessLost = () => {
+    writeSession({
+      projectId: null,
+      workspaceId: null,
+      projectName: null,
+      orgId: membership ? membership.orgId : null,
+      invitedEmails: [],
+      projectStatus: null,
+    });
+    setProjectId(null);
+    setWorkspaceId(null);
+    setProjectName(null);
+    setJobInvitedEmails([]);
+    setProjectStatus('active');
   };
 
   const handleSwitchProject = () => {
@@ -199,11 +224,13 @@ function AppShell() {
       projectName: null,
       orgId: membership ? membership.orgId : null,
       invitedEmails: [],
+      projectStatus: null,
     });
     setProjectId(null);
     setWorkspaceId(null);
     setProjectName(null);
     setJobInvitedEmails([]);
+    setProjectStatus('active');
   };
 
   if (authUser === undefined) {
@@ -241,6 +268,8 @@ function AppShell() {
       projectName={projectName}
       membership={membership}
       onOpenJob={handlePickProject}
+      onJobAccessLost={handleJobAccessLost}
+      jobStatus={projectStatus}
       authUser={authUser}
       profile={shownProfile}
       setProfile={setProfile}

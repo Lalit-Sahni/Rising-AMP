@@ -24,7 +24,7 @@ function formatInvoiceDate(value) {
 }
 
 const InvoiceManagementPage = () => {
-  const { invoices, deleteInvoiceFromFirebase, updateInvoiceStatus, showToast } = useApp();
+  const { invoices, deleteInvoiceFromFirebase, updateInvoiceStatus, showToast, projectName: jobName } = useApp();
   const [showNewInvoice, setShowNewInvoice] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -36,6 +36,7 @@ const InvoiceManagementPage = () => {
     const matchesSearch = 
       invoice.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = filterStatus === 'all' || invoice.status === filterStatus;
@@ -343,7 +344,7 @@ const InvoiceManagementPage = () => {
                       {invoice.clientName}
                     </td>
                     <td className="px-5 py-3.5 text-sm text-slate-600">
-                      {invoice.projectName}
+                      {jobName || invoice.projectName}
                     </td>
                     <td className="px-5 py-3.5 text-sm text-slate-600 font-mono">
                       {formatInvoiceDate(invoice.invoiceDate)}

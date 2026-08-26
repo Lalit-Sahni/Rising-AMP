@@ -1,9 +1,9 @@
 # Database audit — Phase 5 Part A
 
-**Status:** written. No records, rules, or schema were changed.  
+**Status:** Part A written 2026-08-26 (read-only scan). Part B is on staging only. Production data was not changed.  
 **Scanned:** 26 August 2026, read-only, production `rising-amp-467702-b5` (default database) and staging `rising-amp-staging`.  
 **Shopfront:** https://risingamp.com.au  
-**Stop here.** Part B does not start until the owner approves the target model and the migration plan below.
+**Stop here for production.** Part B is on staging only until a second owner yes.
 
 How this was measured: `scripts/audit-database-readonly.js` walked every Firestore document and listed Storage objects. Raw output is gitignored under `backups/phase5-audit-*`. This file is the committed report. Family emails and leftover PIN codes are not repeated here.
 

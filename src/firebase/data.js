@@ -95,7 +95,7 @@ export const fetchExpensesFromFirestore = async (accessCode) => {
     };
   } catch (error) {
     console.error('Fetch from Firestore error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, code: error.code };
   }
 };
 
@@ -126,6 +126,7 @@ export const addExpenseToFirestore = async (accessCode, expense) => {
     // Use setDoc with the expense's ID as the document ID
     await setDoc(expenseDocRef, {
       ...expense,
+      jobId: accessCode,
       timestamp: serverTimestamp()
     });
     
@@ -655,6 +656,7 @@ export const addInvoiceToFirestore = async (accessCode, invoice) => {
     
     const docRef = await addDoc(invoicesCollectionRef, {
       ...invoice,
+      jobId: accessCode,
       timestamp: serverTimestamp()
     });
     
@@ -689,7 +691,7 @@ export const fetchInvoicesFromFirestore = async (accessCode) => {
     return { success: true, invoices };
   } catch (error) {
     console.error('Fetch invoices error:', error);
-    return { success: false, error: error.message };
+    return { success: false, error: error.message, code: error.code };
   }
 };
 
@@ -738,6 +740,7 @@ export const saveHIAContractToFirestore = async (accessCode, contractData) => {
     
     const docRef = await addDoc(contractsCollectionRef, {
       ...contractData,
+      jobId: accessCode,
       timestamp: serverTimestamp()
     });
     

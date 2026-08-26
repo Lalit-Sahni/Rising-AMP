@@ -1,69 +1,11 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow users to access their own data (temporarily allow all access for debugging)
+    // Leftover PIN copies. Keep the documents; do not leave them world-open.
     match /users/{accessCode} {
-      allow read, write: if true;
-      
-      // Allow access to all subcollections with specific rules for new unified structure
-      match /expenses/{document} {
-        allow read, write: if true;
-      }
-      match /clients/{document} {
-        allow read, write: if true;
-      }
-      match /labour/{document} {
-        allow read, write: if true;
-      }
-      match /trades/{document} {
-        allow read, write: if true;
-      }
-      match /projects/{document} {
-        allow read, write: if true;
-      }
-      match /purchaseOrders/{document} {
-        allow read, write: if true;
-      }
-      match /workerHistory/{document} {
-        allow read, write: if true;
-      }
-      match /siteNames/{document} {
-        allow read, write: if true;
-      }
-      match /projectPhases/{document} {
-        allow read, write: if true;
-      }
-      match /progressPayments/{document} {
-        allow read, write: if true;
-      }
-      match /invoices/{document} {
-        allow read, write: if true;
-      }
-      match /hiaContracts/{document} {
-        allow read, write: if true;
-      }
-      match /bankDetails/{document} {
-        allow read, write: if true;
-      }
-      // Legacy collections for backward compatibility
-      match /savedLabour/{document} {
-        allow read, write: if true;
-      }
-      match /savedTrades/{document} {
-        allow read, write: if true;
-      }
-      match /savedCompanies/{document} {
-        allow read, write: if true;
-      }
-      match /savedProjects/{document} {
-        allow read, write: if true;
-      }
-      match /clientDetails/{document} {
-        allow read, write: if true;
-      }
-      // Catch-all for any other subcollections
+      allow read, write: if false;
       match /{allPaths=**} {
-        allow read, write: if true;
+        allow read, write: if false;
       }
     }
     
@@ -95,6 +37,14 @@ service cloud.firestore {
         );
 
       match /projects/{projectId} {
+        function orgDoc() {
+          return get(/databases/$(database)/documents/organizations/$(orgId));
+        }
+
+        function isOrgOwner() {
+          return signedIn() && emailLower() == orgDoc().data.ownerEmail.lower();
+        }
+
         function isProjectMember() {
           return signedIn() && emailLower() in resource.data.invitedEmails;
         }
@@ -104,13 +54,38 @@ service cloud.firestore {
             && emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)/projects/$(projectId)).data.invitedEmails;
         }
 
+        function ownerStaysOnJob() {
+          return orgDoc().data.ownerEmail.lower() in request.resource.data.invitedEmails;
+        }
+
+        function statusOk() {
+          return !request.resource.data.keys().hasAny(['status'])
+            || request.resource.data.status in ['active', 'archived'];
+        }
+
         allow read: if isProjectMember();
+        allow create: if isOrgOwner()
+          && request.resource.data.orgId == orgId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.status == 'active'
+          && request.resource.data.invitedEmails is list
+          && emailLower() in request.resource.data.invitedEmails
+          && orgDoc().data.ownerEmail.lower() in request.resource.data.invitedEmails
+          && !request.resource.data.keys().hasAny(['legacyWorkspaceId', 'accessCode']);
         allow update: if isProjectMember()
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['name', 'invitedEmails', 'updatedAt'])
-          && get(/databases/$(database)/documents/organizations/$(orgId)).data.ownerEmail.lower()
-            in request.resource.data.invitedEmails;
-        allow create, delete: if false;
+          && ownerStaysOnJob()
+          && statusOk()
+          && (
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['name', 'updatedAt'])
+            || (
+              isOrgOwner()
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['name', 'invitedEmails', 'formerEmails', 'status', 'archivedAt', 'archivedBy', 'updatedAt'])
+            )
+          );
+        allow delete: if false;
 
         match /{allPaths=**} {
           allow read, write: if canUseProject();

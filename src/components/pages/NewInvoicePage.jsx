@@ -20,7 +20,7 @@ import ClientManager from '../ui/ClientManager';
 import { getClients } from '../../firebase/firebaseService';
 
 const NewInvoicePage = ({ onComplete }) => {
-  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, accessCode } = useApp();
+  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, accessCode, projectName: jobName } = useApp();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -36,7 +36,7 @@ const NewInvoicePage = ({ onComplete }) => {
     clientAddress: '',
     clientCompany: '',
     clientABN: '',
-    projectName: '',
+    projectName: jobName || '',
     projectReference: '',
     invoiceDate: new Date(),
     dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -295,7 +295,7 @@ const NewInvoicePage = ({ onComplete }) => {
         clientName: '',
         clientEmail: '',
         clientPhone: '',
-        projectName: '',
+        projectName: jobName || '',
         projectReference: '',
         invoiceDate: new Date(),
         dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),

@@ -1,7 +1,36 @@
-import { arrayUnion, collection, doc, getDocs, limit, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import {
+  arrayRemove,
+  arrayUnion,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  limit,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import { db } from './config';
-import { emailInviteVariants, normalizeEmail } from './email';
+import { canonicalEmail, emailInviteVariants, normalizeEmail } from './email';
+import { canRemoveEmailFromJob, isJobArchived, newJobId } from './jobIdentity';
 import { FAMILY_ORG_ID } from './tenancy';
+
+export { canRemoveEmailFromJob, isJobArchived, newJobId };
+
+function mapProjectDoc(projectDoc) {
+  const data = projectDoc.data() || {};
+  return {
+    id: projectDoc.id,
+    projectId: projectDoc.id,
+    workspaceId: data.legacyWorkspaceId || '',
+    name: (data.name && String(data.name).trim()) || 'Untitled job',
+    invitedEmails: (data.invitedEmails || []).map((value) => normalizeEmail(value)),
+    formerEmails: (data.formerEmails || []).map((value) => normalizeEmail(value)),
+    status: isJobArchived(data) ? 'archived' : 'active',
+  };
+}
 
 async function countSubcollection(projectRef, name) {
   try {
@@ -48,16 +77,7 @@ export async function listInvitedProjects(email) {
     throw lastError;
   }
 
-  return Array.from(docsById.values()).map((projectDoc) => {
-    const data = projectDoc.data() || {};
-    return {
-      id: projectDoc.id,
-      projectId: projectDoc.id,
-      workspaceId: data.legacyWorkspaceId || '',
-      name: (data.name && String(data.name).trim()) || 'Untitled job list',
-      invitedEmails: (data.invitedEmails || []).map((value) => normalizeEmail(value)),
-    };
-  });
+  return Array.from(docsById.values()).map(mapProjectDoc);
 }
 
 /**
@@ -98,6 +118,54 @@ export async function renameOrgProject(projectId, name, legacyWorkspaceId) {
   return trimmed;
 }
 
+export async function createOrgProject({ name, ownerEmail }) {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) {
+    throw new Error('Please enter a name.');
+  }
+  const variants = emailInviteVariants(ownerEmail);
+  if (variants.length === 0 || !variants[0].includes('@')) {
+    throw new Error('Missing owner email.');
+  }
+
+  const projectId = newJobId();
+  await setDoc(doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId), {
+    name: trimmed,
+    orgId: FAMILY_ORG_ID,
+    invitedEmails: variants,
+    formerEmails: [],
+    status: 'active',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+
+  return mapProjectDoc({
+    id: projectId,
+    data: () => ({
+      name: trimmed,
+      invitedEmails: variants,
+      formerEmails: [],
+      status: 'active',
+    }),
+  });
+}
+
+export async function setOrgProjectArchived(projectId, archived, actorEmail) {
+  if (!projectId) {
+    throw new Error('Missing job.');
+  }
+  const payload = {
+    status: archived ? 'archived' : 'active',
+    updatedAt: serverTimestamp(),
+  };
+  if (archived) {
+    payload.archivedAt = serverTimestamp();
+    payload.archivedBy = normalizeEmail(actorEmail);
+  }
+  await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId), payload);
+  return archived ? 'archived' : 'active';
+}
+
 export async function inviteEmailToProject(projectId, email) {
   const variants = emailInviteVariants(email);
   if (variants.length === 0 || !variants[0].includes('@')) {
@@ -117,4 +185,36 @@ export async function inviteEmailToProject(projectId, email) {
   });
 
   return variants[0];
+}
+
+export async function removeEmailFromProject(projectId, email) {
+  const variants = emailInviteVariants(email);
+  if (variants.length === 0 || !variants[0].includes('@')) {
+    throw new Error('Enter an email address.');
+  }
+  if (!projectId) {
+    throw new Error('Missing job.');
+  }
+
+  const orgSnap = await getDoc(doc(db, 'organizations', FAMILY_ORG_ID));
+  const ownerEmail = orgSnap.exists() ? orgSnap.data().ownerEmail : '';
+  if (!canRemoveEmailFromJob({ email, ownerEmail })) {
+    throw new Error('A job must keep its owner.');
+  }
+
+  await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId), {
+    invitedEmails: arrayRemove(...variants),
+    formerEmails: arrayUnion(...variants),
+    updatedAt: serverTimestamp(),
+  });
+
+  const stillOnAJob = (await listInvitedProjects(email)).length > 0;
+  if (!stillOnAJob) {
+    await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID), {
+      invitedEmails: arrayRemove(...variants),
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  return canonicalEmail(email);
 }

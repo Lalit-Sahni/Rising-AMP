@@ -16,7 +16,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 **Phase 4 leftovers (not Phase 5 unless he asks):** Gmail invite fallback still in the client; prove one live Resend invite then Task 3 if he wants it gone; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
 
-**Phase 5 next:** Part A is approved (`DATABASE-AUDIT.md`). Owner yes 2026-08-26: the job is `projects/{jobId}`; Part B starts on staging after a fresh production backup restore; close open `users/` and receipt Storage rules (keep the data); leave PIN trees, site logs, and `cost-tracker` alone. **Do not write production job data until a second yes.**
+**Phase 5 next:** Part B is on **staging**. Production backup 2026-08-26 restored onto staging (Firestore 465 docs; Storage skipped — staging has no bucket). Staging rules deployed. `jobId` backfill applied on staging (219 child docs). Create / archive / remove person are in the app. **Production job data, rules, and hosting wait for a second yes.**
 
 **Owner already has:**
 - Shopfront `https://risingamp.com.au`, DNS at Crazy Domains.
@@ -32,7 +32,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.h
 ## Remaining work
 
 1. Phase 5 Part A — `DATABASE-AUDIT.md` written. Owner approved the plan 2026-08-26.
-2. Phase 5 Part B — jobs as stable IDs; create / archive job; add / remove person; rules. Staging first (after production backup restore), production behind a second yes.
+2. Phase 5 Part B — staging done (backup restore, jobId, four operations, rules). Production behind a second yes.
 3. Phase 5 Part C — integrity fixes (additive, reversible) and docs.
 4. Optional leftovers: live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`.
 
@@ -45,7 +45,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.h
 - [x] Phase 5 Step 0 — branch `phase-5-jobs-members` + `PHASE5.md` + `CLAUDE.md` prime directive lifted under heightened process
 - [x] Phase 5 Part A — `DATABASE-AUDIT.md` (no writes; scan 2026-08-26)
 - [x] Phase 5 Part A — owner yes on the target model and migration plan (2026-08-26)
-- [ ] Phase 5 Part B — staging migration + four operations + rules
+- [x] Phase 5 Part B — staging migration + four operations + rules
 - [ ] Phase 5 Part B — production behind backup and owner yes
 - [ ] Phase 5 Part C — integrity + `ARCHITECTURE.md` / docs
 - [ ] Do not write to production job data unless he asks after a backup

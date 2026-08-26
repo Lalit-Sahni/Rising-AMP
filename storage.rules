@@ -1,9 +1,40 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow users to access their own data
-    match /receipts/{accessCode}/{expenseId}/{fileName} {
-      allow read, write: if true;
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email.size() > 0;
+    }
+
+    function emailLower() {
+      return request.auth.token.email.lower();
+    }
+
+    function orgPath() {
+      return /databases/(default)/documents/organizations/opal-ss-constructions;
+    }
+
+    function jobPath(jobId) {
+      return /databases/(default)/documents/organizations/opal-ss-constructions/projects/$(jobId);
+    }
+
+    function canUseReceiptFolder(folder) {
+      return signedIn() && (
+        (
+          firestore.exists(jobPath(folder))
+          && emailLower() in firestore.get(jobPath(folder)).data.invitedEmails
+        )
+        || (
+          firestore.exists(orgPath())
+          && 'legacyWorkspaceIds' in firestore.get(orgPath()).data
+          && folder in firestore.get(orgPath()).data.legacyWorkspaceIds
+        )
+      );
+    }
+
+    match /receipts/{folder}/{expenseId}/{fileName} {
+      allow read, write: if canUseReceiptFolder(folder);
     }
 
     match /avatars/{uid}/{fileName} {
@@ -11,10 +42,8 @@ service firebase.storage {
       allow write: if request.auth != null && request.auth.uid == uid;
     }
     
-    // Deny all other access
     match /{allPaths=**} {
       allow read, write: if false;
     }
   }
 }
-

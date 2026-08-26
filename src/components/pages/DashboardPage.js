@@ -41,6 +41,7 @@ export default function DashboardPage() {
     clients,
     projectName,
     projectId,
+    jobStatus,
     setCurrentPage,
     showToast,
     jobInvitedEmails,
@@ -116,6 +117,9 @@ export default function DashboardPage() {
           <div>
             <div className="eyebrow">Project overview</div>
             <h1 className="text-[25px] font-extrabold tracking-tight mt-1">{projectName || 'Job'}</h1>
+            {jobStatus === 'archived' && (
+              <p className="text-[13.5px] text-warn mt-1">This job is archived. Records stay. The owner can bring it back from Jobs.</p>
+            )}
             <p className="text-[13.5px] text-slate-600 mt-0.5">{subtitle}</p>
             <JobPeople emails={jobInvitedEmails} />
           </div>

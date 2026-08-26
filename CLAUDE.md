@@ -10,7 +10,7 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 2. Read `PROGRESS.md` (next concrete step), then `PHASE5.md` (current phase: database audit, then jobs as records and membership). `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. Open `design/risingamp-vision.html` in a browser.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 5 Part A is approved (`DATABASE-AUDIT.md`, owner yes 2026-08-26). Part B is create / archive job, add / remove person, `jobId` backfill, and tighter rules — **staging first**, after a fresh production backup restore. Production job data waits for a second yes. See `PHASE5.md`.
+5. **Next:** Phase 5 Part B is on staging (backup restore, `jobId` backfill, create / archive / add / remove person, tighter rules). **Production job data, rules, and hosting wait for a second yes.** See `PHASE5.md`.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. Owner (Lalit) writes in plain language. Explain in plain language.
 

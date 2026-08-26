@@ -1,8 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronRight, Pencil, Search, UserPlus } from 'lucide-react';
+import { Archive, ArchiveRestore, Check, ChevronRight, Pencil, Plus, Search, UserPlus, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { canonicalEmail, emailInviteVariants, sendJobInvite } from '../../firebase/email';
-import { inviteEmailToProject, renameOrgProject } from '../../firebase/projectCatalog';
+import {
+  createOrgProject,
+  inviteEmailToProject,
+  removeEmailFromProject,
+  renameOrgProject,
+  setOrgProjectArchived,
+} from '../../firebase/projectCatalog';
 import { loadInvitedJobSummaries } from '../../firebase/jobSummaries';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
 import {
@@ -43,7 +49,10 @@ export default function JobsHomePage() {
   const [draftName, setDraftName] = useState('');
   const [draftEmail, setDraftEmail] = useState('');
   const [savingId, setSavingId] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const isOwner = membership && membership.role === 'owner';
+  const ownerEmail = membership && membership.ownerEmail;
 
   useEffect(() => {
     let cancelled = false;
@@ -71,13 +80,17 @@ export default function JobsHomePage() {
     };
   }, [membership]);
 
+  const activeJobs = useMemo(() => jobs.filter((row) => row.status !== 'archived'), [jobs]);
+  const archivedJobs = useMemo(() => jobs.filter((row) => row.status === 'archived'), [jobs]);
+  const listed = showArchived ? archivedJobs : activeJobs;
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return jobs;
-    return jobs.filter((row) => (row.name || '').toLowerCase().includes(q) || (row.subtitle || '').toLowerCase().includes(q));
-  }, [jobs, query]);
+    if (!q) return listed;
+    return listed.filter((row) => (row.name || '').toLowerCase().includes(q) || (row.subtitle || '').toLowerCase().includes(q));
+  }, [listed, query]);
 
-  const portfolio = useMemo(() => derivePortfolio(visible), [visible]);
+  const portfolio = useMemo(() => derivePortfolio(activeJobs), [activeJobs]);
 
   const openJob = (project) => {
     if (!project.projectId || !onOpenJob) return;
@@ -88,6 +101,7 @@ export default function JobsHomePage() {
   const startRename = (event, project) => {
     event.stopPropagation();
     setInvitingId(null);
+    setCreating(false);
     setEditingId(project.id);
     setDraftName(project.name);
     setError('');
@@ -96,6 +110,7 @@ export default function JobsHomePage() {
   const startInvite = (event, project) => {
     event.stopPropagation();
     setEditingId(null);
+    setCreating(false);
     setInvitingId(project.id);
     setDraftEmail('');
     setError('');
@@ -105,6 +120,7 @@ export default function JobsHomePage() {
     if (event) event.stopPropagation();
     setEditingId(null);
     setInvitingId(null);
+    setCreating(false);
     setDraftName('');
     setDraftEmail('');
   };
@@ -169,6 +185,95 @@ export default function JobsHomePage() {
     }
   };
 
+  const saveCreate = async (event) => {
+    if (event) event.stopPropagation();
+    const nextName = draftName.trim();
+    if (!nextName) {
+      setError('Please enter a name.');
+      return;
+    }
+    setSavingId('new');
+    setError('');
+    try {
+      const created = await createOrgProject({ name: nextName, ownerEmail });
+      setJobs((current) => [
+        {
+          ...created,
+          expenseCount: 0,
+          invoiceCount: 0,
+          metrics: { hasMargin: false, cash: { paid: 0 }, attentionCount: 0, verdict: VERDICT.GETTING_STARTED },
+          subtitle: 'New job',
+        },
+        ...current,
+      ]);
+      cancelPanels();
+    } catch (err) {
+      console.error('Create job failed:', err);
+      setError(err.message || 'Could not create that job.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const toggleArchive = async (event, project) => {
+    event.stopPropagation();
+    const archived = project.status !== 'archived';
+    const ok = window.confirm(
+      archived
+        ? `Archive ${project.name}? Records stay. You can bring the job back later.`
+        : `Bring ${project.name} back to the jobs list?`
+    );
+    if (!ok) return;
+    setSavingId(project.id);
+    setError('');
+    try {
+      const status = await setOrgProjectArchived(project.projectId, archived, membership.email);
+      setJobs((current) => current.map((row) => (row.id === project.id ? { ...row, status } : row)));
+    } catch (err) {
+      console.error('Archive failed:', err);
+      setError(err.message || 'Could not update that job.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const removePerson = async (event, project, email) => {
+    event.stopPropagation();
+    const ok = window.confirm(
+      `Remove ${email} from ${project.name}? They lose access. Records they entered stay.`
+    );
+    if (!ok) return;
+    setSavingId(project.id);
+    setError('');
+    try {
+      await removeEmailFromProject(project.projectId, email);
+      const removed = new Set(emailInviteVariants(email).map((value) => value.toLowerCase()));
+      setJobs((current) =>
+        current.map((row) =>
+          row.id === project.id
+            ? {
+                ...row,
+                invitedEmails: (row.invitedEmails || []).filter((value) => !removed.has(String(value).toLowerCase())),
+              }
+            : row
+        )
+      );
+    } catch (err) {
+      console.error('Remove person failed:', err);
+      setError(err.message || 'Could not remove that person.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const startCreate = () => {
+    setEditingId(null);
+    setInvitingId(null);
+    setCreating(true);
+    setDraftName('');
+    setError('');
+  };
+
   return (
     <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
       <div className="max-w-7xl mx-auto">
@@ -178,7 +283,27 @@ export default function JobsHomePage() {
             <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Jobs</h1>
             <p className="text-[13.5px] text-slate-600 mt-0.5">Every job, and how each one is tracking.</p>
           </div>
-          <label className="flex items-center gap-2.5 border border-hairline rounded-[10px] px-3.5 py-2 bg-surface max-w-xs w-full">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            {archivedJobs.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowArchived((value) => !value)}
+                className="px-3 py-2 text-[13px] font-semibold text-slate-600 border border-hairline rounded-[10px] bg-surface"
+              >
+                {showArchived ? 'Show active' : `Archived (${archivedJobs.length})`}
+              </button>
+            )}
+            {isOwner && !creating && (
+              <button
+                type="button"
+                onClick={startCreate}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-bold text-white bg-accent hover:bg-accent-600 rounded-[10px]"
+              >
+                <Plus className="w-4 h-4" strokeWidth={2} />
+                New job
+              </button>
+            )}
+            <label className="flex items-center gap-2.5 border border-hairline rounded-[10px] px-3.5 py-2 bg-surface max-w-xs w-full">
             <Search className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={1.7} />
             <input
               type="search"
@@ -188,6 +313,7 @@ export default function JobsHomePage() {
               className="flex-1 border-0 outline-none bg-transparent text-[13.5px] text-ink placeholder:text-slate-400"
             />
           </label>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-[18px]">
@@ -239,13 +365,51 @@ export default function JobsHomePage() {
 
           {!loading && visible.length === 0 && (
             <p className="text-slate-600 text-sm px-[18px] py-8">
-              {query ? 'No jobs match that search.' : 'No jobs yet. When you are added to a job, it will show up here.'}
+              {query
+                ? 'No jobs match that search.'
+                : showArchived
+                  ? 'No archived jobs.'
+                  : 'No jobs yet. When you are added to a job, it will show up here.'}
             </p>
+          )}
+
+          {!loading && creating && (
+            <div className="px-[18px] py-4 border-b border-hairline">
+              <p className="text-sm text-ink mb-2">Name the new job. You stay on it as owner.</p>
+              <input
+                autoFocus
+                type="text"
+                value={draftName}
+                disabled={savingId === 'new'}
+                onChange={(event) => setDraftName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') saveCreate(event);
+                  if (event.key === 'Escape') cancelPanels(event);
+                }}
+                className="w-full px-3 py-2 rounded-ot-sm border border-hairline text-ink focus:outline-none focus:border-accent"
+                maxLength={80}
+                placeholder="72 Example Street"
+              />
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <button type="button" onClick={cancelPanels} disabled={savingId === 'new'} className="px-3 py-1.5 text-sm text-slate-600">
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveCreate}
+                  disabled={savingId === 'new'}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-accent hover:bg-accent-600 rounded-ot-sm disabled:opacity-50"
+                >
+                  <Check className="w-4 h-4" />
+                  {savingId === 'new' ? 'Saving…' : 'Create'}
+                </button>
+              </div>
+            </div>
           )}
 
           {!loading &&
             visible.map((project) => {
-              const metrics = project.metrics;
+              const metrics = project.metrics || {};
               const copy = verdictCopy(metrics.verdict);
               const isEditing = editingId === project.id;
               const isInviting = invitingId === project.id;
@@ -297,9 +461,27 @@ export default function JobsHomePage() {
                       Invite someone to <span className="font-medium">{project.name}</span> only. They will not see your other jobs.
                     </p>
                     {displayInviteEmails(project.invitedEmails).length > 0 && (
-                      <p className="text-xs font-mono text-slate-400 mb-2">
-                        Already on this job: {displayInviteEmails(project.invitedEmails).join(', ')}
-                      </p>
+                      <ul className="text-xs font-mono text-slate-500 mb-3 space-y-1">
+                        {displayInviteEmails(project.invitedEmails).map((email) => {
+                          const isJobOwner = canonicalEmail(email) === canonicalEmail(ownerEmail);
+                          return (
+                            <li key={email} className="flex items-center justify-between gap-2">
+                              <span className="truncate">{email}{isJobOwner ? ' (owner)' : ''}</span>
+                              {isOwner && !isJobOwner && (
+                                <button
+                                  type="button"
+                                  onClick={(event) => removePerson(event, project, email)}
+                                  disabled={isSaving}
+                                  className="p-1 text-slate-400 hover:text-neg"
+                                  title={`Remove ${email}`}
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </li>
+                          );
+                        })}
+                      </ul>
                     )}
                     <input
                       autoFocus
@@ -352,7 +534,9 @@ export default function JobsHomePage() {
                     </span>
                     <div className="min-w-0">
                       <b className="block text-sm font-bold truncate">{project.name}</b>
-                      <small className="block text-xs text-slate-400 truncate">{project.subtitle}</small>
+                      <small className="block text-xs text-slate-400 truncate">
+                        {project.status === 'archived' ? 'Archived · ' : ''}{project.subtitle}
+                      </small>
                     </div>
                   </div>
                   <div className="hidden md:flex items-center gap-2.5 min-w-0">
@@ -391,6 +575,20 @@ export default function JobsHomePage() {
                         <UserPlus className="w-4 h-4" />
                       </button>
                     )}
+                    {isOwner && (
+                      <button
+                        type="button"
+                        onClick={(event) => toggleArchive(event, project)}
+                        className="p-1 text-slate-400 hover:text-ink"
+                        title={project.status === 'archived' ? 'Bring back' : 'Archive'}
+                      >
+                        {project.status === 'archived' ? (
+                          <ArchiveRestore className="w-4 h-4" />
+                        ) : (
+                          <Archive className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={(event) => startRename(event, project)}
@@ -407,7 +605,7 @@ export default function JobsHomePage() {
 
           <div className="flex items-center gap-2.5 px-[18px] py-3.5 text-[13px] font-semibold text-slate-500 border-t border-dashed border-hairline">
             {isOwner
-              ? 'New jobs are still created by hand. Ask if a job list is missing.'
+              ? (showArchived ? 'Archived jobs keep their records. Bring one back when you need it.' : 'Create a job, then invite people to that job only.')
               : 'Jobs you are added to will show up here.'}
           </div>
         </div>
