@@ -10,7 +10,7 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 2. Read `PROGRESS.md` (next concrete step), then `PHASE6.md` (current phase: legacy cut — delete unreachable code). `PHASE6-INTEGRITY.md` is the parked database follow-through, not this branch. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide. Open `design/risingamp-vision.html` in a browser.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 5 is **closed** (2026-08-27). Phase 6 Part A is done. Next is Part B in `PHASE6.md` (OCR harnesses). One part per session. Localhost still uses staging. Deploy nothing.
+5. **Next:** Phase 5 is **closed** (2026-08-27). Phase 6 Parts A and B are done. Next is Part C in `PHASE6.md` (Quick Access box). One part per session. Localhost still uses staging.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. Owner (Lalit) writes in plain language. Explain in plain language.
 
@@ -76,7 +76,7 @@ Brief: `PHASE5.md`. Jobs as stable IDs, create / archive / invite / remove, clie
 
 ## Phase 6 (in progress, branch `phase-6-legacy-cut`)
 
-Brief: `PHASE6.md`. Delete unreachable pre-Phase-1 code so agents stop reasoning from a product that no longer exists. Part A done 2026-08-27. Next: Part B (OCR harnesses). Database integrity leftovers: `PHASE6-INTEGRITY.md`. Deploy nothing.
+Brief: `PHASE6.md`. Delete unreachable pre-Phase-1 code so agents stop reasoning from a product that no longer exists. Parts A–B done 2026-08-27. Next: Part C (Quick Access box). Database integrity leftovers: `PHASE6-INTEGRITY.md`.
 
 ## Out of scope until asked
 

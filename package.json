@@ -15,11 +15,9 @@
     "react-dropzone": "^14.3.8",
     "react-scripts": "^5.0.1",
     "react-select": "^5.10.2",
-    "recharts": "^3.1.0",
-    "tesseract.js": "^4.1.1"
+    "recharts": "^3.1.0"
   },
   "devDependencies": {
-    "@craco/craco": "^7.1.0",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
     "autoprefixer": "^10.4.14",
@@ -46,7 +44,7 @@
     "deps:check": "npm outdated",
     "deps:update": "npm update",
     "deps:security": "npm audit --audit-level high",
-    "env:check": "node -e \"console.log('Environment check:'); console.log('NODE_ENV:', process.env.NODE_ENV); console.log('REACT_APP_FIREBASE_API_KEY:', process.env.REACT_APP_FIREBASE_API_KEY ? 'Set' : 'Missing'); console.log('REACT_APP_GOOGLE_CLOUD_VISION_API_KEY:', process.env.REACT_APP_GOOGLE_CLOUD_VISION_API_KEY ? 'Set' : 'Missing'); console.log('REACT_APP_OPENAI_API_KEY:', process.env.REACT_APP_OPENAI_API_KEY ? 'Set' : 'Missing');\"",
+    "env:check": "node -e \"console.log('Environment check:'); console.log('NODE_ENV:', process.env.NODE_ENV); console.log('REACT_APP_FIREBASE_API_KEY:', process.env.REACT_APP_FIREBASE_API_KEY ? 'Set' : 'Missing');\"",
     "precommit": "npm run security:check && npm run build",
     "postinstall": "npm run security:audit"
   },

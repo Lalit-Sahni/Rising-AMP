@@ -42,14 +42,10 @@ Wired in `src/components/MainContent.js`:
 | `hia-contract` | More | `src/components/pages/HIAContractPage.jsx` |
 | `client-manager` | More | `src/components/pages/ClientManagerPage.jsx` |
 | `profile` | Sidebar chip | `src/components/pages/ProfilePage.js` |
-| `ocr-test` | Hidden | `src/components/OCRTest.jsx` |
-| `enhanced-ocr-test` | Hidden | `src/components/EnhancedOCRTest.jsx` |
 
-Removed: Site Log, Weekly Report.
+Removed: Site Log, Weekly Report, hidden OCR test pages (`ocr-test`, `enhanced-ocr-test`).
 
-Present but **not wired**: `PurchaseOrdersPage.js`, `ConstructionExpenseTracker.js` (legacy monolith), `Fab.js`.
-
-Login (not `currentPage`): `LoginScreen.jsx` (Google or email/password), `ProfileSetupScreen.jsx`. Public static pages: `/privacy`, `/terms`. While auth/membership loads, `BootScreen.jsx` (RisingAMP mark). After setup, **Jobs** is home. `NotInvitedScreen.jsx` is unused. Invite/rename live on each job row.
+Login (not `currentPage`): `LoginScreen.jsx` (Google or email/password), `ProfileSetupScreen.jsx`. Public static pages: `/privacy`, `/terms`. While auth/membership loads, `BootScreen.jsx` (RisingAMP mark). After setup, **Jobs** is home. Invite/rename live on each job row.
 
 ---
 

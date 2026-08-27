@@ -16,9 +16,11 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 **Phase 5 shipped:** jobs as IDs, create/archive/invite/remove, clients vs suppliers, `DATABASE.md`, `readReceiptImage` on staging and production. Scanner is OpenAI only — if AI fails, show an error (no Tesseract).
 
-**Phase 6 Part A done (2026-08-27):** deleted 20 unreachable pre-Phase-1 files plus Windows `start-dev` leftovers. Left `authValidation.js` (still used by login). See the Part A commit for the old-app capability list.
+**Phase 6 Part A done (2026-08-27):** deleted unreachable pre-Phase-1 files plus Windows `start-dev` leftovers. Left `authValidation.js` (still used by login). Later the same day: `FormField.jsx` and `validation.js` were also dead (substring false positives) and were deleted with Part B.
 
-**Phase 6 next:** Part B in `PHASE6.md` — remove OCR test harnesses. Ask Lalit about Tesseract before deleting `tesseract.js`. One part per session. Database integrity leftovers are in `PHASE6-INTEGRITY.md` (not this branch).
+**Phase 6 Part B done (2026-08-27):** OCR test harnesses and client Tesseract path gone. Receipt scan is OpenAI Cloud Function only. `tesseract.js` is no longer a dependency.
+
+**Phase 6 next:** Part C in `PHASE6.md` — remove the Quick Access box, keep saved workers/suppliers. One part per session. Database integrity leftovers are in `PHASE6-INTEGRITY.md` (not this branch).
 
 **Phase 4 leftovers (not Phase 6 unless he asks):** Gmail invite fallback still in the client; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
 
@@ -35,8 +37,8 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE6.md. Open design/risingamp-vision.h
 
 ## Remaining work
 
-1. Phase 6 Part B — OCR harnesses (`PHASE6.md`). Ask about Tesseract first.
-2. Then Parts C → D → E → F, one session each.
+1. Phase 6 Part C — Quick Access box (`PHASE6.md`). Keep saved-worker autocomplete.
+2. Then Parts D → E → F, one session each.
 3. Optional leftovers (not this branch): `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`.
 
 ## Next
@@ -46,7 +48,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE6.md. Open design/risingamp-vision.h
 - [x] Phase 3 vision live (Jobs home, verdict, capture, profiles)
 - [x] Phase 4 — legal pages, Resend invites, shopfront `risingamp.com.au`, Google login on that domain
 - [x] Phase 5 — jobs/members, directory split, `DATABASE.md`, OpenAI via function
-- [ ] Phase 6 — legacy cut (`PHASE6.md`); Part A done, Part B next
+- [ ] Phase 6 — legacy cut (`PHASE6.md`); Parts A–B done, Part C next
 
 
 ## What shipped (localhost / staging)

@@ -30,12 +30,12 @@ That is not a tidiness problem. It is a correctness problem, for one specific re
 ## Status (2026-08-27)
 
 - [x] Restore tag `pre-phase6-2026-08-27`
-- [x] Part A — Delete the orphans (`authValidation.js` left in place: still imported by `src/firebase/auth.js` and tests)
-- [ ] Part B — Close the OCR dead end (ask Lalit about Tesseract first)
+- [x] Part A — Delete the orphans (`authValidation.js` left in place: still imported by `src/firebase/auth.js` and tests). Follow-up: `FormField.jsx` and `validation.js` were substring false positives, deleted with Part B.
+- [x] Part B — Close the OCR dead end (Tesseract removed; live path is OpenAI Cloud Function only)
 - [ ] Part C — The "Quick Access to Saved Data" box
 - [ ] Part D — Strip the dead collections from the data layer
 - [ ] Part E — Rename `accessCode` to `jobId` (own session, after A–D)
-- [ ] Part F — Repo hygiene
+- [ ] Part F — Repo hygiene (`craco.config.js` already removed with Part B; it required an uninstalled package)
 
 ## Part A — Delete the orphans
 
@@ -59,6 +59,8 @@ There are currently four OCR services and two test harnesses. The live path afte
 Commit: `Remove unreachable OCR harnesses and the superseded client-side OCR path.`
 
 **Note for the Part B agent:** Phase 5 already dropped the Tesseract fallback from the live scanner (`PROGRESS.md`: "if AI fails, show an error (no Tesseract)"). Confirm what is still in `EnhancedOCRService.js` and `package.json` before asking. Do not assume this brief's "currently four services" counts are still exact.
+
+Done 2026-08-27. Hidden routes `ocr-test` / `enhanced-ocr-test` removed. `OCRTest.jsx`, `EnhancedOCRTest.jsx`, `OCRService.js`, `SmartInvoiceOCR.js` deleted. `tesseract.js` removed from the client. Dead Tesseract/Vision classes stripped from `EnhancedOCRService.js`. Live path is `OCRScanner` → `EnhancedOCRService` → `OpenAIOCRService` → `readReceiptImage`. Vestigial `craco.config.js` and `@craco/craco` removed (it required `webpack-bundle-analyzer`, which was never installed; all scripts already used `react-scripts`).
 
 ## Part C — The "Quick Access to Saved Data" box
 

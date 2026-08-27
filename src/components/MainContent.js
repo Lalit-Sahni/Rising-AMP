@@ -12,8 +12,6 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const BudgetTrackingPage = lazy(() => import('./pages/BudgetTrackingPage'));
-const OCRTest = lazy(() => import('./OCRTest'));
-const EnhancedOCRTest = lazy(() => import('./EnhancedOCRTest'));
 
 export default function MainContent() {
   const { currentPage } = useApp();
@@ -38,10 +36,6 @@ export default function MainContent() {
         return <HIAContractPage />;
       case 'client-manager':
         return <ClientManagerPage />;
-      case 'ocr-test':
-        return <OCRTest />;
-      case 'enhanced-ocr-test':
-        return <EnhancedOCRTest />;
       default:
         return <JobsHomePage />;
     }
