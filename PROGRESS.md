@@ -18,7 +18,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 **Phase 6 Part A done (2026-08-27):** deleted unreachable pre-Phase-1 files plus Windows `start-dev` leftovers. Left `authValidation.js` (still used by login). Later the same day: `FormField.jsx` and `validation.js` were also dead (substring false positives) and were deleted with Part B.
 
-**Phase 6 Part B done (2026-08-27):** OCR test harnesses and client Tesseract path gone. Receipt scan is OpenAI Cloud Function only. `tesseract.js` is no longer a dependency.
+**Phase 6 Part B done (2026-08-27):** OCR test harnesses and client Tesseract path gone. Receipt scan is OpenAI Cloud Function only. `tesseract.js` is no longer a dependency. **Hosting for Parts A–B is live** on https://risingamp.com.au (`firebase deploy --project production --only hosting`). Functions, rules, and Storage were not deployed.
 
 **Phase 6 next:** Part C in `PHASE6.md` — remove the Quick Access box, keep saved workers/suppliers. One part per session. Database integrity leftovers are in `PHASE6-INTEGRITY.md` (not this branch).
 
