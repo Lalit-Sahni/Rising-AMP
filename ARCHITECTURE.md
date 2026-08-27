@@ -171,7 +171,7 @@ Fine for now:
 
 Still messy, and not a side quest unless it blocks the next asked piece of work:
 
-- Two overlapping Firestore helpers (`data.js` and `firebaseService.js`).
+- **Two overlapping Firestore helpers.** `src/firebase/data.js` (~890 lines) is the live write path for expenses, invoices, progress payments, HIA, bank details, and payers. `src/firebase/firebaseService.js` still holds a second set of expense CRUD plus client/labour/trade update-delete, and re-exports directory helpers from `directories.js`. Same collection names, different function names (`updateClient` vs `updateClientInfo`). Do **not** merge them in a cleanup pass: that is a real migration of live callers with real risk. Scope it as its own job, with tests, after Phase 6.
 - `AppContext.js` loads a lot for every screen.
 - Leftover unwired files.
 - No react-router; almost no tests.

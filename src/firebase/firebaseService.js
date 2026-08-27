@@ -29,13 +29,9 @@ export {
 // Collection names
 const COLLECTIONS = {
   EXPENSES: 'expenses',
-  PURCHASE_ORDERS: 'purchaseOrders',
-  WORKER_HISTORY: 'workerHistory',
   CLIENTS: 'clients',
   LABOUR: 'labour',
-  TRADES: 'trades',
-  SITE_NAMES: 'siteNames',
-  PROJECT_PHASES: 'projectPhases'
+  TRADES: 'trades'
 };
 
 // ===== EXPENSES =====
@@ -86,104 +82,6 @@ export const deleteExpense = async (accessCode, expenseId) => {
     console.warn('Error deleting receipt image:', error);
     // Don't throw error here as expense deletion should still succeed
   }
-};
-
-// ===== PURCHASE ORDERS =====
-export const addPurchaseOrder = async (accessCode, poData) => {
-  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`), {
-    ...poData,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-  return { id: docRef.id, ...poData };
-};
-
-export const getPurchaseOrders = async (accessCode) => {
-  const q = query(
-    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`),
-    orderBy('createdAt', 'desc')
-  );
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
-};
-
-export const updatePurchaseOrder = async (accessCode, poId, poData) => {
-  const poRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`, poId);
-  await updateDoc(poRef, {
-    ...poData,
-    updatedAt: serverTimestamp()
-  });
-};
-
-export const deletePurchaseOrder = async (accessCode, poId) => {
-  const poRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PURCHASE_ORDERS}`, poId);
-  await deleteDoc(poRef);
-};
-
-// ===== WORKER HISTORY =====
-export const addWorkerToHistory = async (accessCode, workerData) => {
-  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.WORKER_HISTORY}`), {
-    ...workerData,
-    createdAt: serverTimestamp()
-  });
-  return { id: docRef.id, ...workerData };
-};
-
-export const getWorkerHistory = async (accessCode) => {
-  const q = query(
-    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.WORKER_HISTORY}`),
-    orderBy('createdAt', 'desc')
-  );
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
-};
-
-// ===== SITE NAMES =====
-export const addSiteName = async (accessCode, siteName) => {
-  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.SITE_NAMES}`), {
-    name: siteName,
-    createdAt: serverTimestamp()
-  });
-  return { id: docRef.id, name: siteName };
-};
-
-export const getSiteNames = async (accessCode) => {
-  const q = query(
-    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.SITE_NAMES}`),
-    orderBy('createdAt', 'desc')
-  );
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
-};
-
-// ===== PROJECT PHASES =====
-export const addProjectPhase = async (accessCode, phaseName) => {
-  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECT_PHASES}`), {
-    name: phaseName,
-    createdAt: serverTimestamp()
-  });
-  return { id: docRef.id, name: phaseName };
-};
-
-export const getProjectPhases = async (accessCode) => {
-  const q = query(
-    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECT_PHASES}`),
-    orderBy('createdAt', 'desc')
-  );
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({
-    id: doc.id,
-    ...doc.data()
-  }));
 };
 
 // ===== CLIENTS =====
