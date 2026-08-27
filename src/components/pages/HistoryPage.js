@@ -233,10 +233,8 @@ export default function HistoryPage() {
     }
 
     try {
-      console.log('Starting deletion process for expense:', expenseId);
       const result = await deleteExpenseFromFirebase(expenseId);
       if (result.success) {
-        console.log('Deletion completed successfully');
         showToast('Expense deleted successfully', 'success');
       } else {
         console.error('Deletion failed:', result.error);

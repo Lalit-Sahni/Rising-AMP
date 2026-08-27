@@ -81,7 +81,7 @@ export const AppProvider = ({
   // Load all data from Firestore when the selected job list changes
   useEffect(() => {
     if (jobListId) {
-      logger.firebase('LOAD_DATA', 'Loading data for project:', jobListId);
+      logger.firebase('LOAD_DATA', 'Loading job data');
       
       // Add a loading state to prevent multiple simultaneous loads
       let isMounted = true;
@@ -93,8 +93,6 @@ export const AppProvider = ({
           if (result.success && isMounted) {
             setExpenses(result.expenses);
             setBudget(result.budget || 0);
-            logger.firebase('LOAD_EXPENSES', 'Loaded expenses:', result.expenses.length);
-            logger.firebase('LOAD_BUDGET', 'Loaded budget:', result.budget);
           } else if (!isMounted) {
             logger.debug('Component unmounted, skipping expense load');
           } else if (isPermissionDenied({ code: result.code, message: result.error }) && onJobAccessLost) {
@@ -118,7 +116,6 @@ export const AppProvider = ({
           if (result.success) {
             const labourData = result.labour || [];
             setSavedLabour(Array.isArray(labourData) ? labourData : []);
-            console.log('Loaded saved labour:', labourData.length);
           } else {
             console.error('Failed to load saved labour:', result.error);
             setSavedLabour([]);
@@ -136,7 +133,6 @@ export const AppProvider = ({
           if (result.success) {
             const tradesData = result.trades || [];
             setSavedTrades(Array.isArray(tradesData) ? tradesData : []);
-            console.log('Loaded saved trades:', tradesData.length);
           } else {
             console.error('Failed to load saved trades:', result.error);
             setSavedTrades([]);
@@ -154,7 +150,6 @@ export const AppProvider = ({
           if (result.success) {
             const clientsData = result.clients || [];
             setClients(Array.isArray(clientsData) ? clientsData : []);
-            console.log('Loaded clients:', clientsData.length);
           } else {
             console.error('Failed to load saved companies:', result.error);
             setClients([]);
@@ -199,7 +194,6 @@ export const AppProvider = ({
           const result = await fetchProgressPayments(jobListId);
           if (result.success) {
             setProgressPayments(result.progressPayments);
-            console.log('Loaded progress payments:', result.progressPayments.length);
           } else {
             console.error('Failed to load progress payments:', result.error);
           }
@@ -214,7 +208,6 @@ export const AppProvider = ({
           const result = await fetchInvoicesFromFirestore(jobListId);
           if (result.success) {
             setInvoices(result.invoices);
-            console.log('Loaded invoices:', result.invoices.length);
           } else {
             console.error('Failed to load invoices:', result.error);
           }
@@ -229,7 +222,6 @@ export const AppProvider = ({
           const result = await fetchHIAContractsFromFirestore(jobListId);
           if (result.success) {
             setHiaContracts(result.hiaContracts);
-            console.log('Loaded HIA contracts:', result.hiaContracts.length);
           } else {
             console.error('Failed to load HIA contracts:', result.error);
           }
@@ -244,7 +236,6 @@ export const AppProvider = ({
           const result = await getClients(jobListId);
           if (result.success) {
             setClientDetails(result.clients);
-            console.log('Loaded client details:', result.clients.length);
           } else {
             console.error('Failed to load client details:', result.error);
           }
@@ -259,7 +250,6 @@ export const AppProvider = ({
           const result = await fetchUserBankDetailsFromFirestore(jobListId);
           if (result.success) {
             setUserBankDetails(result.userBankDetails);
-            console.log('Loaded user bank details:', result.userBankDetails);
           } else {
             console.error('Failed to load user bank details:', result.error);
           }
@@ -297,11 +287,7 @@ export const AppProvider = ({
         loadClientDetails(),
         loadUserBankDetails(),
         loadPayers()
-      ]).then(() => {
-        if (isMounted) {
-          console.log('All data loaded successfully');
-        }
-      }).catch((error) => {
+      ]).catch((error) => {
         if (isMounted) {
           console.error('Error loading data:', error);
         }
@@ -316,8 +302,7 @@ export const AppProvider = ({
 
   // Toast notification function
   const showToast = (message, type = 'info') => {
-    // For now, just log to console. We'll implement a proper toast system later
-    console.log(`[${type.toUpperCase()}] ${message}`);
+    logger.info(`toast ${type}: ${message}`);
   };
 
   // Expense functions
@@ -359,30 +344,19 @@ export const AppProvider = ({
 
   const deleteExpenseFromFirebase = async (expenseId) => {
     try {
-      console.log('🗑️ [DELETION v2.1] Starting deletion for expense:', expenseId);
-      
-      // Simple approach: Delete from Firebase first, then update UI
       const result = await deleteExpenseFromFirestore(jobListId, expenseId);
-      
+
       if (result.success) {
-        console.log('✅ [DELETION v2.1] Firebase deletion successful:', expenseId);
-        
-        // Update UI immediately after successful Firebase deletion
-        setExpenses(prev => {
-          const newExpenses = prev.filter(exp => exp.id !== expenseId);
-          console.log('🔄 [DELETION v2.1] Updated UI, remaining expenses:', newExpenses.length);
-          return newExpenses;
-        });
-        
+        setExpenses(prev => prev.filter(exp => exp.id !== expenseId));
         showToast('Expense permanently deleted!', 'success');
         return { success: true };
       } else {
-        console.error('❌ [DELETION v2.1] Firebase deletion failed:', result.error);
+        console.error('Firebase deletion failed:', result.error);
         showToast(`Deletion failed: ${result.error}`, 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('💥 [DELETION v2.1] Deletion error:', error);
+      console.error('Deletion error:', error);
       showToast(`Error: ${error.message}`, 'error');
       return { success: false, error: error.message };
     }

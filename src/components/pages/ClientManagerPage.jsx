@@ -9,10 +9,7 @@ const ClientManagerPage = () => {
       <ClientManager
         isOpen={showClientManager}
         onClose={() => setShowClientManager(false)}
-        onClientSelect={(client) => {
-          console.log('Client selected:', client);
-          // You can add additional logic here if needed
-        }}
+        onClientSelect={() => {}}
       />
     </div>
   );

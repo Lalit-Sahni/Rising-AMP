@@ -32,10 +32,10 @@ That is not a tidiness problem. It is a correctness problem, for one specific re
 - [x] Restore tag `pre-phase6-2026-08-27`
 - [x] Part A — Delete the orphans (`authValidation.js` left in place: still imported by `src/firebase/auth.js` and tests). Follow-up: `FormField.jsx` and `validation.js` were substring false positives, deleted with Part B.
 - [x] Part B — Close the OCR dead end (Tesseract removed; live path is OpenAI Cloud Function only)
-- [ ] Part C — The "Quick Access to Saved Data" box
-- [ ] Part D — Strip the dead collections from the data layer
-- [ ] Part E — Rename `accessCode` to `jobId` (own session, after A–D)
-- [ ] Part F — Repo hygiene (`craco.config.js` already removed with Part B; it required an uninstalled package)
+- [x] Part C — The "Quick Access to Saved Data" box
+- [x] Part D — Strip the dead collections from the data layer
+- [x] Part E — Rename `accessCode` to `jobId` (identifiers only; leftover localStorage key `'accessCode'` kept on purpose)
+- [x] Part F — Repo hygiene (`craco.config.js` already removed with Part B; it required an uninstalled package)
 
 ## Part A — Delete the orphans
 
@@ -102,6 +102,8 @@ Restyle them to the design system: white background, `#E7E9EC` hairline border, 
 
 Commit: `Remove the Quick Access box and the dead saved-projects concept.`
 
+Done 2026-08-27. Quick Access box and SavedDataSelector removed. savedProjects / nested `projects/{jobId}/projects` helpers removed. `projectCatalog.js` untouched. Worker / supplier / provider CreatableSelects kept. Dropdowns restyled off navy `#334155`.
+
 ## Part D — Strip the dead collections from the data layer
 
 `src/firebase/firebaseService.js` still exports full read/write/update/delete sets for four collections that no live screen touches, and that the database audit found empty or absent on production:
@@ -118,6 +120,8 @@ Confirm zero references first. The only importers of `firebaseService.js` are `N
 While here, note but **do not act on** the larger duplication: `firebase/data.js` (971 lines) and `firebase/firebaseService.js` (403 lines) are two parallel data layers with overlapping responsibilities (`saveProjectInfo` exists in both; `updateClient` and `updateClientInfo` do the same thing in different files). Merging them is real work with real risk and it is not this phase. Write what you find into `ARCHITECTURE.md` as a known issue so the next phase can scope it properly.
 
 Commit: `Remove data-layer functions for collections nothing reads.`
+
+Done 2026-08-27. purchaseOrders, workerHistory, siteNames, and projectPhases helpers removed from `firebaseService.js`. data.js / firebaseService.js overlap documented in `ARCHITECTURE.md`; not merged.
 
 ## Part E — Rename `accessCode` to `jobId`
 
@@ -154,6 +158,8 @@ The risk here is not that the rename breaks something subtly. It is that an agen
 
 Commit per file: `Rename accessCode to jobId in <file>.`
 
+Done 2026-08-27 as one identifier-only commit (not one commit per file). AppContext exports `jobId` only. The leftover localStorage key `'accessCode'` in `App.js` and `tenancy.js` is the old PIN-era key and was left on purpose.
+
 ## Part F — Repo hygiene
 
 Small, safe, do them together at the end.
@@ -165,6 +171,8 @@ Small, safe, do them together at the end.
 5. `src/App.css` is deleted in Part A. Confirm nothing else imports a stylesheet that is not `index.css` or `premium-animations.css`.
 
 Commit: `Repo hygiene: one product name, drop stale docs, route logging through logger.`
+
+Done 2026-08-27. Package name `risingamp`. Excel creator `RisingAMP`. Three stale root docs deleted. `console.log` in app code removed (logger.js kept). Live stylesheets are `index.css` and `premium-animations.css` (datepicker CSS imports remain).
 
 ## What this phase does NOT do
 
@@ -184,7 +192,7 @@ Named explicitly so no agent talks itself into them:
 - Localhost against staging: Jobs, Overview, Add expense in all five categories, Invoices, History, all work as before.
 - Worker Name, supplier, and provider autocompletes still suggest previously saved entries.
 - No dark navy dropdowns anywhere in the expense modal.
-- `grep -rn "accessCode" src` returns nothing.
+- `grep -rn "accessCode" src` returns only the leftover localStorage key `'accessCode'` in `App.js` and `tenancy.js`.
 - The import-graph check reports no unreachable non-test files.
 - `PROGRESS.md`, `CLAUDE.md`, and `ARCHITECTURE.md` updated to match.
 - Roughly 6,300 fewer lines, and no user can tell the difference.

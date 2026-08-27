@@ -32,7 +32,6 @@ const projectRootRef = async (projectId) => {
 // Sync local expenses to Firestore (migrate from array to subcollection)
 export const syncExpensesToFirestore = async (jobId, expenses) => {
   try {
-    console.log('Syncing expenses to Firestore with consistent IDs');
     const userDocRef = await projectRootRef(jobId);
     
     // Add each expense as a separate document using expense ID as document ID
@@ -48,7 +47,6 @@ export const syncExpensesToFirestore = async (jobId, expenses) => {
       });
     }
     
-    console.log('Successfully synced', expenses.length, 'expenses to Firestore');
     return { success: true };
   } catch (error) {
     console.error('Sync to Firestore error:', error);
@@ -59,7 +57,6 @@ export const syncExpensesToFirestore = async (jobId, expenses) => {
 // Fetch expenses from Firestore (using subcollections)
 export const fetchExpensesFromFirestore = async (jobId) => {
   try {
-    console.log('Attempting to fetch data for access code:', jobId);
     const userDocRef = await projectRootRef(jobId);
     const expensesCollectionRef = collection(userDocRef, 'expenses');
     
@@ -82,7 +79,6 @@ export const fetchExpensesFromFirestore = async (jobId) => {
       });
     });
     
-    console.log('Fetched expenses:', expenses.length);
     
     // Get user document for budget
     const userDoc = await getDoc(userDocRef);
@@ -118,7 +114,6 @@ export const updateBudgetInFirestore = async (jobId, budget) => {
 // Add single expense to Firestore (using subcollection)
 export const addExpenseToFirestore = async (jobId, expense) => {
   try {
-    console.log('Adding expense with ID:', expense.id, 'to Firebase');
     
     const userDocRef = await projectRootRef(jobId);
     const expenseDocRef = doc(userDocRef, 'expenses', expense.id);
@@ -135,7 +130,6 @@ export const addExpenseToFirestore = async (jobId, expense) => {
       timestamp: new Date()
     };
     
-    console.log('Successfully added expense to Firebase with ID:', expense.id);
     return { success: true, expense: newExpense };
   } catch (error) {
     console.error('Add expense error:', error);
@@ -170,11 +164,10 @@ export const updateExpenseInFirestore = async (jobId, expenseId, updatedExpense)
 // Delete expense from Firestore
 export const deleteExpenseFromFirestore = async (jobId, expenseId) => {
   try {
-    console.log('Deleting expense:', expenseId, 'for access code:', jobId);
     
     if (!jobId) {
-      console.error('No access code provided for deletion');
-      return { success: false, error: 'Access code is required' };
+      console.error('No job ID provided for deletion');
+      return { success: false, error: 'Job ID is required' };
     }
     
     if (!expenseId) {
@@ -192,7 +185,6 @@ export const deleteExpenseFromFirestore = async (jobId, expenseId) => {
       return { success: false, error: 'Expense not found in Firebase' };
     }
     
-    console.log('Document exists, proceeding with deletion...');
     
     // Delete the document directly (more reliable than batch for single operations)
     await deleteDoc(expenseDocRef);
@@ -204,7 +196,6 @@ export const deleteExpenseFromFirestore = async (jobId, expenseId) => {
       return { success: false, error: 'Failed to delete document from Firebase' };
     }
     
-    console.log('Successfully deleted expense from Firebase:', expenseId);
     
     return { success: true };
   } catch (error) {
@@ -224,7 +215,6 @@ export const deleteExpenseFromFirestore = async (jobId, expenseId) => {
 // Batch delete multiple expenses (for future use)
 export const batchDeleteExpenses = async (jobId, expenseIds) => {
   try {
-    console.log('Batch deleting expenses:', expenseIds, 'for access code:', jobId);
     
     const userDocRef = await projectRootRef(jobId);
     const batch = writeBatch(db);
@@ -235,7 +225,6 @@ export const batchDeleteExpenses = async (jobId, expenseIds) => {
     }
     
     await batch.commit();
-    console.log('Successfully batch deleted expenses:', expenseIds);
     
     return { success: true };
   } catch (error) {

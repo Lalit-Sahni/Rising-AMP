@@ -15,7 +15,7 @@ const STORAGE_PATHS = {
 
 /**
  * Upload a receipt image to Firebase Storage
- * @param {string} jobId - User's access code
+ * @param {string} jobId - Job ID
  * @param {string} expenseId - Expense ID
  * @param {File} imageFile - Image file to upload
  * @returns {Promise<{success: boolean, url?: string, path?: string, error?: string}>}
@@ -77,7 +77,7 @@ export const uploadReceiptImage = async (jobId, expenseId, imageFile) => {
 
 /**
  * Get download URL for a receipt image
- * @param {string} jobId - User's access code
+ * @param {string} jobId - Job ID
  * @param {string} expenseId - Expense ID
  * @param {string} fileName - File name (optional, gets latest if not provided)
  * @returns {Promise<{success: boolean, url?: string, error?: string}>}
@@ -129,7 +129,7 @@ export const getReceiptImageUrl = async (jobId, expenseId, fileName = null) => {
 
 /**
  * Delete a receipt image from Firebase Storage
- * @param {string} jobId - User's access code
+ * @param {string} jobId - Job ID
  * @param {string} expenseId - Expense ID
  * @param {string} fileName - File name (optional, deletes all if not provided)
  * @returns {Promise<{success: boolean, error?: string}>}
@@ -171,7 +171,7 @@ export const deleteReceiptImage = async (jobId, expenseId, fileName = null) => {
 
 /**
  * List all receipt images for a user
- * @param {string} jobId - User's access code
+ * @param {string} jobId - Job ID
  * @returns {Promise<{success: boolean, receipts?: Array, error?: string}>}
  */
 export const listReceiptImages = async (jobId) => {
@@ -271,7 +271,7 @@ const compressImage = async (file, maxWidth = 1920, quality = 0.8) => {
 
 /**
  * Get receipt image metadata
- * @param {string} jobId - User's access code
+ * @param {string} jobId - Job ID
  * @param {string} expenseId - Expense ID
  * @returns {Promise<{success: boolean, metadata?: Object, error?: string}>}
  */

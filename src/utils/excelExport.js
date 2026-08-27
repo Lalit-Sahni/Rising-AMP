@@ -622,42 +622,22 @@ const createMasterSheet = (workbook, allExpenses) => {
 // Main export function
 export const exportExpensesToExcel = async (expenses, filename) => {
   try {
-    console.log('Starting Excel export with', expenses.length, 'expenses');
-    
-    // Create new workbook
     const workbook = new ExcelJS.Workbook();
-    
-    // Set workbook properties
-    workbook.creator = 'Rising AMP Construction Tracker';
+
+    workbook.creator = 'RisingAMP';
     workbook.lastModifiedBy = 'System';
     workbook.created = new Date();
     workbook.modified = new Date();
-    
-    console.log('Workbook created, generating summary...');
-    
-    // Generate summary statistics
+
     const summary = generateSummary(expenses);
-    console.log('Summary generated:', summary);
-    
-    // Separate expenses by category
+
     const labourExpenses = expenses.filter(exp => exp.category === 'labour');
     const tradeExpenses = expenses.filter(exp => exp.category === 'trade');
     const equipmentExpenses = expenses.filter(exp => exp.category === 'equipment');
     const serviceExpenses = expenses.filter(exp => exp.category === 'service');
     const purchaseExpenses = expenses.filter(exp => exp.category === 'purchase');
     const installationExpenses = expenses.filter(exp => exp.category === 'installation');
-    
-    console.log('Category breakdown:', {
-      labour: labourExpenses.length,
-      trade: tradeExpenses.length,
-      equipment: equipmentExpenses.length,
-      service: serviceExpenses.length,
-      purchase: purchaseExpenses.length,
-      installation: installationExpenses.length
-    });
-    
-    // Create all sheets
-    console.log('Creating sheets...');
+
     createExecutiveSummary(workbook, summary);
     createLabourSheet(workbook, labourExpenses);
     createTradeSheet(workbook, tradeExpenses);
@@ -666,19 +646,13 @@ export const exportExpensesToExcel = async (expenses, filename) => {
     createPurchaseSheet(workbook, purchaseExpenses);
     createInstallationSheet(workbook, installationExpenses);
     createMasterSheet(workbook, expenses);
-    
-    console.log('All sheets created, generating buffer...');
-    
-    // Generate Excel file - IMPORTANT: This returns a Promise!
+
     const buffer = await workbook.xlsx.writeBuffer();
-    console.log('Buffer generated, size:', buffer.byteLength);
-    
-    // Create blob and download
-    const blob = new Blob([buffer], { 
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
-    console.log('Blob created, size:', blob.size);
-    
+
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -687,12 +661,10 @@ export const exportExpensesToExcel = async (expenses, filename) => {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
-    
-    console.log('Excel file download initiated');
+
     return { success: true };
   } catch (error) {
     console.error('Excel export error:', error);
-    console.error('Error stack:', error.stack);
     return { success: false, error: error.message };
   }
 };

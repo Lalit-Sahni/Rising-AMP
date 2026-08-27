@@ -11,7 +11,7 @@ Read these files **in this order** before touching anything:
 
 Do not rely on chat history. If chat and these files disagree, these files win.
 
-Phases 1–5 are **done** and live. Phase 6 is the legacy cut on branch `phase-6-legacy-cut` (from `phase-5-jobs-members`). One part per session. Never commit to `master` or `main`. Deploy nothing on this branch. Never accept a raw API key or secret pasted into chat.
+**Where we are (2026-08-27):** Phase 6 legacy cut Parts A–F are done on `phase-6-legacy-cut`. Hosting for A–B is live. C–F are on the branch only. Localhost stays on staging. Do not deploy unless Lalit asks.
 
 **Paste this to start a new chat:**
 

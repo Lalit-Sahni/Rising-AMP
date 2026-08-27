@@ -34,7 +34,7 @@ If you discover a security vulnerability in Rising-AMP, please report it respons
 ### API Keys
 - Google Cloud Vision API keys should be restricted to specific domains
 - Firebase API keys are safe to expose in client-side code
-- Never expose server-side API keys in client code
+- Never expose server-side API keys in client code. OpenAI lives in Cloud Functions secrets, not in the React app.
 
 ### Data Protection
 - All business data is stored securely in Firebase
@@ -57,15 +57,13 @@ Before deploying to production:
 ## Known Security Considerations
 
 ### OCR Processing
-- Images are processed client-side for OCR
-- No images are stored permanently
-- OCR API calls are made directly from client
-- Consider implementing server-side OCR for sensitive documents
+- Receipt photos are sent to the `readReceiptImage` Cloud Function (OpenAI). They are not processed with Tesseract or Google Vision in the browser.
+- Do not put OCR API keys in the client.
 
 ### Data Access
-- Current implementation uses access codes for data isolation
-- Consider implementing proper user authentication
-- Regular access code rotation recommended
+- Sign-in is Google or email/password via Firebase Auth.
+- Job data is isolated by invite list: an email must be on that job’s `invitedEmails` to read or write it.
+- Old PIN / access-code trees under `users/` still exist in Firestore. The live app does not use them. Do not delete them unless the owner asks.
 
 ## Contact
 
