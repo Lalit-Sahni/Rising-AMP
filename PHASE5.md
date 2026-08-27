@@ -1,3 +1,11 @@
+# Phase 5 — Jobs, Members, and a Database Audit (closed record)
+
+**Closed 2026-08-27.** Live: jobs as stable IDs, create / archive job, add / remove person, clients vs suppliers vs service providers, `jobId` backfill, `DATABASE.md`, OpenAI receipt reads via `readReceiptImage`. Leftovers moved to `PHASE6.md` (invoice typed names, profile scan, Storage rules deploy, expense pagination).
+
+Read `CLAUDE.md` then `PROGRESS.md` then `PHASE6.md` for current work.
+
+---
+
 # Phase 5 — Jobs, Members, and a Database Audit (agent brief)
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything. Open `design/risingamp-vision.html` in a browser.

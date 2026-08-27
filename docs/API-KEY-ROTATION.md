@@ -42,8 +42,7 @@ REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
 REACT_APP_FIREBASE_APP_ID=your_app_id
 REACT_APP_FIREBASE_MEASUREMENT_ID=your_measurement_id
 
-# OpenAI API Key (for AI-powered OCR)
-REACT_APP_OPENAI_API_KEY=sk-your_openai_api_key_here
+# Google Cloud Vision remains a client key until it is moved behind a function.
 ```
 
 ### Step 3: Test Firebase Connection
@@ -61,35 +60,27 @@ Verify that:
 
 ## OpenAI API Key Rotation
 
-### Step 1: Get New OpenAI API Key
+OpenAI must **not** live in `REACT_APP_*`. The browser cannot call `api.openai.com` (CORS), and the key would ship in the JS bundle.
 
-1. Go to [OpenAI Platform](https://platform.openai.com/)
-2. Sign in to your account
-3. Go to API Keys section
-4. Click "Create new secret key"
-5. Copy the new API key (starts with `sk-`)
-
-### Step 2: Update Environment Variables
-
-Update your `.env.local` file with the new OpenAI API key:
-
-```env
-# New OpenAI API Key
-REACT_APP_OPENAI_API_KEY=sk-your_new_openai_api_key_here
-```
-
-### Step 3: Test OpenAI Connection
+1. Create a new key at [OpenAI Platform](https://platform.openai.com/).
+2. In a terminal, set the Firebase secret at the masked prompt (do not paste the key into chat):
 
 ```bash
-npm run env:check
-npm start
+firebase functions:secrets:set OPENAI_API_KEY --project rising-amp-staging
+firebase functions:secrets:set OPENAI_API_KEY --project production
 ```
 
-### Step 4: Revoke Old Key (Optional)
+3. Deploy the function **by name only**:
 
-1. Go back to [OpenAI Platform](https://platform.openai.com/)
-2. Find your old API key
-3. Click "Revoke" to disable it
+```bash
+firebase deploy --project rising-amp-staging --only functions:readReceiptImage
+firebase deploy --project production --only functions:readReceiptImage
+```
+
+Never `firebase deploy --only functions` (that would delete leftover `generateWeeklyReport` on production).
+
+4. Remove `REACT_APP_OPENAI_API_KEY` from `.env.local` / `.env.production.local` if it is still there.
+5. Revoke the old OpenAI key in the OpenAI dashboard.
 
 ## Google Cloud Vision API Key Rotation
 

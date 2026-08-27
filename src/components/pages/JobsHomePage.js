@@ -10,6 +10,7 @@ import {
   setOrgProjectArchived,
 } from '../../firebase/projectCatalog';
 import { loadInvitedJobSummaries } from '../../firebase/jobSummaries';
+import { listInvitedProjects } from '../../firebase/projectCatalog';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
 import {
   derivePortfolio,
@@ -42,6 +43,7 @@ export default function JobsHomePage() {
   const { membership, onOpenJob, setCurrentPage } = useApp();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -60,18 +62,33 @@ export default function JobsHomePage() {
       if (!membership || !membership.email) {
         setJobs([]);
         setLoading(false);
+        setMetricsLoading(false);
         return;
       }
       setLoading(true);
+      setMetricsLoading(true);
       setError('');
       try {
-        const rows = await loadInvitedJobSummaries(membership.email);
-        if (!cancelled) setJobs(rows);
+        const listed = await listInvitedProjects(membership.email);
+        if (!cancelled) {
+          setJobs(listed);
+          setLoading(false);
+        }
+        try {
+          const rows = await loadInvitedJobSummaries(membership.email, { projects: listed });
+          if (!cancelled) setJobs(rows);
+        } catch (err) {
+          console.error('Job figures failed:', err);
+          if (!cancelled) setError('Jobs loaded, but figures could not. Open a job to see the details.');
+        }
       } catch (err) {
         console.error('Jobs home failed:', err);
         if (!cancelled) setError('Could not load jobs. Try again, or sign out.');
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setMetricsLoading(false);
+        }
       }
     };
     load();
@@ -319,13 +336,13 @@ export default function JobsHomePage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-[18px]">
           {[
             ['Active jobs', loading ? null : portfolio.activeJobs],
-            ['Contracts', loading ? null : (portfolio.contracts == null ? '—' : formatMoneyCompact(portfolio.contracts))],
+            ['Contracts', loading || metricsLoading ? null : (portfolio.contracts == null ? '—' : formatMoneyCompact(portfolio.contracts))],
             ['Combined margin', 'margin'],
-            ['Need attention', loading ? null : portfolio.needAttention],
+            ['Need attention', loading || metricsLoading ? null : portfolio.needAttention],
           ].map(([label, value]) => (
             <div key={label} className="bg-surface border border-hairline rounded-ot px-[17px] py-[15px] shadow-whisper">
               <div className="text-[11.5px] text-slate-400 font-semibold">{label}</div>
-              {loading ? (
+              {loading || (metricsLoading && label !== 'Active jobs') ? (
                 <div className="h-7 w-16 skeleton-bar rounded mt-1.5" />
               ) : label === 'Combined margin' ? (
                 <div className="tabular text-[21px] font-extrabold tracking-tight mt-1.5">
@@ -409,8 +426,9 @@ export default function JobsHomePage() {
 
           {!loading &&
             visible.map((project) => {
+              const metricsReady = project.metrics && typeof project.metrics.hasMargin === 'boolean';
               const metrics = project.metrics || {};
-              const copy = verdictCopy(metrics.verdict);
+              const copy = metricsReady ? verdictCopy(metrics.verdict) : { label: 'Loading', tone: 'new' };
               const isEditing = editingId === project.id;
               const isInviting = invitingId === project.id;
               const isSaving = savingId === project.id;
@@ -535,11 +553,15 @@ export default function JobsHomePage() {
                     <div className="min-w-0">
                       <b className="block text-sm font-bold truncate">{project.name}</b>
                       <small className="block text-xs text-slate-400 truncate">
-                        {project.status === 'archived' ? 'Archived · ' : ''}{project.subtitle}
+                        {project.status === 'archived' ? 'Archived · ' : ''}{project.subtitle || (metricsLoading ? 'Loading figures…' : '')}
                       </small>
                     </div>
                   </div>
                   <div className="hidden md:flex items-center gap-2.5 min-w-0">
+                    {!metricsReady ? (
+                      <div className="h-2 w-24 skeleton-bar rounded" />
+                    ) : (
+                      <>
                     <span className="flex-1 h-[7px] bg-[#EEF0F2] rounded overflow-hidden min-w-[60px]">
                       <span
                         className="block h-full rounded"
@@ -552,13 +574,23 @@ export default function JobsHomePage() {
                     >
                       {metrics.hasMargin ? formatPercent(metrics.marginPct) : '—'}
                     </span>
+                      </>
+                    )}
                   </div>
-                  <div className={`hidden md:inline-flex items-center gap-1.5 text-[12.5px] font-semibold ${toneClass}`}>
+                  <div className={`hidden md:inline-flex items-center gap-1.5 text-[12.5px] font-semibold ${metricsReady ? toneClass : 'text-slate-400'}`}>
+                    {!metricsReady ? (
+                      <div className="h-3 w-16 skeleton-bar rounded" />
+                    ) : (
+                      <>
                     <span className={`w-2 h-2 rounded-full ${dotClass}`} />
                     {copy.label}
+                      </>
+                    )}
                   </div>
                   <div className="hidden md:block text-[12.5px] font-semibold tabular text-slate-500">
-                    {metrics.attentionCount > 0 ? (
+                    {!metricsReady ? (
+                      <div className="h-3 w-14 skeleton-bar rounded" />
+                    ) : metrics.attentionCount > 0 ? (
                       `${metrics.attentionCount} item${metrics.attentionCount === 1 ? '' : 's'}`
                     ) : (
                       <span className="text-slate-400 font-medium">All clear</span>

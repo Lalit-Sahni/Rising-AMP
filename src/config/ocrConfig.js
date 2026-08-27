@@ -3,7 +3,7 @@
 
 export const OCR_CONFIG = {
   // OCR Provider Priority (order of fallback)
-  PROVIDER_PRIORITY: ['OpenAI', 'GoogleVision', 'Tesseract'],
+  PROVIDER_PRIORITY: ['OpenAI'],
   
   // Image Processing Settings
   IMAGE: {
@@ -127,7 +127,7 @@ export const OCR_CONFIG = {
 
 // Helper functions for configuration
 export const getOCRProvider = (index = 0) => {
-  return OCR_CONFIG.PROVIDER_PRIORITY[index] || 'Tesseract';
+  return OCR_CONFIG.PROVIDER_PRIORITY[index] || 'OpenAI';
 };
 
 export const isImageFormatSupported = (fileType) => {

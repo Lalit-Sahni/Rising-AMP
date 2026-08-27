@@ -23,23 +23,42 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
   const [selectedCategory, setSelectedCategory] = useState(null);
 
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
   const videoRef     = useRef(null);
   const canvasRef    = useRef(null);
-  const ocrService   = new EnhancedOCRService();
-
-  useEffect(() => {
-    const videoElement = videoRef.current;
-    return () => {
-      if (videoElement?.srcObject) {
-        videoElement.srcObject.getTracks().forEach(t => t.stop());
-        videoElement.srcObject = null;
-      }
-    };
-  }, []);
+  const pendingStreamRef = useRef(null);
+  const ocrServiceRef = useRef(null);
+  if (!ocrServiceRef.current) ocrServiceRef.current = new EnhancedOCRService();
+  const ocrService = ocrServiceRef.current;
 
   useEffect(() => {
     if (!isOpen) resetAll();
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!useCamera) return undefined;
+    const video = videoRef.current;
+    const stream = pendingStreamRef.current;
+    if (!video || !stream) {
+      setError('Camera not ready. Please try Take photo instead.');
+      setUseCamera(false);
+      return undefined;
+    }
+    video.srcObject = stream;
+    video.onloadedmetadata = () => {
+      video.play().catch(() => setError('Error starting camera'));
+    };
+    video.oncanplay = () => setCameraReady(true);
+    video.play().catch(() => {});
+    return () => {
+      setCameraReady(false);
+      if (video.srcObject && typeof video.srcObject.getTracks === 'function') {
+        video.srcObject.getTracks().forEach((track) => track.stop());
+      }
+      video.srcObject = null;
+      pendingStreamRef.current = null;
+    };
+  }, [useCamera]);
 
   // Map generic OCR fields to category-specific ExpenseModal field names
   const buildFormData = (category, editable, originalFormData) => {
@@ -92,7 +111,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
     } catch (err) {
       console.error('OCR processing failed:', err);
-      setError(err.message || 'Failed to process image. Please try again.');
+      setError(err.message || 'Could not read that receipt with AI. Try another photo, or enter the details yourself.');
     } finally {
       setIsScanning(false);
       setScanProgress(0);
@@ -137,30 +156,29 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
   };
 
   const startCamera = async () => {
+    setError(null);
+    setCameraReady(false);
     try {
-      setError(null);
       if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera not supported');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-      });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => videoRef.current.play().catch(() => setError('Error starting camera'));
-        videoRef.current.oncanplay = () => setCameraReady(true);
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
       }
+      pendingStreamRef.current = stream;
       setUseCamera(true);
     } catch (err) {
+      pendingStreamRef.current = null;
       if (err.name === 'NotAllowedError') setError('Camera access denied. Please allow camera permissions.');
       else if (err.name === 'NotFoundError') setError('No camera found on this device.');
-      else setError('Camera error. Please use file upload instead.');
+      else setError('Camera error. Please use Take photo or Upload instead.');
     }
   };
 
   const stopCamera = () => {
-    if (videoRef.current?.srcObject) {
-      videoRef.current.srcObject.getTracks().forEach(t => t.stop());
-      videoRef.current.srcObject = null;
-    }
     setUseCamera(false);
     setCameraReady(false);
   };
@@ -173,6 +191,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
     setPendingData(null);
     setSelectedCategory(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
   };
 
   const handleClose = () => {
@@ -338,7 +357,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
               {useCamera ? (
                 <div className="space-y-3">
                   <div className="relative rounded-xl overflow-hidden bg-zinc-100">
-                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-48 object-cover" style={{ transform: 'scaleX(-1)' }} />
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-48 object-cover" />
                     {!cameraReady && (
                       <div className="absolute inset-0 flex items-center justify-center bg-zinc-100">
                         <div className="text-center">
@@ -365,13 +384,21 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={startCamera}
-                  className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-zinc-300 rounded-xl hover:border-accent hover:bg-accent-tint transition-all duration-200"
-                >
-                  <Camera className="w-6 h-6 text-zinc-400" />
-                  <span className="text-zinc-600 font-medium">Use Camera</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-zinc-300 rounded-xl hover:border-accent hover:bg-accent-tint transition-all duration-200"
+                  >
+                    <Camera className="w-6 h-6 text-zinc-400" />
+                    <span className="text-zinc-600 font-medium">Take photo</span>
+                  </button>
+                  <button
+                    onClick={startCamera}
+                    className="w-full flex items-center justify-center gap-3 p-4 border border-zinc-200 rounded-xl hover:border-accent hover:bg-accent-tint transition-all duration-200"
+                  >
+                    <span className="text-zinc-600 font-medium text-sm">Live camera preview</span>
+                  </button>
+                </>
               )}
 
               {!useCamera && (
@@ -388,6 +415,14 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                     <Upload className="w-6 h-6 text-zinc-400" />
                     <span className="text-zinc-600 font-medium">Upload Image</span>
                   </button>
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
                   <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
                   <p className="text-xs text-zinc-400 text-center">Supports JPG, PNG, GIF, BMP</p>
                 </>

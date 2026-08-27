@@ -5,7 +5,7 @@ import { deriveJobMetrics, jobSubtitle } from '../utils/jobMetrics';
 import { uniqueByName } from './partyName';
 
 export async function loadInvitedJobSummaries(email, options = {}) {
-  const projects = await listInvitedProjects(email);
+  const projects = options.projects || (await listInvitedProjects(email));
   const now = options.now || new Date();
 
   const rows = await Promise.all(

@@ -1,7 +1,6 @@
 # Database audit — Phase 5 Part A
 
-**Status:** Part A written 2026-08-26 (read-only scan). Part B is on staging only. Production data was not changed.  
-**Scanned:** 26 August 2026, read-only, production `rising-amp-467702-b5` (default database) and staging `rising-amp-staging`.  
+**Status:** Part A written 2026-08-26 (read-only scan). Part B and the directory split are **live** (2026-08-27). For the current model, weaknesses, and scale advice, read **`DATABASE.md`**. This file is the scan record; some findings below are closed (jobId backfill, `users/` rules, create/archive/remove, clients vs suppliers).  
 **Shopfront:** https://risingamp.com.au  
 **Stop here for production.** Part B is on staging only until a second owner yes.
 

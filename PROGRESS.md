@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-5-jobs-members` (from `phase-4-domain-email`, 2026-08-26). Phases 1–4 are live. Localhost still uses `.env.local` → staging.
+`phase-6-integrity` (from `phase-5-jobs-members`, 2026-08-27). Phases 1–5 are live. Localhost still uses `.env.local` → staging.
 
 Restore tag (Phase 1 unwind): `pre-phase1-2026-08-22`
 
@@ -10,13 +10,15 @@ Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as htt
 Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_PROJECT_ID=rising-amp-staging`)  
 `.firebaserc` default is **staging**. Git push does not deploy. Live hosting changes only on `firebase deploy --project production --only hosting`.
 
-## Where we are (2026-08-26)
+## Where we are (2026-08-27)
 
-**Phase 1, 2, 3, and 4 are closed.** Phase 5 is in progress on `phase-5-jobs-members`.
+**Phase 1–5 are closed.** Phase 6 is in progress on `phase-6-integrity`.
 
-**Phase 4 leftovers (not Phase 5 unless he asks):** Gmail invite fallback still in the client; prove one live Resend invite then Task 3 if he wants it gone; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
+**Phase 5 shipped:** jobs as IDs, create/archive/invite/remove, clients vs suppliers, `DATABASE.md`, `readReceiptImage` on staging and production. Scanner is OpenAI only — if AI fails, show an error (no Tesseract).
 
-**Phase 5 next:** Part B (create/archive/remove person) and the clients vs suppliers split are **live** (2026-08-27). Hosting + Firestore rules deployed. `jobId` backfill and directory split applied on production. Localhost still uses staging. Part C is integrity + docs. Do not deploy functions.
+**Phase 6 next:** owner picks the first slice in `PHASE6.md` (invoice job name, profile scan, expense cap, Storage rules, …). Do not start a production write without a yes.
+
+**Phase 4 leftovers (not Phase 6 unless he asks):** Gmail invite fallback still in the client; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
 
 **Owner already has:**
 - Shopfront `https://risingamp.com.au`, DNS at Crazy Domains.
@@ -26,15 +28,13 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is done and approved. Part B (jobs/members) and the clients vs suppliers split are live on production (2026-08-27). Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
+Read CLAUDE.md, then PROGRESS.md, then PHASE6.md. Open design/risingamp-vision.html. Work is on branch phase-6-integrity (from phase-5-jobs-members). Shopfront is https://risingamp.com.au. Localhost stays on staging. Phases 1–5 are live. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
 ```
 
 ## Remaining work
 
-1. Phase 5 Part A — `DATABASE-AUDIT.md` written. Owner approved the plan 2026-08-26.
-2. Phase 5 Part B — staging done (backup restore, jobId, four operations, rules). Production behind a second yes.
-3. Phase 5 Part C — integrity fixes (additive, reversible) and docs.
-4. Optional leftovers: live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`.
+1. Phase 6 — owner picks first slice from `PHASE6.md`.
+2. Optional leftovers: live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`.
 
 ## Next
 
@@ -42,13 +42,8 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.h
 - [x] Phase 2 restyle live (Manrope, Palette 1)
 - [x] Phase 3 vision live (Jobs home, verdict, capture, profiles)
 - [x] Phase 4 — legal pages, Resend invites, shopfront `risingamp.com.au`, Google login on that domain
-- [x] Phase 5 Step 0 — branch `phase-5-jobs-members` + `PHASE5.md` + `CLAUDE.md` prime directive lifted under heightened process
-- [x] Phase 5 Part A — `DATABASE-AUDIT.md` (no writes; scan 2026-08-26)
-- [x] Phase 5 Part A — owner yes on the target model and migration plan (2026-08-26)
-- [x] Phase 5 Part B — staging migration + four operations + rules
-- [x] Phase 5 clients vs suppliers split — staging (owner checked 2026-08-27)
-- [x] Phase 5 Part B + directory split — production (backup, jobId, split, hosting + rules, 2026-08-27)
-- [ ] Phase 5 Part C — integrity + `ARCHITECTURE.md` / docs
+- [x] Phase 5 — jobs/members, directory split, `DATABASE.md`, OpenAI via function
+- [ ] Phase 6 — integrity follow-through (`PHASE6.md`); first slice TBD
 
 
 ## What shipped (localhost / staging)
@@ -90,7 +85,7 @@ Honest numbers, display only, no new stored verdict field, no document rewrites.
 
 ## What was skipped, and why
 
-- **New job create** — would write org/project docs, invites, storage keys. Owner still creates lists by hand. The jobs list says so instead of a fake button that writes.
+- **New job create** — shipped in Phase 5 Part B (owner-only).
 - **HIA `totalAmount` as the contract figure** — live budget already used paid invoice `total`s. HIA totals were not substituted.
 - **Decorative margin sparkline** — would be made-up ink.
 - **Schema / auto-fix of bad dates** — missing dates are listed for the user to fix.
@@ -116,7 +111,7 @@ OCR “Check this” **was** implemented, but only from real signals: missing/in
 
 - `firebase deploy` without `--project production` and an explicit `--only`, and only when Lalit asks
 - Point localhost at production to make receipts appear
-- Add a working New job write **until Phase 5 Part B is approved**
+- Add a working New job write without an explicit yes (create-job is live; do not invent extra writes)
 - Commit `.env*`, `.phase1-local.json`, or `backups/`
 - Billing, Stripe, a second product
 

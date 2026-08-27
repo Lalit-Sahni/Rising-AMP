@@ -1,97 +1,43 @@
 // OpenAI Vision API Service for Construction Receipt/Invoice OCR
 // Uses GPT-4 Vision for superior accuracy on construction documents
 
+import { readReceiptWithAi } from '../firebase/readReceipt';
+
+function friendlyAiError(error) {
+  const code = (error && error.code) || '';
+  const message = (error && error.message) || '';
+  if (code === 'functions/unauthenticated') return 'Sign in again to read a receipt.';
+  if (code === 'functions/permission-denied') return 'You are not on this organisation.';
+  if (code === 'functions/not-found') {
+    return 'AI receipt reading is not deployed on this environment yet.';
+  }
+  if (code === 'functions/failed-precondition') {
+    return 'AI receipt reading is not configured yet.';
+  }
+  if (code === 'functions/invalid-argument') {
+    return message.replace(/^FirebaseError:\s*/i, '') || 'That photo could not be sent.';
+  }
+  if (code === 'functions/deadline-exceeded') return 'The AI read timed out. Try a closer photo.';
+  if (message) return message.replace(/^FirebaseError:\s*/i, '');
+  return 'Could not read that receipt with AI.';
+}
+
 class OpenAIOCRService {
   constructor() {
-    this.apiKey = process.env.REACT_APP_OPENAI_API_KEY;
-    this.apiEndpoint = "https://api.openai.com/v1/chat/completions";
-    // Use a current vision-capable model
     this.model = "gpt-4o-mini";
-    
-    // Validate API key
-    if (!this.apiKey) {
-      console.warn('⚠️ OpenAI API key not found. OCR functionality will be limited.');
-      console.warn('📝 Please set REACT_APP_OPENAI_API_KEY in your .env.local file.');
-    }
-  }
-
-  /**
-   * Convert image file to base64
-   * @param {File} file - Image file
-   * @returns {Promise<string>} Base64 encoded image
-   */
-  async imageToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
   }
 
   /**
    * Extract text and data from receipt/invoice image using OpenAI Vision
-   * @param {File} imageFile - Image file to process
-   * @returns {Promise<Object>} Extracted data with confidence scores
+   * via a Cloud Function. Browsers cannot call api.openai.com directly (CORS),
+   * and the key must not live in the client.
    */
   async extractTextFromImage(imageFile) {
     try {
-      if (!this.apiKey) {
-        throw new Error('OpenAI API key not configured');
-      }
-
-      // Convert image to base64
-      const base64Image = await this.imageToBase64(imageFile);
-      
-      // Create the prompt for construction expense extraction
-      const prompt = this.createConstructionPrompt();
-      
-      const requestBody = {
-        model: this.model,
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}`, detail: "high" } }
-            ]
-          }
-        ],
-        max_tokens: 2000,
-        temperature: 0.1
-      };
-
-      const response = await fetch(this.apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`OpenAI API request failed: ${response.status} ${response.statusText}. ${errorData.error?.message || ''}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        throw new Error('Invalid response from OpenAI API');
-      }
-
-      const content = data.choices[0].message.content;
-      
-      // Parse the JSON response
+      const content = await readReceiptWithAi(imageFile);
       const extractedData = this.parseAIResponse(content);
-      
-      // Map to form fields
       const formData = this.mapToFormFields(extractedData);
-      
+
       return {
         rawText: extractedData.rawText || '',
         category: extractedData.category,
@@ -102,66 +48,10 @@ class OpenAIOCRService {
         suggestions: this.generateSuggestions(extractedData),
         warnings: extractedData.warnings || []
       };
-
     } catch (error) {
       console.error('OpenAI OCR extraction failed:', error);
-      throw error;
+      throw new Error(friendlyAiError(error));
     }
-  }
-
-  /**
-   * Create construction-specific prompt for AI
-   * @returns {string} Formatted prompt
-   */
-  createConstructionPrompt() {
-    return `You are an expert at extracting data from construction industry receipts and invoices. 
-
-Analyze this image and extract the following information in JSON format:
-
-{
-  "vendor": "Company/supplier name",
-  "date": "Date in YYYY-MM-DD format",
-  "totalAmount": 123.45,
-  "tax": 12.34,
-  "subtotal": 111.11,
-  "invoiceNumber": "Invoice/Receipt number",
-  "items": [
-    {
-      "description": "Item description",
-      "quantity": 1,
-      "unitPrice": 10.00,
-      "totalPrice": 10.00
-    }
-  ],
-  "category": "labour|trade|equipment|service|purchase",
-  "confidence": 85,
-  "rawText": "Full extracted text",
-  "warnings": ["Any issues or uncertainties"]
-}
-
-CATEGORY RULES:
-- "labour": Worker payments, hourly rates, payroll, contractor fees
-- "trade": Electrician, plumber, carpenter, painter, roofer, HVAC, concrete work
-- "equipment": Tool rentals, machinery, equipment purchases, vehicle rentals
-- "service": Maintenance, repairs, consulting, inspections, cleaning
-- "purchase": Materials, supplies, lumber, hardware, consumables
-
-CONSTRUCTION-SPECIFIC VENDORS:
-- Home Depot, Lowe's, Menards → "purchase" (materials)
-- Equipment rental companies → "equipment"
-- Trade contractors → "trade"
-- Labor/contractor payments → "labour"
-
-IMPORTANT:
-1. Be very accurate with amounts and dates
-2. Extract ALL line items with quantities and prices
-3. Identify the correct category based on content
-4. Provide confidence score (0-100) for overall accuracy
-5. Include any warnings about unclear text or missing information
-6. If you cannot determine something, use null or empty string
-7. For handwritten receipts, do your best but note in warnings
-
-Return ONLY the JSON object, no additional text.`;
   }
 
   /**
@@ -378,29 +268,6 @@ Return ONLY the JSON object, no additional text.`;
     }
 
     return suggestions;
-  }
-
-  /**
-   * Test API connectivity
-   * @returns {Promise<boolean>} Connection status
-   */
-  async testConnection() {
-    try {
-      if (!this.apiKey) {
-        return false;
-      }
-
-      const response = await fetch('https://api.openai.com/v1/models', {
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`
-        }
-      });
-
-      return response.ok;
-    } catch (error) {
-      console.error('OpenAI connection test failed:', error);
-      return false;
-    }
   }
 }
 

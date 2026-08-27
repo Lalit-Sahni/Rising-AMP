@@ -7,9 +7,11 @@
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
  *   firebase deploy --project production --only functions:sendJobInviteEmail
+ *   firebase deploy --project rising-amp-staging --only functions:readReceiptImage
+ *   firebase deploy --project production --only functions:readReceiptImage
  *
- * RESEND_API_KEY must already exist in Secret Manager. The owner sets it
- * themselves (masked prompt). Never put the key in this repo or in REACT_APP_*.
+ * Secrets the owner sets at a masked prompt (never paste into chat or REACT_APP_*):
+ *   RESEND_API_KEY, OPENAI_API_KEY
  */
 
 const admin = require('firebase-admin');
@@ -24,7 +26,9 @@ const {
 
 const FAMILY_ORG_ID = 'opal-ss-constructions';
 const FROM = 'RisingAMP <invites@risingamp.com.au>';
+const { RECEIPT_PROMPT } = require('./lib/receiptPrompt');
 const resendApiKey = defineSecret('RESEND_API_KEY');
+const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
 const ALLOWED_APP_ORIGINS = new Set([
   'https://rising-amp-467702-b5.web.app',
@@ -162,3 +166,98 @@ exports.sendJobInviteEmail = onCall(
     return { ok: true, id: payload.id || null, via: 'resend' };
   }
 );
+
+exports.readReceiptImage = onCall(
+  {
+    region: 'us-central1',
+    secrets: [openaiApiKey],
+    cors: true,
+    maxInstances: 10,
+    timeoutSeconds: 60,
+    memory: '512MiB',
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to read a receipt.');
+    }
+    const callerEmail = normalizeEmail(request.auth.token && request.auth.token.email);
+    if (!callerEmail) {
+      throw new HttpsError('unauthenticated', 'Sign in to read a receipt.');
+    }
+
+    const imageBase64 = String((request.data && request.data.imageBase64) || '').replace(/\s/g, '');
+    const mimeType = String((request.data && request.data.mimeType) || 'image/jpeg');
+    if (!imageBase64 || imageBase64.length < 100) {
+      throw new HttpsError('invalid-argument', 'The photo was empty.');
+    }
+    if (imageBase64.length > 5 * 1024 * 1024) {
+      throw new HttpsError('invalid-argument', 'That photo is too large. Try a closer shot.');
+    }
+    if (!/^image\/(jpeg|jpg|png|webp|gif)$/i.test(mimeType)) {
+      throw new HttpsError('invalid-argument', 'Use a JPG, PNG, or WebP photo.');
+    }
+
+    const db = admin.firestore();
+    const orgSnap = await db.collection('organizations').doc(FAMILY_ORG_ID).get();
+    if (!orgSnap.exists) {
+      throw new HttpsError('not-found', 'Organisation is not set up.');
+    }
+    const org = orgSnap.data() || {};
+    if (!isEmailOnList(org.invitedEmails || [], callerEmail)) {
+      throw new HttpsError('permission-denied', 'You are not on this organisation.');
+    }
+
+    const apiKey = openaiApiKey.value();
+    if (!apiKey) {
+      throw new HttpsError('failed-precondition', 'OpenAI is not configured.');
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: RECEIPT_PROMPT },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${imageBase64}`,
+                  detail: 'high',
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 2000,
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      const details = await response.text();
+      console.error('OpenAI receipt read failed', response.status, details.slice(0, 500));
+      throw new HttpsError('internal', 'Could not read that receipt.');
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    const content =
+      payload &&
+      payload.choices &&
+      payload.choices[0] &&
+      payload.choices[0].message &&
+      payload.choices[0].message.content;
+    if (!content) {
+      throw new HttpsError('internal', 'OpenAI returned an empty read.');
+    }
+
+    return { content };
+  }
+);
+

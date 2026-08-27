@@ -16,9 +16,9 @@ App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category col
 |--------|------------|
 | UI | React 18, Create React App (`react-scripts`), Tailwind |
 | Routing | **No react-router.** A string `currentPage` in `AppContext` switches which page component is shown. |
-| Backend | Firebase: Auth (Google), Firestore, Storage, Hosting, Cloud Functions (unused leftover), Analytics |
-| Functions | Node 22. App source no longer exports Weekly Report. Production still has unused `generateWeeklyReport`. Do not deploy functions unless asked. |
-| OCR | Client-side: OpenAI Vision (`gpt-4o-mini`) → Google Cloud Vision → Tesseract.js |
+| Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions, Analytics |
+| Functions | Node 22. Live: `sendJobInviteEmail`. Added in repo: `readReceiptImage` (OpenAI). Production still has unused `generateWeeklyReport`. Deploy functions **by name only**. Never `firebase deploy --only functions`. |
+| OCR | OpenAI Vision via Cloud Function `readReceiptImage`. If that fails, show an error. Do not fall back to Tesseract or Google Vision. |
 | PWA | Mobile web-app meta tags only. No `manifest.json`, no service worker. |
 
 Entry: `src/index.js` → `src/App.js`.
@@ -72,13 +72,13 @@ Old PIN trees `users/{accessCode}/…` still exist. The live app does not use th
 
 `firestore.rules`:
 
-- `users/{accessCode}/**` — still `if true` (legacy PIN copies).
+- `users/{accessCode}/**` — deny (legacy PIN copies kept, not world-open).
 - `profiles/{uid}` — signed-in users can read; only the owner of that uid can write.
 - `organizations/{orgId}` — signed-in email must be in `invitedEmails`.
-- `organizations/{orgId}/projects/{projectId}` — signed-in Gmail must be in that project’s `invitedEmails`. List queries use `resource.data.invitedEmails` so they match `array-contains`.
+- `organizations/{orgId}/projects/{projectId}` — signed-in email must be in that project’s `invitedEmails`. List queries use `resource.data.invitedEmails` so they match `array-contains`. Owner-only: create job, archive, invite, remove person. Delete job is denied.
 - Project subcollections use a `get()` of the parent project’s `invitedEmails`.
 
-`storage.rules`: receipts still keyed by legacy access code, `if true`. Same as before Phase 1.
+`storage.rules` in the repo: receipts require sign-in and job membership (or a known legacy PIN folder). Production Storage rules were **not** deployed on 27 Aug 2026 (hosting + Firestore only). See `DATABASE.md`.
 
 ---
 

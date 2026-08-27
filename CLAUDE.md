@@ -6,24 +6,23 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Work is on **`phase-5-jobs-members`** (created from `phase-4-domain-email`, 2026-08-26). Phases 1–4 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tag if you need to unwind Phase 1: `pre-phase1-2026-08-22`.
-2. Read `PROGRESS.md` (next concrete step), then `PHASE5.md` (current phase: database audit, then jobs as records and membership). `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. Open `design/risingamp-vision.html` in a browser.
+1. Confirm git branch. Work is on **`phase-6-integrity`** (created from `phase-5-jobs-members`, 2026-08-27). Phases 1–5 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tag if you need to unwind Phase 1: `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next concrete step), then `PHASE6.md` (current phase: integrity and database follow-through). `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide. Open `design/risingamp-vision.html` in a browser.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 5 Part B (jobs/members) and the clients vs suppliers split are **live on production** (2026-08-27). Localhost still uses staging. Part C is integrity + docs. See `PHASE5.md`.
+5. **Next:** Phase 5 is **closed** (2026-08-27). Phase 6 is `PHASE6.md` on branch `phase-6-integrity`. First slice is the owner’s pick from that brief. Localhost still uses staging.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE5.md. Open design/risingamp-vision.html. Work is on branch phase-5-jobs-members (from phase-4-domain-email). Shopfront is https://risingamp.com.au. Localhost stays on staging. Part A is done and approved. Part B (jobs/members) and the clients vs suppliers split are live on production (2026-08-27). Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
+> Read CLAUDE.md, then PROGRESS.md, then PHASE6.md. Open design/risingamp-vision.html. Work is on branch phase-6-integrity (from phase-5-jobs-members). Shopfront is https://risingamp.com.au. Localhost stays on staging. Phases 1–5 are live. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
 
 If you are unsure whether a command writes to production, do not run it.
 
 ## Prime directive
 
-- This is a live app with real, irreplaceable data. **Schema and data-structure changes are in scope for Phase 5**, and they are the highest-risk work in the project. They follow the heightened process in `PHASE5.md`, not a free-for-all.
-- Part A (`DATABASE-AUDIT.md`) is **read-only**. Do not migrate, rewrite, or delete anything until the owner approves that plan.
+- This is a live app with real, irreplaceable data. **Schema and data-structure changes follow `PHASE6.md` and `DATABASE.md`**, not a free-for-all. Phase 5’s heightened process still applies.
 - Nothing runs against **production** Firestore or Storage without a full backup and a tested restore first. Staging first, production only behind an explicit yes.
 - No hard deletes of user-created data. Archive a job; revoke a person’s access. Keep the records they entered.
 - Before any change that has side effects, stop, write a plan, and wait for explicit human approval. Propose first, execute second.
@@ -71,25 +70,31 @@ Same app, same data. Brief: `PHASE3.md`. Mockup: `design/risingamp-vision.html`.
 
 Brief: `PHASE4.md`. Legal pages, Resend invite function on staging and production (`invites@risingamp.com.au`), shopfront `https://risingamp.com.au`, Google login on that domain. Gmail invite fallback still in the client until the owner asks to remove it. Unused `generateWeeklyReport` still on production — deploy functions **by name only**.
 
-## Phase 5 (in progress, branch `phase-5-jobs-members`)
+## Phase 5 (closed 2026-08-27; live)
 
-Brief: `PHASE5.md`. Database audit first (`DATABASE-AUDIT.md`, no writes). Then, only after owner yes: jobs as stable IDs, create / archive job, add / remove person, rules that follow membership. Soft deletes only.
+Brief: `PHASE5.md`. Jobs as stable IDs, create / archive / invite / remove, clients vs suppliers, `DATABASE.md`, OpenAI via `readReceiptImage`. Leftovers are in `PHASE6.md`.
+
+## Phase 6 (in progress, branch `phase-6-integrity`)
+
+Brief: `PHASE6.md`. Integrity and database follow-through from `DATABASE.md`. First slice is the owner’s pick. Soft deletes only.
 
 ## Out of scope until asked
 
-- Billing, Stripe, a second product, deleting leftover PIN folders unless the approved Phase 5 plan says so, deploying functions beyond what `PHASE5.md` names, new npm packages (fonts via Google Fonts are OK), Phase 4 Gmail-fallback removal
+- Billing, Stripe, a second product, deleting leftover PIN folders unless the owner asks, deploying functions beyond what `PHASE6.md` names, new npm packages (fonts via Google Fonts are OK), Phase 4 Gmail-fallback removal
 
 ## Continuity
 
 - `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
-- `PHASE5.md` — current phase brief (audit, then jobs and membership).
+- `PHASE6.md` — current phase brief (integrity and database follow-through).
+- `PHASE5.md` — jobs, members, database audit — closed record.
 - `PHASE4.md` — domain, Resend, legal pages — closed record.
 - `PHASE3.md` — Phase 3 vision brief — closed record.
 - `PHASE2.md` — Phase 2 restyle record (complete).
 - `PROGRESS.md` — next concrete step. Update at session end.
 - `PLAN.md` — Phase 1 record (complete).
 - `ARCHITECTURE.md` — how the running app is built.
-- `DATABASE-AUDIT.md` — Phase 5 Part A deliverable (written 2026-08-26; plan approved).
+- `DATABASE.md` — living database guide (model, weaknesses, scale). Prefer this over the audit when they disagree.
+- `DATABASE-AUDIT.md` — Phase 5 Part A scan (26 Aug 2026; plan approved). Historical counts.
 - Small sessions: one checklist item, then commit on the branch.
 
 ## Owner working style
