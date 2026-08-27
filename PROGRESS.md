@@ -2,9 +2,9 @@
 
 ## Current branch
 
-`phase-6-integrity` (from `phase-5-jobs-members`, 2026-08-27). Phases 1–5 are live. Localhost still uses `.env.local` → staging.
+`phase-6-legacy-cut` (from `phase-5-jobs-members`, 2026-08-27). Phases 1–5 are live. Localhost still uses `.env.local` → staging.
 
-Restore tag (Phase 1 unwind): `pre-phase1-2026-08-22`
+Restore tags: `pre-phase6-2026-08-27` (this phase), `pre-phase1-2026-08-22` (Phase 1 unwind)
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_PROJECT_ID=rising-amp-staging`)  
@@ -12,11 +12,13 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 ## Where we are (2026-08-27)
 
-**Phase 1–5 are closed.** Phase 6 is in progress on `phase-6-integrity`.
+**Phase 1–5 are closed.** Phase 6 is the **legacy cut** on `phase-6-legacy-cut`. Code deletion only. No Firestore writes, no deploys.
 
 **Phase 5 shipped:** jobs as IDs, create/archive/invite/remove, clients vs suppliers, `DATABASE.md`, `readReceiptImage` on staging and production. Scanner is OpenAI only — if AI fails, show an error (no Tesseract).
 
-**Phase 6 next:** owner picks the first slice in `PHASE6.md` (invoice job name, profile scan, expense cap, Storage rules, …). Do not start a production write without a yes.
+**Phase 6 Part A done (2026-08-27):** deleted 20 unreachable pre-Phase-1 files plus Windows `start-dev` leftovers. Left `authValidation.js` (still used by login). See the Part A commit for the old-app capability list.
+
+**Phase 6 next:** Part B in `PHASE6.md` — remove OCR test harnesses. Ask Lalit about Tesseract before deleting `tesseract.js`. One part per session. Database integrity leftovers are in `PHASE6-INTEGRITY.md` (not this branch).
 
 **Phase 4 leftovers (not Phase 6 unless he asks):** Gmail invite fallback still in the client; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
 
@@ -28,13 +30,14 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE6.md. Open design/risingamp-vision.html. Work is on branch phase-6-integrity (from phase-5-jobs-members). Shopfront is https://risingamp.com.au. Localhost stays on staging. Phases 1–5 are live. Never hard-delete user records. Never accept a pasted API key. Do not deploy a full functions set to production (that would delete generateWeeklyReport).
+Read CLAUDE.md, then PROGRESS.md, then PHASE6.md. Open design/risingamp-vision.html. Work is on branch phase-6-legacy-cut (from phase-5-jobs-members). Restore tag: pre-phase6-2026-08-27. Shopfront is https://risingamp.com.au. Localhost stays on staging. Phases 1–5 are live. Never hard-delete user records. Never accept a pasted API key. Do not deploy. One part per session.
 ```
 
 ## Remaining work
 
-1. Phase 6 — owner picks first slice from `PHASE6.md`.
-2. Optional leftovers: live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`.
+1. Phase 6 Part B — OCR harnesses (`PHASE6.md`). Ask about Tesseract first.
+2. Then Parts C → D → E → F, one session each.
+3. Optional leftovers (not this branch): `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`.
 
 ## Next
 
@@ -43,7 +46,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE6.md. Open design/risingamp-vision.h
 - [x] Phase 3 vision live (Jobs home, verdict, capture, profiles)
 - [x] Phase 4 — legal pages, Resend invites, shopfront `risingamp.com.au`, Google login on that domain
 - [x] Phase 5 — jobs/members, directory split, `DATABASE.md`, OpenAI via function
-- [ ] Phase 6 — integrity follow-through (`PHASE6.md`); first slice TBD
+- [ ] Phase 6 — legacy cut (`PHASE6.md`); Part A done, Part B next
 
 
 ## What shipped (localhost / staging)

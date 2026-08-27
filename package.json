@@ -29,7 +29,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "start:clean": "powershell -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Where-Object {$_.ProcessName -eq 'node'} | Stop-Process -Force; react-scripts start\"",
+    "start:clean": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true; react-scripts start",
     "dev": "PORT=3001 react-scripts start",
     "build": "react-scripts build",
     "build:analyze": "ANALYZE=true react-scripts build",
