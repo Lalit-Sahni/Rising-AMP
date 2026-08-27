@@ -121,7 +121,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
     saveCompanyToFirebase,
     saveServiceProviderToFirebase,
     savePayerToFirebase,
-    accessCode
+    jobId
   } = useApp();
 
   const [formData, setFormData] = useState({});
@@ -387,7 +387,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
         try {
           setUploadProgress(10);
           const { uploadReceiptImage } = await import('../firebase/storage');
-          const uploadResult = await uploadReceiptImage(accessCode, expenseData.id, receiptFile);
+          const uploadResult = await uploadReceiptImage(jobId, expenseData.id, receiptFile);
 
           if (uploadResult.success) {
             expenseData.receiptImageUrl = uploadResult.url;

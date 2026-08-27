@@ -50,6 +50,7 @@ export function writeSession({ projectId, workspaceId, projectName, orgId, invit
   if (projectStatus) localStorage.setItem(SESSION_KEYS.projectStatus, projectStatus);
   else localStorage.removeItem(SESSION_KEYS.projectStatus);
 
+  // Legacy PIN-era key. The string must stay; do not rename it to jobId.
   localStorage.removeItem('accessCode');
 }
 

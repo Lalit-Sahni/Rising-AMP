@@ -40,7 +40,7 @@ export default function DashboardPage() {
     invoices,
     clients,
     projectName,
-    projectId,
+    jobId,
     jobStatus,
     setCurrentPage,
     showToast,
@@ -78,7 +78,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (!projectId) {
+  if (!jobId) {
     return (
       <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
         <div className="max-w-xl">

@@ -35,8 +35,8 @@ const COLLECTIONS = {
 };
 
 // ===== EXPENSES =====
-export const addExpense = async (accessCode, expenseData) => {
-  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.EXPENSES}`), {
+export const addExpense = async (jobId, expenseData) => {
+  const docRef = await addDoc(collection(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.EXPENSES}`), {
     ...expenseData,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
@@ -44,9 +44,9 @@ export const addExpense = async (accessCode, expenseData) => {
   return { id: docRef.id, ...expenseData };
 };
 
-export const getExpenses = async (accessCode) => {
+export const getExpenses = async (jobId) => {
   const q = query(
-    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.EXPENSES}`),
+    collection(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.EXPENSES}`),
     orderBy('createdAt', 'desc')
   );
   const querySnapshot = await getDocs(q);
@@ -56,8 +56,8 @@ export const getExpenses = async (accessCode) => {
   }));
 };
 
-export const updateExpense = async (accessCode, expenseId, expenseData) => {
-  const expenseRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.EXPENSES}`, expenseId);
+export const updateExpense = async (jobId, expenseId, expenseData) => {
+  const expenseRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.EXPENSES}`, expenseId);
   await updateDoc(expenseRef, {
     ...expenseData,
     updatedAt: serverTimestamp()
@@ -70,14 +70,14 @@ export const updateExpense = async (accessCode, expenseId, expenseData) => {
   }
 };
 
-export const deleteExpense = async (accessCode, expenseId) => {
-  const expenseRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.EXPENSES}`, expenseId);
+export const deleteExpense = async (jobId, expenseId) => {
+  const expenseRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.EXPENSES}`, expenseId);
   await deleteDoc(expenseRef);
   
   // Also delete associated receipt image if it exists
   try {
     const { deleteReceiptImage } = await import('./storage');
-    await deleteReceiptImage(accessCode, expenseId);
+    await deleteReceiptImage(jobId, expenseId);
   } catch (error) {
     console.warn('Error deleting receipt image:', error);
     // Don't throw error here as expense deletion should still succeed
@@ -85,9 +85,9 @@ export const deleteExpense = async (accessCode, expenseId) => {
 };
 
 // ===== CLIENTS =====
-export const updateClient = async (accessCode, clientId, clientData) => {
+export const updateClient = async (jobId, clientId, clientData) => {
   try {
-    const clientRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.CLIENTS}`, clientId);
+    const clientRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.CLIENTS}`, clientId);
     await updateDoc(clientRef, {
       ...clientData,
       updatedAt: serverTimestamp()
@@ -107,9 +107,9 @@ export const updateClient = async (accessCode, clientId, clientData) => {
   }
 };
 
-export const deleteClient = async (accessCode, clientId) => {
+export const deleteClient = async (jobId, clientId) => {
   try {
-    const clientRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.CLIENTS}`, clientId);
+    const clientRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.CLIENTS}`, clientId);
     await deleteDoc(clientRef);
     
     return { success: true };
@@ -120,13 +120,13 @@ export const deleteClient = async (accessCode, clientId) => {
 };
 
 // Legacy function names for backward compatibility
-export const addClient = async (accessCode, clientData) => {
-  return await saveClientInfo(accessCode, clientData);
+export const addClient = async (jobId, clientData) => {
+  return await saveClientInfo(jobId, clientData);
 };
 
-export const updateLabour = async (accessCode, labourId, labourData) => {
+export const updateLabour = async (jobId, labourId, labourData) => {
   try {
-    const labourRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.LABOUR}`, labourId);
+    const labourRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.LABOUR}`, labourId);
     await updateDoc(labourRef, {
       ...labourData,
       updatedAt: serverTimestamp()
@@ -146,9 +146,9 @@ export const updateLabour = async (accessCode, labourId, labourData) => {
   }
 };
 
-export const deleteLabour = async (accessCode, labourId) => {
+export const deleteLabour = async (jobId, labourId) => {
   try {
-    const labourRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.LABOUR}`, labourId);
+    const labourRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.LABOUR}`, labourId);
     await deleteDoc(labourRef);
     
     return { success: true };
@@ -158,9 +158,9 @@ export const deleteLabour = async (accessCode, labourId) => {
   }
 };
 
-export const updateTrade = async (accessCode, tradeId, tradeData) => {
+export const updateTrade = async (jobId, tradeId, tradeData) => {
   try {
-    const tradeRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.TRADES}`, tradeId);
+    const tradeRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.TRADES}`, tradeId);
     await updateDoc(tradeRef, {
       ...tradeData,
       updatedAt: serverTimestamp()
@@ -180,9 +180,9 @@ export const updateTrade = async (accessCode, tradeId, tradeData) => {
   }
 };
 
-export const deleteTrade = async (accessCode, tradeId) => {
+export const deleteTrade = async (jobId, tradeId) => {
   try {
-    const tradeRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.TRADES}`, tradeId);
+    const tradeRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${jobId}/${COLLECTIONS.TRADES}`, tradeId);
     await deleteDoc(tradeRef);
     
     return { success: true };
@@ -191,4 +191,3 @@ export const deleteTrade = async (accessCode, tradeId) => {
     return { success: false, error: error.message };
   }
 };
- 

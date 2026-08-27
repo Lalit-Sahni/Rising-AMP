@@ -50,6 +50,7 @@ function AppShell() {
   const [projectStatus, setProjectStatus] = useState(() => readSession().projectStatus || 'active');
 
   useEffect(() => {
+    // Legacy PIN-era key. The string must stay; do not rename it to jobId.
     localStorage.removeItem('accessCode');
     const unsubscribe = onAuthChange((user) => {
       if (user && user.isAnonymous) {

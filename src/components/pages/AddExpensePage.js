@@ -7,14 +7,14 @@ import OCRScanner from '../OCRScanner';
 import ErrorBoundary from '../ui/ErrorBoundary';
 
 export default function AddExpensePage() {
-  const { showToast, projectId, setCurrentPage } = useApp();
+  const { showToast, jobId, setCurrentPage } = useApp();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState({});
   const [uncertainFields, setUncertainFields] = useState({});
   const [ocrScannerOpen, setOcrScannerOpen] = useState(false);
 
-  if (!projectId) {
+  if (!jobId) {
     return (
       <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
         <div className="eyebrow">Record spend</div>

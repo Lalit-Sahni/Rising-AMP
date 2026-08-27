@@ -30,10 +30,10 @@ const projectRootRef = async (projectId) => {
 };
 
 // Sync local expenses to Firestore (migrate from array to subcollection)
-export const syncExpensesToFirestore = async (accessCode, expenses) => {
+export const syncExpensesToFirestore = async (jobId, expenses) => {
   try {
     console.log('Syncing expenses to Firestore with consistent IDs');
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     
     // Add each expense as a separate document using expense ID as document ID
     for (const expense of expenses) {
@@ -57,10 +57,10 @@ export const syncExpensesToFirestore = async (accessCode, expenses) => {
 };
 
 // Fetch expenses from Firestore (using subcollections)
-export const fetchExpensesFromFirestore = async (accessCode) => {
+export const fetchExpensesFromFirestore = async (jobId) => {
   try {
-    console.log('Attempting to fetch data for access code:', accessCode);
-    const userDocRef = await projectRootRef(accessCode);
+    console.log('Attempting to fetch data for access code:', jobId);
+    const userDocRef = await projectRootRef(jobId);
     const expensesCollectionRef = collection(userDocRef, 'expenses');
     
     // Query expenses ordered by timestamp with limit for performance
@@ -100,9 +100,9 @@ export const fetchExpensesFromFirestore = async (accessCode) => {
 };
 
 // Update budget in Firestore
-export const updateBudgetInFirestore = async (accessCode, budget) => {
+export const updateBudgetInFirestore = async (jobId, budget) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     await updateDoc(userDocRef, {
       budget: budget,
       updatedAt: serverTimestamp()
@@ -116,17 +116,17 @@ export const updateBudgetInFirestore = async (accessCode, budget) => {
 };
 
 // Add single expense to Firestore (using subcollection)
-export const addExpenseToFirestore = async (accessCode, expense) => {
+export const addExpenseToFirestore = async (jobId, expense) => {
   try {
     console.log('Adding expense with ID:', expense.id, 'to Firebase');
     
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const expenseDocRef = doc(userDocRef, 'expenses', expense.id);
     
     // Use setDoc with the expense's ID as the document ID
     await setDoc(expenseDocRef, {
       ...expense,
-      jobId: accessCode,
+      jobId: jobId,
       timestamp: serverTimestamp()
     });
     
@@ -144,9 +144,9 @@ export const addExpenseToFirestore = async (accessCode, expense) => {
 };
 
 // Update expense in Firestore
-export const updateExpenseInFirestore = async (accessCode, expenseId, updatedExpense) => {
+export const updateExpenseInFirestore = async (jobId, expenseId, updatedExpense) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
     
     await updateDoc(expenseDocRef, {
@@ -168,11 +168,11 @@ export const updateExpenseInFirestore = async (accessCode, expenseId, updatedExp
 };
 
 // Delete expense from Firestore
-export const deleteExpenseFromFirestore = async (accessCode, expenseId) => {
+export const deleteExpenseFromFirestore = async (jobId, expenseId) => {
   try {
-    console.log('Deleting expense:', expenseId, 'for access code:', accessCode);
+    console.log('Deleting expense:', expenseId, 'for access code:', jobId);
     
-    if (!accessCode) {
+    if (!jobId) {
       console.error('No access code provided for deletion');
       return { success: false, error: 'Access code is required' };
     }
@@ -182,7 +182,7 @@ export const deleteExpenseFromFirestore = async (accessCode, expenseId) => {
       return { success: false, error: 'Expense ID is required' };
     }
     
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
     
     // Verify the document exists before deleting
@@ -222,11 +222,11 @@ export const deleteExpenseFromFirestore = async (accessCode, expenseId) => {
 };
 
 // Batch delete multiple expenses (for future use)
-export const batchDeleteExpenses = async (accessCode, expenseIds) => {
+export const batchDeleteExpenses = async (jobId, expenseIds) => {
   try {
-    console.log('Batch deleting expenses:', expenseIds, 'for access code:', accessCode);
+    console.log('Batch deleting expenses:', expenseIds, 'for access code:', jobId);
     
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const batch = writeBatch(db);
     
     for (const expenseId of expenseIds) {
@@ -245,9 +245,9 @@ export const batchDeleteExpenses = async (accessCode, expenseIds) => {
 };
 
 // Save labour information (updated to use unified structure)
-export const saveLabourInfo = async (accessCode, labourData) => {
+export const saveLabourInfo = async (jobId, labourData) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const labourCollectionRef = collection(userDocRef, 'labour');
     
     // Check if labour with same name and role already exists
@@ -299,9 +299,9 @@ export const saveLabourInfo = async (accessCode, labourData) => {
 };
 
 // Save trade information (updated to use unified structure)
-export const saveTradeInfo = async (accessCode, tradeData) => {
+export const saveTradeInfo = async (jobId, tradeData) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const tradeCollectionRef = collection(userDocRef, 'trades');
     
     // Check if trade with same name and category already exists
@@ -353,9 +353,9 @@ export const saveTradeInfo = async (accessCode, tradeData) => {
 };
 
 // Fetch labour (updated to use unified structure)
-export const fetchLabour = async (accessCode) => {
+export const fetchLabour = async (jobId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const labourCollectionRef = collection(userDocRef, 'labour');
     const labourQuery = query(labourCollectionRef, orderBy('createdAt', 'desc'));
     const labourSnapshot = await getDocs(labourQuery);
@@ -376,14 +376,14 @@ export const fetchLabour = async (accessCode) => {
 };
 
 // Legacy function for backward compatibility
-export const fetchSavedLabour = async (accessCode) => {
-  return await fetchLabour(accessCode);
+export const fetchSavedLabour = async (jobId) => {
+  return await fetchLabour(jobId);
 };
 
 // Fetch trades (updated to use unified structure)
-export const fetchTrades = async (accessCode) => {
+export const fetchTrades = async (jobId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const tradeCollectionRef = collection(userDocRef, 'trades');
     const tradeQuery = query(tradeCollectionRef, orderBy('createdAt', 'desc'));
     const tradeSnapshot = await getDocs(tradeQuery);
@@ -404,14 +404,14 @@ export const fetchTrades = async (accessCode) => {
 };
 
 // Legacy function for backward compatibility
-export const fetchSavedTrades = async (accessCode) => {
-  return await fetchTrades(accessCode);
+export const fetchSavedTrades = async (jobId) => {
+  return await fetchTrades(jobId);
 };
 
 // Save client information (replaces saveCompanyInfo)
-export const saveClientInfo = async (accessCode, clientData) => {
+export const saveClientInfo = async (jobId, clientData) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const clientCollectionRef = collection(userDocRef, 'clients');
     
     // Check if client with same email already exists (if email provided)
@@ -462,9 +462,9 @@ export const saveClientInfo = async (accessCode, clientData) => {
 };
 
 // Fetch clients (replaces fetchSavedCompanies)
-export const fetchClients = async (accessCode) => {
+export const fetchClients = async (jobId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const clientCollectionRef = collection(userDocRef, 'clients');
     const clientQuery = query(clientCollectionRef, orderBy('createdAt', 'desc'));
     const clientSnapshot = await getDocs(clientQuery);
@@ -485,9 +485,9 @@ export const fetchClients = async (accessCode) => {
 };
 
 // Progress payment functions
-export const addProgressPayment = async (accessCode, paymentData) => {
+export const addProgressPayment = async (jobId, paymentData) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const paymentsCollectionRef = collection(userDocRef, 'progressPayments');
     
     const docRef = await addDoc(paymentsCollectionRef, {
@@ -508,9 +508,9 @@ export const addProgressPayment = async (accessCode, paymentData) => {
   }
 };
 
-export const fetchProgressPayments = async (accessCode) => {
+export const fetchProgressPayments = async (jobId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const paymentsCollectionRef = collection(userDocRef, 'progressPayments');
     const paymentsQuery = query(paymentsCollectionRef, orderBy('timestamp', 'desc'));
     const paymentsSnapshot = await getDocs(paymentsQuery);
@@ -530,9 +530,9 @@ export const fetchProgressPayments = async (accessCode) => {
   }
 };
 
-export const updateProgressPayment = async (accessCode, paymentId, updatedPayment) => {
+export const updateProgressPayment = async (jobId, paymentId, updatedPayment) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const paymentDocRef = doc(userDocRef, 'progressPayments', paymentId);
     
     await updateDoc(paymentDocRef, {
@@ -553,9 +553,9 @@ export const updateProgressPayment = async (accessCode, paymentId, updatedPaymen
   }
 };
 
-export const deleteProgressPayment = async (accessCode, paymentId) => {
+export const deleteProgressPayment = async (jobId, paymentId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const paymentDocRef = doc(userDocRef, 'progressPayments', paymentId);
     
     await deleteDoc(paymentDocRef);
@@ -568,14 +568,14 @@ export const deleteProgressPayment = async (accessCode, paymentId) => {
 };
 
 // Invoice functions
-export const addInvoiceToFirestore = async (accessCode, invoice) => {
+export const addInvoiceToFirestore = async (jobId, invoice) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const invoicesCollectionRef = collection(userDocRef, 'invoices');
     
     const docRef = await addDoc(invoicesCollectionRef, {
       ...invoice,
-      jobId: accessCode,
+      jobId: jobId,
       timestamp: serverTimestamp()
     });
     
@@ -592,9 +592,9 @@ export const addInvoiceToFirestore = async (accessCode, invoice) => {
   }
 };
 
-export const fetchInvoicesFromFirestore = async (accessCode) => {
+export const fetchInvoicesFromFirestore = async (jobId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const invoicesCollectionRef = collection(userDocRef, 'invoices');
     const invoicesQuery = query(invoicesCollectionRef, orderBy('timestamp', 'desc'));
     const invoicesSnapshot = await getDocs(invoicesQuery);
@@ -614,9 +614,9 @@ export const fetchInvoicesFromFirestore = async (accessCode) => {
   }
 };
 
-export const updateInvoiceInFirestore = async (accessCode, invoiceId, updatedInvoice) => {
+export const updateInvoiceInFirestore = async (jobId, invoiceId, updatedInvoice) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const invoiceDocRef = doc(userDocRef, 'invoices', invoiceId);
     
     await updateDoc(invoiceDocRef, {
@@ -637,9 +637,9 @@ export const updateInvoiceInFirestore = async (accessCode, invoiceId, updatedInv
   }
 };
 
-export const deleteInvoiceFromFirestore = async (accessCode, invoiceId) => {
+export const deleteInvoiceFromFirestore = async (jobId, invoiceId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const invoiceDocRef = doc(userDocRef, 'invoices', invoiceId);
     
     await deleteDoc(invoiceDocRef);
@@ -652,14 +652,14 @@ export const deleteInvoiceFromFirestore = async (accessCode, invoiceId) => {
 };
 
 // HIA Contract functions
-export const saveHIAContractToFirestore = async (accessCode, contractData) => {
+export const saveHIAContractToFirestore = async (jobId, contractData) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const contractsCollectionRef = collection(userDocRef, 'hiaContracts');
     
     const docRef = await addDoc(contractsCollectionRef, {
       ...contractData,
-      jobId: accessCode,
+      jobId: jobId,
       timestamp: serverTimestamp()
     });
     
@@ -676,9 +676,9 @@ export const saveHIAContractToFirestore = async (accessCode, contractData) => {
   }
 };
 
-export const fetchHIAContractsFromFirestore = async (accessCode) => {
+export const fetchHIAContractsFromFirestore = async (jobId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const contractsCollectionRef = collection(userDocRef, 'hiaContracts');
     const contractsQuery = query(contractsCollectionRef, orderBy('timestamp', 'desc'));
     const contractsSnapshot = await getDocs(contractsQuery);
@@ -698,9 +698,9 @@ export const fetchHIAContractsFromFirestore = async (accessCode) => {
   }
 };
 
-export const updateHIAContractInFirestore = async (accessCode, contractId, updates) => {
+export const updateHIAContractInFirestore = async (jobId, contractId, updates) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const contractDocRef = doc(userDocRef, 'hiaContracts', contractId);
     
     await updateDoc(contractDocRef, {
@@ -721,9 +721,9 @@ export const updateHIAContractInFirestore = async (accessCode, contractId, updat
   }
 };
 
-export const deleteHIAContractFromFirestore = async (accessCode, contractId) => {
+export const deleteHIAContractFromFirestore = async (jobId, contractId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const contractDocRef = doc(userDocRef, 'hiaContracts', contractId);
     
     await deleteDoc(contractDocRef);
@@ -736,9 +736,9 @@ export const deleteHIAContractFromFirestore = async (accessCode, contractId) => 
 };
 
 // Update client information
-export const updateClientInfo = async (accessCode, clientId, clientData) => {
+export const updateClientInfo = async (jobId, clientId, clientData) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const clientDocRef = doc(userDocRef, 'clients', clientId);
     
     await updateDoc(clientDocRef, {
@@ -760,9 +760,9 @@ export const updateClientInfo = async (accessCode, clientId, clientData) => {
 };
 
 // Delete client information
-export const deleteClientInfo = async (accessCode, clientId) => {
+export const deleteClientInfo = async (jobId, clientId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const clientDocRef = doc(userDocRef, 'clients', clientId);
     
     await deleteDoc(clientDocRef);
@@ -775,9 +775,9 @@ export const deleteClientInfo = async (accessCode, clientId) => {
 };
 
 // User Bank Details functions
-export const saveUserBankDetailsToFirestore = async (accessCode, bankData) => {
+export const saveUserBankDetailsToFirestore = async (jobId, bankData) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const bankDetailsCollectionRef = collection(userDocRef, 'bankDetails');
     
     // Check if bank details already exist
@@ -822,9 +822,9 @@ export const saveUserBankDetailsToFirestore = async (accessCode, bankData) => {
   }
 };
 
-export const fetchUserBankDetailsFromFirestore = async (accessCode) => {
+export const fetchUserBankDetailsFromFirestore = async (jobId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const bankDetailsCollectionRef = collection(userDocRef, 'bankDetails');
     const bankDetailsQuery = query(bankDetailsCollectionRef, limit(1));
     const bankDetailsSnapshot = await getDocs(bankDetailsQuery);
@@ -847,9 +847,9 @@ export const fetchUserBankDetailsFromFirestore = async (accessCode) => {
 };
 
 // Payer functions
-export const savePayerToFirestore = async (accessCode, payerName) => {
+export const savePayerToFirestore = async (jobId, payerName) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const payersCollectionRef = collection(userDocRef, 'payers');
 
     const existingQuery = query(payersCollectionRef, where('name', '==', payerName));
@@ -871,9 +871,9 @@ export const savePayerToFirestore = async (accessCode, payerName) => {
   }
 };
 
-export const fetchPayersFromFirestore = async (accessCode) => {
+export const fetchPayersFromFirestore = async (jobId) => {
   try {
-    const userDocRef = await projectRootRef(accessCode);
+    const userDocRef = await projectRootRef(jobId);
     const payersCollectionRef = collection(userDocRef, 'payers');
     const payersQuery = query(payersCollectionRef, orderBy('createdAt', 'asc'));
     const payersSnapshot = await getDocs(payersQuery);

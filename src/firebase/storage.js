@@ -15,16 +15,16 @@ const STORAGE_PATHS = {
 
 /**
  * Upload a receipt image to Firebase Storage
- * @param {string} accessCode - User's access code
+ * @param {string} jobId - User's access code
  * @param {string} expenseId - Expense ID
  * @param {File} imageFile - Image file to upload
  * @returns {Promise<{success: boolean, url?: string, path?: string, error?: string}>}
  */
-export const uploadReceiptImage = async (accessCode, expenseId, imageFile) => {
+export const uploadReceiptImage = async (jobId, expenseId, imageFile) => {
   try {
     // Validate inputs
-    if (!accessCode || !expenseId || !imageFile) {
-      throw new Error('Missing required parameters: accessCode, expenseId, or imageFile');
+    if (!jobId || !expenseId || !imageFile) {
+      throw new Error('Missing required parameters: jobId, expenseId, or imageFile');
     }
 
     // Validate file type
@@ -48,7 +48,7 @@ export const uploadReceiptImage = async (accessCode, expenseId, imageFile) => {
     const fileName = `receipt_${timestamp}.${fileExtension}`;
     
     // Create storage reference
-    const storagePath = `${STORAGE_PATHS.RECEIPTS}/${accessCode}/${expenseId}/${fileName}`;
+    const storagePath = `${STORAGE_PATHS.RECEIPTS}/${jobId}/${expenseId}/${fileName}`;
     const storageRef = ref(storage, storagePath);
 
     // Upload file
@@ -77,23 +77,23 @@ export const uploadReceiptImage = async (accessCode, expenseId, imageFile) => {
 
 /**
  * Get download URL for a receipt image
- * @param {string} accessCode - User's access code
+ * @param {string} jobId - User's access code
  * @param {string} expenseId - Expense ID
  * @param {string} fileName - File name (optional, gets latest if not provided)
  * @returns {Promise<{success: boolean, url?: string, error?: string}>}
  */
-export const getReceiptImageUrl = async (accessCode, expenseId, fileName = null) => {
+export const getReceiptImageUrl = async (jobId, expenseId, fileName = null) => {
   try {
-    if (!accessCode || !expenseId) {
-      throw new Error('Missing required parameters: accessCode or expenseId');
+    if (!jobId || !expenseId) {
+      throw new Error('Missing required parameters: jobId or expenseId');
     }
 
     let storagePath;
     if (fileName) {
-      storagePath = `${STORAGE_PATHS.RECEIPTS}/${accessCode}/${expenseId}/${fileName}`;
+      storagePath = `${STORAGE_PATHS.RECEIPTS}/${jobId}/${expenseId}/${fileName}`;
     } else {
       // Get the latest file in the expense folder
-      const folderPath = `${STORAGE_PATHS.RECEIPTS}/${accessCode}/${expenseId}`;
+      const folderPath = `${STORAGE_PATHS.RECEIPTS}/${jobId}/${expenseId}`;
       const folderRef = ref(storage, folderPath);
       const fileList = await listAll(folderRef);
       
@@ -129,25 +129,25 @@ export const getReceiptImageUrl = async (accessCode, expenseId, fileName = null)
 
 /**
  * Delete a receipt image from Firebase Storage
- * @param {string} accessCode - User's access code
+ * @param {string} jobId - User's access code
  * @param {string} expenseId - Expense ID
  * @param {string} fileName - File name (optional, deletes all if not provided)
  * @returns {Promise<{success: boolean, error?: string}>}
  */
-export const deleteReceiptImage = async (accessCode, expenseId, fileName = null) => {
+export const deleteReceiptImage = async (jobId, expenseId, fileName = null) => {
   try {
-    if (!accessCode || !expenseId) {
-      throw new Error('Missing required parameters: accessCode or expenseId');
+    if (!jobId || !expenseId) {
+      throw new Error('Missing required parameters: jobId or expenseId');
     }
 
     if (fileName) {
       // Delete specific file
-      const storagePath = `${STORAGE_PATHS.RECEIPTS}/${accessCode}/${expenseId}/${fileName}`;
+      const storagePath = `${STORAGE_PATHS.RECEIPTS}/${jobId}/${expenseId}/${fileName}`;
       const storageRef = ref(storage, storagePath);
       await deleteObject(storageRef);
     } else {
       // Delete all files in the expense folder
-      const folderPath = `${STORAGE_PATHS.RECEIPTS}/${accessCode}/${expenseId}`;
+      const folderPath = `${STORAGE_PATHS.RECEIPTS}/${jobId}/${expenseId}`;
       const folderRef = ref(storage, folderPath);
       const fileList = await listAll(folderRef);
       
@@ -171,16 +171,16 @@ export const deleteReceiptImage = async (accessCode, expenseId, fileName = null)
 
 /**
  * List all receipt images for a user
- * @param {string} accessCode - User's access code
+ * @param {string} jobId - User's access code
  * @returns {Promise<{success: boolean, receipts?: Array, error?: string}>}
  */
-export const listReceiptImages = async (accessCode) => {
+export const listReceiptImages = async (jobId) => {
   try {
-    if (!accessCode) {
-      throw new Error('Missing required parameter: accessCode');
+    if (!jobId) {
+      throw new Error('Missing required parameter: jobId');
     }
 
-    const userFolderPath = `${STORAGE_PATHS.RECEIPTS}/${accessCode}`;
+    const userFolderPath = `${STORAGE_PATHS.RECEIPTS}/${jobId}`;
     const userFolderRef = ref(storage, userFolderPath);
     const folderList = await listAll(userFolderRef);
 
@@ -271,17 +271,17 @@ const compressImage = async (file, maxWidth = 1920, quality = 0.8) => {
 
 /**
  * Get receipt image metadata
- * @param {string} accessCode - User's access code
+ * @param {string} jobId - User's access code
  * @param {string} expenseId - Expense ID
  * @returns {Promise<{success: boolean, metadata?: Object, error?: string}>}
  */
-export const getReceiptImageMetadata = async (accessCode, expenseId) => {
+export const getReceiptImageMetadata = async (jobId, expenseId) => {
   try {
-    if (!accessCode || !expenseId) {
-      throw new Error('Missing required parameters: accessCode or expenseId');
+    if (!jobId || !expenseId) {
+      throw new Error('Missing required parameters: jobId or expenseId');
     }
 
-    const folderPath = `${STORAGE_PATHS.RECEIPTS}/${accessCode}/${expenseId}`;
+    const folderPath = `${STORAGE_PATHS.RECEIPTS}/${jobId}/${expenseId}`;
     const folderRef = ref(storage, folderPath);
     const fileList = await listAll(folderRef);
 

@@ -38,7 +38,7 @@ function initials(name, email) {
 }
 
 export default function Sidebar({ user, projectName, onSwitchProject }) {
-  const { currentPage, setCurrentPage, showToast, projectId, profile } = useApp();
+  const { currentPage, setCurrentPage, showToast, jobId, profile } = useApp();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const [moreOpen, setMoreOpen] = useState(
@@ -54,7 +54,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
   const email = user?.email || '';
   const displayName = (profile && profile.displayName) || user?.displayName || 'RisingAMP';
   const company = (profile && profile.businessName) || '';
-  const onJobsHome = currentPage === 'jobs' || !projectId;
+  const onJobsHome = currentPage === 'jobs' || !jobId;
   const visibleMain = navMain.filter((item) => {
     if (item.key === 'jobs') return onJobsHome;
     if (item.jobOnly) return !onJobsHome;
@@ -62,7 +62,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
   });
 
   const handleNavClick = (pageKey, needsJob) => {
-    if (needsJob && !projectId) {
+    if (needsJob && !jobId) {
       showToast('Open a job first.', 'info');
       setCurrentPage('jobs');
       setIsMobileOpen(false);

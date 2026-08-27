@@ -1,17 +1,17 @@
 import { useState, useCallback } from 'react';
 import { saveClientInfo, getClients, updateClient, deleteClient } from '../firebase/firebaseService';
 
-export const useClientManager = (accessCode, showToast) => {
+export const useClientManager = (jobId, showToast) => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const loadClients = useCallback(async () => {
-    if (!accessCode) return;
+    if (!jobId) return;
     
     try {
       setLoading(true);
-      const result = await getClients(accessCode);
+      const result = await getClients(jobId);
       
       if (result.success) {
         setClients(result.clients);
@@ -27,17 +27,17 @@ export const useClientManager = (accessCode, showToast) => {
     } finally {
       setLoading(false);
     }
-  }, [accessCode, showToast]);
+  }, [jobId, showToast]);
 
   const saveClient = useCallback(async (clientData) => {
-    if (!accessCode || !clientData.name?.trim()) {
+    if (!jobId || !clientData.name?.trim()) {
       showToast?.('Client name is required', 'error');
       return { success: false, error: 'Client name is required' };
     }
 
     try {
       setSubmitting(true);
-      const result = await saveClientInfo(accessCode, clientData);
+      const result = await saveClientInfo(jobId, clientData);
       
       if (result.success) {
         showToast?.('Client saved successfully', 'success');
@@ -54,17 +54,17 @@ export const useClientManager = (accessCode, showToast) => {
     } finally {
       setSubmitting(false);
     }
-  }, [accessCode, showToast, loadClients]);
+  }, [jobId, showToast, loadClients]);
 
   const updateClientData = useCallback(async (clientId, clientData) => {
-    if (!accessCode || !clientId || !clientData.name?.trim()) {
+    if (!jobId || !clientId || !clientData.name?.trim()) {
       showToast?.('Client ID and name are required', 'error');
       return { success: false, error: 'Client ID and name are required' };
     }
 
     try {
       setSubmitting(true);
-      const result = await updateClient(accessCode, clientId, clientData);
+      const result = await updateClient(jobId, clientId, clientData);
       
       if (result.success) {
         showToast?.('Client updated successfully', 'success');
@@ -81,16 +81,16 @@ export const useClientManager = (accessCode, showToast) => {
     } finally {
       setSubmitting(false);
     }
-  }, [accessCode, showToast, loadClients]);
+  }, [jobId, showToast, loadClients]);
 
   const removeClient = useCallback(async (clientId) => {
-    if (!accessCode || !clientId) {
+    if (!jobId || !clientId) {
       showToast?.('Client ID is required', 'error');
       return { success: false, error: 'Client ID is required' };
     }
 
     try {
-      const result = await deleteClient(accessCode, clientId);
+      const result = await deleteClient(jobId, clientId);
       
       if (result.success) {
         showToast?.('Client deleted successfully', 'success');
@@ -105,7 +105,7 @@ export const useClientManager = (accessCode, showToast) => {
       showToast?.('Failed to delete client', 'error');
       return { success: false, error: error.message };
     }
-  }, [accessCode, showToast, loadClients]);
+  }, [jobId, showToast, loadClients]);
 
   const searchClients = useCallback((searchTerm) => {
     if (!searchTerm?.trim()) return clients;

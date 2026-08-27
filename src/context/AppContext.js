@@ -893,8 +893,7 @@ export const AppProvider = ({
   };
 
   const value = {
-    accessCode: jobListId,
-    projectId: jobListId,
+    jobId: jobListId,
     storageKey,
     projectName,
     jobStatus,

@@ -21,7 +21,7 @@ import { getClients } from '../../firebase/firebaseService';
 import { uniqueByName } from '../../firebase/partyName';
 
 const NewInvoicePage = ({ onComplete }) => {
-  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, accessCode, projectName: jobName, saveClientToFirebase } = useApp();
+  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, jobId, projectName: jobName, saveClientToFirebase } = useApp();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -63,10 +63,10 @@ const NewInvoicePage = ({ onComplete }) => {
   // Load clients from Firebase on mount
   useEffect(() => {
     const loadClients = async () => {
-      if (!accessCode) return;
+      if (!jobId) return;
       
       try {
-        const result = await getClients(accessCode);
+        const result = await getClients(jobId);
         if (result.success) {
           setClients(uniqueByName(result.clients || [], (row) => row.name));
         } else {
@@ -82,7 +82,7 @@ const NewInvoicePage = ({ onComplete }) => {
     };
 
     loadClients();
-  }, [accessCode, showToast]);
+  }, [jobId, showToast]);
 
   const handleClientSelect = (client) => {
     setSelectedClient(client);
@@ -1059,9 +1059,9 @@ const NewInvoicePage = ({ onComplete }) => {
                       setShowClientManager(false);
                       // Refresh clients from Firebase
                       const loadClients = async () => {
-                        if (!accessCode) return;
+                        if (!jobId) return;
                         try {
-                          const result = await getClients(accessCode);
+                          const result = await getClients(jobId);
                           if (result.success) {
                             setClients(uniqueByName(result.clients || [], (row) => row.name));
                           } else {

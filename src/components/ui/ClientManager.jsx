@@ -17,7 +17,7 @@ import { useApp } from '../../context/AppContext';
 import { useClientManager } from '../../hooks/useClientManager';
 
 const ClientManager = ({ isOpen, onClose, onClientSelect }) => {
-  const { showToast, accessCode } = useApp();
+  const { showToast, jobId } = useApp();
   const { 
     loading, 
     submitting, 
@@ -26,7 +26,7 @@ const ClientManager = ({ isOpen, onClose, onClientSelect }) => {
     updateClient, 
     removeClient, 
     searchClients 
-  } = useClientManager(accessCode, showToast);
+  } = useClientManager(jobId, showToast);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -42,10 +42,10 @@ const ClientManager = ({ isOpen, onClose, onClientSelect }) => {
   });
 
   useEffect(() => {
-    if (isOpen && accessCode) {
+    if (isOpen && jobId) {
       loadClients();
     }
-  }, [isOpen, accessCode, loadClients]);
+  }, [isOpen, jobId, loadClients]);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
