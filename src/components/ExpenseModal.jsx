@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Database, Upload, Image, Trash2, Eye, AlertTriangle } from 'lucide-react';
+import { X, Upload, Image, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import SavedDataSelector from './SavedDataSelector';
 import CreatableSelect from 'react-select/creatable';
 import DatePicker from 'react-datepicker';
 import { useDropzone } from 'react-dropzone';
@@ -78,6 +77,35 @@ function calculateTotal(category, data) {
   }
 }
 
+function creatableSelectStyles(hasError) {
+  return {
+    control: (base, state) => ({
+      ...base,
+      backgroundColor: '#FFFFFF',
+      borderColor: hasError ? '#C0392B' : (state.isFocused ? '#E85D1A' : '#E7E9EC'),
+      boxShadow: state.isFocused ? '0 0 0 1px #E85D1A' : 'none',
+      color: '#17181C',
+      minHeight: 42,
+      '&:hover': {
+        borderColor: state.isFocused ? '#E85D1A' : '#D6D9DD'
+      }
+    }),
+    menu: (base) => ({
+      ...base,
+      backgroundColor: '#FFFFFF',
+      border: '1px solid #E7E9EC'
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isFocused ? '#FCEEE4' : '#FFFFFF',
+      color: '#17181C'
+    }),
+    singleValue: (base) => ({ ...base, color: '#17181C' }),
+    input: (base) => ({ ...base, color: '#17181C' }),
+    placeholder: (base) => ({ ...base, color: '#8A9099' })
+  };
+}
+
 const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId = null, uncertainFields = {} }) => {
   const {
     addExpenseToFirebase,
@@ -87,13 +115,11 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
     savedTrades = [],
     savedCompanies = [],
     savedServiceProviders = [],
-    savedProjects = [],
     savedPayers = [],
     saveLabourToFirebase,
     saveTradeToFirebase,
     saveCompanyToFirebase,
     saveServiceProviderToFirebase,
-    saveProjectToFirebase,
     savePayerToFirebase,
     accessCode
   } = useApp();
@@ -174,14 +200,6 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
     }));
   };
 
-  const getProjectOptions = () => {
-    return savedProjects.map(project => ({
-      value: project.name,
-      label: project.name,
-      data: project
-    }));
-  };
-
   const handleWorkerSelect = (selectedOption) => {
     if (selectedOption) {
       setFormData(prev => ({
@@ -226,20 +244,6 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
       setFormData(prev => ({
         ...prev,
         supplier: ''
-      }));
-    }
-  };
-
-  const handleProjectSelect = (selectedOption) => {
-    if (selectedOption) {
-      setFormData(prev => ({
-        ...prev,
-        projectName: selectedOption.value
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        projectName: ''
       }));
     }
   };
@@ -452,17 +456,6 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
         }
       }
 
-      // Save project information for autofill
-      if (formData.projectName) {
-        try {
-          await saveProjectToFirebase({
-            name: formData.projectName
-          });
-        } catch (error) {
-          console.error('Error saving project info:', error);
-        }
-      }
-
       // Save payer for autofill
       if (formData.paidBy && formData.paidBy.trim()) {
         try {
@@ -517,82 +510,6 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 p-4 md:p-6 overflow-y-auto">
           <div className="space-y-6">
-            {/* Saved Data Access */}
-            <div className="bg-zinc-50 rounded-lg p-4 border border-zinc-200">
-              <h3 className="text-sm font-medium text-zinc-700 mb-3 flex items-center gap-2">
-                <Database className="w-4 h-4 text-accent" />
-                Quick Access to Saved Data
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                {category === 'labour' && (
-                  <SavedDataSelector
-                    type="labour"
-                    onSelect={(item) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        workerName: item.name,
-                        role: item.role || '',
-                        rate: item.rate || ''
-                      }));
-                    }}
-                    placeholder="Select saved worker..."
-                    showDelete={true}
-                  />
-                )}
-                {category === 'trade' && (
-                  <SavedDataSelector
-                    type="trade"
-                    onSelect={(item) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        tradeName: item.tradeName,
-                        tradeCategory: item.tradeCategory || ''
-                      }));
-                    }}
-                    placeholder="Select saved trade..."
-                    showDelete={true}
-                  />
-                )}
-                {category === 'purchase' && (
-                  <SavedDataSelector
-                    type="company"
-                    onSelect={(item) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        supplier: item.name
-                      }));
-                    }}
-                    placeholder="Select saved supplier..."
-                    showDelete={true}
-                  />
-                )}
-                {category === 'service' && (
-                  <SavedDataSelector
-                    type="serviceProvider"
-                    onSelect={(item) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        provider: item.name
-                      }));
-                    }}
-                    placeholder="Select saved provider..."
-                    showDelete={false}
-                  />
-                )}
-                <SavedDataSelector
-                  type="project"
-                  onSelect={(item) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      projectName: item.name
-                    }));
-                  }}
-                  placeholder="Select saved project..."
-                  showDelete={true}
-                />
-              </div>
-            </div>
-
             {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {fields.map((field) => (
@@ -621,38 +538,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                       placeholder="Search or add worker..."
                       className="react-select-container"
                       classNamePrefix="react-select"
-                      styles={{
-                        control: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          borderColor: validationErrors[field.name] ? '#EF4444' : '#475569',
-                          color: 'white',
-                          '&:hover': {
-                            borderColor: '#64748B'
-                          }
-                        }),
-                        menu: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          border: '1px solid #475569'
-                        }),
-                        option: (base, state) => ({
-                          ...base,
-                          backgroundColor: state.isFocused ? '#475569' : 'transparent',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: '#475569'
-                          }
-                        }),
-                        singleValue: (base) => ({
-                          ...base,
-                          color: 'white'
-                        }),
-                        input: (base) => ({
-                          ...base,
-                          color: 'white'
-                        })
-                      }}
+                      styles={creatableSelectStyles(!!validationErrors[field.name])}
                     />
                   ) : field.name === 'tradeName' && category === 'trade' ? (
                     <CreatableSelect
@@ -663,38 +549,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                       placeholder="Search or add trade..."
                       className="react-select-container"
                       classNamePrefix="react-select"
-                      styles={{
-                        control: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          borderColor: validationErrors[field.name] ? '#EF4444' : '#475569',
-                          color: 'white',
-                          '&:hover': {
-                            borderColor: '#64748B'
-                          }
-                        }),
-                        menu: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          border: '1px solid #475569'
-                        }),
-                        option: (base, state) => ({
-                          ...base,
-                          backgroundColor: state.isFocused ? '#475569' : 'transparent',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: '#475569'
-                          }
-                        }),
-                        singleValue: (base) => ({
-                          ...base,
-                          color: 'white'
-                        }),
-                        input: (base) => ({
-                          ...base,
-                          color: 'white'
-                        })
-                      }}
+                      styles={creatableSelectStyles(!!validationErrors[field.name])}
                     />
                   ) : field.name === 'supplier' && category === 'purchase' ? (
                     <CreatableSelect
@@ -705,38 +560,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                       placeholder="Search or add supplier..."
                       className="react-select-container"
                       classNamePrefix="react-select"
-                      styles={{
-                        control: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          borderColor: validationErrors[field.name] ? '#EF4444' : '#475569',
-                          color: 'white',
-                          '&:hover': {
-                            borderColor: '#64748B'
-                          }
-                        }),
-                        menu: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          border: '1px solid #475569'
-                        }),
-                        option: (base, state) => ({
-                          ...base,
-                          backgroundColor: state.isFocused ? '#475569' : 'transparent',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: '#475569'
-                          }
-                        }),
-                        singleValue: (base) => ({
-                          ...base,
-                          color: 'white'
-                        }),
-                        input: (base) => ({
-                          ...base,
-                          color: 'white'
-                        })
-                      }}
+                      styles={creatableSelectStyles(!!validationErrors[field.name])}
                     />
                   ) : field.name === 'provider' && category === 'service' ? (
                     <CreatableSelect
@@ -747,80 +571,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                       placeholder="Search or add service provider..."
                       className="react-select-container"
                       classNamePrefix="react-select"
-                      styles={{
-                        control: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          borderColor: validationErrors[field.name] ? '#EF4444' : '#475569',
-                          color: 'white',
-                          '&:hover': {
-                            borderColor: '#64748B'
-                          }
-                        }),
-                        menu: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          border: '1px solid #475569'
-                        }),
-                        option: (base, state) => ({
-                          ...base,
-                          backgroundColor: state.isFocused ? '#475569' : 'transparent',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: '#475569'
-                          }
-                        }),
-                        singleValue: (base) => ({
-                          ...base,
-                          color: 'white'
-                        }),
-                        input: (base) => ({
-                          ...base,
-                          color: 'white'
-                        })
-                      }}
-                    />
-                  ) : field.name === 'projectName' ? (
-                    <CreatableSelect
-                      value={formData[field.name] ? { value: formData[field.name], label: formData[field.name] } : null}
-                      onChange={handleProjectSelect}
-                      options={getProjectOptions()}
-                      isClearable
-                      placeholder="Search or add project..."
-                      className="react-select-container"
-                      classNamePrefix="react-select"
-                      styles={{
-                        control: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          borderColor: validationErrors[field.name] ? '#EF4444' : '#475569',
-                          color: 'white',
-                          '&:hover': {
-                            borderColor: '#64748B'
-                          }
-                        }),
-                        menu: (base) => ({
-                          ...base,
-                          backgroundColor: '#334155',
-                          border: '1px solid #475569'
-                        }),
-                        option: (base, state) => ({
-                          ...base,
-                          backgroundColor: state.isFocused ? '#475569' : 'transparent',
-                          color: 'white',
-                          '&:hover': {
-                            backgroundColor: '#475569'
-                          }
-                        }),
-                        singleValue: (base) => ({
-                          ...base,
-                          color: 'white'
-                        }),
-                        input: (base) => ({
-                          ...base,
-                          color: 'white'
-                        })
-                      }}
+                      styles={creatableSelectStyles(!!validationErrors[field.name])}
                     />
                   ) : field.type === 'select' ? (
                     <select
@@ -891,27 +642,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                 placeholder="Who paid? Type a name or select..."
                 className="react-select-container"
                 classNamePrefix="react-select"
-                styles={{
-                  control: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                    borderColor: '#d4d4d8',
-                    '&:hover': { borderColor: '#a1a1aa' }
-                  }),
-                  menu: (base) => ({
-                    ...base,
-                    backgroundColor: 'white',
-                    border: '1px solid #e4e4e7'
-                  }),
-                  option: (base, state) => ({
-                    ...base,
-                    backgroundColor: state.isFocused ? '#f4f4f5' : 'white',
-                    color: '#18181b'
-                  }),
-                  singleValue: (base) => ({ ...base, color: '#18181b' }),
-                  input: (base) => ({ ...base, color: '#18181b' }),
-                  placeholder: (base) => ({ ...base, color: '#a1a1aa' })
-                }}
+                styles={creatableSelectStyles(false)}
               />
             </div>
 

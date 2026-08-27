@@ -27,16 +27,11 @@ import {
   getClients,
   getSuppliers,
   getServiceProviders,
-  getProjects,
   saveLabourInfo,
   saveTradeInfo,
   saveClientInfo,
   saveSupplierInfo,
   saveServiceProviderInfo,
-  saveProjectInfo,
-  deleteLabour,
-  deleteTrade,
-  deleteProject,
   deleteClient
 } from '../firebase/firebaseService';
 import { upsertNamedRow } from '../firebase/partyName';
@@ -76,7 +71,6 @@ export const AppProvider = ({
   const [clients, setClients] = useState([]);
   const [savedSuppliers, setSavedSuppliers] = useState([]);
   const [savedServiceProviders, setSavedServiceProviders] = useState([]);
-  const [savedProjects, setSavedProjects] = useState([]);
   const [progressPayments, setProgressPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [hiaContracts, setHiaContracts] = useState([]);
@@ -199,24 +193,6 @@ export const AppProvider = ({
         }
       };
 
-      // Load saved projects
-      const loadProjects = async () => {
-        try {
-          const result = await getProjects(jobListId);
-          if (result.success) {
-            const projectsData = result.projects || [];
-            setSavedProjects(Array.isArray(projectsData) ? projectsData : []);
-            console.log('Loaded saved projects:', projectsData.length);
-          } else {
-            console.error('Failed to load saved projects:', result.error);
-            setSavedProjects([]);
-          }
-        } catch (error) {
-          console.error('Error loading saved projects:', error);
-          setSavedProjects([]);
-        }
-      };
-
       // Load progress payments
       const loadPayments = async () => {
         try {
@@ -315,7 +291,6 @@ export const AppProvider = ({
         loadCompanies(),
         loadSuppliers(),
         loadServiceProviders(),
-        loadProjects(),
         loadPayments(),
         loadInvoices(),
         loadHIAContracts(),
@@ -722,79 +697,7 @@ export const AppProvider = ({
     }
   };
 
-  const saveProjectToFirebase = async (projectData) => {
-    try {
-      const result = await saveProjectInfo(jobListId, projectData);
-      if (result.success) {
-        setSavedProjects(prev => [...prev, result.project]);
-        showToast('Project saved successfully', 'success');
-        return { success: true, savedProject: result.project };
-      } else {
-        showToast('Failed to save project', 'error');
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error saving project:', error);
-      showToast('Error saving project', 'error');
-      return { success: false, error: error.message };
-    }
-  };
-
   // Delete functions
-  const deleteLabourFromFirebase = async (labourId) => {
-    try {
-      const result = await deleteLabour(jobListId, labourId);
-      if (result.success) {
-        setSavedLabour(prev => prev.filter(labour => labour.id !== labourId));
-        showToast('Labour deleted successfully', 'success');
-        return { success: true };
-      } else {
-        showToast('Failed to delete labour', 'error');
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error deleting labour:', error);
-      showToast('Error deleting labour', 'error');
-      return { success: false, error: error.message };
-    }
-  };
-
-  const deleteTradeFromFirebase = async (tradeId) => {
-    try {
-      const result = await deleteTrade(jobListId, tradeId);
-      if (result.success) {
-        setSavedTrades(prev => prev.filter(trade => trade.id !== tradeId));
-        showToast('Trade deleted successfully', 'success');
-        return { success: true };
-      } else {
-        showToast('Failed to delete trade', 'error');
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error deleting trade:', error);
-      showToast('Error deleting trade', 'error');
-      return { success: false, error: error.message };
-    }
-  };
-
-  const deleteProjectFromFirebase = async (projectId) => {
-    try {
-      const result = await deleteProject(jobListId, projectId);
-      if (result.success) {
-        setSavedProjects(prev => prev.filter(project => project.id !== projectId));
-        showToast('Project deleted successfully', 'success');
-        return { success: true };
-      } else {
-        showToast('Failed to delete project', 'error');
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error deleting project:', error);
-      showToast('Error deleting project', 'error');
-      return { success: false, error: error.message };
-    }
-  };
-
   const deleteClientFromFirebase = async (clientId) => {
     try {
       const result = await deleteClient(jobListId, clientId);
@@ -824,21 +727,6 @@ export const AppProvider = ({
       }
     } catch (error) {
       console.error('Error loading companies:', error);
-      return { success: false, error: error.message };
-    }
-  };
-
-  const loadProjects = async () => {
-    try {
-      const result = await getProjects(jobListId);
-      if (result.success) {
-        setSavedProjects(result.projects);
-        return { success: true, savedProjects: result.projects };
-      } else {
-        return { success: false, error: result.error };
-      }
-    } catch (error) {
-      console.error('Error loading projects:', error);
       return { success: false, error: error.message };
     }
   };
@@ -1028,7 +916,6 @@ export const AppProvider = ({
     savedCompanies: savedSuppliers,
     savedSuppliers,
     savedServiceProviders,
-    savedProjects,
     progressPayments,
     invoices,
     hiaContracts,
@@ -1055,13 +942,8 @@ export const AppProvider = ({
     saveCompanyToFirebase,
     saveServiceProviderToFirebase,
     saveClientToFirebase,
-    saveProjectToFirebase,
-    deleteLabourFromFirebase,
-    deleteTradeFromFirebase,
-    deleteProjectFromFirebase,
     deleteClientFromFirebase,
     loadCompanies,
-    loadProjects,
     addHIAContractToFirebase,
     updateHIAContractInFirebase,
     deleteHIAContractFromFirebase,

@@ -461,59 +461,6 @@ export const saveClientInfo = async (accessCode, clientData) => {
   }
 };
 
-// Save project information (updated to use unified structure)
-export const saveProjectInfo = async (accessCode, projectData) => {
-  try {
-    const userDocRef = await projectRootRef(accessCode);
-    const projectCollectionRef = collection(userDocRef, 'projects');
-    
-    // Check if project with same name already exists
-    if (projectData.name) {
-      const existingQuery = query(
-        projectCollectionRef,
-        where('name', '==', projectData.name)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        // Update existing record
-        const existingDoc = existingSnapshot.docs[0];
-        await updateDoc(existingDoc.ref, {
-          ...projectData,
-          updatedAt: serverTimestamp()
-        });
-        
-        const updatedProject = {
-          id: existingDoc.id,
-          ...projectData,
-          updatedAt: new Date()
-        };
-        
-        return { success: true, savedProject: updatedProject };
-      }
-    }
-    
-    // Add new record
-    const docRef = await addDoc(projectCollectionRef, {
-      ...projectData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    const newProject = {
-      id: docRef.id,
-      ...projectData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    return { success: true, savedProject: newProject };
-  } catch (error) {
-    console.error('Save project error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
 // Fetch clients (replaces fetchSavedCompanies)
 export const fetchClients = async (accessCode) => {
   try {
@@ -535,34 +482,6 @@ export const fetchClients = async (accessCode) => {
     console.error('Fetch clients error:', error);
     return { success: false, error: error.message };
   }
-};
-
-// Fetch projects (updated to use unified structure)
-export const fetchProjects = async (accessCode) => {
-  try {
-    const userDocRef = await projectRootRef(accessCode);
-    const projectCollectionRef = collection(userDocRef, 'projects');
-    const projectQuery = query(projectCollectionRef, orderBy('createdAt', 'desc'));
-    const projectSnapshot = await getDocs(projectQuery);
-    
-    const projects = [];
-    projectSnapshot.forEach((doc) => {
-      projects.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-    
-    return { success: true, savedProjects: projects };
-  } catch (error) {
-    console.error('Fetch projects error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Legacy function for backward compatibility
-export const fetchSavedProjects = async (accessCode) => {
-  return await fetchProjects(accessCode);
 };
 
 // Progress payment functions

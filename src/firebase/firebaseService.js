@@ -7,7 +7,6 @@ import {
   doc,
   query,
   orderBy,
-  where,
   serverTimestamp
 } from "firebase/firestore";
 import { db } from "./config";
@@ -35,7 +34,6 @@ const COLLECTIONS = {
   CLIENTS: 'clients',
   LABOUR: 'labour',
   TRADES: 'trades',
-  PROJECTS: 'projects',
   SITE_NAMES: 'siteNames',
   PROJECT_PHASES: 'projectPhases'
 };
@@ -295,110 +293,4 @@ export const deleteTrade = async (accessCode, tradeId) => {
     return { success: false, error: error.message };
   }
 };
-
-// ===== PROJECTS =====
-export const saveProjectInfo = async (accessCode, projectData) => {
-  try {
-    const projectsCollectionRef = collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECTS}`);
-    
-    // Check if project with same name already exists
-    if (projectData.name) {
-      const existingQuery = query(
-        projectsCollectionRef,
-        where('name', '==', projectData.name)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        // Update existing record
-        const existingDoc = existingSnapshot.docs[0];
-        await updateDoc(existingDoc.ref, {
-          ...projectData,
-          updatedAt: serverTimestamp()
-        });
-        
-        return {
-          success: true,
-          project: {
-            id: existingDoc.id,
-            ...projectData,
-            updatedAt: new Date()
-          }
-        };
-      }
-    }
-    
-    // Add new record
-    const docRef = await addDoc(projectsCollectionRef, {
-      ...projectData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    return {
-      success: true,
-      project: {
-        id: docRef.id,
-        ...projectData,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-    };
-  } catch (error) {
-    console.error('Save project error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const getProjects = async (accessCode) => {
-  try {
-    const q = query(
-      collection(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECTS}`),
-      orderBy('createdAt', 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    const projects = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
-    return { success: true, projects };
-  } catch (error) {
-    console.error('Get projects error:', error);
-    return { success: false, error: error.message, projects: [] };
-  }
-};
-
-export const updateProject = async (accessCode, projectId, projectData) => {
-  try {
-    const projectRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECTS}`, projectId);
-    await updateDoc(projectRef, {
-      ...projectData,
-      updatedAt: serverTimestamp()
-    });
-    
-    return {
-      success: true,
-      project: {
-        id: projectId,
-        ...projectData,
-        updatedAt: new Date()
-      }
-    };
-  } catch (error) {
-    console.error('Update project error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const deleteProject = async (accessCode, projectId) => {
-  try {
-    const projectRef = doc(db, `organizations/${FAMILY_ORG_ID}/projects/${accessCode}/${COLLECTIONS.PROJECTS}`, projectId);
-    await deleteDoc(projectRef);
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Delete project error:', error);
-    return { success: false, error: error.message };
-  }
-}; 
+ 
