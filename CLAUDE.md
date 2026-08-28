@@ -6,17 +6,17 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Work is on **`phase-7-app-feel`** (create it from `phase-6-legacy-cut` if it is not checked out). Phases 1–6 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase7-2026-08-28` (this phase), `pre-phase6-2026-08-27` (Phase 6 unwind), `pre-phase1-2026-08-22` (Phase 1 unwind).
-2. Read `PROGRESS.md` (next concrete step), then `PHASE7.md` (current phase: app feel on a phone). `PHASE6.md` and `PHASE6-INTEGRITY.md` are closed / parked records. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide. Open `design/risingamp-vision.html` in a browser.
+1. Confirm git branch. Latest work is **`phase-7-app-feel`**. Phases 1–7 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase7-2026-08-28` (Phase 7 unwind), `pre-phase6-2026-08-27` (Phase 6 unwind), `pre-phase1-2026-08-22` (Phase 1 unwind).
+2. Read `PROGRESS.md` (next concrete step). `PHASE7.md` is a closed record (app feel). `PHASE6.md` and `PHASE6-INTEGRITY.md` are closed / parked. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide. Open `design/risingamp-vision.html` in a browser.
 3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 6 is **closed** (2026-08-28). Phase 7 Part A is next in `PHASE7.md` (safe areas and the shell). One part per session. Localhost still uses staging.
+5. **Next:** Phases 1–7 are **closed**. Phase 7 (app feel) is live on hosting. Localhost still uses staging. Leftovers: `PHASE6-INTEGRITY.md`. Do not deploy unless he names it.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE7.md. Open design/risingamp-vision.html. Work is on branch phase-7-app-feel (from phase-6-legacy-cut). Restore tag: pre-phase7-2026-08-28. Shopfront is https://risingamp.com.au. Localhost stays on staging. Phases 1–6 are live. Never hard-delete user records. Never accept a pasted API key. Do not deploy. One part per session.
+> Read CLAUDE.md, then PROGRESS.md. Open design/risingamp-vision.html. Phases 1–7 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -78,9 +78,9 @@ Brief: `PHASE5.md`. Jobs as stable IDs, create / archive / invite / remove, clie
 
 Brief: `PHASE6.md`. Unreachable code cut. Receipt scan stays OpenAI Cloud Function only. Hosting live. Database integrity leftovers: `PHASE6-INTEGRITY.md`. Staging now has a Storage bucket for localhost receipts. Production Storage rules still not deployed.
 
-## Phase 7 (current, branch `phase-7-app-feel`)
+## Phase 7 (closed 2026-08-28; live hosting)
 
-Brief: `PHASE7.md`. App feel on a phone: safe areas, standalone status bar, manifest and icons. Layout and metadata only. No data, rules, or functions.
+Brief: `PHASE7.md`. Safe areas, `default` status bar, pinch zoom, selectable content. Layout and metadata only. Manifest / new icons skipped on purpose. Measured standalone portrait: `t:0 r:0 b:34 l:0`.
 
 ## Out of scope until asked
 

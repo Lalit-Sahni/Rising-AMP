@@ -166,7 +166,7 @@ export default function AuthShell({ mode = 'signin', children }) {
   const copy = mode === 'signup' ? SIGNUP_STACK : SIGNIN_STACK;
 
   return (
-    <div className="min-h-screen bg-surface text-ink flex">
+    <div className="auth-frame min-h-screen bg-surface text-ink flex">
       <div className="flex-1 flex flex-col px-6 py-8 sm:px-14 sm:py-[52px] max-w-[560px] mx-auto min-[860px]:mx-0 min-[860px]:max-w-none w-full min-h-screen">
         <div className="flex items-center gap-2.5 mb-8 max-[859px]:flex-col max-[859px]:mb-5">
           <span className="hidden min-[860px]:inline-grid">
@@ -229,7 +229,7 @@ export function AuthInput({ lead, trail, ...props }) {
     <div className="flex items-center border border-hairline rounded-[10px] px-3 bg-white focus-within:border-accent focus-within:shadow-[0_0_0_3px_var(--accent-tint)]">
       {lead && <span className="mr-2.5 text-slate-400 grid place-items-center">{lead}</span>}
       <input
-        className="flex-1 border-0 outline-none text-sm text-ink py-3 bg-transparent placeholder:text-slate-400"
+        className="flex-1 border-0 outline-none text-base text-ink py-3 bg-transparent placeholder:text-slate-400"
         {...props}
       />
       {trail}

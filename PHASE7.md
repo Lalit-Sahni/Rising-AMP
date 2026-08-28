@@ -1,5 +1,7 @@
 # Phase 7 — App feel on a phone (agent brief)
 
+**Closed 2026-08-28.** Hosting live. Safe areas, `default` status bar, pinch zoom, selectable content. Part B (manifest + icons) skipped — owner did not want a new home-screen icon. Measured standalone portrait: `t:0 r:0 b:34 l:0`.
+
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
 Branch: create **`phase-7-app-feel`** from `phase-6-legacy-cut` once Phase 6 is finished and merged. Never commit to `master` or `main`.

@@ -76,7 +76,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
     <>
       <button
         onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 w-8 h-8 grid place-items-center bg-surface border border-hairline rounded-ot-sm text-slate-600 hover:text-ink shadow-whisper"
+        className="mobile-menu-btn md:hidden fixed z-50 w-8 h-8 grid place-items-center bg-surface border border-hairline rounded-ot-sm text-slate-600 hover:text-ink shadow-whisper"
         aria-label="Open menu"
       >
         {isMobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -90,7 +90,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
       )}
 
       <aside
-        className={`sidebar bg-steel-900 text-[#C9CDD4] flex flex-col min-h-screen transition-all duration-300 ease-in-out overflow-visible
+        className={`sidebar bg-steel-900 text-[#C9CDD4] flex flex-col transition-all duration-300 ease-in-out overflow-visible
           fixed inset-y-0 left-0 z-50 w-[210px] flex-shrink-0
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0 md:z-auto
@@ -111,6 +111,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
           {isDesktopCollapsed ? <ChevronRight className="w-4 h-4" /> : <X className="w-3.5 h-3.5" />}
         </button>
 
+        <div className="sidebar-safe flex flex-col flex-1 min-h-0">
         <button
           type="button"
           onClick={() => handleNavClick('jobs', false)}
@@ -195,6 +196,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
             </span>
             <ChevronDown className="w-3.5 h-3.5 text-[#767B84] shrink-0" strokeWidth={1.7} />
           </button>
+        </div>
         </div>
       </aside>
     </>

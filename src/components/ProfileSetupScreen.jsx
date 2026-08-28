@@ -133,7 +133,7 @@ export default function ProfileSetupScreen({ user, initialProfile, onComplete, o
   };
 
   return (
-    <div className={editing ? 'text-ink px-4 py-6 md:px-[26px] md:py-[26px]' : 'min-h-screen bg-canvas text-ink px-4 py-8 md:px-10 md:py-10'}>
+    <div className={editing ? 'text-ink px-4 py-6 md:px-[26px] md:py-[26px]' : 'auth-frame min-h-screen bg-canvas text-ink px-4 py-8 md:px-10 md:py-10'}>
       <div className="max-w-[600px] mx-auto">
         <div className="flex items-center justify-between">
           {editing ? (

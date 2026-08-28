@@ -19,7 +19,7 @@ App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category col
 | Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions, Analytics |
 | Functions | Node 22. Live: `sendJobInviteEmail`. Added in repo: `readReceiptImage` (OpenAI). Production still has unused `generateWeeklyReport`. Deploy functions **by name only**. Never `firebase deploy --only functions`. |
 | OCR | OpenAI Vision via Cloud Function `readReceiptImage`. If that fails, show an error. Do not fall back to Tesseract or Google Vision. |
-| PWA | Mobile web-app meta tags only. No `manifest.json`, no service worker. |
+| PWA | Standalone meta tags + safe-area CSS. No `manifest.json` (icons skipped on purpose). No service worker. |
 
 Entry: `src/index.js` → `src/App.js`.
 
@@ -176,3 +176,37 @@ Still messy, and not a side quest unless it blocks the next asked piece of work:
 - Leftover unwired files.
 - No react-router; almost no tests.
 - Legacy `users/` and Storage rules still open.
+
+---
+
+## 14. Mobile and standalone
+
+Phase 7. Layout and metadata only.
+
+**Do not detect standalone in JavaScript to set margins.** `env(safe-area-inset-*)` is the operating system’s number for this device and this orientation. In a Safari tab the values are `0` because Safari’s chrome already occupies that space. The same CSS is therefore correct in a tab and on the home screen.
+
+Variables in `src/index.css`:
+
+- `--safe-top` / `--safe-right` / `--safe-bottom` / `--safe-left` → `env(safe-area-inset-*, 0px)`
+
+Where they are applied:
+
+- `.content` — bottom always; right always; left only under 768px (sidebar already sits on the left at `md`)
+- `.mobile-menu-btn` — `top` and `left` are `1rem +` the matching inset
+- `.sidebar-safe` — pad the drawer **contents**, not the steel panel
+- `.auth-frame` — sign-in / sign-up shell
+- `.app-shell` / `body` / `.mobile-modal` — `100dvh` with `100vh` as the fallback
+
+Status bar: `apple-mobile-web-app-status-bar-style` is `default` (dark text on a light canvas). `theme-color` is `#F5F6F8`. The immersive translucent bar is a later design pass, not this phase.
+
+Pinch zoom is allowed. `user-select: none` is only on nav, buttons, tabs, and the sidebar. Content text is selectable.
+
+**Measured (owner iPhone, standalone, 28 Aug 2026):**
+
+| Mode | top | right | bottom | left |
+|------|-----|-------|--------|------|
+| Home screen, portrait | `0px` | `0px` | `34px` | `0px` |
+
+Top `0` is expected with `default`: iOS reserves the status-bar strip, so the webview starts below the clock. Bottom `34px` is the home indicator. Landscape was not recorded. Do not hardcode those numbers; they are evidence that `env()` is live.
+
+Part B (manifest + PNG icons) was skipped — owner did not want a new home-screen icon. Orientation was not locked. No service worker.

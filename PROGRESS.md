@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-6-legacy-cut` is closed and live. Next work: **`phase-7-app-feel`** (from `phase-6-legacy-cut`). Phases 1–6 are live. Localhost still uses `.env.local` → staging.
+`phase-7-app-feel` is closed and live on hosting. Phases 1–7 are live. Localhost still uses `.env.local` → staging.
 
 Restore tags: `pre-phase7-2026-08-28` (this phase), `pre-phase6-2026-08-27` (Phase 6 unwind), `pre-phase1-2026-08-22` (Phase 1 unwind)
 
@@ -12,7 +12,9 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 ## Where we are (2026-08-28)
 
-**Phases 1–6 are closed and live.** Phase 7 is **app feel on a phone** on `phase-7-app-feel`. Layout and metadata only. No Firestore writes, no deploys.
+**Phases 1–7 are closed and live.** Phase 7 is **app feel on a phone**: safe areas via `env(safe-area-inset-*)`, `default` status bar, pinch zoom on, content text selectable. No new home-screen icon. No Firestore writes.
+
+**Phase 7 shipped (28 Aug 2026):** standalone portrait measured `t:0 r:0 b:34 l:0`. Top 0 because iOS reserves the status bar under `default`. Bottom 34 is the home indicator. Manifest / PNG icons skipped on purpose. Orientation not locked. No service worker.
 
 **Phase 6 shipped (28 Aug 2026):** unreachable code cut, Tesseract gone, Quick Access box gone, `accessCode` renamed to `jobId` in code, leftover navy Receipt Viewer / Clients restyled. Hosting live on https://risingamp.com.au. Staging Storage bucket exists so localhost can upload receipts. Production Storage rules still not deployed. Integrity leftovers: `PHASE6-INTEGRITY.md`.
 
@@ -28,14 +30,14 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE7.md. Open design/risingamp-vision.html. Work is on branch phase-7-app-feel (from phase-6-legacy-cut). Restore tag: pre-phase7-2026-08-28. Shopfront is https://risingamp.com.au. Localhost stays on staging. Phases 1–6 are live. Never hard-delete user records. Never accept a pasted API key. Do not deploy. One part per session.
+Read CLAUDE.md, then PROGRESS.md. Open design/risingamp-vision.html. Phases 1–7 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
 
-1. Phase 7 Part A — safe areas and the shell (`PHASE7.md`). Measure on the real phone before tuning.
-2. Then Parts B → C (ask first) → D, one session each.
-3. Optional leftovers (not this branch): `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes).
+1. Optional leftovers (not unless he asks): `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes).
+2. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
+3. Offline / service worker — named out of Phase 7 on purpose.
 
 ## Next
 
@@ -45,7 +47,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE7.md. Open design/risingamp-vision.h
 - [x] Phase 4 — legal pages, Resend invites, shopfront `risingamp.com.au`, Google login on that domain
 - [x] Phase 5 — jobs/members, directory split, `DATABASE.md`, OpenAI via function
 - [x] Phase 6 — legacy cut live (`PHASE6.md`)
-- [ ] Phase 7 — app feel on a phone (`PHASE7.md`); Part A next
+- [x] Phase 7 — app feel on a phone (`PHASE7.md`); hosting live; no new icon
 
 
 ## What shipped (localhost / staging)

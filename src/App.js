@@ -276,7 +276,7 @@ function AppShell() {
       setProfile={setProfile}
       jobInvitedEmails={jobInvitedEmails}
     >
-      <div className="flex h-screen bg-canvas text-ink overflow-hidden">
+      <div className="app-shell flex bg-canvas text-ink overflow-hidden">
         <Sidebar
           user={authUser}
           projectName={projectName}
