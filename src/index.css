@@ -62,12 +62,25 @@ select,
 
 /* Mobile-safe area handling.
    Applied unconditionally. env() is 0 in a normal browser tab.
-   Never hardcode a notch / home-indicator pixel value. */
+   Do not invent per-model pixel tables. The 59px floor below is
+   only for the iOS 26 standalone env(top)=0 bug. */
 :root {
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* iOS 26 standalone reports 0 for the top inset while the page still
+   draws under the clock (WebKit 301994). Bottom env() is fine.
+   Floor the top value on the home-screen app only. A Safari tab is
+   unchanged. When Apple reports a real inset, max() keeps it. */
+@media (display-mode: standalone) {
+  @supports (-webkit-touch-callout: none) {
+    :root {
+      --safe-top: max(env(safe-area-inset-top, 0px), 59px);
+    }
+  }
 }
 
 .safe-area-top {
@@ -109,8 +122,15 @@ select,
   padding-left: var(--safe-left);
 }
 
-.auth-frame {
+/* Push the header (and sign-in / boot) below the clock. Height is
+   --safe-top: 0 in a Safari tab, floored on a home-screen iPhone. */
+.app-main,
+.auth-frame,
+.boot-screen {
   padding-top: var(--safe-top);
+}
+
+.auth-frame {
   padding-bottom: var(--safe-bottom);
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);

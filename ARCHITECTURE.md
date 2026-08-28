@@ -192,21 +192,22 @@ Variables in `src/index.css`:
 Where they are applied:
 
 - `.content` — bottom always; right always; left only under 768px (sidebar already sits on the left at `md`)
+- `.app-main` / `.auth-frame` / `.boot-screen` — `padding-top: var(--safe-top)` so the header is below the clock
 - Header menu button — in the header row on the left, not `position:fixed`
 - `.sidebar-safe` — pad the drawer **contents**, not the steel panel
 - `.auth-frame` — sign-in / sign-up shell
 - `.app-shell` / `body` / `.mobile-modal` — `100dvh` with `100vh` as the fallback
 
-Status bar: `apple-mobile-web-app-status-bar-style` is `default` (dark text on a light canvas). `theme-color` is `#F5F6F8`. The immersive translucent bar is a later design pass, not this phase.
+Status bar: `apple-mobile-web-app-status-bar-style` is `default` (dark clock text on the light canvas). `.app-main`, `.auth-frame` and `.boot-screen` get `padding-top: var(--safe-top)` so the header sits below the clock.
 
-Pinch zoom is allowed. `user-select: none` is only on nav, buttons, tabs, and the sidebar. Content text is selectable.
+**iOS 26 standalone reports `--safe-top: 0` while the page still draws under the clock** (WebKit 301994). Bottom env() is fine (`34px` measured). On a home-screen iPhone only, `--safe-top` is `max(env(safe-area-inset-top), 59px)` so the header sits below the Dynamic Island even when env() is lying. A Safari tab is not that media query, so it stays at `0`. This is not a per-device table and it is not a JavaScript standalone check.
 
 **Measured (owner iPhone, standalone, 28 Aug 2026):**
 
 | Mode | top | right | bottom | left |
 |------|-----|-------|--------|------|
-| Home screen, portrait | `0px` | `0px` | `34px` | `0px` |
+| Home screen, portrait | `0px` (env, buggy) | `0px` | `34px` | `0px` |
 
-Top `0` is expected with `default`: iOS reserves the status-bar strip, so the webview starts below the clock. Bottom `34px` is the home indicator. Landscape was not recorded. Do not hardcode those numbers; they are evidence that `env()` is live.
+Do not treat that top `0` as “iOS reserved the strip”. The header was going under the clock. The 59px floor is the workaround until env() reports the real island height.
 
 Part B (manifest + PNG icons) was skipped — owner did not want a new home-screen icon. Orientation was not locked. No service worker.

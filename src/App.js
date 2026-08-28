@@ -282,7 +282,7 @@ function AppShell() {
           projectName={projectName}
           onSwitchProject={handleSwitchProject}
         />
-        <div className="flex-1 flex flex-col min-w-0 w-full overflow-hidden">
+        <div className="app-main flex-1 flex flex-col min-w-0 w-full overflow-hidden">
           <Header
             onLogout={handleLogout}
             onSwitchProject={handleSwitchProject}
