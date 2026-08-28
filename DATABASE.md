@@ -22,9 +22,9 @@ Until this session, opening Jobs home called `loadInvitedJobSummaries`, which fo
 
 then computed margin, “needs you,” and the subtitle **in the browser**. Two live jobs and ~130 expenses is about **~200 document reads** and a large JSON payload before the first card appears. Opening a job then downloads those collections **again** for the dashboard.
 
-The cheap UX fix (now in the app, no schema change): show job **names** as soon as `listInvitedProjects` returns (one query), then hydrate figures. The download is the same size; you wait on names for a fraction of a second instead of several.
+The cheap UX fix (now in the app, no schema change): show job **names** as soon as `listInvitedProjects` returns (one query), then hydrate **counts** with `getCountFromServer` (one read per thousand documents). Drawing the Jobs list does **not** download the ledger. Opening a job still downloads expenses and invoices for the dashboard.
 
-The **real** scale fix is denormalised summary fields on the job document (section 7). Do not do that until you approve a write plan.
+The **real** scale fix is denormalised summary fields on the job document (section 7). Do not do that until you approve a write plan. Phase 8 skipped rollups on purpose so the ledger stays the only source of truth.
 
 ### Is the model right for a family construction tracker?
 
@@ -32,7 +32,7 @@ The **real** scale fix is denormalised summary fields on the job document (secti
 
 ### Is it right to scale into a product with many companies and thousands of jobs?
 
-**Not as-is.** The tree can grow, but several habits will hurt: downloading every expense to paint a list, a silent 1,000-expense cap, scanning every profile on login, API keys in the browser, leftover PIN copies, and Storage rules that may still be the old open rules on production. None of that is fatal at two jobs. All of it becomes expensive or unsafe at 10× / 100×.
+**Not as-is.** The tree can grow, but several habits will hurt: a silent 1,000-expense cap (Phase 8 now **refuses** a margin when the cap is hit), leftover PIN copies, and Storage rules that may still be the old open rules on production. Jobs-list counts and the profile leak were fixed in Phase 8. None of the leftovers is fatal at two jobs.
 
 ---
 
@@ -41,8 +41,9 @@ The **real** scale fix is denormalised summary fields on the job document (secti
 Three root collections on the default Firestore database. Production project: `rising-amp-467702-b5`. Staging: `rising-amp-staging`. Empty named database `cost-tracker` exists on production (0 documents) — leave it.
 
 ```
-organizations/opal-ss-constructions
+organizations/{orgId}
   name, ownerEmail, invitedEmails
+  counters/invoices                            # year + next; Cloud Function only
   legacyWorkspaceIds, legacyWorkspaceNames     # leftover PIN folder map; keep
   projects/{jobId}                             # THE job record
     name, orgId, status                        # active | archived
@@ -51,7 +52,7 @@ organizations/opal-ss-constructions
     legacyWorkspaceId, accessCode              # only on the two original jobs
     budget, expenses[]                         # leftover PIN copy fields; ignore
     expenses/{id}          + jobId
-    invoices/{id}          + jobId, plus typed projectName snapshot
+    invoices/{id}          + jobId, invoiceNumber, status including void
     clients/{id}           house owner you invoice (one per job, ideally)
     suppliers/{id}         materials (Bunnings, Rodgers, …) upsert by name
     serviceProviders/{id}  same idea as labour, not mixed into clients
@@ -62,7 +63,8 @@ organizations/opal-ss-constructions
     siteNames/{id}, projectPhases/{id}, workerHistory/{id}
     siteLogs/{id}          # UI removed; rows may still exist
 
-profiles/{uid}             one per signed-in person
+profiles/{uid}             private (mobile, ABN, business). Owner-only read.
+publicProfiles/{email}     display name + photo. Signed-in get, no listing.
 
 users/{accessCode}/…       leftover PIN copies. App unused. Do not delete.
 ```
@@ -247,7 +249,7 @@ Do these in order. Earlier items are worth it even if you never “scale.” Lat
 ### Soon (Part C, additive / reversible — owner yes)
 
 5. **Show the job’s `name` on invoice UI**, keep typed `projectName` as PDF history.
-6. **Stop scanning all profiles.** Done in Phase 8 Part A on the branch. Production rules still need a named deploy.
+6. **Stop scanning all profiles.** Client is on the branch. Production leak still open. Backfill `publicProfiles` with `scripts/backfill-public-profiles.js` before rules. Hosting before rules.
 7. **Paginate expenses** (page of 100–200) and **surface the 1,000 cap** until pagination exists (“showing first 1,000”).
 8. **Archive instead of hard-delete** on expense/invoice delete buttons, or remove those buttons.
 9. **Move Google Vision** to a function the same way as OpenAI, then remove `REACT_APP_GOOGLE_CLOUD_VISION_API_KEY`.

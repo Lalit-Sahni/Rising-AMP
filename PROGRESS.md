@@ -2,26 +2,21 @@
 
 ## Current branch
 
-`phase-8-technical-revamp` — Phase 8 Part A on the branch. Phases 1–7 are live on hosting. Localhost still uses `.env.local` → staging.
+`phase-8-technical-revamp` — Phase 8 **closed and live**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase8-2026-08-28` (this phase), `pre-phase7-2026-08-28` (Phase 7 unwind), `pre-phase6-2026-08-27` (Phase 6 unwind), `pre-phase1-2026-08-22` (Phase 1 unwind)
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
-Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_PROJECT_ID=rising-amp-staging`)  
-`.firebaserc` default is **staging**. Git push does not deploy. Live hosting changes only on `firebase deploy --project production --only hosting`. Phase 8 Part A production rules: `firebase deploy --project production --only firestore:rules` after he names it.
+Staging: `rising-amp-staging` — localhost / `.env.local`  
+`.firebaserc` default is **staging**. Git push does not deploy.
 
 ## Where we are (2026-08-28)
 
-**Phases 1–7 are closed and live.** Phase 8 is **foundations**: security, build, money, routes. Brief: `PHASE8.md`.
+**Phases 1–8 are closed and live.** Brief: `PHASE8.md`.
 
-**Phase 8 Part A (on the branch, not production):**
-- Private `profiles/{uid}` — owner (or same email on another uid) only. A stranger who signs up cannot read mobile, ABN, business name or address.
-- `publicProfiles/{email}` — display name and photo only. Signed-in get, no listing, no private fields.
-- Login no longer scans the whole `profiles` collection.
-- Unused Google Analytics removed (`getAnalytics` was called and never used).
-- App Check client is wired for reCAPTCHA Enterprise but **does not run** until `REACT_APP_FIREBASE_APPCHECK_SITE_KEY` is set. **Do not enforce** until the console shows clean traffic.
-- Production `console.log` / `debug` / `info` are muted.
-- Prove with `npm run test:rules` (Firestore emulator).
+**Phase 8 shipped:** Vite + TypeScript for new files, real URLs, integer cents, server invoice numbers (`YYYY-0001`), void not delete, named collection rules (no wildcard write), org from membership, Vitest + GitHub Action. Profile leak closed on production and verified from a second account that is not on a family job. App Check client is wired; **do not enforce**. Jobs list uses `getCountFromServer`. At 1,000 expenses the app refuses to show a margin.
+
+**Left on purpose:** App Check enforcement, ledger rollup documents, normalising stored money fields, TanStack Query on the ledger, Gmail invite fallback, leftover `generateWeeklyReport`, production Storage rules.
 
 **Phase 7 shipped (28 Aug 2026):** standalone portrait measured `t:0 r:0 b:34 l:0`. Top 0 because iOS reserves the status bar under `default`. Bottom 34 is the home indicator. Manifest / PNG icons skipped on purpose. Orientation not locked. No service worker.
 
@@ -29,7 +24,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 
 **Phase 5 shipped:** jobs as IDs, create/archive/invite/remove, clients vs suppliers, `DATABASE.md`, `readReceiptImage` on staging and production. Scanner is OpenAI only — if AI fails, show an error (no Tesseract).
 
-**Phase 4 leftovers (not Phase 8 unless he asks):** Gmail invite fallback still in the client; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
+**Phase 4 leftovers (not unless he asks):** Gmail invite fallback still in the client; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
 
 **Owner already has:**
 - Shopfront `https://risingamp.com.au`, DNS at Crazy Domains.
@@ -39,16 +34,14 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE8.md. Branch is phase-8-technical-revamp. Phases 1–7 are live. Phase 8 Part A is on the branch; production profile rules are not deployed until named. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md. Open design/risingamp-vision.html. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
 
-1. **Phase 8 Part A close-out:** deploy Firestore rules to staging (localhost), then production when he names `--only firestore:rules`. Create the reCAPTCHA Enterprise site key, put it in gitignored env, watch App Check traffic, enforce later.
-2. Phase 8 Part B — Vite + TypeScript for new files. Then C, D, E, … in `PHASE8.md`.
-3. Optional leftovers (not unless he asks): `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes).
-4. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
-5. Offline / service worker — still its own phase.
+1. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes); ledger rollups; money-field migration.
+2. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
+3. Offline / service worker — still its own phase.
 
 ## Next
 
@@ -59,7 +52,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE8.md. Branch is phase-8-technical-re
 - [x] Phase 5 — jobs/members, directory split, `DATABASE.md`, OpenAI via function
 - [x] Phase 6 — legacy cut live (`PHASE6.md`)
 - [x] Phase 7 — app feel on a phone (`PHASE7.md`); hosting live; no new icon
-- [ ] Phase 8 — Part A on the branch; production rules not deployed; Parts B–L still to do
+- [x] Phase 8 — foundations live (`PHASE8.md`); leak closed; Vite; routes; cents; server invoice numbers
 
 ## What shipped (localhost / staging)
 

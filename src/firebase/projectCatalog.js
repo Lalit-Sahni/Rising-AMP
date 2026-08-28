@@ -3,9 +3,9 @@ import {
   arrayUnion,
   collection,
   doc,
+  getCountFromServer,
   getDoc,
   getDocs,
-  limit,
   query,
   serverTimestamp,
   setDoc,
@@ -15,7 +15,7 @@ import {
 import { auth, db } from './config';
 import { canonicalEmail, emailInviteVariants, normalizeEmail } from './email';
 import { canRemoveEmailFromJob, emailRemainsOnJobs, isJobArchived, newJobId } from './jobIdentity';
-import { FAMILY_ORG_ID } from './tenancy';
+import { FAMILY_ORG_ID, getActiveOrgId } from './tenancy';
 
 export { canRemoveEmailFromJob, emailRemainsOnJobs, isJobArchived, newJobId };
 
@@ -34,18 +34,22 @@ function mapProjectDoc(projectDoc) {
 
 async function countSubcollection(projectRef, name) {
   try {
-    const snap = await getDocs(query(collection(projectRef, name), limit(1000)));
-    return snap.size;
+    const snap = await getCountFromServer(collection(projectRef, name));
+    return snap.data().count || 0;
   } catch (error) {
     console.warn(`Could not count ${name}:`, error);
     return 0;
   }
 }
 
+function orgId() {
+  return getActiveOrgId() || FAMILY_ORG_ID;
+}
+
 async function queryProjectsForEmail(email) {
   const snap = await getDocs(
     query(
-      collection(db, 'organizations', FAMILY_ORG_ID, 'projects'),
+      collection(db, 'organizations', orgId(), 'projects'),
       where('invitedEmails', 'array-contains', email)
     )
   );
@@ -75,7 +79,7 @@ export async function listOrgProjects(email) {
   const listed = await listInvitedProjects(email);
   const rows = [];
   for (const project of listed) {
-    const projectRef = doc(db, 'organizations', FAMILY_ORG_ID, 'projects', project.projectId);
+    const projectRef = doc(db, 'organizations', orgId(), 'projects', project.projectId);
     const expenses = await countSubcollection(projectRef, 'expenses');
     const invoices = await countSubcollection(projectRef, 'invoices');
     rows.push({
@@ -93,12 +97,12 @@ export async function renameOrgProject(projectId, name, legacyWorkspaceId) {
   if (!trimmed) {
     throw new Error('Please enter a name.');
   }
-  await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId), {
+  await updateDoc(doc(db, 'organizations', orgId(), 'projects', projectId), {
     name: trimmed,
     updatedAt: serverTimestamp(),
   });
   if (legacyWorkspaceId) {
-    await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID), {
+    await updateDoc(doc(db, 'organizations', orgId()), {
       [`legacyWorkspaceNames.${legacyWorkspaceId}`]: trimmed,
       updatedAt: serverTimestamp(),
     });
@@ -117,9 +121,9 @@ export async function createOrgProject({ name, ownerEmail }) {
   }
 
   const projectId = newJobId();
-  await setDoc(doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId), {
+  await setDoc(doc(db, 'organizations', orgId(), 'projects', projectId), {
     name: trimmed,
-    orgId: FAMILY_ORG_ID,
+    orgId: orgId(),
     invitedEmails: variants,
     formerEmails: [],
     status: 'active',
@@ -150,7 +154,7 @@ export async function setOrgProjectArchived(projectId, archived, actorEmail) {
     payload.archivedAt = serverTimestamp();
     payload.archivedBy = normalizeEmail(actorEmail);
   }
-  await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId), payload);
+  await updateDoc(doc(db, 'organizations', orgId(), 'projects', projectId), payload);
   return archived ? 'archived' : 'active';
 }
 
@@ -163,11 +167,11 @@ export async function inviteEmailToProject(projectId, email) {
     throw new Error('Missing job list.');
   }
 
-  await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId), {
+  await updateDoc(doc(db, 'organizations', orgId(), 'projects', projectId), {
     invitedEmails: arrayUnion(...variants),
     updatedAt: serverTimestamp(),
   });
-  await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID), {
+  await updateDoc(doc(db, 'organizations', orgId()), {
     invitedEmails: arrayUnion(...variants),
     updatedAt: serverTimestamp(),
   });
@@ -184,13 +188,13 @@ export async function removeEmailFromProject(projectId, email, viewerEmail) {
     throw new Error('Missing job.');
   }
 
-  const orgSnap = await getDoc(doc(db, 'organizations', FAMILY_ORG_ID));
+  const orgSnap = await getDoc(doc(db, 'organizations', orgId()));
   const ownerEmail = orgSnap.exists() ? orgSnap.data().ownerEmail : '';
   if (!canRemoveEmailFromJob({ email, ownerEmail })) {
     throw new Error('A job must keep its owner.');
   }
 
-  await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId), {
+  await updateDoc(doc(db, 'organizations', orgId(), 'projects', projectId), {
     invitedEmails: arrayRemove(...variants),
     formerEmails: arrayUnion(...variants),
     updatedAt: serverTimestamp(),
@@ -200,7 +204,7 @@ export async function removeEmailFromProject(projectId, email, viewerEmail) {
   // person's email is denied even for the owner.
   const visibleJobs = await listInvitedProjects(viewerEmail || ownerEmail);
   if (!emailRemainsOnJobs(visibleJobs, email)) {
-    await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID), {
+    await updateDoc(doc(db, 'organizations', orgId()), {
       invitedEmails: arrayRemove(...variants),
       updatedAt: serverTimestamp(),
     });

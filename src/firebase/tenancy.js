@@ -1,9 +1,21 @@
-import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from './config';
 import { canonicalEmail, isEmailOnList, normalizeEmail } from './email';
 
-// Stable org id on staging. Not a secret. Seeded by scripts/seed-staging-org.js.
+// Opal's live org id. Kept as a fallback so the family app cannot lose its home.
 export const FAMILY_ORG_ID = 'opal-ss-constructions';
+
+let activeOrgId = FAMILY_ORG_ID;
+
+export function setActiveOrgId(orgId) {
+  if (orgId && typeof orgId === 'string') {
+    activeOrgId = orgId;
+  }
+}
+
+export function getActiveOrgId() {
+  return activeOrgId || FAMILY_ORG_ID;
+}
 
 const SESSION_KEYS = {
   projectId: 'risingAmp.projectId',
@@ -64,9 +76,38 @@ export function isPermissionDenied(error) {
   return code === 'permission-denied' || /permission-denied|insufficient permissions/i.test(message);
 }
 
+function mapOrgSnap(orgDoc, email) {
+  const data = orgDoc.data() || {};
+  const invitedEmails = (data.invitedEmails || []).map(normalizeEmail);
+  const legacyWorkspaceIds = Array.isArray(data.legacyWorkspaceIds)
+    ? data.legacyWorkspaceIds.filter((id) => typeof id === 'string' && id.trim())
+    : [];
+  const legacyWorkspaceNames = data.legacyWorkspaceNames && typeof data.legacyWorkspaceNames === 'object'
+    ? data.legacyWorkspaceNames
+    : {};
+  return {
+    invited: true,
+    email,
+    orgId: orgDoc.id,
+    orgName: data.name || 'Organisation',
+    role: canonicalEmail(data.ownerEmail) === canonicalEmail(email) ? 'owner' : 'member',
+    invitedEmails,
+    ownerEmail: normalizeEmail(data.ownerEmail),
+    legacyWorkspaceIds,
+    legacyWorkspaceNames,
+  };
+}
+
+export async function listOrganisationsForEmail(email) {
+  const snap = await getDocs(
+    query(collection(db, 'organizations'), where('invitedEmails', 'array-contains', email))
+  );
+  return snap.docs.map((orgDoc) => mapOrgSnap(orgDoc, email));
+}
+
 /**
- * Product-agnostic invite check. Does not create a workspace.
- * Permission-denied (not on the invite list) is treated as not invited.
+ * Resolve the signed-in user's organisation from membership, not from a
+ * hardcoded constant. Prefer a stored org, then Opal if they are on it.
  */
 export async function resolveInvitation(user) {
   const email = normalizeEmail(user && user.email);
@@ -75,35 +116,19 @@ export async function resolveInvitation(user) {
   }
 
   try {
-    const snap = await getDoc(doc(db, 'organizations', FAMILY_ORG_ID));
-    if (!snap.exists()) {
-      return { invited: false, reason: 'org-missing' };
-    }
-
-    const data = snap.data() || {};
-    const invitedEmails = (data.invitedEmails || []).map(normalizeEmail);
-    if (!isEmailOnList(invitedEmails, email)) {
+    const orgs = await listOrganisationsForEmail(email);
+    if (orgs.length === 0) {
       return { invited: false, reason: 'not-on-list', email };
     }
 
-    const legacyWorkspaceIds = Array.isArray(data.legacyWorkspaceIds)
-      ? data.legacyWorkspaceIds.filter((id) => typeof id === 'string' && id.trim())
-      : [];
-    const legacyWorkspaceNames = data.legacyWorkspaceNames && typeof data.legacyWorkspaceNames === 'object'
-      ? data.legacyWorkspaceNames
-      : {};
+    const session = readSession();
+    const preferred =
+      orgs.find((org) => org.orgId === session.orgId)
+      || orgs.find((org) => org.orgId === FAMILY_ORG_ID)
+      || orgs[0];
 
-    return {
-      invited: true,
-      email,
-      orgId: FAMILY_ORG_ID,
-      orgName: data.name || 'Organisation',
-      role: canonicalEmail(data.ownerEmail) === canonicalEmail(email) ? 'owner' : 'member',
-      invitedEmails,
-      ownerEmail: normalizeEmail(data.ownerEmail),
-      legacyWorkspaceIds,
-      legacyWorkspaceNames,
-    };
+    setActiveOrgId(preferred.orgId);
+    return { ...preferred, organisations: orgs };
   } catch (error) {
     const code = error && error.code;
     if (code === 'permission-denied') {
@@ -123,7 +148,7 @@ export async function renameLegacyWorkspace(workspaceId, name, allowedWorkspaceI
     throw new Error('That job list is not part of this organisation.');
   }
 
-  await updateDoc(doc(db, 'organizations', FAMILY_ORG_ID), {
+  await updateDoc(doc(db, 'organizations', getActiveOrgId()), {
     [`legacyWorkspaceNames.${workspaceId}`]: trimmed,
     updatedAt: serverTimestamp(),
   });

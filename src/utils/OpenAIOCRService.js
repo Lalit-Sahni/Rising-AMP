@@ -2,6 +2,7 @@
 // Uses GPT-4 Vision for superior accuracy on construction documents
 
 import { readReceiptWithAi } from '../firebase/readReceipt';
+import { fromCents, parseQuantity, parseToCents } from '../money';
 
 function friendlyAiError(error) {
   const code = (error && error.code) || '';
@@ -89,7 +90,7 @@ class OpenAIOCRService {
         invoiceNumber: parsed.invoiceNumber || null,
         items: Array.isArray(parsed.items) ? parsed.items.map(item => ({
           description: item.description || '',
-          quantity: parseFloat(item.quantity) || 1,
+          quantity: parseQuantity(item.quantity) || 1,
           unitPrice: this.parseAmount(item.unitPrice),
           totalPrice: this.parseAmount(item.totalPrice)
         })) : [],
@@ -134,8 +135,11 @@ class OpenAIOCRService {
   parseAmount(amountInput) {
     if (amountInput === null || amountInput === undefined) return null;
     
-    const amount = parseFloat(amountInput);
-    return isNaN(amount) ? null : amount;
+    try {
+      return fromCents(parseToCents(amountInput));
+    } catch {
+      return null;
+    }
   }
 
   /**

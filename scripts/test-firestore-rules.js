@@ -91,7 +91,71 @@ async function main() {
       updatedAt: new Date(),
     }));
 
-    console.log('firestore.rules profile tests passed');
+    const ORG = 'opal-ss-constructions';
+    const JOB = 'job-1';
+    const ORG_B = 'phase8-isolation';
+    const JOB_B = 'job-b';
+
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await db.doc(`organizations/${ORG}`).set({
+        name: 'Opal',
+        ownerEmail: OWNER.email,
+        invitedEmails: [OWNER.email],
+      });
+      await db.doc(`organizations/${ORG}/projects/${JOB}`).set({
+        name: 'Test job',
+        orgId: ORG,
+        invitedEmails: [OWNER.email],
+        status: 'active',
+      });
+      await db.doc(`organizations/${ORG}/projects/${JOB}/invoices/inv-1`).set({
+        invoiceNumber: '2026-0001',
+        status: 'draft',
+        total: 10,
+      });
+      await db.doc(`organizations/${ORG_B}`).set({
+        name: 'Other Co',
+        ownerEmail: STRANGER.email,
+        invitedEmails: [STRANGER.email],
+      });
+      await db.doc(`organizations/${ORG_B}/projects/${JOB_B}`).set({
+        name: 'B job',
+        orgId: ORG_B,
+        invitedEmails: [STRANGER.email],
+        status: 'active',
+      });
+    });
+
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}`).get());
+    await assertFails(stranger.firestore().doc(`organizations/${ORG}/projects/${JOB}`).get());
+    await assertFails(stranger.firestore().doc(`organizations/${ORG}/projects/${JOB}/invoices/inv-1`).get());
+    await assertFails(stranger.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e1`).set({
+      category: 'purchase',
+      total: 1,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invoices/inv-1`).delete());
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invoices/inv-2`).set({
+      status: 'draft',
+      total: 5,
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invoices/inv-2`).set({
+      invoiceNumber: '2026-0002',
+      status: 'draft',
+      total: 5,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-bad`).set({
+      category: 12,
+      total: 1,
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e1`).set({
+      category: 'purchase',
+      total: 40,
+    }));
+    await assertSucceeds(stranger.firestore().doc(`organizations/${ORG_B}/projects/${JOB_B}`).get());
+    await assertFails(owner.firestore().doc(`organizations/${ORG_B}/projects/${JOB_B}`).get());
+
+    console.log('firestore.rules profile, invoice, org and expense tests passed');
   } finally {
     await testEnv.cleanup();
   }

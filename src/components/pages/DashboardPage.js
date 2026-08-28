@@ -11,7 +11,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import ExportDialog from '../ExportDialog';
 import JobPeople from '../JobPeople';
-import { exportExpensesToExcel } from '../../utils/excelExport';
+import EmptyState from '../EmptyState';
 import { getCategoryStyle } from '../../utils/categoryStyle';
 import {
   VERDICT,
@@ -42,6 +42,7 @@ export default function DashboardPage() {
     projectName,
     jobId,
     jobStatus,
+    expensesCapped,
     setCurrentPage,
     showToast,
     jobInvitedEmails,
@@ -51,8 +52,8 @@ export default function DashboardPage() {
   const attentionRef = useRef(null);
 
   const metrics = useMemo(
-    () => deriveJobMetrics({ expenses, invoices }, { period: selectedPeriod }),
-    [expenses, invoices, selectedPeriod]
+    () => deriveJobMetrics({ expenses, invoices }, { period: selectedPeriod, expensesCapped }),
+    [expenses, invoices, selectedPeriod, expensesCapped]
   );
   const banner = bannerMessage(metrics);
   const subtitle = jobSubtitle({ clients, invoices, metrics });
@@ -64,6 +65,7 @@ export default function DashboardPage() {
   };
 
   const handleExport = async (filename) => {
+    const { exportExpensesToExcel } = await import('../../utils/excelExport');
     const result = await exportExpensesToExcel(expenses || [], filename);
     if (result.success) {
       showToast('Excel file exported.', 'success');
@@ -81,20 +83,12 @@ export default function DashboardPage() {
   if (!jobId) {
     return (
       <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
-        <div className="max-w-xl">
-          <div className="eyebrow">Project overview</div>
-          <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Open a job</h1>
-          <p className="text-[13.5px] text-slate-600 mt-2">
-            Pick a job from the list to see margin, cash, and what needs you today.
-          </p>
-          <button
-            type="button"
-            onClick={() => setCurrentPage('jobs')}
-            className="mt-4 inline-flex items-center bg-accent hover:bg-accent-600 text-white text-[13px] font-bold px-[15px] py-[9px] rounded-[9px]"
-          >
-            Jobs
-          </button>
-        </div>
+        <EmptyState
+          title="Open a job"
+          body="Pick a job from the list to see margin, cash, and what needs you today."
+          actionLabel="Jobs"
+          to="/"
+        />
       </div>
     );
   }
@@ -350,7 +344,12 @@ export default function DashboardPage() {
           <div className="bg-surface border border-hairline rounded-ot px-5 py-[18px] shadow-whisper">
             <h3 className="text-sm font-extrabold">Recent</h3>
             {metrics.recent.length === 0 ? (
-              <p className="text-[13px] text-slate-400 mt-3">No expenses yet.</p>
+              <EmptyState
+                title="No expenses yet"
+                body="The first receipt or labour row you add will show up here."
+                actionLabel="Add expense"
+                to={jobId ? `/jobs/${jobId}/expenses/new` : '/'}
+              />
             ) : (
               <div className="mt-1.5">
                 {metrics.recent.map((expense, index) => {

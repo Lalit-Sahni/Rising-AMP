@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, Download, Eye, EyeOff, RotateCcw, FileText } from 'lucide-react';
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import { addCents, fromCents, percentOf, safeParseToCents } from '../../money';
 
 function formatPreviewDate(value) {
   if (!value) return '—';
@@ -29,14 +28,11 @@ const InvoicePreview = ({
 
   const calculateSubtotal = () => {
     if (!invoice.lineItems) return 0;
-    return invoice.lineItems.reduce((sum, item) => {
-      const total = parseFloat(item.total) || 0;
-      return sum + total;
-    }, 0);
+    return fromCents(addCents(...invoice.lineItems.map((item) => safeParseToCents(item.total))));
   };
 
   const calculateGST = () => {
-    return invoice.includeGST ? calculateSubtotal() * 0.1 : 0;
+    return invoice.includeGST ? fromCents(percentOf(safeParseToCents(calculateSubtotal()), 10)) : 0;
   };
 
   const calculateTotal = () => {
@@ -48,6 +44,11 @@ const InvoicePreview = ({
     
     setIsGenerating(true);
     try {
+      const [{ jsPDF }, html2canvasModule] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ]);
+      const html2canvas = html2canvasModule.default;
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2,
         useCORS: true,

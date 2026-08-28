@@ -7,8 +7,8 @@
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
  *   firebase deploy --project production --only functions:sendJobInviteEmail
- *   firebase deploy --project rising-amp-staging --only functions:readReceiptImage
- *   firebase deploy --project production --only functions:readReceiptImage
+ *   firebase deploy --project rising-amp-staging --only functions:allocateInvoiceNumber
+ *   firebase deploy --project production --only functions:allocateInvoiceNumber
  *
  * Secrets the owner sets at a masked prompt (never paste into chat or REACT_APP_*):
  *   RESEND_API_KEY, OPENAI_API_KEY
@@ -258,6 +258,55 @@ exports.readReceiptImage = onCall(
     }
 
     return { content };
+  }
+);
+
+exports.allocateInvoiceNumber = onCall(
+  {
+    region: 'us-central1',
+    cors: true,
+    maxInstances: 10,
+    timeoutSeconds: 15,
+    memory: '256MiB',
+  },
+  async (request) => {
+    if (!request.auth || !request.auth.token || !request.auth.token.email) {
+      throw new HttpsError('unauthenticated', 'Sign in to raise an invoice.');
+    }
+    const orgId = String((request.data && request.data.orgId) || '').trim();
+    if (!/^[a-z0-9-]{3,80}$/.test(orgId)) {
+      throw new HttpsError('invalid-argument', 'Missing organisation.');
+    }
+
+    const callerEmail = request.auth.token.email;
+    const db = admin.firestore();
+    const orgRef = db.collection('organizations').doc(orgId);
+    const orgSnap = await orgRef.get();
+    if (!orgSnap.exists) {
+      throw new HttpsError('not-found', 'Organisation is not set up.');
+    }
+    const org = orgSnap.data() || {};
+    if (!isEmailOnList(org.invitedEmails || [], callerEmail)) {
+      throw new HttpsError('permission-denied', 'You are not on this organisation.');
+    }
+
+    const year = Number(
+      new Date().toLocaleString('en-AU', { timeZone: 'Australia/Sydney', year: 'numeric' })
+    );
+    const counterRef = orgRef.collection('counters').doc('invoices');
+    const invoiceNumber = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(counterRef);
+      const data = snap.exists ? snap.data() : {};
+      const seq = data.year === year && typeof data.next === 'number' ? data.next : 1;
+      tx.set(counterRef, {
+        year,
+        next: seq + 1,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      return `${year}-${String(seq).padStart(4, '0')}`;
+    });
+
+    return { invoiceNumber };
   }
 );
 

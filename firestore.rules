@@ -78,17 +78,67 @@ service cloud.firestore {
           && statusOk()
           && (
             request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['name', 'updatedAt'])
+              .hasOnly(['name', 'updatedAt', 'budget'])
             || (
               isOrgOwner()
               && request.resource.data.diff(resource.data).affectedKeys()
-                .hasOnly(['name', 'invitedEmails', 'formerEmails', 'status', 'archivedAt', 'archivedBy', 'updatedAt'])
+                .hasOnly(['name', 'invitedEmails', 'formerEmails', 'status', 'archivedAt', 'archivedBy', 'updatedAt', 'budget'])
             )
           );
         allow delete: if false;
 
-        match /{allPaths=**} {
+        function expenseOk() {
+          return !request.resource.data.keys().hasAny(['category'])
+            || request.resource.data.category is string;
+        }
+
+        function invoiceOk() {
+          return request.resource.data.invoiceNumber is string
+            && (
+              !request.resource.data.keys().hasAny(['status'])
+              || request.resource.data.status in ['draft', 'sent', 'paid', 'overdue', 'void', 'pending', 'unpaid']
+            );
+        }
+
+        match /expenses/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject() && expenseOk();
+          allow delete: if canUseProject();
+        }
+        match /invoices/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject() && invoiceOk();
+          allow delete: if false;
+        }
+        match /hiaContracts/{itemId} {
           allow read, write: if canUseProject();
+        }
+        match /progressPayments/{itemId} {
+          allow read, write: if canUseProject();
+        }
+        match /labour/{itemId} {
+          allow read, write: if canUseProject();
+        }
+        match /trades/{itemId} {
+          allow read, write: if canUseProject();
+        }
+        match /clients/{itemId} {
+          allow read, write: if canUseProject();
+        }
+        match /suppliers/{itemId} {
+          allow read, write: if canUseProject();
+        }
+        match /serviceProviders/{itemId} {
+          allow read, write: if canUseProject();
+        }
+        match /payers/{itemId} {
+          allow read, write: if canUseProject();
+        }
+        match /bankDetails/{itemId} {
+          allow read, write: if canUseProject();
+        }
+        match /{allPaths=**} {
+          allow read, write: if false;
         }
       }
 

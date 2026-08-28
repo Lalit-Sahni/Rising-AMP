@@ -1,7 +1,11 @@
+import { addCents, fromCents, labourCents, lineCents, parseToCents } from '../money';
+import { parseCalendarDate } from '../dates';
+
 /**
  * Read-only derived job metrics.
  * Every figure comes from stored expense / invoice fields. No writes.
  *
+ * Money is integer cents internally, converted once for display.
  * Margin $ = paid invoice totals − cost to date
  * Margin % = margin / paid invoice totals, only when paid > 0
  * Verdict is computed, never stored.
@@ -22,47 +26,53 @@ export function isValidDate(value) {
 }
 
 export function parseRecordDate(value) {
-  if (value == null || value === '') return null;
-  if (typeof value.toDate === 'function') {
-    const date = value.toDate();
-    return isValidDate(date) ? date : null;
-  }
-  if (value instanceof Date) {
-    return isValidDate(value) ? value : null;
-  }
-  if (typeof value === 'object' && typeof value.seconds === 'number') {
-    const date = new Date(value.seconds * 1000);
-    return isValidDate(date) ? date : null;
-  }
-  const date = new Date(value);
-  return isValidDate(date) ? date : null;
+  return parseCalendarDate(value);
 }
 
-function asNumber(value) {
-  const amount = parseFloat(value);
-  return Number.isFinite(amount) ? amount : 0;
+function moneyCents(value) {
+  try {
+    return parseToCents(value);
+  } catch (error) {
+    return 0;
+  }
 }
 
-export function getExpenseTotal(expense) {
+export function getExpenseTotalCents(expense) {
   if (!expense) return 0;
-  if (expense.total != null && expense.total !== '') return asNumber(expense.total);
-  if (expense.amount != null && expense.amount !== '') return asNumber(expense.amount);
-  if (expense.cost != null && expense.cost !== '') return asNumber(expense.cost);
-  if (expense.totalPrice != null && expense.totalPrice !== '') return asNumber(expense.totalPrice);
+  if (Number.isInteger(expense.totalCents)) return expense.totalCents;
+  if (expense.total != null && expense.total !== '') return moneyCents(expense.total);
+  if (expense.amount != null && expense.amount !== '') return moneyCents(expense.amount);
+  if (expense.cost != null && expense.cost !== '') return moneyCents(expense.cost);
+  if (expense.totalPrice != null && expense.totalPrice !== '') return moneyCents(expense.totalPrice);
   if (expense.category === 'labour' && expense.hours != null && expense.rate != null) {
-    return asNumber(expense.hours) * asNumber(expense.rate);
+    return labourCents(expense.hours, expense.rate);
   }
   if (expense.quantity != null && expense.unitCost != null) {
-    return asNumber(expense.quantity) * asNumber(expense.unitCost);
+    return lineCents(expense.quantity, expense.unitCost);
   }
   return 0;
 }
 
+export function getExpenseTotal(expense) {
+  return fromCents(getExpenseTotalCents(expense));
+}
+
+export function getInvoiceTotalCents(invoice) {
+  if (!invoice || isVoidInvoice(invoice)) return 0;
+  if (Number.isInteger(invoice.totalCents)) return invoice.totalCents;
+  return moneyCents(invoice && invoice.total);
+}
+
 export function getInvoiceTotal(invoice) {
-  return asNumber(invoice && invoice.total);
+  return fromCents(getInvoiceTotalCents(invoice));
+}
+
+export function isVoidInvoice(invoice) {
+  return String((invoice && invoice.status) || '').toLowerCase() === 'void';
 }
 
 export function isPaidInvoice(invoice) {
+  if (isVoidInvoice(invoice)) return false;
   return String((invoice && invoice.status) || '').toLowerCase() === 'paid';
 }
 
@@ -97,7 +107,7 @@ export function inCalendarPeriod(date, period, now) {
 }
 
 export function isInvoiceOverdue(invoice, now = new Date()) {
-  if (!invoice || isPaidInvoice(invoice)) return false;
+  if (!invoice || isPaidInvoice(invoice) || isVoidInvoice(invoice)) return false;
   const due = parseRecordDate(invoice.dueDate);
   if (!due) return false;
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -119,11 +129,13 @@ export function reviewedFieldInUse(expenses) {
 }
 
 export function deriveCash(invoices = [], expenses = []) {
-  const invoiced = (invoices || []).reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
-  const paid = (invoices || [])
-    .filter(isPaidInvoice)
-    .reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
-  const cost = (expenses || []).reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
+  const liveInvoices = (invoices || []).filter((invoice) => !isVoidInvoice(invoice));
+  const invoiced = fromCents(addCents(...liveInvoices.map((invoice) => getInvoiceTotalCents(invoice)), 0));
+  const paid = fromCents(addCents(
+    ...liveInvoices.filter(isPaidInvoice).map((invoice) => getInvoiceTotalCents(invoice)),
+    0,
+  ));
+  const cost = fromCents(addCents(...(expenses || []).map((expense) => getExpenseTotalCents(expense)), 0));
   return {
     invoiced,
     paid,
@@ -369,21 +381,38 @@ export function periodLabel(period) {
 export function deriveJobMetrics({ expenses = [], invoices = [] } = {}, options = {}) {
   const now = options.now || new Date();
   const period = options.period || 'month';
-  const cash = deriveCash(invoices, expenses);
-  const { hasMargin, margin, marginPct } = deriveMargin(cash.paid, cash.cost);
-  const overdueCount = (invoices || []).filter((invoice) => isInvoiceOverdue(invoice, now)).length;
+  const expensesCapped = Boolean(options.expensesCapped);
+  const liveInvoices = (invoices || []).filter((invoice) => !isVoidInvoice(invoice));
+  const cash = deriveCash(liveInvoices, expenses);
+  const capped = expensesCapped
+    ? { hasMargin: false, margin: null, marginPct: null }
+    : deriveMargin(cash.paid, cash.cost);
+  const { hasMargin, margin, marginPct } = capped;
+  const overdueCount = liveInvoices.filter((invoice) => isInvoiceOverdue(invoice, now)).length;
   const periodExpenses = (expenses || []).filter((expense) => {
     const dated = expenseDate(expense);
     return dated && inCalendarPeriod(dated, period, now);
   });
-  const periodSpend = periodExpenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
-  const attentionItems = deriveAttentionItems({ expenses, invoices }, now);
-  const verdict = deriveVerdict({ hasMargin, marginPct });
+  const periodSpend = fromCents(addCents(...periodExpenses.map((expense) => getExpenseTotalCents(expense)), 0));
+  const attentionItems = deriveAttentionItems({ expenses, invoices: liveInvoices }, now);
+  const invalidCount = (expenses || []).filter((expense) => expense && expense._invalid).length
+    + (invoices || []).filter((invoice) => invoice && invoice._invalid).length;
+  if (invalidCount > 0) {
+    attentionItems.unshift({
+      id: 'invalid-records',
+      page: 'history',
+      title: invalidCount === 1 ? '1 record needs checking' : `${invalidCount} records need checking`,
+      detail: 'They did not match the expected shape. They are listed, not dropped.',
+      action: 'Review',
+      tone: 'warn',
+    });
+  }
+  const verdict = expensesCapped ? VERDICT.GETTING_STARTED : deriveVerdict({ hasMargin, marginPct });
   const categories = deriveCategorySpend(expenses);
 
   return {
     expenseCount: (expenses || []).length,
-    invoiceCount: (invoices || []).length,
+    invoiceCount: liveInvoices.length,
     cash,
     hasMargin,
     margin,
@@ -396,6 +425,7 @@ export function deriveJobMetrics({ expenses = [], invoices = [] } = {}, options 
     attentionCount: attentionItems.length,
     categories,
     recent: (expenses || []).slice(0, 4),
+    expensesCapped,
   };
 }
 
@@ -477,6 +507,13 @@ export function bannerMessage(metrics) {
     : metrics.attentionCount === 1
       ? 'One small thing needs tidying up.'
       : `${metrics.attentionCount} small things need tidying up.`;
+
+  if (metrics.expensesCapped) {
+    return {
+      ...copy,
+      line: 'There are more than 1,000 expenses on this job, so margin is not shown. A missing number is honest; a wrong one is not.',
+    };
+  }
 
   if (metrics.verdict === VERDICT.GETTING_STARTED) {
     return {

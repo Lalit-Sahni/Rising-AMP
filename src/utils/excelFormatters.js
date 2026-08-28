@@ -1,4 +1,6 @@
 import { CELL_STYLES, getCategoryColor, getStatusColor, hexToArgb } from './excelStyles';
+import { getExpenseTotal as jobExpenseTotal } from './jobMetrics';
+import { dollarsFromUnknown, parseToCents, fromCents } from '../money';
 
 // Helper function to format date for Excel
 export const formatDateForExcel = (dateString) => {
@@ -16,10 +18,7 @@ export const formatDateForExcel = (dateString) => {
 };
 
 // Helper function to format currency
-export const formatCurrency = (amount) => {
-  if (amount === null || amount === undefined || isNaN(amount)) return 0;
-  return parseFloat(amount);
-};
+export const formatCurrency = (amount) => dollarsFromUnknown(amount);
 
 // Helper function to format percentage
 export const formatPercentage = (value, total) => {
@@ -41,25 +40,19 @@ export const calculateDuration = (startDate, endDate) => {
   }
 };
 
-// Helper function to get expense total
 export const getExpenseTotal = (expense) => {
-  if (expense.total !== undefined) return expense.total;
-  if (expense.amount !== undefined) return expense.amount;
-  if (expense.cost !== undefined) return expense.cost;
-  
-  // For labour expenses, calculate from hours and rate
-  if (expense.category === 'labour' && expense.hours && expense.rate) {
-    return parseFloat(expense.hours) * parseFloat(expense.rate);
-  }
-  
-  // For equipment expenses, calculate from daily cost and dates
-  if (expense.category === 'equipment' && expense.dailyCost && expense.startDate && expense.endDate) {
+  const fromJob = jobExpenseTotal(expense);
+  if (fromJob) return fromJob;
+  if (expense && expense.category === 'equipment' && expense.dailyCost && expense.startDate && expense.endDate) {
     const start = new Date(expense.startDate);
     const end = new Date(expense.endDate);
     const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    return days * parseFloat(expense.dailyCost);
+    try {
+      return fromCents(parseToCents(expense.dailyCost) * days);
+    } catch (error) {
+      return 0;
+    }
   }
-  
   return 0;
 };
 

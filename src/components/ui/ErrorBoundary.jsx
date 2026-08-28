@@ -16,13 +16,16 @@ class ErrorBoundary extends React.Component {
       errorInfo: errorInfo
     });
 
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.error('Error Boundary caught an error:', error, errorInfo);
     }
   }
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback) {
+        return this.props.fallback;
+      }
       return (
         <div className="min-h-screen bg-canvas flex items-center justify-center p-4">
           <div className="bg-surface border border-hairline rounded-ot p-8 max-w-md w-full text-center space-y-4 shadow-whisper">
@@ -51,7 +54,7 @@ class ErrorBoundary extends React.Component {
               </button>
             </div>
 
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="text-left">
                 <summary className="text-slate-400 text-sm cursor-pointer hover:text-ink">
                   Error details (development)

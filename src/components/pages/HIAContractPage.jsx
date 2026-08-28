@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
 import { Upload, Download, Save } from 'lucide-react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
 const HIAContractPage = () => {
   const {
@@ -158,6 +156,11 @@ const HIAContractPage = () => {
 
   const generateProgressPaymentPDF = async (stage) => {
     try {
+      const [{ default: jsPDF }, html2canvasModule] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ]);
+      const html2canvas = html2canvasModule.default;
       const pdf = new jsPDF();
       
       // Create HTML content for the PDF

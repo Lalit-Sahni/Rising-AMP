@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { saveClientInfo, getClients, updateClient, deleteClient } from '../firebase/firebaseService';
+import { saveClientInfo, getClients, updateClient, deleteClient } from '../data';
 
 export const useClientManager = (jobId, showToast) => {
   const [clients, setClients] = useState([]);

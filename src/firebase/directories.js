@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
   getDocs,
   serverTimestamp,
@@ -13,7 +14,7 @@ import {
   namesMatch,
   uniqueByName,
 } from './partyName';
-import { FAMILY_ORG_ID } from './tenancy';
+import { getActiveOrgId } from './tenancy';
 
 export const DIRECTORY = {
   CLIENTS: 'clients',
@@ -24,11 +25,11 @@ export const DIRECTORY = {
 };
 
 function colRef(projectId, name) {
-  return collection(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId, name);
+  return collection(db, 'organizations', getActiveOrgId(), 'projects', projectId, name);
 }
 
 function rowRef(projectId, name, id) {
-  return doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId, name, id);
+  return doc(db, 'organizations', getActiveOrgId(), 'projects', projectId, name, id);
 }
 
 function definedFields(data) {
@@ -224,3 +225,66 @@ export async function getTrades(projectId) {
 }
 
 export { isLiveDirectoryRow, uniqueByName };
+
+export async function updateClient(jobId, clientId, clientData) {
+  try {
+    await updateDoc(rowRef(jobId, DIRECTORY.CLIENTS, clientId), definedFields({
+      ...clientData,
+      updatedAt: serverTimestamp(),
+    }));
+    return { success: true, client: { id: clientId, ...clientData } };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteClient(jobId, clientId) {
+  try {
+    await deleteDoc(rowRef(jobId, DIRECTORY.CLIENTS, clientId));
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateLabour(jobId, labourId, labourData) {
+  try {
+    await updateDoc(rowRef(jobId, DIRECTORY.LABOUR, labourId), definedFields({
+      ...labourData,
+      updatedAt: serverTimestamp(),
+    }));
+    return { success: true, labour: { id: labourId, ...labourData } };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteLabour(jobId, labourId) {
+  try {
+    await deleteDoc(rowRef(jobId, DIRECTORY.LABOUR, labourId));
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateTrade(jobId, tradeId, tradeData) {
+  try {
+    await updateDoc(rowRef(jobId, DIRECTORY.TRADES, tradeId), definedFields({
+      ...tradeData,
+      updatedAt: serverTimestamp(),
+    }));
+    return { success: true, trade: { id: tradeId, ...tradeData } };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+
+export async function deleteTrade(jobId, tradeId) {
+  try {
+    await deleteDoc(rowRef(jobId, DIRECTORY.TRADES, tradeId));
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}

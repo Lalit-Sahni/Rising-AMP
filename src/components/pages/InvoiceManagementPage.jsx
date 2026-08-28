@@ -10,7 +10,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import NewInvoicePage from './NewInvoicePage';
-import InvoicePreview from '../ui/InvoicePreview';
+import { getInvoiceTotal, isPaidInvoice, isVoidInvoice } from '../../utils/jobMetrics';
+import { formatCents, lineCents, percentOf, safeParseToCents } from '../../money';
 
 function formatInvoiceDate(value) {
   if (!value) return '—';
@@ -44,19 +45,17 @@ const InvoiceManagementPage = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // Calculate total invoiced amount
-  const totalInvoiced = invoices.reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
-  const totalPaid = invoices.filter(inv => inv.status === 'paid').reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
+  const liveInvoices = invoices.filter((invoice) => !isVoidInvoice(invoice));
+  const totalInvoiced = liveInvoices.reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
+  const totalPaid = liveInvoices.filter(isPaidInvoice).reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
   const totalPending = totalInvoiced - totalPaid;
 
-  // Handle invoice deletion
   const handleDeleteInvoice = async (invoiceId) => {
-    if (window.confirm('Are you sure you want to delete this invoice?')) {
+    if (window.confirm('Void this invoice? It stays on the job with its number. Totals will ignore it.')) {
       try {
         await deleteInvoiceFromFirebase(invoiceId);
-        showToast('Invoice deleted successfully', 'success');
       } catch (error) {
-        showToast('Failed to delete invoice', 'error');
+        showToast('Failed to void invoice', 'error');
       }
     }
   };
@@ -124,7 +123,7 @@ const InvoiceManagementPage = () => {
             <div style="text-align: right;">
               <h3 style="font-size: 18px; font-weight: bold; color: #1f2937; margin-bottom: 12px;">Invoice Details:</h3>
               <p style="font-size: 14px; color: #6b7280; margin: 4px 0;"><strong>Status:</strong> ${invoice.status || 'Draft'}</p>
-              <p style="font-size: 14px; color: #6b7280; margin: 4px 0;"><strong>Total:</strong> $${(parseFloat(invoice.total) || 0).toLocaleString()}</p>
+              <p style="font-size: 14px; color: #6b7280; margin: 4px 0;"><strong>Total:</strong> ${formatCents(safeParseToCents(invoice.total))}</p>
             </div>
           </div>
 
@@ -143,8 +142,8 @@ const InvoiceManagementPage = () => {
                 <tr>
                   <td style="border: 1px solid #d1d5db; padding: 12px; color: #374151;">${item.description || 'N/A'}</td>
                   <td style="border: 1px solid #d1d5db; padding: 12px; text-align: right; color: #374151;">${item.quantity || 0}</td>
-                  <td style="border: 1px solid #d1d5db; padding: 12px; text-align: right; color: #374151;">$${(parseFloat(item.unitCost) || 0).toFixed(2)}</td>
-                  <td style="border: 1px solid #d1d5db; padding: 12px; text-align: right; color: #374151;">$${((parseFloat(item.quantity) || 0) * (parseFloat(item.unitCost) || 0)).toFixed(2)}</td>
+                  <td style="border: 1px solid #d1d5db; padding: 12px; text-align: right; color: #374151;">${formatCents(safeParseToCents(item.unitCost))}</td>
+                  <td style="border: 1px solid #d1d5db; padding: 12px; text-align: right; color: #374151;">${formatCents(lineCents(item.quantity, item.unitCost))}</td>
                 </tr>
               `).join('') || '<tr><td colspan="4" style="border: 1px solid #d1d5db; padding: 12px; text-align: center; color: #6b7280;">No items</td></tr>'}
             </tbody>
@@ -155,17 +154,17 @@ const InvoiceManagementPage = () => {
             <div style="width: 300px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                 <span style="color: #374151;">Subtotal:</span>
-                <span style="color: #374151;">$${(parseFloat(invoice.total) || 0).toFixed(2)}</span>
+                <span style="color: #374151;">${formatCents(safeParseToCents(invoice.total))}</span>
               </div>
               ${invoice.gst ? `
                 <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                   <span style="color: #374151;">GST (10%):</span>
-                  <span style="color: #374151;">$${((parseFloat(invoice.total) || 0) * 0.1).toFixed(2)}</span>
+                  <span style="color: #374151;">${formatCents(percentOf(safeParseToCents(invoice.total), 10))}</span>
                 </div>
               ` : ''}
               <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; border-top: 2px solid #d1d5db; padding-top: 8px;">
                 <span style="color: #1f2937;">Total:</span>
-                <span style="color: #1f2937;">$${(parseFloat(invoice.total) || 0).toFixed(2)}</span>
+                <span style="color: #1f2937;">${formatCents(safeParseToCents(invoice.total))}</span>
               </div>
             </div>
           </div>
@@ -353,9 +352,12 @@ const InvoiceManagementPage = () => {
                       {formatInvoiceDate(invoice.dueDate)}
                     </td>
                     <td className="px-5 py-3.5 text-sm text-ink text-right tabular font-medium">
-                      ${(parseFloat(invoice.total) || 0).toLocaleString()}
+                      {formatCents(safeParseToCents(invoice.total))}
                     </td>
                     <td className="px-5 py-3.5 text-center">
+                      {isVoidInvoice(invoice) ? (
+                        <span className="text-[12px] font-semibold text-slate-400">Void</span>
+                      ) : (
                       <select
                         value={invoice.status || 'draft'}
                         onChange={(e) => handleStatusUpdate(invoice.id, e.target.value)}
@@ -366,6 +368,7 @@ const InvoiceManagementPage = () => {
                         <option value="paid">Paid</option>
                         <option value="overdue">Overdue</option>
                       </select>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-center">
                       <div className="flex items-center justify-center gap-1.5">
@@ -383,13 +386,18 @@ const InvoiceManagementPage = () => {
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleDeleteInvoice(invoice.id)}
-                          className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm text-slate-600 hover:text-neg"
-                          title="Delete Invoice"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {isVoidInvoice(invoice) ? (
+                          <span className="text-[12px] font-semibold text-slate-400">Void</span>
+                        ) : (
+                          <button
+                            onClick={() => handleDeleteInvoice(invoice.id)}
+                            className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm text-slate-600 hover:text-neg"
+                            title="Void invoice"
+                            aria-label={`Void invoice ${invoice.invoiceNumber || ''}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

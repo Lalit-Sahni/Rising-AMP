@@ -1,5 +1,5 @@
 import { fetchExpensesFromFirestore, fetchInvoicesFromFirestore } from './data';
-import { getClients } from './firebaseService';
+import { getClients } from './directories';
 import { listInvitedProjects } from './projectCatalog';
 import { deriveJobMetrics, jobSubtitle } from '../utils/jobMetrics';
 import { uniqueByName } from './partyName';

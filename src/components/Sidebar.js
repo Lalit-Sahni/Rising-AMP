@@ -97,6 +97,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
               : 'top-4 right-3 bg-steel-800 hover:bg-steel-700 text-[#C9CDD4] hover:text-white'
             }`}
           title={isDesktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={isDesktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {isDesktopCollapsed ? <ChevronRight className="w-4 h-4" /> : <X className="w-3.5 h-3.5" />}
         </button>

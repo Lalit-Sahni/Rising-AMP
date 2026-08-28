@@ -15,13 +15,15 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { db } from './config';
-import { FAMILY_ORG_ID } from './tenancy';
+import { getActiveOrgId } from './tenancy';
+import { parseAtBoundary, expenseSchema, invoiceSchema } from '../domain/schemas';
+import { parseToCents } from '../money';
 
 const projectRootRef = async (projectId) => {
   if (!projectId) {
     throw new Error('Missing job list');
   }
-  const projectRef = doc(db, 'organizations', FAMILY_ORG_ID, 'projects', projectId);
+  const projectRef = doc(db, 'organizations', getActiveOrgId(), 'projects', projectId);
   const projectDoc = await getDoc(projectRef);
   if (!projectDoc.exists()) {
     throw new Error('Job list not found');
@@ -69,24 +71,32 @@ export const fetchExpensesFromFirestore = async (jobId) => {
     const expensesSnapshot = await getDocs(expensesQuery);
     
     const expenses = [];
-    expensesSnapshot.forEach((doc) => {
-      const data = doc.data();
+    expensesSnapshot.forEach((row) => {
+      const data = row.data();
+      const parsed = parseAtBoundary(expenseSchema, { id: row.id, ...data });
+      const body = parsed.ok ? parsed.data : parsed.data;
+      let totalCents = 0;
+      try {
+        totalCents = parseToCents(body.total ?? body.amount ?? body.cost ?? body.totalPrice ?? 0);
+      } catch (error) {
+        totalCents = 0;
+      }
       expenses.push({
-        id: doc.id,
-        ...data,
-        // Ensure timestamp is properly converted
+        ...body,
+        id: row.id,
+        totalCents,
+        _invalid: parsed.ok ? false : true,
         timestamp: data.timestamp?.toDate?.() || data.timestamp || new Date()
       });
     });
     
-    
-    // Get user document for budget
     const userDoc = await getDoc(userDocRef);
     const userData = userDoc.data();
     
     return { 
       success: true, 
-      expenses: expenses,
+      expenses,
+      expensesCapped: expensesSnapshot.size >= 1000,
       budget: userData?.budget || 0
     };
   } catch (error) {
@@ -589,10 +599,14 @@ export const fetchInvoicesFromFirestore = async (jobId) => {
     const invoicesSnapshot = await getDocs(invoicesQuery);
     
     const invoices = [];
-    invoicesSnapshot.forEach((doc) => {
+    invoicesSnapshot.forEach((row) => {
+      const data = row.data();
+      const parsed = parseAtBoundary(invoiceSchema, { id: row.id, ...data });
+      const body = parsed.ok ? parsed.data : parsed.data;
       invoices.push({
-        id: doc.id,
-        ...doc.data()
+        ...body,
+        id: row.id,
+        _invalid: parsed.ok ? false : true,
       });
     });
     
@@ -626,18 +640,25 @@ export const updateInvoiceInFirestore = async (jobId, invoiceId, updatedInvoice)
   }
 };
 
-export const deleteInvoiceFromFirestore = async (jobId, invoiceId) => {
+export const voidInvoiceInFirestore = async (jobId, invoiceId) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const invoiceDocRef = doc(userDocRef, 'invoices', invoiceId);
-    
-    await deleteDoc(invoiceDocRef);
-    
+    await updateDoc(invoiceDocRef, {
+      status: 'void',
+      voidedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
     return { success: true };
   } catch (error) {
-    console.error('Delete invoice error:', error);
+    console.error('Void invoice error:', error);
     return { success: false, error: error.message };
   }
+};
+
+/** @deprecated Use voidInvoiceInFirestore. Invoices cannot be hard-deleted. */
+export const deleteInvoiceFromFirestore = async (jobId, invoiceId) => {
+  return voidInvoiceInFirestore(jobId, invoiceId);
 };
 
 // HIA Contract functions

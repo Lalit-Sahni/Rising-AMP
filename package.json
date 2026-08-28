@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@tanstack/react-query": "^5.102.8",
     "@types/react-datepicker": "^6.2.0",
     "exceljs": "^4.4.0",
     "firebase": "^12.0.0",
@@ -13,29 +14,39 @@
     "react-datepicker": "^8.4.0",
     "react-dom": "^18.2.0",
     "react-dropzone": "^14.3.8",
-    "react-scripts": "^5.0.1",
+    "react-router-dom": "^7.18.2",
     "react-select": "^5.10.2",
-    "recharts": "^3.1.0"
+    "recharts": "^3.1.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
+    "@vitejs/plugin-react": "^4.5.2",
     "autoprefixer": "^10.4.14",
     "cssnano": "^7.1.0",
+    "jsdom": "^26.1.0",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.3.3"
+    "rollup-plugin-visualizer": "^6.0.3",
+    "tailwindcss": "^3.3.3",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.4"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "start:clean": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true; react-scripts start",
-    "dev": "PORT=3001 react-scripts start",
-    "build": "react-scripts build",
-    "build:analyze": "ANALYZE=true react-scripts build",
+    "start": "vite",
+    "start:clean": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true; vite",
+    "dev": "vite --port 3001",
+    "build": "vite build",
+    "preview": "vite preview",
+    "build:analyze": "vite build",
     "analyze": "node scripts/analyze-bundle.js",
-    "test": "react-scripts test",
+    "test": "vitest run && node --test functions/lib/emailMatch.test.js",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "test:rules": "sh scripts/run-rules-tests.sh",
-    "eject": "react-scripts eject",
+    "backfill:public-profiles": "node scripts/backfill-public-profiles.js",
     "backup": "node scripts/backup-firebase-data.js",
     "backup:production": "node scripts/backup-production.js",
     "restore": "node scripts/restore-firebase-data.js",
@@ -46,15 +57,9 @@
     "deps:check": "npm outdated",
     "deps:update": "npm update",
     "deps:security": "npm audit --audit-level high",
-    "env:check": "node -e \"console.log('Environment check:'); console.log('NODE_ENV:', process.env.NODE_ENV); console.log('REACT_APP_FIREBASE_API_KEY:', process.env.REACT_APP_FIREBASE_API_KEY ? 'Set' : 'Missing');\"",
+    "env:check": "node -e \"console.log('Environment check:'); console.log('VITE_FIREBASE_PROJECT_ID is in .env.local (staging) and .env.production.local (production). Do not print secrets.');\"",
     "precommit": "npm run security:check && npm run build",
     "postinstall": "npm run security:audit"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [

@@ -1,6 +1,6 @@
 import { GoogleAuthProvider, reauthenticateWithPopup } from 'firebase/auth';
-import { httpsCallable } from 'firebase/functions';
-import { auth, functions } from './config';
+import { auth } from './config';
+import { callFunction } from './callable';
 import { isProductionProject } from './env';
 import { isInviteFunctionUnavailable } from './inviteSendSwitch';
 import {
@@ -183,8 +183,7 @@ export async function sendInviteFromSignedInGmail({ to, projectName }) {
 export { isInviteFunctionUnavailable } from './inviteSendSwitch';
 
 async function sendInviteViaResend({ to, projectId, projectName }) {
-  const callable = httpsCallable(functions, 'sendJobInviteEmail');
-  await callable({
+  await callFunction('sendJobInviteEmail', {
     to,
     projectId,
     projectName,

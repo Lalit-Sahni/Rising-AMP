@@ -1,11 +1,11 @@
-# Rising AMP — Architecture (after Phase 2, 2026-08-23)
+# Rising AMP — Architecture (after Phase 8, 2026-08-28)
 
-This describes the **running live app**. Phase 1 record is `PLAN.md`. Phase 2 visual record is `PHASE2.md`.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE8.md`.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging (localhost): `rising-amp-staging`  
-Default git branch in use was `master`; Phase 1 landed on `phase-1-foundation`; Phase 2 (live look) is `phase-2-visual`; Phase 3 vision is `phase-3-vision`; Phase 4 is `phase-4-domain-email`; Phase 5 is `phase-5-jobs-members`.  
+Working branch: `phase-8-technical-revamp`. Never commit to `master` / `main`.  
 App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category colour as data ink only.
 
 ---
@@ -14,53 +14,60 @@ App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category col
 
 | Layer | What it is |
 |--------|------------|
-| UI | React 18, Create React App (`react-scripts`), Tailwind |
-| Routing | **No react-router.** A string `currentPage` in `AppContext` switches which page component is shown. |
-| Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions. Analytics **removed** in Phase 8 Part A (was loaded, never used). |
-| Functions | Node 22. Live: `sendJobInviteEmail`. Added in repo: `readReceiptImage` (OpenAI). Production still has unused `generateWeeklyReport`. Deploy functions **by name only**. Never `firebase deploy --only functions`. |
-| OCR | OpenAI Vision via Cloud Function `readReceiptImage`. If that fails, show an error. Do not fall back to Tesseract or Google Vision. |
-| PWA | Standalone meta tags + safe-area CSS. No `manifest.json` (icons skipped on purpose). No service worker. |
+| UI | React 18, Vite 6, Tailwind. TypeScript `allowJs` + `strict`. New files are TypeScript. |
+| Routing | `react-router-dom`. Job id lives in the URL: `/jobs/:jobId`. |
+| Money | Integer cents in `src/money.ts`. Parse at the Firestore / form boundary. Stored documents stay mixed until a later migration. |
+| Server state | TanStack Query is provided. Most ledger fetches still run in `AppContext` on mount. |
+| Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions. Analytics removed. App Check client is wired but **not enforced**. |
+| Functions | Node 22. Live: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`. Production still has unused `generateWeeklyReport`. Deploy functions **by name only**. Never `firebase deploy --only functions`. |
+| OCR | OpenAI Vision via Cloud Function `readReceiptImage`. If that fails, show an error. |
+| PWA | Standalone meta tags + safe-area CSS. No `manifest.json`. No service worker. |
 
-Entry: `src/index.js` → `src/App.js`.
+Entry: `index.html` → `src/index.js` → `src/App.js`.
 
 Localhost must load `.env.local` (staging). Production builds must load `.env.production.local`. Do not swap them.
 
+**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Measured 28 Aug 2026: **238.9 KB** initial gzip (main chunk ~245 KB gzip in the Vite reporter). `exceljs` and `jspdf`/`html2canvas` load on click. See `build/stats.html` after `npm run build`.
+
 ---
 
-## 2. Pages (“routes”)
+## 2. Routes
 
-Wired in `src/components/MainContent.js`:
+Wired in `src/components/MainContent.js`. Map: `src/navigation.ts`.
 
-| `currentPage` key | In sidebar? | File |
-|-------------------|-------------|------|
-| `jobs` | Yes | `src/components/pages/JobsHomePage.js` |
-| `dashboard` | Yes (“Overview” when a job is open) | `src/components/pages/DashboardPage.js` |
-| `add-expense` | Yes | `src/components/pages/AddExpensePage.js` |
-| `new-invoice` | Yes (“Invoices”) | `src/components/pages/InvoiceManagementPage.jsx` |
-| `history` | Yes | `src/components/pages/HistoryPage.js` |
-| `budget-tracking` | More | `src/components/pages/BudgetTrackingPage.js` |
-| `hia-contract` | More | `src/components/pages/HIAContractPage.jsx` |
-| `client-manager` | More | `src/components/pages/ClientManagerPage.jsx` |
-| `profile` | Sidebar chip | `src/components/pages/ProfilePage.js` |
+| Path | File |
+|------|------|
+| `/` | `JobsHomePage.js` |
+| `/jobs/:jobId` | `DashboardPage.js` |
+| `/jobs/:jobId/expenses/new` | `AddExpensePage.js` |
+| `/jobs/:jobId/invoices` | `InvoiceManagementPage.jsx` |
+| `/jobs/:jobId/history` | `HistoryPage.js` |
+| `/jobs/:jobId/budget` | `BudgetTrackingPage.js` |
+| `/jobs/:jobId/contracts` | `HIAContractPage.jsx` |
+| `/clients` | `ClientManagerPage.jsx` |
+| `/profile` | `ProfilePage.js` |
+| `/privacy` `/terms` | static HTML via `firebase.json` rewrites |
+| anything else | `NotFoundPage.jsx` |
 
-Removed: Site Log, Weekly Report, hidden OCR test pages (`ocr-test`, `enhanced-ocr-test`).
+The URL is the source of truth for the open job. `localStorage` is a cold-start fallback only.
 
-Login (not `currentPage`): `LoginScreen.jsx` (Google or email/password), `ProfileSetupScreen.jsx`. Public static pages: `/privacy`, `/terms`. While auth/membership loads, `BootScreen.jsx` (RisingAMP mark). After setup, **Jobs** is home. Invite/rename live on each job row.
+Login (outside those routes): `LoginScreen.jsx`, `ProfileSetupScreen.jsx`, `AskForAccessScreen.jsx` when the signed-in email is on no organisation. While auth loads: `BootScreen.jsx`.
 
 ---
 
 ## 3. Access model
 
-Google or email/password via Firebase Auth (email/password enabled on **staging**). After sign-in:
+Google or email/password via Firebase Auth. After sign-in:
 
 1. If the profile is incomplete, show **Set up your account**. Saved at `profiles/{uid}`.
-2. Anyone signed in can use the app. Jobs home lists only projects where `invitedEmails` contains that email. A new signup sees an empty list until they are added to a job.
-3. Family jobs are still protected by rules: you cannot read Opal data unless your email is on that job.
-4. Tracker reads/writes `organizations/{orgId}/projects/{projectId}/…`. Receipt Storage still uses the legacy workspace id (`storageKey`) so live photos keep working.
+2. Organisation is resolved from membership (`invitedEmails` query), not from a hardcoded constant. Opal (`opal-ss-constructions`) is preferred when the user is on it.
+3. A signed-in person with no org sees **Ask us for access**.
+4. Jobs home lists only projects where `invitedEmails` contains that email.
+5. Tracker reads/writes `organizations/{orgId}/projects/{projectId}/…`. Receipt Storage still uses the legacy workspace id (`storageKey`) so live photos keep working.
 
-Invite: owner taps the person icon on a job card. That email (any domain) is added to that project (and to the org door list). Invite mail is the professional HTML from `design/risingamp-signin-email.html`, sent from `invites@risingamp.com.au` via Resend once `sendJobInviteEmail` is deployed. Until then the app falls back to the inviter’s Gmail send path. New-sign-in notices are still Gmail-only (no popup on login).
+Invite: owner taps the person icon on a job card. Invite mail is Resend from `invites@risingamp.com.au` via `sendJobInviteEmail`. Gmail fallback remains until the owner asks to remove it.
 
-Old PIN trees `users/{accessCode}/…` still exist. The live app does not use them. Do not delete them unless asked. `users/` rules are still `if true` for those leftover trees.
+Old PIN trees `users/{accessCode}/…` still exist. The live app does not use them. Rules deny all reads/writes. Do not delete them unless asked.
 
 ---
 
@@ -81,18 +88,18 @@ Old PIN trees `users/{accessCode}/…` still exist. The live app does not use th
 
 ## 5. How data is scoped
 
-One organisation: Opal SS Constructions.
+One organisation is live: Opal SS Constructions (`opal-ss-constructions`). A second org `phase8-isolation` exists on **staging only** so we can prove a member of org B cannot read org A. Production isolation org is not created unless named.
 
-Two projects (job lists): **72 Centenary Dr**, **Gurner St**. Each is a Firestore document under `organizations/opal-ss-constructions/projects/{projectId}` with tracker subcollections copied from the old PIN folders.
-
-The dashboard is **one job list at a time**, opened from the Jobs home (or restored from `localStorage` so Add expense still has a job).
+The dashboard is **one job at a time**. The job id is in the URL. `localStorage` restores it on a cold start if the URL has none.
 
 ---
 
 ## 6. Firestore layout (live)
 
 ```
-organizations/opal-ss-constructions
+organizations/{orgId}
+  invitedEmails, ownerEmail, name
+  counters/invoices            # year + next sequence; written by allocateInvoiceNumber
   projects/{projectId}
     expenses, invoices, clients, labour, trades, …
 profiles/{uid}              # private: name, mobile, ABN, address, photo
@@ -112,7 +119,7 @@ Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `o
 | `siteLogs/{legacyWorkspaceId}/…` | Old Site Log photos (unused) |
 | `reports/{legacyWorkspaceId}/…` | Old Weekly Report files (unused) |
 
-Staging has **no** Storage bucket; localhost receipts may be missing. Live receipts work.
+Staging has a Storage bucket so localhost can upload receipts. Production Storage rules in the repo are tighter than what may still be live; they were **not** deployed unless the owner named Storage.
 
 ---
 
@@ -120,18 +127,16 @@ Staging has **no** Storage bucket; localhost receipts may be missing. Live recei
 
 Production still has leftover `generateWeeklyReport`. The app UI does not call it.
 
-This branch adds **one** new callable: `sendJobInviteEmail` (us-central1). It sends job invites from `invites@risingamp.com.au` via Resend. The Resend API key lives in Secret Manager (`RESEND_API_KEY`), never in the client bundle.
-
-Deploy **only** that function by name, after the owner has set the secret:
+Callables in use: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` (us-central1). Deploy **by name**:
 
 ```
-firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
-firebase deploy --project production --only functions:sendJobInviteEmail
+firebase deploy --project rising-amp-staging --only functions:allocateInvoiceNumber
+firebase deploy --project production --only functions:allocateInvoiceNumber
 ```
 
 Do **not** run `firebase deploy --only functions` against production — that would delete `generateWeeklyReport`.
 
-Until the new function is deployed, the app falls back to the existing Gmail send path. `sendNewSignInNotice` is still Gmail and was not moved.
+Gmail invite fallback remains in the client until the owner asks to remove it. `sendNewSignInNotice` is still Gmail.
 
 ---
 
@@ -163,21 +168,29 @@ Production is **`rising-amp-467702-b5`**. Staging is **`rising-amp-staging`**. P
 
 ## 13. Honest shape of the codebase
 
-Working family tool, not a tidy platform. Phase 1 was not a rewrite.
+Working family tool after a foundations pass, not a greenfield platform.
 
-Fine for now:
+Done in Phase 8:
 
-- Folder layout (`pages`, `firebase`, `hooks`, `utils`).
-- Live data path: `organizations/…/projects/…`.
-- Staging + branch + restore tag.
+- Vite + TypeScript for new files. `react-scripts` is gone.
+- Real URLs. Refresh stays on the same screen.
+- Money is integer cents in one module.
+- Invoice numbers from a server counter. Invoices are voided, not deleted.
+- One import path: `src/data`. `firebaseService.js` is a thin re-export of `directories.js`.
+- Auth / org / UI contexts split. Ledger state still sits in `AppContext`.
+- Org id from membership. Wildcard project writes are gone.
+- Jobs list counts with `getCountFromServer`. At 1,000 expenses the app refuses to show a margin.
+- Vitest + GitHub Action on `phase-*` branches.
 
-Still messy, and not a side quest unless it blocks the next asked piece of work:
+Left on purpose:
 
-- **Two overlapping Firestore helpers.** `src/firebase/data.js` (~890 lines) is the live write path for expenses, invoices, progress payments, HIA, bank details, and payers. `src/firebase/firebaseService.js` still holds a second set of expense CRUD plus client/labour/trade update-delete, and re-exports directory helpers from `directories.js`. Same collection names, different function names (`updateClient` vs `updateClientInfo`). Do **not** merge them in a cleanup pass: that is a real migration of live callers with real risk. Scope it as its own job, with tests, after Phase 6.
-- `AppContext.js` loads a lot for every screen.
-- Leftover unwired files.
-- No react-router; almost no tests.
-- Legacy `users/` and Storage rules still open.
+- Stored money fields are still mixed strings/numbers. Normalising them is a migration.
+- Ledger rollups (Cloud Function summaries) were skipped. The list no longer reads the ledger; the dashboard still does.
+- TanStack Query is mounted but most fetches are still AppContext.
+- App Check enforcement is off until a site key exists and traffic is clean.
+- Gmail invite fallback; leftover `generateWeeklyReport`; production Storage rules not deployed.
+
+Decisions: `ADR/`.
 
 ---
 

@@ -161,6 +161,31 @@ describe('attention items', () => {
   });
 });
 
+describe('void invoices and the expense cap', () => {
+  test('void invoices are excluded from cash and overdue', () => {
+    const cash = deriveCash(
+      [
+        { total: 100, status: 'paid' },
+        { total: 50, status: 'void' },
+      ],
+      [{ total: 20 }],
+    );
+    expect(cash.paid).toBe(100);
+    expect(cash.invoiced).toBe(100);
+    expect(cash.cost).toBe(20);
+  });
+
+  test('refuses margin when the 1,000 expense cap is hit', () => {
+    const metrics = deriveJobMetrics({
+      expenses: [{ total: 20 }],
+      invoices: [{ total: 100, status: 'paid', invoiceDate: '2026-01-01' }],
+    }, { now, expensesCapped: true });
+    expect(metrics.hasMargin).toBe(false);
+    expect(metrics.margin).toBeNull();
+    expect(bannerMessage(metrics).line).toMatch(/1,000 expenses/);
+  });
+});
+
 describe('deriveJobMetrics and portfolio', () => {
   test('Getting started job shows em-dash margin, not $0', () => {
     const metrics = deriveJobMetrics({

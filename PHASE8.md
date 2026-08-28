@@ -1,12 +1,14 @@
-# Phase 8 — Make it a product an engineer would recognise (agent brief)
+# Phase 8 — Make it a product an engineer would recognise (closed record)
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
-Working branch: **`phase-8-technical-revamp`** (owner-named; this brief originally said `phase-8-foundations`). Created from `phase-7-app-feel`. Never commit to `master` or `main`. Restore tag: `pre-phase8-2026-08-28`.
+Working branch: **`phase-8-technical-revamp`**. Created from `phase-7-app-feel`. Never commit to `master` or `main`. Restore tag: `pre-phase8-2026-08-28`.
 
-**Part A status (28 Aug 2026):** implemented on the branch. Emulator test in `npm run test:rules`. Production rules **not** deployed. App Check client is present but does nothing until `REACT_APP_FIREBASE_APPCHECK_SITE_KEY` is set, and enforcement stays off. Next: staging rules deploy if localhost should match, then production rules on a named yes, then Part B.
+**Closed 28 Aug 2026.** Parts A–L shipped. Profile leak is **closed** on https://risingamp.com.au (hosting, then rules, then a second-account check). App Check client is present; **enforcement stays off** until a `VITE_FIREBASE_APPCHECK_SITE_KEY` exists and traffic is clean. Ledger rollups, stored-money normalisation, and full TanStack Query on the ledger were skipped on purpose.
 
-Phases 1 to 7 fixed what the app *does*. Phase 8 fixes what the app *is*. The test for every decision here is not "does it work" but "would a software engineer picking this up cold understand it, trust it, and be able to add to it without breaking something".
+The rest of this file is the original brief. Do not re-run Parts A–L.
+
+---
 
 ## Sources
 
@@ -86,8 +88,11 @@ The published Privacy Policy and the sales page both promise the data is private
 
 - Replace the unbounded scan at `profiles.js:57`. The app needs profiles for *people on a job*, so read them by the emails on that job's invite list. The batched `where('email', 'in', chunk)` query already in that file at line 167 is the right shape.
 - Tighten the rule so a profile is readable by its owner and by people who share a job with them. If expressing "shares a job with me" needs a `get()` per read and proves too expensive, the correct fallback is a small deliberately-public `publicProfiles/{uid}` document holding display name and photo only, with mobile, ABN and business name private to the owner. **Do not leave the current rule in place while designing the perfect one.**
-- Prove it with an emulator test before deploying: a signed-in user sharing no job cannot read another profile.
-- Deploy with an explicit owner yes: `firebase deploy --project production --only firestore:rules`.
+- Prove it with an emulator test before deploying: a signed-in user sharing no job cannot read another profile. `npm run test:rules`. Java is required; the script prints the brew command if it is missing. **Do not deploy rules that have not gone green locally.**
+- Backfill `publicProfiles` for existing people **before** the rules go live. `syncPublicProfile` only runs when someone loads or saves a complete profile, so the four family members have private docs and no public cards. Script: `scripts/backfill-public-profiles.js` (additive, idempotent, dry-runnable). Staging first, then production.
+- Deploy **hosting before rules**. The client still live does the old whole-collection scan. Rules first would break that client. Hosting first is safe: the new client reads public cards, and the old permissive rules still allow the fallback.
+- Then deploy rules: `firebase deploy --project production --only firestore:rules`. **That is the moment the leak closes.**
+- **Definition of done for A1:** deployed to production and verified from a second account that is not on any family job. Code on a branch does not close a live hole.
 
 ### A2. Delete Google Analytics
 
@@ -108,6 +113,15 @@ Enable App Check with reCAPTCHA Enterprise for web, on staging first, then produ
 Phase 6 cut logging from 60 calls to 12, which was good. Finish it: confirm the production build ships no `console.log`. Either route the remainder through `src/utils/logger.js` with a level that is silent in production, or strip them at build time. The teardown saw data volumes and identifiers printed in the live console, which both leaks information and looks unfinished to anyone who opens dev tools.
 
 Commit: `Lock down profile reads, remove unused analytics, and enable App Check.`
+
+**Close-out order (do not skip or reverse).** Rules before hosting breaks the live app. Hosting before rules is safe.
+
+1. `npm run test:rules` green.
+2. Backfill `publicProfiles` on staging, then production (`node scripts/backfill-public-profiles.js --dry-run`, then `--apply --staging`, then `--apply --production`).
+3. `firebase deploy --project production --only hosting`.
+4. Check the job overview on the live site. Names and photos still showing.
+5. `firebase deploy --project production --only firestore:rules`. The leak closes here.
+6. Check again, and check from a second account that is not on any family job. **No backdoor.** That second account is a normal Sign up that you never invite onto a job. Disable it in Firebase Auth when the check is done.
 
 ---
 
@@ -297,6 +311,8 @@ A financial record vanishes, its number is freed, and the job's invoiced history
 
 Commit: `Number invoices server-side, void instead of delete, and settle date handling.`
 
+**Done when:** production rules deny invoice delete, hosting is live, and a second account cannot delete or read another job's invoices. Code on a branch is not done.
+
 ---
 
 ## Part H — One data layer, typed and validated
@@ -320,6 +336,8 @@ Any member of a job can write a document of any shape into any subcollection. Co
 5. **Add TanStack Query for server state.** It earns its place: caching, deduplication and background refresh in one place, which directly cuts the Firestore reads Part D is attacking, and removes a large amount of hand-rolled loading state from components.
 
 Commit: `Collapse the two data layers into one typed, validated module.`
+
+**Done when:** the wildcard write is gone on production, emulator tests prove a malformed expense is rejected, and a second account cannot write a junk document onto a job it is not on. Code on a branch is not done.
 
 ---
 
@@ -355,6 +373,8 @@ While doing this:
 - Keep Opal SS Constructions working exactly as it does throughout. It is the live business.
 
 Commit: `Resolve the organisation from membership instead of a hardcoded constant.`
+
+**Done when:** a second organisation exists on staging (then production if named), a member of org B cannot read org A, and that is verified by signing in as that second account. Reading the rules file is not verification.
 
 ---
 
@@ -446,17 +466,27 @@ Each part is one agent session. They are ordered by risk-adjusted value.
 - The scaffold product.
 - Any production deploy beyond Part A's rules and App Check, unless Lalit names it.
 
+## When a part touches Firestore rules
+
+Code on a branch does not close a live hole. For Parts **A, G, H and J** (and any later rules change):
+
+- Emulator tests green before any deploy.
+- Hosting (new client) before rules whenever the live client would break under the new rules.
+- Any required backfill on staging, then production, before the rules that depend on it.
+- `firebase deploy --project production --only firestore:rules` only when the owner names it.
+- **Definition of done:** deployed to production and verified from a second account. Not "code written".
+
 ## Definition of done
 
-- A stranger who signs up can read nothing but their own profile, and a test proves it.
-- Invoice numbers are server-generated, unique and monotonic, and a test generates a thousand with zero duplicates.
-- No financial record can be hard-deleted, enforced in the rules.
+- A stranger who signs up can read nothing but their own profile. **Deployed to production and verified from a second account that is not on any family job.** An emulator test is necessary and not sufficient.
+- Invoice numbers are server-generated, unique and monotonic, and a test generates a thousand with zero duplicates. **Live, with delete denied in production rules.**
+- No financial record can be hard-deleted, **enforced in production rules and verified from a second account.**
 - Job counts use aggregation queries; drawing the Jobs list does not read the ledger.
 - Initial JavaScript under 250 KB gzipped, enforced by the build.
 - Every screen has a URL, and a refresh lands where the user was.
 - No money arithmetic outside the money module, and no `parseFloat` on a currency value anywhere.
-- One data layer, typed, every read and write validated.
-- A second organisation can be created on staging and cannot see the first one's data.
+- One data layer, typed, every read and write validated. **Wildcard write gone on production.**
+- A second organisation can be created on staging and cannot see the first one's data, **verified by signing in as that second account.**
 - Every screen has a deliberate empty state, checked on a brand-new job.
 - `npm run typecheck`, `test` and `build` all pass in CI.
 - A competent engineer can clone the repo and run it against staging in fifteen minutes using only the README.

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import { loadProfilesForEmails } from '../firebase/profiles';
 import { canonicalEmail } from '../firebase/email';
 
@@ -21,7 +22,7 @@ function initials(profile) {
   return source.slice(0, 1).toUpperCase();
 }
 
-export default function JobPeople({ emails }) {
+export default function JobPeople({ emails, ownerEmail, onRemove, saving }) {
   const [people, setPeople] = useState([]);
 
   useEffect(() => {
@@ -42,24 +43,40 @@ export default function JobPeople({ emails }) {
 
   return (
     <div className="flex items-center gap-2 mt-3 flex-wrap">
-      {people.map((person) => (
-        <div
-          key={person.uid || person.email}
-          className="inline-flex items-center gap-2 bg-surface border border-hairline rounded-full pl-0.5 pr-2.5 py-0.5"
-          title={person.email}
-        >
-          {person.photoUrl ? (
-            <img src={person.photoUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
-          ) : (
-            <span className="w-6 h-6 rounded-full bg-canvas border border-hairline grid place-items-center text-[10px] font-bold">
-              {initials(person)}
+      {people.map((person) => {
+        const isOwner = canonicalEmail(person.email) === canonicalEmail(ownerEmail);
+        const label = person.displayName || person.email;
+        return (
+          <div
+            key={person.uid || person.email}
+            className="inline-flex items-center gap-2 bg-surface border border-hairline rounded-full pl-0.5 pr-2 py-0.5"
+            title={person.email}
+          >
+            {person.photoUrl ? (
+              <img src={person.photoUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+            ) : (
+              <span className="w-6 h-6 rounded-full bg-canvas border border-hairline grid place-items-center text-[10px] font-bold">
+                {initials(person)}
+              </span>
+            )}
+            <span className="text-xs font-semibold text-ink max-w-[10rem] truncate">
+              {label}{isOwner ? ' · owner' : ''}
             </span>
-          )}
-          <span className="text-xs font-semibold text-ink max-w-[10rem] truncate">
-            {person.displayName || person.email}
-          </span>
-        </div>
-      ))}
+            {onRemove && !isOwner && (
+              <button
+                type="button"
+                className="p-0.5 text-slate-400 hover:text-neg"
+                title={`Remove ${label}`}
+                aria-label={`Remove ${label}`}
+                disabled={saving}
+                onClick={(event) => onRemove(event, person.email)}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

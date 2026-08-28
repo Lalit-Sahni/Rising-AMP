@@ -6,7 +6,7 @@ import {
   listAll,
   getMetadata 
 } from "firebase/storage";
-import { storage } from "./config";
+import { getFirebaseStorage } from "./callable";
 
 // Collection names
 const STORAGE_PATHS = {
@@ -21,6 +21,7 @@ const STORAGE_PATHS = {
  * @returns {Promise<{success: boolean, url?: string, path?: string, error?: string}>}
  */
 export const uploadReceiptImage = async (jobId, expenseId, imageFile) => {
+  const storage = await getFirebaseStorage();
   try {
     // Validate inputs
     if (!jobId || !expenseId || !imageFile) {
@@ -83,6 +84,7 @@ export const uploadReceiptImage = async (jobId, expenseId, imageFile) => {
  * @returns {Promise<{success: boolean, url?: string, error?: string}>}
  */
 export const getReceiptImageUrl = async (jobId, expenseId, fileName = null) => {
+  const storage = await getFirebaseStorage();
   try {
     if (!jobId || !expenseId) {
       throw new Error('Missing required parameters: jobId or expenseId');
@@ -135,6 +137,7 @@ export const getReceiptImageUrl = async (jobId, expenseId, fileName = null) => {
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export const deleteReceiptImage = async (jobId, expenseId, fileName = null) => {
+  const storage = await getFirebaseStorage();
   try {
     if (!jobId || !expenseId) {
       throw new Error('Missing required parameters: jobId or expenseId');
@@ -175,6 +178,7 @@ export const deleteReceiptImage = async (jobId, expenseId, fileName = null) => {
  * @returns {Promise<{success: boolean, receipts?: Array, error?: string}>}
  */
 export const listReceiptImages = async (jobId) => {
+  const storage = await getFirebaseStorage();
   try {
     if (!jobId) {
       throw new Error('Missing required parameter: jobId');
@@ -276,6 +280,7 @@ const compressImage = async (file, maxWidth = 1920, quality = 0.8) => {
  * @returns {Promise<{success: boolean, metadata?: Object, error?: string}>}
  */
 export const getReceiptImageMetadata = async (jobId, expenseId) => {
+  const storage = await getFirebaseStorage();
   try {
     if (!jobId || !expenseId) {
       throw new Error('Missing required parameters: jobId or expenseId');

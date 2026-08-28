@@ -8,8 +8,8 @@
  * - Replaces console.log statements for better security
  */
 
-const isDevelopment = process.env.NODE_ENV === 'development';
-const isDebugMode = process.env.REACT_APP_DEBUG === 'true';
+const isDevelopment = import.meta.env.DEV;
+const isDebugMode = import.meta.env.VITE_DEBUG === 'true';
 
 /**
  * Logger class for controlled logging

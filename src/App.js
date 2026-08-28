@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { onAuthChange, signOut } from './firebase/auth';
 import { AppProvider } from './context/AppContext';
 import Sidebar from './components/Sidebar';
@@ -8,10 +9,12 @@ import CommandPalette from './components/CommandPalette';
 import LoginScreen from './components/LoginScreen';
 import ProfileSetupScreen from './components/ProfileSetupScreen';
 import BootScreen from './components/BootScreen';
+import AskForAccessScreen from './components/AskForAccessScreen';
 import { listInvitedProjects } from './firebase/projectCatalog';
 import { sendNewSignInNotice } from './firebase/email';
 import { loadProfile, profileIsComplete, profileNeedsSetup, readProfileCache, recordSignIn } from './firebase/profiles';
-import { clearSession, readSession, resolveInvitation, writeSession } from './firebase/tenancy';
+import { clearSession, readSession, resolveInvitation, setActiveOrgId, writeSession } from './firebase/tenancy';
+import { jobIdFromPath } from './navigation';
 import './styles/premium-animations.css';
 
 function legalHtmlPath() {
@@ -38,6 +41,9 @@ function App() {
 }
 
 function AppShell() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const urlJobId = jobIdFromPath(location.pathname);
   const [authUser, setAuthUser] = useState(undefined);
   const [membership, setMembership] = useState(null);
   const [membershipLoading, setMembershipLoading] = useState(true);
@@ -48,6 +54,7 @@ function AppShell() {
   const [projectName, setProjectName] = useState(() => readSession().projectName);
   const [jobInvitedEmails, setJobInvitedEmails] = useState(() => readSession().invitedEmails || []);
   const [projectStatus, setProjectStatus] = useState(() => readSession().projectStatus || 'active');
+  const [allowedJobs, setAllowedJobs] = useState([]);
 
   useEffect(() => {
     // Legacy PIN-era key. The string must stay; do not rename it to jobId.
@@ -103,6 +110,7 @@ function AppShell() {
 
         if (!invite.invited) {
           clearSession();
+          setAllowedJobs([]);
           setProjectId(null);
           setWorkspaceId(null);
           setProjectName(null);
@@ -112,8 +120,10 @@ function AppShell() {
           return;
         }
 
+        setActiveOrgId(invite.orgId);
         const allowed = await listInvitedProjects(invite.email);
         if (cancelled) return;
+        setAllowedJobs(allowed);
         const session = readSession();
         const current = allowed.find((row) => row.projectId === session.projectId);
         if (current) {
@@ -232,7 +242,35 @@ function AppShell() {
     setProjectName(null);
     setJobInvitedEmails([]);
     setProjectStatus('active');
+    navigate('/');
   };
+
+  useEffect(() => {
+    if (membershipLoading || !membership || !membership.invited) return undefined;
+    if (!urlJobId) return undefined;
+    const row = allowedJobs.find((job) => job.projectId === urlJobId);
+    if (row) {
+      if (row.projectId !== projectId) {
+        const status = row.status === 'archived' ? 'archived' : 'active';
+        writeSession({
+          projectId: row.projectId,
+          workspaceId: row.workspaceId,
+          projectName: row.name,
+          orgId: membership.orgId,
+          invitedEmails: row.invitedEmails || [],
+          projectStatus: status,
+        });
+        setProjectId(row.projectId);
+        setWorkspaceId(row.workspaceId);
+        setProjectName(row.name);
+        setJobInvitedEmails(row.invitedEmails || []);
+        setProjectStatus(status);
+      }
+      return undefined;
+    }
+    navigate('/', { replace: true });
+    return undefined;
+  }, [urlJobId, allowedJobs, membership, membershipLoading, projectId, navigate]);
 
   if (authUser === undefined) {
     return <BootScreen />;
@@ -257,6 +295,15 @@ function AppShell() {
         user={authUser}
         initialProfile={shownProfile}
         onComplete={setProfile}
+        onSignOut={handleLogout}
+      />
+    );
+  }
+
+  if (!membership.invited) {
+    return (
+      <AskForAccessScreen
+        email={authEmail}
         onSignOut={handleLogout}
       />
     );

@@ -1,5 +1,4 @@
-import { httpsCallable } from 'firebase/functions';
-import { functions } from './config';
+import { callFunction } from './callable';
 
 function canvasToBlob(canvas, type, quality) {
   return new Promise((resolve, reject) => {
@@ -56,10 +55,9 @@ export async function fileToCompressedBase64(file, maxEdge = 1280) {
 
 export async function readReceiptWithAi(imageFile) {
   const payload = await fileToCompressedBase64(imageFile);
-  const callable = httpsCallable(functions, 'readReceiptImage', { timeout: 60000 });
-  const result = await callable(payload);
-  if (!result.data || !result.data.content) {
+  const result = await callFunction('readReceiptImage', payload, { timeout: 60000 });
+  if (!result || !result.content) {
     throw new Error('OpenAI returned an empty read.');
   }
-  return result.data.content;
+  return result.content;
 }

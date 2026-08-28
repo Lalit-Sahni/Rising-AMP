@@ -1,12 +1,15 @@
 import React from 'react';
 import { Target, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { formatCents, parseToCents } from '../../money';
+import { getExpenseTotal, getInvoiceTotal, isPaidInvoice } from '../../utils/jobMetrics';
 
 function money(n) {
-  return `$${Number(n || 0).toLocaleString('en-AU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  try {
+    return formatCents(parseToCents(n));
+  } catch {
+    return formatCents(0);
+  }
 }
 
 function formatInvoiceDate(value) {
@@ -24,12 +27,9 @@ const BudgetTrackingPage = () => {
   const { expenses, invoices, setCurrentPage } = useApp();
 
   const totalPaidInvoices = invoices
-    .filter((inv) => inv.status === 'paid')
-    .reduce((sum, invoice) => sum + (parseFloat(invoice.total) || 0), 0);
-  const totalExpenses = expenses.reduce((sum, expense) => {
-    const amount = expense.total || expense.amount || expense.cost || 0;
-    return sum + parseFloat(amount);
-  }, 0);
+    .filter(isPaidInvoice)
+    .reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
+  const totalExpenses = expenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
   const remainingBudget = totalPaidInvoices - totalExpenses;
   const budgetUsedPercentage = totalPaidInvoices > 0 ? (totalExpenses / totalPaidInvoices) * 100 : 0;
   const budgetUnset = totalPaidInvoices <= 0;
@@ -42,10 +42,7 @@ const BudgetTrackingPage = () => {
       const expenseDate = new Date(expense.timestamp || expense.date);
       return expenseDate >= thirtyDaysAgo;
     });
-    const recentTotal = recentExpenses.reduce((sum, expense) => {
-      const amount = expense.total || expense.amount || expense.cost || 0;
-      return sum + parseFloat(amount);
-    }, 0);
+    const recentTotal = recentExpenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
     return recentTotal / 30;
   };
 
@@ -171,7 +168,7 @@ const BudgetTrackingPage = () => {
             {paid.map((invoice) => (
               <div key={invoice.id} className="flex items-center justify-between py-3 border-b border-hairline last:border-0">
                 <div>
-                  <p className="tabular font-medium">{money(parseFloat(invoice.total) || 0)}</p>
+                  <p className="tabular font-medium">{money(getInvoiceTotal(invoice))}</p>
                   <p className="font-mono text-xs text-slate-400 mt-0.5">
                     {invoice.invoiceNumber} · {formatInvoiceDate(invoice.invoiceDate)}
                     {invoice.clientName ? ` · ${invoice.clientName}` : ''}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Image, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import CreatableSelect from 'react-select/creatable';
@@ -6,6 +6,11 @@ import DatePicker from 'react-datepicker';
 import { useDropzone } from 'react-dropzone';
 import ReceiptViewer from './ReceiptViewer';
 import { uniqueByName } from '../firebase/partyName';
+import { calendarDateToYmd, parseCalendarDate, toYmd } from '../dates';
+import { dollarsFromUnknown, fromCents, labourCents, lineCents, parseQuantity } from '../money';
+import { doc, collection } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { getActiveOrgId } from '../firebase/tenancy';
 import "react-datepicker/dist/react-datepicker.css";
 
 const categoryFields = {
@@ -60,20 +65,23 @@ const categoryLabels = {
 };
 
 function calculateTotal(category, data) {
-  switch (category) {
-    case 'labour':
-      return (parseFloat(data.hours) || 0) * (parseFloat(data.rate) || 0);
-    case 'equipment': {
-      return parseFloat(data.totalPrice) || 0;
+  try {
+    switch (category) {
+      case 'labour':
+        return fromCents(labourCents(data.hours, data.rate));
+      case 'equipment':
+        return dollarsFromUnknown(data.totalPrice);
+      case 'trade':
+        return dollarsFromUnknown(data.amount);
+      case 'purchase':
+        return fromCents(lineCents(data.quantity, data.unitCost));
+      case 'service':
+        return dollarsFromUnknown(data.cost);
+      default:
+        return 0;
     }
-    case 'trade':
-      return parseFloat(data.amount) || 0;
-    case 'purchase':
-      return (parseFloat(data.unitCost) || 0) * (parseFloat(data.quantity) || 0);
-    case 'service':
-      return parseFloat(data.cost) || 0;
-    default:
-      return 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -132,15 +140,56 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
   const [receiptViewerOpen, setReceiptViewerOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [checkFields, setCheckFields] = useState({});
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const root = dialogRef.current;
+    if (!root) return undefined;
+    const previouslyFocused = document.activeElement;
+    const focusables = () =>
+      [...root.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')]
+        .filter((el) => !el.disabled && el.offsetParent !== null);
+    const first = focusables()[0];
+    if (first) first.focus();
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const items = focusables();
+      if (items.length === 0) return;
+      const start = items[0];
+      const end = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === start) {
+        event.preventDefault();
+        end.focus();
+      } else if (!event.shiftKey && document.activeElement === end) {
+        event.preventDefault();
+        start.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus();
+      }
+    };
+  }, [isOpen, onClose]);
 
   // Initialize form data
   useEffect(() => {
     if (isOpen && category) {
       const toSafeDate = (val) => {
         if (!val) return null;
-        if (typeof val?.toDate === 'function') return val.toDate(); // Firestore Timestamp
+        const fromYmd = parseCalendarDate(val);
+        if (fromYmd) return fromYmd;
+        if (typeof val?.toDate === 'function') return val.toDate();
         const d = new Date(val);
-        return isNaN(d.getTime()) ? null : d;
+        return Number.isNaN(d.getTime()) ? null : d;
       };
 
       const initialFormData = {};
@@ -289,15 +338,15 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
       return `${field.label} is required`;
     }
 
-    if (field.type === 'number' && value && isNaN(parseFloat(value))) {
+    if (field.type === 'number' && value && Number.isNaN(Number(value))) {
       return `${field.label} must be a valid number`;
     }
 
-    if (field.name === 'hours' && value && parseFloat(value) <= 0) {
+    if (field.name === 'hours' && value && parseQuantity(value) <= 0) {
       return 'Hours must be greater than 0';
     }
 
-    if (field.name === 'rate' && value && parseFloat(value) <= 0) {
+    if (field.name === 'rate' && value && dollarsFromUnknown(value) <= 0) {
       return 'Rate must be greater than 0';
     }
 
@@ -367,20 +416,31 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
       setIsSubmitting(true);
       
       const isEditMode = !!expenseId;
+      const nextId = isEditMode
+        ? expenseId
+        : doc(collection(db, 'organizations', getActiveOrgId(), 'projects', jobId, 'expenses')).id;
+
+      const datedFields = {};
+      (categoryFields[category] || []).forEach((field) => {
+        if (field.type === 'date' && formData[field.name]) {
+          datedFields[field.name] = calendarDateToYmd(formData[field.name]) || toYmd(formData[field.name]);
+        }
+      });
 
       const expenseData = {
-        id: isEditMode ? expenseId : `expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: nextId,
         category: category,
         ...formData,
+        ...datedFields,
         paidBy: formData.paidBy || '',
         total: calculateTotal(category, formData),
-        timestamp: isEditMode ? (initialData.timestamp || new Date().toISOString()) : new Date().toISOString(),
-        ...(isEditMode && initialData.receiptImageUrl && !receiptFile ? {
-          receiptImageUrl: initialData.receiptImageUrl,
-          receiptImagePath: initialData.receiptImagePath,
-          receiptUploadedAt: initialData.receiptUploadedAt
-        } : {})
       };
+
+      if (isEditMode && initialData.receiptImageUrl && !receiptFile) {
+        expenseData.receiptImageUrl = initialData.receiptImageUrl;
+        expenseData.receiptImagePath = initialData.receiptImagePath;
+        expenseData.receiptUploadedAt = initialData.receiptUploadedAt;
+      }
 
       // Upload receipt if present
       if (receiptFile) {
@@ -416,7 +476,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
           await saveWorkerToFirebase({
             name: formData.workerName,
             role: formData.role || '',
-            rate: parseFloat(formData.rate) || 0
+            rate: dollarsFromUnknown(formData.rate)
           });
         } catch (error) {
           console.error('Error saving labour info:', error);
@@ -483,11 +543,17 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-zinc-200 flex flex-col">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="expense-modal-title"
+        className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-zinc-200 flex flex-col"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-200">
           <div>
-            <h2 className="text-xl font-bold text-zinc-900">
+            <h2 id="expense-modal-title" className="text-xl font-bold text-zinc-900">
               {expenseId ? 'Edit' : 'Add'} {categoryLabels[category]} Expense
             </h2>
             <p className="text-sm text-zinc-500">
@@ -502,6 +568,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
               setValidationErrors({});
             }}
             className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
+            aria-label="Close"
           >
             <X className="w-5 h-5 text-zinc-500" />
           </button>

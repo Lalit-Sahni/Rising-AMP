@@ -14,6 +14,7 @@ import {
   mergeCells
 } from './excelFormatters';
 import { getCategoryColor } from './excelStyles';
+import { dollarsFromUnknown, parseQuantity } from '../money';
 
 
 // Generate summary statistics
@@ -154,7 +155,7 @@ const createLabourSheet = (workbook, labourExpenses) => {
   addTitleRow(worksheet, 1, 'Labour Expenses', 'labour');
   
   // Summary row
-  const totalHours = labourExpenses.reduce((sum, exp) => sum + (parseFloat(exp.hours) || 0), 0);
+  const totalHours = labourExpenses.reduce((sum, exp) => sum + parseQuantity(exp.hours), 0);
   const totalCost = labourExpenses.reduce((sum, exp) => sum + getExpenseTotal(exp), 0);
   const avgRate = totalHours > 0 ? totalCost / totalHours : 0;
   
@@ -182,8 +183,8 @@ const createLabourSheet = (workbook, labourExpenses) => {
       formatDateForExcel(expense.date || expense.timestamp),
       expense.workerName || '',
       expense.role || '',
-      parseFloat(expense.hours) || 0,
-      parseFloat(expense.rate) || 0,
+      parseQuantity(expense.hours),
+      dollarsFromUnknown(expense.rate),
       getExpenseTotal(expense),
       expense.reviewed ? 'Reviewed' : 'Pending',
       expense.notes || ''
@@ -424,7 +425,7 @@ const createPurchaseSheet = (workbook, purchaseExpenses) => {
   
   // Summary
   const totalItems = purchaseExpenses.length;
-  const totalQuantity = purchaseExpenses.reduce((sum, exp) => sum + (parseFloat(exp.quantity) || 0), 0);
+  const totalQuantity = purchaseExpenses.reduce((sum, exp) => sum + parseQuantity(exp.quantity), 0);
   const totalCost = purchaseExpenses.reduce((sum, exp) => sum + getExpenseTotal(exp), 0);
   
   const summaryData = [
@@ -451,8 +452,8 @@ const createPurchaseSheet = (workbook, purchaseExpenses) => {
       formatDateForExcel(expense.date || expense.timestamp),
       expense.itemName || '',
       expense.supplier || '',
-      parseFloat(expense.quantity) || 0,
-      parseFloat(expense.unitCost) || 0,
+      parseQuantity(expense.quantity),
+      dollarsFromUnknown(expense.unitCost),
       getExpenseTotal(expense),
       expense.reviewed ? 'Reviewed' : 'Pending',
       expense.notes || ''

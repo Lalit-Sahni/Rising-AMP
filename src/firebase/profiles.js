@@ -1,6 +1,5 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from './config';
+import { db } from './config';
 import { normalizeEmail } from './email';
 import logger from '../utils/logger';
 import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile, toPublicProfile, pickProfileForEmail } from './profileGate';
@@ -162,6 +161,9 @@ export async function uploadProfilePhoto(uid, file) {
     return { success: false, error: 'Keep the photo under 5 MB.' };
   }
   try {
+    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+    const { getFirebaseStorage } = await import('./callable');
+    const storage = await getFirebaseStorage();
     const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
     const path = `avatars/${uid}/avatar.${ext}`;
     const snapshot = await uploadBytes(ref(storage, path), file);

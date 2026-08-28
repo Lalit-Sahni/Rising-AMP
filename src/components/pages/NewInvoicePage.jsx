@@ -17,16 +17,20 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import InvoicePreview from '../ui/InvoicePreview';
 import ClientManager from '../ui/ClientManager';
-import { getClients } from '../../firebase/firebaseService';
+import { getClients } from '../../data';
 import { uniqueByName } from '../../firebase/partyName';
+import { allocateInvoiceNumber } from '../../firebase/invoiceNumbers';
+import { defaultDueYmd, toYmd, ymdToLocalDate } from '../../dates';
+import { addCents, dollarsFromUnknown, formatCents, fromCents, lineCents, parseQuantity, percentOf, safeParseToCents } from '../../money';
 
 const NewInvoicePage = ({ onComplete }) => {
-  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, jobId, projectName: jobName, saveClientToFirebase } = useApp();
+  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, jobId, projectName: jobName, saveClientToFirebase, membership } = useApp();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showClientManager, setShowClientManager] = useState(false);
-  const [invoiceNumber, setInvoiceNumber] = useState(`INV-${Math.floor(Math.random() * 999) + 1}`);
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [numberError, setNumberError] = useState('');
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   
@@ -40,7 +44,7 @@ const NewInvoicePage = ({ onComplete }) => {
     projectName: jobName || '',
     projectReference: '',
     invoiceDate: new Date(),
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    dueDate: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 30),
     includeGST: true,
     notes: '',
     paymentInstructions: '',
@@ -59,6 +63,29 @@ const NewInvoicePage = ({ onComplete }) => {
   });
 
   const pdfRef = useRef();
+
+  const takeInvoiceNumber = async () => {
+    setNumberError('');
+    try {
+      const number = await allocateInvoiceNumber(membership && membership.orgId);
+      setInvoiceNumber(number);
+      return number;
+    } catch (error) {
+      setInvoiceNumber('');
+      setNumberError(error.message || 'Could not allocate an invoice number.');
+      throw error;
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    takeInvoiceNumber().catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // Allocate once when the page opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [membership && membership.orgId]);
 
   // Load clients from Firebase on mount
   useEffect(() => {
@@ -112,10 +139,9 @@ const NewInvoicePage = ({ onComplete }) => {
 
   const calculateSubtotal = () => {
     try {
-      return formData.lineItems.reduce((sum, item) => {
-        const total = parseFloat(item.total) || 0;
-        return sum + total;
-      }, 0);
+      return fromCents(
+        addCents(...formData.lineItems.map((item) => lineCents(item.quantity, item.unitCost)))
+      );
     } catch (error) {
       console.error('Error calculating subtotal:', error);
       return 0;
@@ -124,7 +150,7 @@ const NewInvoicePage = ({ onComplete }) => {
 
   const calculateGST = () => {
     try {
-      return formData.includeGST ? calculateSubtotal() * 0.1 : 0;
+      return formData.includeGST ? fromCents(percentOf(safeParseToCents(calculateSubtotal()), 10)) : 0;
     } catch (error) {
       console.error('Error calculating GST:', error);
       return 0;
@@ -149,7 +175,7 @@ const NewInvoicePage = ({ onComplete }) => {
           if (field === 'quantity' || field === 'unitCost') {
             const quantity = field === 'quantity' ? value : item.quantity;
             const unitCost = field === 'unitCost' ? value : item.unitCost;
-            updatedItem.total = (parseFloat(quantity) || 0) * (parseFloat(unitCost) || 0);
+            updatedItem.total = fromCents(lineCents(quantity, unitCost));
           }
           return updatedItem;
         }
@@ -260,17 +286,22 @@ const NewInvoicePage = ({ onComplete }) => {
   };
 
   const saveInvoice = async () => {
+    if (!invoiceNumber) {
+      showToast(numberError || 'Wait for an invoice number from the server.', 'error');
+      return;
+    }
     try {
       setIsSubmitting(true);
       
       const invoiceData = {
         invoiceNumber,
         ...formData,
+        invoiceDate: toYmd(formData.invoiceDate instanceof Date ? formData.invoiceDate : new Date()),
+        dueDate: toYmd(formData.dueDate instanceof Date ? formData.dueDate : new Date()),
         subtotal: calculateSubtotal(),
         gst: calculateGST(),
         total: calculateTotal(),
         status: 'draft',
-        createdAt: new Date().toISOString()
       };
 
       const savedInvoice = await addInvoiceToFirebase(invoiceData);
@@ -313,7 +344,7 @@ const NewInvoicePage = ({ onComplete }) => {
         projectName: jobName || '',
         projectReference: '',
         invoiceDate: new Date(),
-        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        dueDate: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 30),
         includeGST: true,
         notes: '',
         paymentInstructions: '',
@@ -322,7 +353,8 @@ const NewInvoicePage = ({ onComplete }) => {
         accountNumber: '',
         lineItems: [{ id: 1, description: '', quantity: 1, unitCost: 0, total: 0 }]
       });
-      setInvoiceNumber(`INV-${Math.floor(Math.random() * 999) + 1}`);
+      setInvoiceNumber('');
+      takeInvoiceNumber().catch(() => {});
       setCurrentStep(1);
       
       if (onComplete) {
@@ -616,7 +648,14 @@ const NewInvoicePage = ({ onComplete }) => {
                       </label>
                       <DatePicker
                         selected={formData.invoiceDate}
-                        onChange={(date) => setFormData(prev => ({ ...prev, invoiceDate: date }))}
+                        onChange={(date) => {
+                          const due = date ? ymdToLocalDate(defaultDueYmd(toYmd(date))) : null;
+                          setFormData((prev) => ({
+                            ...prev,
+                            invoiceDate: date,
+                            dueDate: due || prev.dueDate,
+                          }));
+                        }}
                         className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                         dateFormat="dd/MM/yyyy"
                       />
@@ -679,7 +718,7 @@ const NewInvoicePage = ({ onComplete }) => {
                           min="0"
                           step="0.01"
                           value={item.quantity}
-                          onChange={(e) => updateLineItemTotal(item.id, 'quantity', parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateLineItemTotal(item.id, 'quantity', parseQuantity(e.target.value))}
                           className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                         />
                       </div>
@@ -693,7 +732,7 @@ const NewInvoicePage = ({ onComplete }) => {
                           min="0"
                           step="0.01"
                           value={item.unitCost}
-                          onChange={(e) => updateLineItemTotal(item.id, 'unitCost', parseFloat(e.target.value) || 0)}
+                          onChange={(e) => updateLineItemTotal(item.id, 'unitCost', dollarsFromUnknown(e.target.value))}
                           className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
                         />
                       </div>
@@ -701,7 +740,7 @@ const NewInvoicePage = ({ onComplete }) => {
                     
                     <div className="flex items-center justify-between mt-4">
                       <div className="text-lg font-semibold text-ink">
-                        Total: ${(parseFloat(item.total) || 0).toFixed(2)}
+                        Total: {formatCents(safeParseToCents(item.total))}
                       </div>
                       
                       {formData.lineItems.length > 1 && (
@@ -981,8 +1020,8 @@ const NewInvoicePage = ({ onComplete }) => {
                           <tr key={item.id}>
                             <td className="border border-gray-300 px-4 py-2">{item.description}</td>
                             <td className="border border-gray-300 px-4 py-2 text-right">{item.quantity}</td>
-                            <td className="border border-gray-300 px-4 py-2 text-right">${(parseFloat(item.unitCost) || 0).toFixed(2)}</td>
-                            <td className="border border-gray-300 px-4 py-2 text-right">${(parseFloat(item.total) || 0).toFixed(2)}</td>
+                            <td className="border border-gray-300 px-4 py-2 text-right">{formatCents(safeParseToCents(item.unitCost))}</td>
+                            <td className="border border-gray-300 px-4 py-2 text-right">{formatCents(safeParseToCents(item.total))}</td>
                           </tr>
                         ))}
                       </tbody>

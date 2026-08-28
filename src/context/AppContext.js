@@ -11,7 +11,7 @@ import {
   addInvoiceToFirestore,
   fetchInvoicesFromFirestore,
   updateInvoiceInFirestore,
-  deleteInvoiceFromFirestore,
+  voidInvoiceInFirestore,
   saveHIAContractToFirestore,
   fetchHIAContractsFromFirestore,
   updateHIAContractInFirestore,
@@ -20,7 +20,7 @@ import {
   fetchUserBankDetailsFromFirestore,
   savePayerToFirestore,
   fetchPayersFromFirestore
-} from '../firebase/data';
+} from '../data';
 import { 
   getLabour, 
   getTrades, 
@@ -33,22 +33,75 @@ import {
   saveSupplierInfo,
   saveServiceProviderInfo,
   deleteClient
-} from '../firebase/firebaseService';
+} from '../data';
 import { upsertNamedRow } from '../firebase/partyName';
 import logger from '../utils/logger';
 import { isPermissionDenied } from '../firebase/tenancy';
+import { AuthProvider, useAuth } from './AuthContext';
+import { OrgProvider, useOrg } from './OrgContext';
+import { UIProvider, useUI } from './UIContext';
+import { queryClient } from '../query/client';
 
-const AppContext = createContext();
+const AppDataContext = createContext();
 
 export const useApp = () => {
-  const context = useContext(AppContext);
-  if (!context) {
+  const auth = useAuth();
+  const org = useOrg();
+  const ui = useUI();
+  const data = useContext(AppDataContext);
+  if (!data) {
     throw new Error('useApp must be used within an AppProvider');
   }
-  return context;
+  return { ...auth, ...org, ...ui, ...data };
 };
 
-export const AppProvider = ({
+export const AppProvider = (props) => {
+  const {
+    children,
+    projectId,
+    storageKey,
+    projectName,
+    membership,
+    onOpenJob,
+    onJobAccessLost,
+    jobStatus,
+    authUser,
+    profile,
+    setProfile,
+    jobInvitedEmails,
+  } = props;
+  return (
+    <AuthProvider authUser={authUser} profile={profile} setProfile={setProfile}>
+      <OrgProvider
+        membership={membership}
+        jobId={projectId}
+        storageKey={storageKey}
+        projectName={projectName}
+        jobStatus={jobStatus}
+        jobInvitedEmails={jobInvitedEmails}
+        onOpenJob={onOpenJob}
+        onJobAccessLost={onJobAccessLost}
+      >
+        <UIProvider jobId={projectId}>
+          <AppDataProvider
+            projectId={projectId}
+            storageKey={storageKey}
+            projectName={projectName}
+            membership={membership}
+            onOpenJob={onOpenJob}
+            onJobAccessLost={onJobAccessLost}
+            jobStatus={jobStatus}
+            jobInvitedEmails={jobInvitedEmails}
+          >
+            {children}
+          </AppDataProvider>
+        </UIProvider>
+      </OrgProvider>
+    </AuthProvider>
+  );
+};
+
+const AppDataProvider = ({
   children,
   projectId: jobListId,
   storageKey,
@@ -57,15 +110,11 @@ export const AppProvider = ({
   onOpenJob = null,
   onJobAccessLost = null,
   jobStatus = 'active',
-  authUser = null,
-  profile = null,
-  setProfile = () => {},
   jobInvitedEmails = [],
 }) => {
-  const [currentPage, setCurrentPage] = useState('jobs');
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { showToast } = useUI();
   const [expenses, setExpenses] = useState([]);
+  const [expensesCapped, setExpensesCapped] = useState(false);
   const [budget, setBudget] = useState(0);
   const [savedLabour, setSavedLabour] = useState([]);
   const [savedTrades, setSavedTrades] = useState([]);
@@ -93,6 +142,7 @@ export const AppProvider = ({
           const result = await fetchExpensesFromFirestore(jobListId);
           if (result.success && isMounted) {
             setExpenses(result.expenses);
+            setExpensesCapped(Boolean(result.expensesCapped));
             setBudget(result.budget || 0);
           } else if (!isMounted) {
             logger.debug('Component unmounted, skipping expense load');
@@ -301,10 +351,11 @@ export const AppProvider = ({
     }
   }, [jobListId]);
 
-  // Toast notification function
-  const showToast = (message, type = 'info') => {
-    logger.info(`toast ${type}: ${message}`);
+  const invalidateJobQueries = () => {
+    queryClient.invalidateQueries();
   };
+
+  // Toast notifications live in UIContext.
 
   // Expense functions
   const addExpenseToFirebase = async (expenseData) => {
@@ -581,18 +632,19 @@ export const AppProvider = ({
 
   const deleteInvoiceFromFirebase = async (invoiceId) => {
     try {
-      const result = await deleteInvoiceFromFirestore(jobListId, invoiceId);
+      const result = await voidInvoiceInFirestore(jobListId, invoiceId);
       if (result.success) {
-        setInvoices(prev => prev.filter(inv => inv.id !== invoiceId));
-        showToast('Invoice deleted successfully', 'success');
+        setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status: 'void' } : inv));
+        showToast('Invoice voided. The number is kept.', 'success');
+        invalidateJobQueries();
         return { success: true };
       } else {
-        showToast('Failed to delete invoice', 'error');
+        showToast('Failed to void invoice', 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
-      console.error('Error deleting invoice:', error);
-      showToast('Error deleting invoice', 'error');
+      console.error('Error voiding invoice:', error);
+      showToast('Error voiding invoice', 'error');
       return { success: false, error: error.message };
     }
   };
@@ -874,17 +926,9 @@ export const AppProvider = ({
     jobStatus,
     membership,
     onOpenJob,
-    authUser,
-    profile,
-    setProfile,
     jobInvitedEmails,
-    commandPaletteOpen,
-    setCommandPaletteOpen,
-    mobileMenuOpen,
-    setMobileMenuOpen,
-    currentPage,
-    setCurrentPage,
     expenses,
+    expensesCapped,
     budget,
     savedLabour,
     savedTrades,
@@ -897,7 +941,6 @@ export const AppProvider = ({
     hiaContracts,
     clientDetails,
     userBankDetails,
-    showToast,
     addExpenseToFirebase,
     updateExpenseInFirebase,
     deleteExpenseFromFirebase,
@@ -933,8 +976,8 @@ export const AppProvider = ({
   };
 
   return (
-    <AppContext.Provider value={value}>
+    <AppDataContext.Provider value={value}>
       {children}
-    </AppContext.Provider>
+    </AppDataContext.Provider>
   );
 }; 

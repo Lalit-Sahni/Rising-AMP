@@ -6,25 +6,26 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-8-technical-revamp`**. Phases 1–7 are live. Phase 8 Part A is on this branch (profile leak, unused Analytics removed, App Check client ready). Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase8-2026-08-28` (Phase 8 unwind), `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
-2. Read `PROGRESS.md` (next concrete step). `PHASE8.md` is the current brief. `PHASE7.md` is a closed record (app feel). `PHASE6.md` and `PHASE6-INTEGRITY.md` are closed / parked. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide. Open `design/risingamp-vision.html` in a browser.
-3. Localhost (`npm start` → http://localhost:3000) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them.
+1. Confirm git branch. Latest work is **`phase-8-technical-revamp`**. Phases 1–8 are live (Phase 8 foundations). Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase8-2026-08-28` (Phase 8 unwind), `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next concrete step). `PHASE8.md` is the closed Phase 8 record. `PHASE7.md` is a closed record (app feel). `PHASE6.md` and `PHASE6-INTEGRITY.md` are closed / parked. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide. Open `design/risingamp-vision.html` in a browser.
+3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 8 Part A is implemented on the branch. Production Firestore rules are **not** deployed until he names `firebase deploy --project production --only firestore:rules`. App Check is in the client but **not enforced**. Then Part B (Vite + TypeScript). Do not deploy unless he names it.
+5. **Next:** Phases 1–8 are **closed**. Leftovers: App Check **enforcement** (off until a site key and clean traffic), ledger rollups, normalising stored money fields, TanStack Query on the ledger, `PHASE6-INTEGRITY.md`. Do not deploy unless he names it.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
-7. Owner (Lalit) writes in plain language. Explain in plain language.
+7. **All new files are TypeScript.** Existing JS converts only when a brief says so, or when the file is being substantially rewritten anyway.
+8. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE8.md. Branch is phase-8-technical-revamp. Phases 1–7 are live. Phase 8 Part A is on the branch; production profile rules are not deployed until named. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md. Open design/risingamp-vision.html. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 
 ## Prime directive
 
-- This is a live app with real, irreplaceable data. **Phase 8 Part A tightens profile reads and adds `publicProfiles` (name + photo only).** It does not migrate stored fields. Production rules deploy only with an explicit `--only firestore:rules`. Database follow-through is parked in `PHASE6-INTEGRITY.md`. Phase 5’s heightened process still applies.
+- This is a live app with real, irreplaceable data. **Phase 8 is closed** (foundations). Profile leak is closed on production (owner-only `profiles`, public name/photo cards, verified from a second account that is not on any family job). Database follow-through is parked in `PHASE6-INTEGRITY.md`. Phase 5’s heightened process still applies.
 - Nothing runs against **production** Firestore or Storage without a full backup and a tested restore first. Staging first, production only behind an explicit yes.
-- No hard deletes of user-created data. Archive a job; revoke a person’s access. Keep the records they entered.
+- No hard deletes of user-created data. Archive a job; **void an invoice**; revoke a person’s access. Keep the records they entered.
 - Before any change that has side effects, stop, write a plan, and wait for explicit human approval. Propose first, execute second.
 - All work happens on a branch, never on `master` or `main`.
 - Day-to-day work uses **staging** (`rising-amp-staging`). Localhost must keep pointing there.
@@ -34,7 +35,7 @@ If you are unsure whether a command writes to production, do not run it.
 
 ## How to preview work
 
-- Day-to-day: `npm start` → http://localhost:3000 (staging). After Google or email login, complete profile if asked, then **Jobs**.
+- Day-to-day: `npm start` → http://localhost:3000 (Vite, staging). After Google or email login, complete profile if asked, then **Jobs**.
 - Live shopfront: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)
 - Design mockup (Phase 3): `design/risingamp-vision.html`
 - Auth mockups: `design/risingamp-auth.html`, `design/risingamp-signin-email.html`
@@ -52,7 +53,7 @@ What matters is **which database the app points at**, not local versus deployed.
 
 ## Access model (live)
 
-Google or email/password via Firebase Auth (email/password is on **staging and production**). After login, anyone can use the app. Family jobs still only show for emails on that job’s invite list (Firestore rules). Tracker data lives under `organizations/opal-ss-constructions/projects/{projectId}/…`. User profiles live under `profiles/{uid}` (owner-only read of private fields). Job people chips read `publicProfiles/{email}` (display name and photo only). Old `users/{accessCode}` trees still exist as unused copies. Do not delete them unless the owner later asks.
+Google or email/password via Firebase Auth (email/password is on **staging and production**). After login, anyone can use the app. Family jobs still only show for emails on that job’s invite list (Firestore rules). Tracker data lives under `organizations/{orgId}/projects/{projectId}/…` (Opal id `opal-ss-constructions`). User profiles live under `profiles/{uid}` (owner-only read of private fields). Job people chips read `publicProfiles/{email}` (display name and photo only). Old `users/{accessCode}` trees still exist as unused copies. Do not delete them unless the owner later asks.
 
 ## Phase 1 (closed 2026-08-23)
 
@@ -82,18 +83,18 @@ Brief: `PHASE6.md`. Unreachable code cut. Receipt scan stays OpenAI Cloud Functi
 
 Brief: `PHASE7.md`. Safe areas, `default` status bar, pinch zoom, selectable content. Layout and metadata only. Manifest / new icons skipped on purpose. Measured standalone portrait: `t:0 r:0 b:34 l:0`.
 
-## Phase 8 (in progress on `phase-8-technical-revamp`)
+## Phase 8 (closed 2026-08-28; live hosting)
 
-Brief: `PHASE8.md`. Make it a product an engineer would recognise. **Part A first:** private profiles, drop unused Analytics, App Check client (no enforcement until a site key exists and traffic is clean). Restore tag: `pre-phase8-2026-08-28`. **New files are TypeScript once Part B lands; existing files convert only when a part says so.** Production rules and App Check enforcement wait for a named deploy.
+Brief: `PHASE8.md`. Vite, routes, integer cents, server invoice numbers, void not delete, tighter rules, org from membership. Profile leak closed on production and verified from a second account that is not on a family job. App Check client is present; **do not enforce**. Restore tag: `pre-phase8-2026-08-28`. **New files are TypeScript; existing files convert only when a brief says so.**
 
 ## Out of scope until asked
 
-- Billing, Stripe, a second product, deleting leftover PIN folders unless the owner asks, deploying functions beyond what the current phase names, new npm packages except the list in `PHASE8.md` (plus `@firebase/rules-unit-testing` for the Part A emulator test), Phase 4 Gmail-fallback removal, a service worker / offline queue (named out of Phase 7 on purpose), App Check **enforcement** until staging traffic is clean
+- Billing, Stripe, a second product, deleting leftover PIN folders unless the owner asks, deploying functions beyond what the current phase names, new npm packages except the list already in `PHASE8.md`, Phase 4 Gmail-fallback removal, a service worker / offline queue, App Check **enforcement** until staging traffic is clean, normalising stored money fields, ledger rollup documents
 
 ## Continuity
 
-- `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`, then `PHASE8.md`.
-- `PHASE8.md` — current phase brief (foundations / technical revamp).
+- `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
+- `PHASE8.md` — foundations / technical revamp — closed record.
 - `PHASE7.md` — app feel on a phone — closed record.
 - `PHASE6.md` — legacy cut — closed record.
 - `PHASE6-INTEGRITY.md` — parked database follow-through; not this branch.

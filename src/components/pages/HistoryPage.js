@@ -4,8 +4,9 @@ import { Trash2, Pencil, Filter, Search, Download, Eye, Calendar, DollarSign, Ha
 import ExportDialog from '../ExportDialog';
 import ExpenseModal from '../ExpenseModal';
 import CategoryChip from '../ui/CategoryChip';
-import { exportExpensesToExcel } from '../../utils/excelExport';
 import { CATEGORY_STYLE } from '../../utils/categoryStyle';
+import { getExpenseTotal } from '../../utils/jobMetrics';
+import EmptyState from '../EmptyState';
 
 const categoryLabels = {
   labour: 'Labour',
@@ -65,28 +66,6 @@ export default function HistoryPage() {
     if (createdDate) return createdDate;
 
     return null;
-  };
-
-  // Helper function to safely get expense total
-  const getExpenseTotal = (expense) => {
-    if (expense.total !== undefined) return expense.total;
-    if (expense.amount !== undefined) return expense.amount;
-    if (expense.cost !== undefined) return expense.cost;
-    
-    // For labour expenses, calculate from hours and rate
-    if (expense.category === 'labour' && expense.hours && expense.rate) {
-      return parseFloat(expense.hours) * parseFloat(expense.rate);
-    }
-    
-    // For equipment expenses, calculate from daily cost and dates
-    if (expense.category === 'equipment' && expense.dailyCost && expense.startDate && expense.endDate) {
-      const start = new Date(expense.startDate);
-      const end = new Date(expense.endDate);
-      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-      return days * parseFloat(expense.dailyCost);
-    }
-    
-    return 0;
   };
 
   // Helper function to get expense display name
@@ -248,6 +227,7 @@ export default function HistoryPage() {
 
   const handleExport = async (filename) => {
     try {
+      const { exportExpensesToExcel } = await import('../../utils/excelExport');
       const result = await exportExpensesToExcel(filteredAndSortedExpenses, filename);
       if (result.success) {
         showToast('Excel file exported successfully!', 'success');

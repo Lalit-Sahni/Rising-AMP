@@ -5,20 +5,16 @@ import { canonicalEmail, emailInviteVariants, sendJobInvite } from '../../fireba
 import {
   createOrgProject,
   inviteEmailToProject,
+  listOrgProjects,
   removeEmailFromProject,
   renameOrgProject,
   setOrgProjectArchived,
 } from '../../firebase/projectCatalog';
-import { loadInvitedJobSummaries } from '../../firebase/jobSummaries';
-import { listInvitedProjects } from '../../firebase/projectCatalog';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
+import EmptyState from '../EmptyState';
+import JobPeople from '../JobPeople';
 import {
-  derivePortfolio,
-  formatMoneyCompact,
-  formatPercent,
   jobMark,
-  verdictCopy,
-  VERDICT,
 } from '../../utils/jobMetrics';
 
 function displayInviteEmails(emails) {
@@ -33,10 +29,8 @@ function displayInviteEmails(emails) {
   return out;
 }
 
-function marginBarColor(verdict) {
-  if (verdict === VERDICT.MARGIN_AT_RISK) return 'var(--warn)';
-  if (verdict === VERDICT.ON_TRACK) return 'var(--pos)';
-  return 'transparent';
+function initialsFromEmail(email) {
+  return String(email || '?').slice(0, 1).toUpperCase();
 }
 
 export default function JobsHomePage() {
@@ -69,17 +63,9 @@ export default function JobsHomePage() {
       setMetricsLoading(true);
       setError('');
       try {
-        const listed = await listInvitedProjects(membership.email);
+        const listed = await listOrgProjects(membership.email);
         if (!cancelled) {
           setJobs(listed);
-          setLoading(false);
-        }
-        try {
-          const rows = await loadInvitedJobSummaries(membership.email, { projects: listed });
-          if (!cancelled) setJobs(rows);
-        } catch (err) {
-          console.error('Job figures failed:', err);
-          if (!cancelled) setError('Jobs loaded, but figures could not. Open a job to see the details.');
         }
       } catch (err) {
         console.error('Jobs home failed:', err);
@@ -107,7 +93,12 @@ export default function JobsHomePage() {
     return listed.filter((row) => (row.name || '').toLowerCase().includes(q) || (row.subtitle || '').toLowerCase().includes(q));
   }, [listed, query]);
 
-  const portfolio = useMemo(() => derivePortfolio(activeJobs), [activeJobs]);
+  const portfolio = useMemo(() => {
+    const active = activeJobs.length;
+    const expenses = activeJobs.reduce((sum, row) => sum + (row.expenseCount || 0), 0);
+    const invoices = activeJobs.reduce((sum, row) => sum + (row.invoiceCount || 0), 0);
+    return { activeJobs: active, expenses, invoices };
+  }, [activeJobs]);
 
   const openJob = (project) => {
     if (!project.projectId || !onOpenJob) return;
@@ -335,30 +326,14 @@ export default function JobsHomePage() {
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-[18px]">
           {[
-            ['Active jobs', loading ? null : portfolio.activeJobs],
-            ['Contracts', loading || metricsLoading ? null : (portfolio.contracts == null ? '—' : formatMoneyCompact(portfolio.contracts))],
-            ['Combined margin', 'margin'],
-            ['Need attention', loading || metricsLoading ? null : portfolio.needAttention],
+            ['Active jobs', loading ? '…' : portfolio.activeJobs],
+            ['Expenses', loading ? '…' : portfolio.expenses],
+            ['Invoices', loading ? '…' : portfolio.invoices],
+            ['Margin', 'On the job'],
           ].map(([label, value]) => (
             <div key={label} className="bg-surface border border-hairline rounded-ot px-[17px] py-[15px] shadow-whisper">
               <div className="text-[11.5px] text-slate-400 font-semibold">{label}</div>
-              {loading || (metricsLoading && label !== 'Active jobs') ? (
-                <div className="h-7 w-16 skeleton-bar rounded mt-1.5" />
-              ) : label === 'Combined margin' ? (
-                <div className="tabular text-[21px] font-extrabold tracking-tight mt-1.5">
-                  {portfolio.hasMargin ? (
-                    <>
-                      <span className={portfolio.margin < 0 ? 'text-neg' : 'text-pos'}>{formatMoneyCompact(portfolio.margin)}</span>
-                      {' '}
-                      <small className="text-xs font-semibold text-slate-400">{formatPercent(portfolio.marginPct)}</small>
-                    </>
-                  ) : (
-                    '—'
-                  )}
-                </div>
-              ) : (
-                <div className="tabular text-[21px] font-extrabold tracking-tight mt-1.5">{value}</div>
-              )}
+              <div className="tabular text-[21px] font-extrabold tracking-tight mt-1.5">{value}</div>
             </div>
           ))}
         </div>
@@ -368,9 +343,9 @@ export default function JobsHomePage() {
         <div className="bg-surface border border-hairline rounded-ot shadow-whisper overflow-hidden">
           <div className="hidden md:grid grid-cols-[minmax(0,2.3fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_28px] gap-3.5 items-center px-[18px] py-3.5 text-[11px] font-bold tracking-[0.06em] uppercase text-slate-400 border-b border-hairline">
             <span>Job</span>
-            <span>Margin</span>
+            <span>Expenses</span>
+            <span>Invoices</span>
             <span>Status</span>
-            <span>Needs you</span>
             <span />
           </div>
 
@@ -381,13 +356,18 @@ export default function JobsHomePage() {
           )}
 
           {!loading && visible.length === 0 && (
-            <p className="text-slate-600 text-sm px-[18px] py-8">
-              {query
-                ? 'No jobs match that search.'
-                : showArchived
-                  ? 'No archived jobs.'
-                  : 'No jobs yet. When you are added to a job, it will show up here.'}
-            </p>
+            <div className="px-[18px] py-6">
+              <EmptyState
+                title={query ? 'No jobs match that search' : showArchived ? 'No archived jobs' : 'No jobs yet'}
+                body={
+                  query
+                    ? 'Try a different name.'
+                    : showArchived
+                      ? 'Archived jobs will sit here if you need them later.'
+                      : 'When someone invites this email onto a job, it will show up here. Nothing is missing — you are just starting.'
+                }
+              />
+            </div>
           )}
 
           {!loading && creating && (
@@ -426,17 +406,9 @@ export default function JobsHomePage() {
 
           {!loading &&
             visible.map((project) => {
-              const metricsReady = project.metrics && typeof project.metrics.hasMargin === 'boolean';
-              const metrics = project.metrics || {};
-              const copy = metricsReady ? verdictCopy(metrics.verdict) : { label: 'Loading', tone: 'new' };
               const isEditing = editingId === project.id;
               const isInviting = invitingId === project.id;
               const isSaving = savingId === project.id;
-              const bar = metrics.hasMargin ? Math.max(0, Math.min(100, metrics.marginPct)) : 0;
-              const toneClass =
-                copy.tone === 'ok' ? 'text-pos' : copy.tone === 'warn' ? 'text-warn' : 'text-slate-500';
-              const dotClass =
-                copy.tone === 'ok' ? 'bg-pos' : copy.tone === 'warn' ? 'bg-warn' : 'bg-slate-400';
 
               if (isEditing) {
                 return (
@@ -479,27 +451,14 @@ export default function JobsHomePage() {
                       Invite someone to <span className="font-medium">{project.name}</span> only. They will not see your other jobs.
                     </p>
                     {displayInviteEmails(project.invitedEmails).length > 0 && (
-                      <ul className="text-xs font-mono text-slate-500 mb-3 space-y-1">
-                        {displayInviteEmails(project.invitedEmails).map((email) => {
-                          const isJobOwner = canonicalEmail(email) === canonicalEmail(ownerEmail);
-                          return (
-                            <li key={email} className="flex items-center justify-between gap-2">
-                              <span className="truncate">{email}{isJobOwner ? ' (owner)' : ''}</span>
-                              {isOwner && !isJobOwner && (
-                                <button
-                                  type="button"
-                                  onClick={(event) => removePerson(event, project, email)}
-                                  disabled={isSaving}
-                                  className="p-1 text-slate-400 hover:text-neg"
-                                  title={`Remove ${email}`}
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </li>
-                          );
-                        })}
-                      </ul>
+                      <div className="mb-3">
+                        <JobPeople
+                          emails={project.invitedEmails}
+                          ownerEmail={ownerEmail}
+                          saving={isSaving}
+                          onRemove={isOwner ? (event, email) => removePerson(event, project, email) : undefined}
+                        />
+                      </div>
                     )}
                     <input
                       autoFocus
@@ -553,48 +512,19 @@ export default function JobsHomePage() {
                     <div className="min-w-0">
                       <b className="block text-sm font-bold truncate">{project.name}</b>
                       <small className="block text-xs text-slate-400 truncate">
-                        {project.status === 'archived' ? 'Archived · ' : ''}{project.subtitle || (metricsLoading ? 'Loading figures…' : '')}
+                        {project.status === 'archived' ? 'Archived' : 'Open for the figures'}
                       </small>
                     </div>
                   </div>
-                  <div className="hidden md:flex items-center gap-2.5 min-w-0">
-                    {!metricsReady ? (
-                      <div className="h-2 w-24 skeleton-bar rounded" />
-                    ) : (
-                      <>
-                    <span className="flex-1 h-[7px] bg-[#EEF0F2] rounded overflow-hidden min-w-[60px]">
-                      <span
-                        className="block h-full rounded"
-                        style={{ width: `${bar}%`, background: marginBarColor(metrics.verdict) }}
-                      />
-                    </span>
-                    <span
-                      className="tabular text-[13px] font-bold w-11 text-right"
-                      style={{ color: metrics.hasMargin ? undefined : 'var(--slate-400)' }}
-                    >
-                      {metrics.hasMargin ? formatPercent(metrics.marginPct) : '—'}
-                    </span>
-                      </>
-                    )}
+                  <div className="hidden md:block tabular text-[13px] font-bold text-ink">
+                    {project.expenseCount ?? 0}
                   </div>
-                  <div className={`hidden md:inline-flex items-center gap-1.5 text-[12.5px] font-semibold ${metricsReady ? toneClass : 'text-slate-400'}`}>
-                    {!metricsReady ? (
-                      <div className="h-3 w-16 skeleton-bar rounded" />
-                    ) : (
-                      <>
-                    <span className={`w-2 h-2 rounded-full ${dotClass}`} />
-                    {copy.label}
-                      </>
-                    )}
+                  <div className="hidden md:block tabular text-[13px] font-bold text-ink">
+                    {project.invoiceCount ?? 0}
                   </div>
-                  <div className="hidden md:block text-[12.5px] font-semibold tabular text-slate-500">
-                    {!metricsReady ? (
-                      <div className="h-3 w-14 skeleton-bar rounded" />
-                    ) : metrics.attentionCount > 0 ? (
-                      `${metrics.attentionCount} item${metrics.attentionCount === 1 ? '' : 's'}`
-                    ) : (
-                      <span className="text-slate-400 font-medium">All clear</span>
-                    )}
+                  <div className="hidden md:inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-500">
+                    <span className={`w-2 h-2 rounded-full ${project.status === 'archived' ? 'bg-slate-400' : 'bg-pos'}`} />
+                    {project.status === 'archived' ? 'Archived' : 'Active'}
                   </div>
                   <div className="flex items-center justify-end gap-1">
                     {isOwner && (

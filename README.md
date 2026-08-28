@@ -1,55 +1,60 @@
-# Rising AMP (Opal Track)
+# RisingAMP
 
-Family construction tracker for Opal SS Constructions. Live app after Phase 1 (2026-08-23): Google login, one company, two job lists.
+Construction tracking for Opal SS Constructions. Live shopfront: [https://risingamp.com.au](https://risingamp.com.au).
 
-Live: https://rising-amp-467702-b5.web.app  
-Local preview: `npm start` → http://localhost:3000 (talks to **staging**, not live)
+This repo is a live family business app. Prefer shipping nothing over risking stored jobs, invoices, or people.
 
-## What it does
+## In fifteen minutes
 
-- Sign in with Google / Gmail. Only invited addresses get in.
-- Choose a job list (72 Centenary Dr or Gurner St). Invite is **per job**, not the whole company.
-- Expenses (with receipt OCR), invoices, history, budget / HIA, clients.
-- Site Log and Weekly Report were removed in Phase 1.
-
-## Preview vs live
-
-| | Localhost | Live site |
-|--|-----------|-----------|
-| Command | `npm start` | already deployed |
-| Firebase | staging (`rising-amp-staging`) via `.env.local` | production (`rising-amp-467702-b5`) |
-| Receipt photos | often missing (staging has no Storage bucket) | work |
-
-Do not copy production keys into `.env.local`. Git push does **not** deploy. Live only changes with:
+You need **Node 24** (see `.nvmrc`; 20+ will also run Vite). You need the gitignored staging env file; ask the owner, do not invent production keys.
 
 ```bash
-npm run build   # uses .env.production.local
-firebase deploy --project production --only hosting,firestore:rules
-```
-
-Never deploy functions unless the owner explicitly asks.
-
-## Setup
-
-Need Node 18.17+ (see `.nvmrc`).
-
-```bash
+git clone <this-repo>
+cd Rising-AMP
+git checkout phase-8-technical-revamp
 npm install
 cp .env.example .env.local
-# Fill .env.local with staging Firebase keys, never production.
+# Fill .env.local with the staging Firebase web config. Every key is VITE_*.
+# VITE_FIREBASE_PROJECT_ID must be rising-amp-staging.
 npm start
 ```
 
-Gitignored and never committed: `.env*`, `.phase1-local.json`, `backups/`.
+Open [http://localhost:3000](http://localhost:3000). Sign in with Google or email/password. Complete the profile if asked. You land on **Jobs**.
 
-## Agent / continuity docs
+Localhost talks to **staging** (`rising-amp-staging`). Production keys live in `.env.production.local` and are only used by `npm run build` before a named hosting deploy.
 
-If you are an agent (or picking this up later), read in this order:
+```bash
+npm test
+npm run typecheck
+npm run test:rules   # needs Java; the script prints the brew command if missing
+npm run build        # uses .env.production.local; do not point .env.local at production
+```
 
-1. `CLAUDE.md` — safety, environments, what is in scope
-2. `PROGRESS.md` — next concrete step
-3. `PHASE2.md` — Phase 2 visual restyle (complete; look is `design/opal-track-reference.html`)
-4. `ARCHITECTURE.md` — how the running app is built
-5. `PLAN.md` — Phase 1 record (complete)
+## What you must not do
 
-Phase 1 and Phase 2 are **done**. Phase 2 look: `design/opal-track-reference.html`. Branch `phase-2-visual`. Live: https://rising-amp-467702-b5.web.app
+- Commit `.env*`, `.phase1-local.json`, or `backups/`
+- Point localhost at production to make receipt photos appear
+- `firebase deploy` without `--project` and an explicit `--only`, and only when the owner names it
+- `firebase deploy --only functions` (would delete leftover `generateWeeklyReport` on production). Deploy functions **by name**.
+- Hard-delete user records. Archive a job; void an invoice; revoke access. Keep the rows.
+- Paste API keys into chat
+
+## Environments
+
+| Alias | Firebase project | Role |
+|--------|------------------|------|
+| production | `rising-amp-467702-b5` | Live family app. https://risingamp.com.au |
+| staging | `rising-amp-staging` | Copy of production. Localhost. `.firebaserc` default. |
+
+Git push does not deploy. Hosting changes only on `firebase deploy --project production --only hosting`.
+
+## How the app is shaped
+
+- **Vite + React 18 + TypeScript** (`allowJs`, `strict`). New files are TypeScript. Existing JS converts only when a brief says so.
+- **Routes** in `src/components/MainContent.js`. Job id is in the URL: `/jobs/:jobId`.
+- **Money** is integer cents in `src/money.ts`. Parse at the Firestore boundary.
+- **One data import path:** `src/data`.
+- **Org** comes from membership at sign-in, not a hardcoded constant. Opal’s id `opal-ss-constructions` remains the live family org.
+- Decisions: `ADR/`.
+
+Read next: `CLAUDE.md`, `PROGRESS.md`, `ARCHITECTURE.md`, `DATABASE.md`.
