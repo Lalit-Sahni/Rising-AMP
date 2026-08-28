@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import NewInvoicePage from './NewInvoicePage';
+import InvoicePreview from '../ui/InvoicePreview';
 import { getInvoiceTotal, isPaidInvoice, isVoidInvoice } from '../../utils/jobMetrics';
 import { formatCents, lineCents, percentOf, safeParseToCents } from '../../money';
 
@@ -420,17 +421,18 @@ const InvoiceManagementPage = () => {
           )}
         </div>
 
-        {/* Invoice Preview Modal */}
-        <InvoicePreview
-          invoice={previewInvoice}
-          isOpen={showPreview}
-          onClose={() => {
-            setShowPreview(false);
-            setPreviewInvoice(null);
-          }}
-          isNewInvoice={false}
-          showSaveButton={false}
-        />
+        {showPreview && previewInvoice ? (
+          <InvoicePreview
+            invoice={previewInvoice}
+            isOpen={showPreview}
+            onClose={() => {
+              setShowPreview(false);
+              setPreviewInvoice(null);
+            }}
+            isNewInvoice={false}
+            showSaveButton={false}
+          />
+        ) : null}
       </div>
     </div>
   );
