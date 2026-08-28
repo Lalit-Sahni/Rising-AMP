@@ -27,7 +27,7 @@ That is not a tidiness problem. It is a correctness problem, for one specific re
 - Nothing in this phase touches production data, Firestore rules, Storage, or Cloud Functions.
 - Deploy nothing. Phase 6 ends on the branch. Lalit decides when it merges and deploys.
 
-## Status (2026-08-27)
+## Status (2026-08-28)
 
 - [x] Restore tag `pre-phase6-2026-08-27`
 - [x] Part A — Delete the orphans (`authValidation.js` left in place: still imported by `src/firebase/auth.js` and tests). Follow-up: `FormField.jsx` and `validation.js` were substring false positives, deleted with Part B.
@@ -36,6 +36,9 @@ That is not a tidiness problem. It is a correctness problem, for one specific re
 - [x] Part D — Strip the dead collections from the data layer
 - [x] Part E — Rename `accessCode` to `jobId` (identifiers only; leftover localStorage key `'accessCode'` kept on purpose)
 - [x] Part F — Repo hygiene (`craco.config.js` already removed with Part B; it required an uninstalled package)
+- [x] Hosting for A–F live on https://risingamp.com.au (28 Aug 2026). Follow-up the same day: leftover navy Receipt Viewer / Clients restyle, job-list query no longer asks Gmail variants that rules reject. Staging Storage bucket created so localhost can upload receipts. Production Storage rules still not deployed.
+
+Phase 6 is **closed**. Next: `PHASE7.md`. Database integrity leftovers stay in `PHASE6-INTEGRITY.md`.
 
 ## Part A — Delete the orphans
 

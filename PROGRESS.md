@@ -2,27 +2,23 @@
 
 ## Current branch
 
-`phase-6-legacy-cut` (from `phase-5-jobs-members`, 2026-08-27). Phases 1–5 are live. Localhost still uses `.env.local` → staging.
+`phase-6-legacy-cut` is closed and live. Next work: **`phase-7-app-feel`** (from `phase-6-legacy-cut`). Phases 1–6 are live. Localhost still uses `.env.local` → staging.
 
-Restore tags: `pre-phase6-2026-08-27` (this phase), `pre-phase1-2026-08-22` (Phase 1 unwind)
+Restore tags: `pre-phase7-2026-08-28` (this phase), `pre-phase6-2026-08-27` (Phase 6 unwind), `pre-phase1-2026-08-22` (Phase 1 unwind)
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_PROJECT_ID=rising-amp-staging`)  
 `.firebaserc` default is **staging**. Git push does not deploy. Live hosting changes only on `firebase deploy --project production --only hosting`.
 
-## Where we are (2026-08-27)
+## Where we are (2026-08-28)
 
-**Phase 1–5 are closed.** Phase 6 is the **legacy cut** on `phase-6-legacy-cut`. Code deletion only. No Firestore writes, no deploys.
+**Phases 1–6 are closed and live.** Phase 7 is **app feel on a phone** on `phase-7-app-feel`. Layout and metadata only. No Firestore writes, no deploys.
+
+**Phase 6 shipped (28 Aug 2026):** unreachable code cut, Tesseract gone, Quick Access box gone, `accessCode` renamed to `jobId` in code, leftover navy Receipt Viewer / Clients restyled. Hosting live on https://risingamp.com.au. Staging Storage bucket exists so localhost can upload receipts. Production Storage rules still not deployed. Integrity leftovers: `PHASE6-INTEGRITY.md`.
 
 **Phase 5 shipped:** jobs as IDs, create/archive/invite/remove, clients vs suppliers, `DATABASE.md`, `readReceiptImage` on staging and production. Scanner is OpenAI only — if AI fails, show an error (no Tesseract).
 
-**Phase 6 Part A done (2026-08-27):** deleted unreachable pre-Phase-1 files plus Windows `start-dev` leftovers. Left `authValidation.js` (still used by login). Later the same day: `FormField.jsx` and `validation.js` were also dead (substring false positives) and were deleted with Part B.
-
-**Phase 6 Part B done (2026-08-27):** OCR test harnesses and client Tesseract path gone. Receipt scan is OpenAI Cloud Function only. `tesseract.js` is no longer a dependency. **Hosting for Parts A–B is live** on https://risingamp.com.au (`firebase deploy --project production --only hosting`). Functions, rules, and Storage were not deployed.
-
-**Phase 6 Parts A–F done (2026-08-27) on `phase-6-legacy-cut`.** Code deletion only. No Firestore writes. **Hosting for Parts A–B is live** on https://risingamp.com.au. Parts C–F are committed on the branch; they are not on production hosting until Lalit deploys. Database integrity leftovers are in `PHASE6-INTEGRITY.md` (not this branch).
-
-**Phase 4 leftovers (not Phase 6 unless he asks):** Gmail invite fallback still in the client; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
+**Phase 4 leftovers (not Phase 7 unless he asks):** Gmail invite fallback still in the client; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
 
 **Owner already has:**
 - Shopfront `https://risingamp.com.au`, DNS at Crazy Domains.
@@ -32,13 +28,14 @@ Staging: `rising-amp-staging` — localhost / `.env.local` (`REACT_APP_FIREBASE_
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE6.md. Open design/risingamp-vision.html. Work is on branch phase-6-legacy-cut (from phase-5-jobs-members). Restore tag: pre-phase6-2026-08-27. Shopfront is https://risingamp.com.au. Localhost stays on staging. Phases 1–5 are live. Never hard-delete user records. Never accept a pasted API key. Do not deploy. One part per session.
+Read CLAUDE.md, then PROGRESS.md, then PHASE7.md. Open design/risingamp-vision.html. Work is on branch phase-7-app-feel (from phase-6-legacy-cut). Restore tag: pre-phase7-2026-08-28. Shopfront is https://risingamp.com.au. Localhost stays on staging. Phases 1–6 are live. Never hard-delete user records. Never accept a pasted API key. Do not deploy. One part per session.
 ```
 
 ## Remaining work
 
-1. Lalit decides when to merge `phase-6-legacy-cut` and whether to deploy hosting for Parts C–F.
-2. Optional leftovers (not this branch): `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`.
+1. Phase 7 Part A — safe areas and the shell (`PHASE7.md`). Measure on the real phone before tuning.
+2. Then Parts B → C (ask first) → D, one session each.
+3. Optional leftovers (not this branch): `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes).
 
 ## Next
 
@@ -47,7 +44,8 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE6.md. Open design/risingamp-vision.h
 - [x] Phase 3 vision live (Jobs home, verdict, capture, profiles)
 - [x] Phase 4 — legal pages, Resend invites, shopfront `risingamp.com.au`, Google login on that domain
 - [x] Phase 5 — jobs/members, directory split, `DATABASE.md`, OpenAI via function
-- [ ] Phase 6 — legacy cut (`PHASE6.md`); Parts A–F done on branch; A–B hosting live; C–F not deployed
+- [x] Phase 6 — legacy cut live (`PHASE6.md`)
+- [ ] Phase 7 — app feel on a phone (`PHASE7.md`); Part A next
 
 
 ## What shipped (localhost / staging)
