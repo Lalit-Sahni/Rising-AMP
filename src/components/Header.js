@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Search, LogOut } from 'lucide-react';
+import { Menu, Search, LogOut, X } from 'lucide-react';
 
 const PAGE_TITLES = {
   jobs: 'Jobs',
@@ -15,29 +15,45 @@ const PAGE_TITLES = {
 };
 
 const Header = ({ onLogout, projectName }) => {
-  const { currentPage, setCurrentPage, setCommandPaletteOpen } = useApp();
+  const {
+    currentPage,
+    setCurrentPage,
+    setCommandPaletteOpen,
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  } = useApp();
   const title = PAGE_TITLES[currentPage] || 'RisingAMP';
   const showJobCrumb = currentPage !== 'jobs' && currentPage !== 'profile' && projectName;
 
   return (
     <header className="bg-surface border-b border-hairline px-4 md:px-[26px] py-3.5">
       <div className="flex items-center justify-between gap-3">
-        <div className="text-[13px] md:ml-0 ml-10 flex items-center gap-2 font-semibold">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden shrink-0 w-8 h-8 grid place-items-center bg-surface border border-hairline rounded-ot-sm text-slate-600 hover:text-ink"
+            aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
+          <div className="text-[13px] flex items-center gap-2 font-semibold min-w-0">
           {showJobCrumb ? (
             <>
               <button
                 type="button"
                 onClick={() => setCurrentPage('jobs')}
-                className="text-slate-400 font-medium hover:text-ink"
+                className="text-slate-400 font-medium hover:text-ink shrink-0"
               >
                 Jobs
               </button>
-              <span className="text-slate-400 font-medium">/</span>
-              <b className="text-ink">{currentPage === 'dashboard' ? projectName : title}</b>
+              <span className="text-slate-400 font-medium shrink-0">/</span>
+              <b className="text-ink truncate">{currentPage === 'dashboard' ? projectName : title}</b>
             </>
           ) : (
-            <b className="text-ink">{title}</b>
+            <b className="text-ink truncate">{title}</b>
           )}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

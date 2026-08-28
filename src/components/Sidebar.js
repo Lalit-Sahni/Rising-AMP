@@ -3,7 +3,6 @@ import {
   PlusCircle,
   LayoutDashboard,
   Clock,
-  Menu,
   X,
   ChevronRight,
   ChevronDown,
@@ -38,8 +37,7 @@ function initials(name, email) {
 }
 
 export default function Sidebar({ user, projectName, onSwitchProject }) {
-  const { currentPage, setCurrentPage, showToast, jobId, profile } = useApp();
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const { currentPage, setCurrentPage, showToast, jobId, profile, mobileMenuOpen, setMobileMenuOpen } = useApp();
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const [moreOpen, setMoreOpen] = useState(
     () => navMore.some((item) => item.key === currentPage)
@@ -65,34 +63,26 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
     if (needsJob && !jobId) {
       showToast('Open a job first.', 'info');
       setCurrentPage('jobs');
-      setIsMobileOpen(false);
+      setMobileMenuOpen(false);
       return;
     }
     setCurrentPage(pageKey);
-    setIsMobileOpen(false);
+    setMobileMenuOpen(false);
   };
 
   return (
     <>
-      <button
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="mobile-menu-btn md:hidden fixed z-50 w-8 h-8 grid place-items-center bg-surface border border-hairline rounded-ot-sm text-slate-600 hover:text-ink shadow-whisper"
-        aria-label="Open menu"
-      >
-        {isMobileOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-      </button>
-
-      {isMobileOpen && (
+      {mobileMenuOpen && (
         <div
           className="md:hidden fixed inset-0 bg-steel-900/50 z-40"
-          onClick={() => setIsMobileOpen(false)}
+          onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       <aside
         className={`sidebar bg-steel-900 text-[#C9CDD4] flex flex-col transition-all duration-300 ease-in-out overflow-visible
           fixed inset-y-0 left-0 z-50 w-[210px] flex-shrink-0
-          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
+          ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
           md:translate-x-0 md:z-auto
           ${isDesktopCollapsed
             ? 'md:relative md:w-14 md:min-w-[3.5rem]'
@@ -112,14 +102,24 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
         </button>
 
         <div className="sidebar-safe flex flex-col flex-1 min-h-0">
+        <div className={`flex items-center gap-2.5 px-3 pt-4 pb-5 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>
         <button
           type="button"
           onClick={() => handleNavClick('jobs', false)}
-          className={`flex items-center gap-2.5 px-3 pt-4 pb-5 text-left ${isDesktopCollapsed ? 'md:hidden' : ''}`}
+          className="flex items-center gap-2.5 text-left min-w-0 flex-1"
         >
           <BrandMark size={32} icon={17} />
           <b className="text-[14.5px] font-extrabold text-white tracking-tight">RisingAMP</b>
         </button>
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(false)}
+          className="md:hidden shrink-0 w-8 h-8 grid place-items-center rounded-ot-sm text-[#C9CDD4] hover:bg-steel-800 hover:text-white"
+          aria-label="Close menu"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        </div>
 
         <nav className={`flex-1 px-3 pb-4 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>
           <div className="text-[10px] tracking-[0.16em] uppercase text-[#5B606A] px-2 pt-2.5 pb-2 font-bold">

@@ -37,7 +37,6 @@ body {
 button,
 nav,
 .sidebar,
-.mobile-menu-btn,
 [role="tab"] {
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -101,13 +100,6 @@ select,
   .content {
     padding-left: var(--safe-left);
   }
-}
-
-/* Hamburger is position:fixed, so it is measured from the true
-   screen edge even when iOS reserves a status-bar strip. */
-.mobile-menu-btn {
-  top: calc(1rem + var(--safe-top));
-  left: calc(1rem + var(--safe-left));
 }
 
 /* Steel drawer stays edge-to-edge. Pad the contents, not the panel. */

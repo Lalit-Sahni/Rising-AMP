@@ -192,7 +192,7 @@ Variables in `src/index.css`:
 Where they are applied:
 
 - `.content` — bottom always; right always; left only under 768px (sidebar already sits on the left at `md`)
-- `.mobile-menu-btn` — `top` and `left` are `1rem +` the matching inset
+- Header menu button — in the header row on the left, not `position:fixed`
 - `.sidebar-safe` — pad the drawer **contents**, not the steel panel
 - `.auth-frame` — sign-in / sign-up shell
 - `.app-shell` / `body` / `.mobile-modal` — `100dvh` with `100vh` as the fallback

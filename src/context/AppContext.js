@@ -64,6 +64,7 @@ export const AppProvider = ({
 }) => {
   const [currentPage, setCurrentPage] = useState('jobs');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expenses, setExpenses] = useState([]);
   const [budget, setBudget] = useState(0);
   const [savedLabour, setSavedLabour] = useState([]);
@@ -879,6 +880,8 @@ export const AppProvider = ({
     jobInvitedEmails,
     commandPaletteOpen,
     setCommandPaletteOpen,
+    mobileMenuOpen,
+    setMobileMenuOpen,
     currentPage,
     setCurrentPage,
     expenses,
