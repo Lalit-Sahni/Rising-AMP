@@ -34,6 +34,39 @@ export function toClientProfile(uid, data = {}) {
   };
 }
 
+/** Name and photo only. Never include mobile, ABN, address, or business name. */
+export function toPublicProfile(profile) {
+  if (!profile || !profile.uid) return null;
+  const email = normalizeEmail(profile.email);
+  if (!email) return null;
+  return {
+    uid: profile.uid,
+    email,
+    displayName: String(profile.displayName || '').trim(),
+    photoUrl: profile.photoUrl || '',
+  };
+}
+
+export function pickProfileForEmail(rows, email, exceptUid) {
+  const wanted = normalizeEmail(email);
+  if (!wanted) return null;
+  let fallback = null;
+  let sameUidComplete = null;
+  for (const candidate of rows || []) {
+    if (normalizeEmail(candidate && candidate.email) !== wanted) continue;
+    if (!profileIsComplete(candidate)) {
+      if (!fallback) fallback = candidate;
+      continue;
+    }
+    if (exceptUid && candidate.uid === exceptUid) {
+      sameUidComplete = candidate;
+      continue;
+    }
+    return candidate;
+  }
+  return sameUidComplete || fallback;
+}
+
 export function resolveLoadedProfile({ uid, email, uidDoc, emailProfile, cached }) {
   const fromUid = uidDoc ? toClientProfile(uid, { uid, ...uidDoc }) : null;
   if (profileIsComplete(fromUid)) {

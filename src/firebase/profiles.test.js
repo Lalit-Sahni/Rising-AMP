@@ -1,4 +1,6 @@
-import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile } from './profileGate';
+import fs from 'fs';
+import path from 'path';
+import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile, toPublicProfile, pickProfileForEmail } from './profileGate';
 
 describe('profile setup gate', () => {
   test('a finished profile is not asked to set up again', () => {
@@ -77,5 +79,60 @@ describe('profile setup gate', () => {
     });
     expect(resolved.write).toBe(true);
     expect(profileNeedsSetup(resolved.profile)).toBe(false);
+  });
+
+  test('public profile cards never include mobile, ABN or business name', () => {
+    const card = toPublicProfile({
+      uid: 'uid-1',
+      email: 'Owner@Gmail.com',
+      displayName: 'Lalit Sahni',
+      mobile: '0400000000',
+      businessName: 'Opal SS',
+      abn: '32162378190',
+      street: '1 Example St',
+      photoUrl: 'https://example.com/p.jpg',
+    });
+    expect(card).toEqual({
+      uid: 'uid-1',
+      email: 'owner@gmail.com',
+      displayName: 'Lalit Sahni',
+      photoUrl: 'https://example.com/p.jpg',
+    });
+    expect(card).not.toHaveProperty('mobile');
+    expect(card).not.toHaveProperty('abn');
+    expect(card).not.toHaveProperty('businessName');
+    expect(toPublicProfile({ uid: 'uid-1' })).toBeNull();
+  });
+
+  test('email lookup prefers a complete profile on a different uid', () => {
+    const picked = pickProfileForEmail([
+      { uid: 'google-uid', email: 'lalit.sahni@gmail.com', displayName: '', businessName: '' },
+      {
+        uid: 'password-uid',
+        email: 'lalit.sahni@gmail.com',
+        displayName: 'Lalit Sahni',
+        businessName: 'Opal SS',
+        setupComplete: true,
+      },
+    ], 'Lalit.Sahni@gmail.com', 'google-uid');
+    expect(picked.uid).toBe('password-uid');
+  });
+});
+
+describe('firestore.rules source', () => {
+  const rules = fs.readFileSync(path.join(__dirname, '../../firestore.rules'), 'utf8');
+
+  test('private profiles are not readable by any signed-in stranger', () => {
+    expect(rules).toContain('match /profiles/{uid}');
+    expect(rules).toContain('match /publicProfiles/{emailKey}');
+    expect(rules).toContain('allow list: if false;');
+    expect(rules).not.toContain('Own write, any signed-in read');
+    expect(rules).not.toMatch(/match \/profiles\/\{uid\} \{[\s\S]*?allow read: if request\.auth != null;/);
+  });
+
+  test('the web app does not load Google Analytics', () => {
+    const config = fs.readFileSync(path.join(__dirname, 'config.js'), 'utf8');
+    expect(config).not.toMatch(/getAnalytics/);
+    expect(config).not.toMatch(/firebase\/analytics/);
   });
 });

@@ -128,9 +128,9 @@ Opening a job (`fetchExpensesFromFirestore` and friends) repeats the same reads.
 
 `fetchExpensesFromFirestore` uses `limit(1000)` and does not tell you if more exist. Centenary is ~124. The day a job passes 1,000, Jobs home **undercounts cost and margin** and History looks complete when it is not. Invoices have no cap (fine for now).
 
-### 3.3 Login scans every profile
+### 3.3 Login no longer scans every profile
 
-`findProfileByEmail` in `src/firebase/profiles.js` does `getDocs(collection(db, 'profiles'))`. Four profiles today. At 1,000 sign-ups this is a full collection read on every login, and rules currently allow **any signed-in user to read every profile** (name, mobile, ABN, address, photo).
+Phase 8 Part A: `findProfileByEmail` queries `where('email', '==', own email)` instead of `getDocs` on the whole collection. Private `profiles/{uid}` are owner-only (plus same-email). Job people chips read `publicProfiles/{email}` (display name and photo). Production rules are not deployed until named.
 
 ### 3.4 Typed job names on invoices
 
@@ -188,7 +188,7 @@ Typical signed-in visit:
 
 | Step | What it reads | Rough size today |
 |------|----------------|------------------|
-| Auth + profile | `profiles/{uid}` **plus all profiles** (email match) | 4 docs, will grow |
+| Auth + profile | `profiles/{uid}` plus same-email query (not the whole collection) | 1–2 docs |
 | Jobs home (names) | `projects` `array-contains` email (and Gmail variants) | 2 job docs |
 | Jobs home (figures) | all expenses + invoices + clients **per job** | ~130 + 10 + remaining clients |
 | Open a job | expenses, invoices, labour, trades, payers, HIA, clients, … again | another ~200 |
@@ -210,7 +210,7 @@ Firestore does not have SQL `SUM()`. If you want a total on the chooser, you eit
 | Org create | Denied. Cannot spawn a second org from the client. |
 | Job delete | Denied. Archive only. |
 | `users/**` PIN copies | Repo + production Firestore: **deny**. Documents kept. |
-| `profiles` | Any signed-in user can read all profiles. Tighten when you have more than family. |
+| `profiles` | Owner (or same email) can read private fields. `publicProfiles` is name + photo, get-only. Production rules deploy still outstanding. |
 | Storage receipts | **Repo is tight; production deploy of Storage rules is still outstanding.** |
 | Client API keys | Vision key in the bundle. OpenAI must not be. |
 
@@ -247,7 +247,7 @@ Do these in order. Earlier items are worth it even if you never “scale.” Lat
 ### Soon (Part C, additive / reversible — owner yes)
 
 5. **Show the job’s `name` on invoice UI**, keep typed `projectName` as PDF history.
-6. **Stop scanning all profiles.** `where('email', '==', …)` plus store a canonical email field, **or** drop the email fallback once every uid doc is complete. Then tighten profile read rules to org / shared-job (this needs a rules design; do not lock people out of their own profile).
+6. **Stop scanning all profiles.** Done in Phase 8 Part A on the branch. Production rules still need a named deploy.
 7. **Paginate expenses** (page of 100–200) and **surface the 1,000 cap** until pagination exists (“showing first 1,000”).
 8. **Archive instead of hard-delete** on expense/invoice delete buttons, or remove those buttons.
 9. **Move Google Vision** to a function the same way as OpenAI, then remove `REACT_APP_GOOGLE_CLOUD_VISION_API_KEY`.

@@ -16,7 +16,7 @@ App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category col
 |--------|------------|
 | UI | React 18, Create React App (`react-scripts`), Tailwind |
 | Routing | **No react-router.** A string `currentPage` in `AppContext` switches which page component is shown. |
-| Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions, Analytics |
+| Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions. Analytics **removed** in Phase 8 Part A (was loaded, never used). |
 | Functions | Node 22. Live: `sendJobInviteEmail`. Added in repo: `readReceiptImage` (OpenAI). Production still has unused `generateWeeklyReport`. Deploy functions **by name only**. Never `firebase deploy --only functions`. |
 | OCR | OpenAI Vision via Cloud Function `readReceiptImage`. If that fails, show an error. Do not fall back to Tesseract or Google Vision. |
 | PWA | Standalone meta tags + safe-area CSS. No `manifest.json` (icons skipped on purpose). No service worker. |
@@ -69,7 +69,8 @@ Old PIN trees `users/{accessCode}/…` still exist. The live app does not use th
 `firestore.rules`:
 
 - `users/{accessCode}/**` — deny (legacy PIN copies kept, not world-open).
-- `profiles/{uid}` — signed-in users can read; only the owner of that uid can write.
+- `profiles/{uid}` — owner of that uid can read/write; same-email read for the dual-uid login case; delete denied. **Not** any-signed-in read.
+- `publicProfiles/{email}` — signed-in get of display name + photo; list denied; owner write of those fields only.
 - `organizations/{orgId}` — signed-in email must be in `invitedEmails`.
 - `organizations/{orgId}/projects/{projectId}` — signed-in email must be in that project’s `invitedEmails`. List queries use `resource.data.invitedEmails` so they match `array-contains`. Owner-only: create job, archive, invite, remove person. Delete job is denied.
 - Project subcollections use a `get()` of the parent project’s `invitedEmails`.
@@ -94,8 +95,9 @@ The dashboard is **one job list at a time**, opened from the Jobs home (or resto
 organizations/opal-ss-constructions
   projects/{projectId}
     expenses, invoices, clients, labour, trades, …
-profiles/{uid}         # name, company, photo
-users/{accessCode}     # leftover copies, unused by the app
+profiles/{uid}              # private: name, mobile, ABN, address, photo
+publicProfiles/{email}      # display name + photo only
+users/{accessCode}          # leftover copies, unused by the app
 ```
 
 Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `orgId`.

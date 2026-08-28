@@ -41,5 +41,13 @@
     "predeploy": [
       "cp src/emails/risingAmpMail.js functions/emails/risingAmpMail.mjs"
     ]
+  },
+  "emulators": {
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": false
+    }
   }
 } 

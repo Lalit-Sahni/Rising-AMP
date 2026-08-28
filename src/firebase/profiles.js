@@ -1,10 +1,11 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './config';
-import { emailsMatch, normalizeEmail } from './email';
-import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile } from './profileGate';
+import { normalizeEmail } from './email';
+import logger from '../utils/logger';
+import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile, toPublicProfile, pickProfileForEmail } from './profileGate';
 
-export { profileIsComplete, profileNeedsSetup, toClientProfile };
+export { profileIsComplete, profileNeedsSetup, toClientProfile, toPublicProfile };
 export const ROLES = ['Owner', 'Director', 'Site manager', 'Estimator', 'Bookkeeper', 'Other'];
 export const STATES = ['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'];
 
@@ -52,25 +53,42 @@ export function writeProfileCache(profile) {
   }
 }
 
+function asPublicPerson(email, data = {}) {
+  return {
+    uid: data.uid || '',
+    email: normalizeEmail(data.email || email),
+    displayName: String(data.displayName || '').trim(),
+    photoUrl: data.photoUrl || '',
+    setupComplete: Boolean(data.setupComplete),
+  };
+}
+
+async function syncPublicProfile(profile) {
+  const publicProfile = toPublicProfile(profile);
+  if (!publicProfile) return;
+  try {
+    await setDoc(doc(db, 'publicProfiles', publicProfile.email), {
+      ...publicProfile,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    logger.warn('Public profile sync failed', error && error.code);
+  }
+}
+
 async function findProfileByEmail(email, exceptUid) {
   if (!email) return null;
-  const snap = await getDocs(collection(db, 'profiles'));
-  let fallback = null;
-  let sameUidComplete = null;
-  for (const row of snap.docs) {
-    const candidate = { uid: row.id, ...row.data() };
-    if (!emailsMatch(candidate.email, email)) continue;
-    if (!profileIsComplete(candidate)) {
-      if (!fallback) fallback = candidate;
-      continue;
-    }
-    if (exceptUid && row.id === exceptUid) {
-      sameUidComplete = candidate;
-      continue;
-    }
-    return candidate;
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'profiles'),
+      where('email', '==', normalizeEmail(email)),
+    ));
+    const rows = snap.docs.map((row) => ({ uid: row.id, ...row.data() }));
+    return pickProfileForEmail(rows, email, exceptUid);
+  } catch (error) {
+    logger.warn('Profile email lookup failed', error && error.code);
+    return null;
   }
-  return sameUidComplete || fallback;
 }
 
 export async function loadProfile(uid, email) {
@@ -96,6 +114,7 @@ export async function loadProfile(uid, email) {
       }, { merge: true });
     }
     writeProfileCache(resolved.profile);
+    await syncPublicProfile(resolved.profile);
   }
 
   return resolved.profile;
@@ -114,6 +133,7 @@ export async function saveProfile(uid, data) {
   }
   await setDoc(doc(db, 'profiles', uid), payload, { merge: true });
   writeProfileCache(saved);
+  await syncPublicProfile(saved);
   return saved;
 }
 
@@ -128,7 +148,7 @@ export async function recordSignIn(uid, extra = {}) {
     });
   } catch (error) {
     if (error && error.code === 'not-found') return;
-    console.error('Sign-in stamp failed:', error);
+    logger.error('Sign-in stamp failed', error);
   }
 }
 
@@ -148,7 +168,7 @@ export async function uploadProfilePhoto(uid, file) {
     const url = await getDownloadURL(snapshot.ref);
     return { success: true, url, path };
   } catch (error) {
-    console.error('Profile photo upload failed:', error);
+    logger.error('Profile photo upload failed', error);
     return {
       success: false,
       error: 'Photo could not be stored on this copy yet. You can finish without one.',
@@ -161,18 +181,33 @@ export async function loadProfilesForEmails(emails) {
   if (wanted.length === 0) return [];
 
   const found = new Map();
-  for (let i = 0; i < wanted.length; i += 10) {
-    const chunk = wanted.slice(i, i + 10);
+
+  await Promise.all(wanted.map(async (email) => {
+    try {
+      const snap = await getDoc(doc(db, 'publicProfiles', email));
+      if (snap.exists()) {
+        found.set(email, asPublicPerson(email, snap.data()));
+      }
+    } catch (error) {
+      logger.warn('Public profile lookup failed', error && error.code);
+    }
+  }));
+
+  const missing = wanted.filter((email) => !found.has(email));
+  for (let i = 0; i < missing.length; i += 10) {
+    const chunk = missing.slice(i, i + 10);
     try {
       const snap = await getDocs(query(collection(db, 'profiles'), where('email', 'in', chunk)));
       snap.forEach((row) => {
         const data = { uid: row.id, ...row.data() };
-        found.set(normalizeEmail(data.email), data);
+        const email = normalizeEmail(data.email);
+        if (!email || found.has(email)) return;
+        found.set(email, asPublicPerson(email, data));
       });
     } catch (error) {
-      console.error('Profile lookup failed:', error);
+      logger.warn('Profile lookup failed', error && error.code);
     }
   }
 
-  return wanted.map((email) => found.get(email) || { email, displayName: '', setupComplete: false });
+  return wanted.map((email) => found.get(email) || { email, displayName: '', photoUrl: '', setupComplete: false });
 }
