@@ -164,7 +164,9 @@ Rotate the OpenAI key after the function is live. Do not paste keys into chat.
 
 ### 3.8 Storage on production may still be the old rules
 
-Repo `storage.rules` require sign-in and job membership (or a known legacy PIN folder). The 27 Aug production deploy was **hosting + Firestore rules only**. Storage was not named. **Live receipt files may still be world-open** until `firebase deploy --project production --only storage` with an explicit yes. Staging has no Storage bucket; missing photos on localhost are expected. Do not point localhost at production to “fix” that.
+Repo `storage.rules` require sign-in and job membership (or a known legacy PIN folder). The 27 Aug production deploy was **hosting + Firestore rules only**. Storage was not named. **Live receipt files may still be world-open** until `firebase deploy --project production --only storage` with an explicit yes.
+
+Staging now has a Storage bucket (`rising-amp-staging.firebasestorage.app`, created 28 Aug 2026) so localhost can upload receipts. CORS allows `http://localhost:3000`. Staging Storage rules were deployed the same day. Production Storage rules were not.
 
 ### 3.9 Anyone on a job can write everything on that job
 
@@ -227,7 +229,7 @@ Production bucket: `rising-amp-467702-b5.firebasestorage.app` (audit: 21 files, 
 | `siteLogs/{legacy PIN}/…` | Unused by UI. |
 | `avatars/{uid}/…` | Profile photos. |
 
-Staging has no bucket. Localhost missing receipts are expected.
+Staging bucket: `rising-amp-staging.firebasestorage.app` (created 28 Aug 2026). Localhost can upload new receipts here. Old production photos are not copied over.
 
 ---
 

@@ -12,7 +12,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { db } from './config';
+import { auth, db } from './config';
 import { canonicalEmail, emailInviteVariants, normalizeEmail } from './email';
 import { canRemoveEmailFromJob, emailRemainsOnJobs, isJobArchived, newJobId } from './jobIdentity';
 import { FAMILY_ORG_ID } from './tenancy';
@@ -54,30 +54,18 @@ async function queryProjectsForEmail(email) {
 
 /**
  * Job lists this email is invited to (no subcollection counts).
+ *
+ * Firestore rules only allow `array-contains` when the value equals the
+ * signed-in email. Extra Gmail spelling variants cannot be queried — they
+ * used to log a permission error even when the real query had succeeded.
  */
 export async function listInvitedProjects(email) {
-  const variants = emailInviteVariants(email);
-  if (variants.length === 0) return [];
+  const tokenEmail = normalizeEmail(auth.currentUser && auth.currentUser.email);
+  const queryEmail = tokenEmail || normalizeEmail(email);
+  if (!queryEmail.includes('@')) return [];
 
-  const docsById = new Map();
-  let lastError = null;
-  for (const candidate of variants) {
-    try {
-      const docs = await queryProjectsForEmail(candidate);
-      for (const projectDoc of docs) {
-        docsById.set(projectDoc.id, projectDoc);
-      }
-    } catch (error) {
-      lastError = error;
-      console.error('Job list query failed:', error);
-    }
-  }
-
-  if (docsById.size === 0 && lastError) {
-    throw lastError;
-  }
-
-  return Array.from(docsById.values()).map(mapProjectDoc);
+  const docs = await queryProjectsForEmail(queryEmail);
+  return docs.map(mapProjectDoc);
 }
 
 /**

@@ -210,11 +210,7 @@ const InvoicePreview = ({
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mb-2">
-                      <span className="text-white text-2xl font-bold">BT</span>
-                    </div>
-                    <p className="text-sm text-gray-600">BuildTrack</p>
-                    <p className="text-sm text-gray-600">Construction Management</p>
+                    <p className="text-lg font-extrabold text-ink">RisingAMP</p>
                   </div>
                 </div>
 

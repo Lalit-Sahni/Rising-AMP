@@ -1,33 +1,39 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Search, 
-  MapPin, 
-  Phone, 
-  Mail, 
+import {
+  User,
+  Plus,
+  Edit,
+  Trash2,
+  Search,
+  MapPin,
+  Phone,
+  Mail,
   Building,
   Save,
   X,
-  Check
+  Check,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useClientManager } from '../../hooks/useClientManager';
 
-const ClientManager = ({ isOpen, onClose, onClientSelect }) => {
+const fieldClass =
+  'w-full px-3.5 py-[10px] bg-surface border border-hairline rounded-ot-sm text-[13.5px] text-ink placeholder-slate-400 focus:outline-none focus:border-accent';
+
+const iconBtn =
+  'p-2 rounded-ot-sm border border-hairline text-slate-600 hover:text-ink hover:bg-canvas transition-colors';
+
+const ClientManager = ({ isOpen, onClose, onClientSelect, embedded = false }) => {
   const { showToast, jobId } = useApp();
-  const { 
-    loading, 
-    submitting, 
-    loadClients, 
-    saveClient, 
-    updateClient, 
-    removeClient, 
-    searchClients 
+  const {
+    loading,
+    submitting,
+    loadClients,
+    saveClient,
+    updateClient,
+    removeClient,
+    searchClients,
   } = useClientManager(jobId, showToast);
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
@@ -38,19 +44,21 @@ const ClientManager = ({ isOpen, onClose, onClientSelect }) => {
     address: '',
     company: '',
     abn: '',
-    notes: ''
+    notes: '',
   });
 
+  const active = embedded || isOpen;
+
   useEffect(() => {
-    if (isOpen && jobId) {
+    if (active && jobId) {
       loadClients();
     }
-  }, [isOpen, jobId, loadClients]);
+  }, [active, jobId, loadClients]);
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
@@ -62,32 +70,28 @@ const ClientManager = ({ isOpen, onClose, onClientSelect }) => {
       address: '',
       company: '',
       abn: '',
-      notes: ''
+      notes: '',
     });
     setEditingClient(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    // Client-side validation
+
     if (!formData.name?.trim()) {
       showToast('Client name is required', 'error');
       return;
     }
 
-    
     try {
       let result;
-      
+
       if (editingClient) {
-        // Update existing client
         result = await updateClient(editingClient.id, formData);
       } else {
-        // Add new client
         result = await saveClient(formData);
       }
-      
+
       if (result.success) {
         resetForm();
         setShowAddForm(false);
@@ -106,7 +110,7 @@ const ClientManager = ({ isOpen, onClose, onClientSelect }) => {
       address: client.address || '',
       company: client.company || '',
       abn: client.abn || '',
-      notes: client.notes || ''
+      notes: client.notes || '',
     });
     setShowAddForm(true);
   };
@@ -121,337 +125,331 @@ const ClientManager = ({ isOpen, onClose, onClientSelect }) => {
     if (onClientSelect) {
       onClientSelect(client);
     }
-    onClose();
+    if (onClose) onClose();
   };
 
   const filteredClients = searchClients(searchTerm);
 
-  if (!isOpen) return null;
+  if (!active) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-slate-900 rounded-2xl w-full max-w-4xl h-[90vh] flex flex-col shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">
-                Client Manager
-              </h2>
-              <p className="text-slate-400 text-sm">
-                Manage your client profiles
-              </p>
-            </div>
-          </div>
+  const header = (
+    <div className={`flex items-center justify-between gap-3 ${embedded ? 'mb-4' : 'p-4 md:px-6 md:py-5 border-b border-hairline'}`}>
+      <div>
+        {embedded ? (
+          <>
+            <div className="eyebrow">Directory</div>
+            <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Clients</h1>
+            <p className="text-[13.5px] text-slate-600 mt-0.5">People you bill on this job.</p>
+          </>
+        ) : (
+          <>
+            <h2 className="text-[18px] font-extrabold text-ink">Clients</h2>
+            <p className="text-[13px] text-slate-400">People you bill on this job</p>
+          </>
+        )}
+      </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                resetForm();
-                setShowAddForm(true);
-              }}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium transition-colors flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Add Client
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => {
+            resetForm();
+            setShowAddForm(true);
+          }}
+          className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent-600 text-white text-[13px] font-bold px-[15px] py-[9px] rounded-ot-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Add client
+        </button>
+        {!embedded && (
+          <button type="button" onClick={onClose} className={iconBtn} title="Close">
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  const form = (
+    <div className={embedded ? 'bg-surface border border-hairline rounded-ot p-5 shadow-whisper' : 'h-full overflow-auto p-4 md:p-6'}>
+      <div className={embedded ? '' : 'bg-canvas border border-hairline rounded-ot p-5'}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-[16px] font-bold text-ink">
+            {editingClient ? 'Edit client' : 'Add client'}
+          </h3>
+          <button
+            type="button"
+            onClick={() => {
+              setShowAddForm(false);
+              resetForm();
+            }}
+            className={iconBtn}
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden">
-          {showAddForm ? (
-            /* Add/Edit Form */
-            <div className="h-full overflow-auto p-6">
-              <div className="bg-slate-800 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-semibold text-white">
-                    {editingClient ? 'Edit Client' : 'Add New Client'}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowAddForm(false);
-                      resetForm();
-                    }}
-                    className="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[13px] font-medium text-ink mb-1.5">
+                  Client name <span className="text-neg">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  className={fieldClass}
+                  placeholder="Enter client name"
+                  required
+                />
+              </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Basic Information */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Client Name *
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.name}
-                          onChange={(e) => handleInputChange('name', e.target.value)}
-                          className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="Enter client name"
-                          required
-                        />
-                      </div>
+              <div>
+                <label className="block text-[13px] font-medium text-ink mb-1.5">Company name</label>
+                <input
+                  type="text"
+                  value={formData.company}
+                  onChange={(e) => handleInputChange('company', e.target.value)}
+                  className={fieldClass}
+                  placeholder="Enter company name"
+                />
+              </div>
 
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Company Name
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.company}
-                          onChange={(e) => handleInputChange('company', e.target.value)}
-                          className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="Enter company name"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          ABN
-                        </label>
-                        <input
-                          type="text"
-                          value={formData.abn}
-                          onChange={(e) => handleInputChange('abn', e.target.value)}
-                          className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="Enter ABN"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Contact Information */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Email Address
-                        </label>
-                        <input
-                          type="email"
-                          value={formData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="client@example.com"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Phone Number
-                        </label>
-                        <input
-                          type="tel"
-                          value={formData.phone}
-                          onChange={(e) => handleInputChange('phone', e.target.value)}
-                          className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                          placeholder="+61 400 000 000"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Address */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Address
-                    </label>
-                    <textarea
-                      value={formData.address}
-                      onChange={(e) => handleInputChange('address', e.target.value)}
-                      rows="3"
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="Enter full address"
-                    />
-                  </div>
-
-                  {/* Notes */}
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Notes
-                    </label>
-                    <textarea
-                      value={formData.notes}
-                      onChange={(e) => handleInputChange('notes', e.target.value)}
-                      rows="3"
-                      className="w-full px-4 py-3 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="Additional notes about this client"
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-700">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAddForm(false);
-                        resetForm();
-                      }}
-                      className="px-6 py-3 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:bg-purple-800 disabled:cursor-not-allowed text-white font-medium transition-colors flex items-center gap-2"
-                    >
-                      {submitting ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4" />
-                          {editingClient ? 'Update Client' : 'Save Client'}
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
+              <div>
+                <label className="block text-[13px] font-medium text-ink mb-1.5">ABN</label>
+                <input
+                  type="text"
+                  value={formData.abn}
+                  onChange={(e) => handleInputChange('abn', e.target.value)}
+                  className={fieldClass}
+                  placeholder="Enter ABN"
+                />
               </div>
             </div>
-          ) : (
-            /* Client List */
-            <div className="h-full overflow-auto p-6">
-              {/* Search */}
-              <div className="mb-6">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search clients..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[13px] font-medium text-ink mb-1.5">Email</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className={fieldClass}
+                  placeholder="client@example.com"
+                />
               </div>
 
-              {/* Client List */}
-              {loading ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto"></div>
-                  <p className="text-slate-400 mt-4">Loading clients...</p>
-                </div>
-              ) : filteredClients.length === 0 ? (
-                <div className="text-center py-12">
-                  <User className="w-12 h-12 text-slate-500 mx-auto mb-4" />
-                  <p className="text-slate-400 mb-4">
-                    {searchTerm ? 'No clients found matching your search' : 'No clients yet'}
-                  </p>
-                  {!searchTerm && (
-                    <button
-                      onClick={() => setShowAddForm(true)}
-                      className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
-                    >
-                      Add Your First Client
-                    </button>
-                  )}
-                </div>
+              <div>
+                <label className="block text-[13px] font-medium text-ink mb-1.5">Phone</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className={fieldClass}
+                  placeholder="+61 400 000 000"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[13px] font-medium text-ink mb-1.5">Address</label>
+            <textarea
+              value={formData.address}
+              onChange={(e) => handleInputChange('address', e.target.value)}
+              rows="3"
+              className={fieldClass}
+              placeholder="Enter full address"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[13px] font-medium text-ink mb-1.5">Notes</label>
+            <textarea
+              value={formData.notes}
+              onChange={(e) => handleInputChange('notes', e.target.value)}
+              rows="3"
+              className={fieldClass}
+              placeholder="Anything else about this client"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-4 border-t border-hairline">
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddForm(false);
+                resetForm();
+              }}
+              className="px-4 py-[9px] rounded-ot-sm border border-hairline text-[13px] font-semibold text-ink hover:bg-canvas"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-1.5 px-4 py-[9px] rounded-ot-sm bg-accent hover:bg-accent-600 disabled:opacity-50 text-white text-[13px] font-bold"
+            >
+              {submitting ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  Saving…
+                </>
               ) : (
-                <div className="space-y-4">
-                  {filteredClients.map((client) => (
-                    <div
-                      key={client.id}
-                      className="bg-slate-800 rounded-xl p-6 border border-slate-700 hover:border-purple-500 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-3">
-                            <h3 className="text-lg font-semibold text-white">
-                              {client.name}
-                            </h3>
-                            {client.company && (
-                              <span className="px-2 py-1 bg-slate-700 text-slate-300 text-sm rounded">
-                                {client.company}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                            {client.email && (
-                              <div className="flex items-center gap-2 text-slate-300">
-                                <Mail className="w-4 h-4" />
-                                {client.email}
-                              </div>
-                            )}
-                            {client.phone && (
-                              <div className="flex items-center gap-2 text-slate-300">
-                                <Phone className="w-4 h-4" />
-                                {client.phone}
-                              </div>
-                            )}
-                            {client.address && (
-                              <div className="flex items-start gap-2 text-slate-300 md:col-span-2">
-                                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                                <span className="line-clamp-2">{client.address}</span>
-                              </div>
-                            )}
-                            {client.abn && (
-                              <div className="flex items-center gap-2 text-slate-300">
-                                <Building className="w-4 h-4" />
-                                ABN: {client.abn}
-                              </div>
-                            )}
-                          </div>
-
-                          {client.notes && (
-                            <div className="mt-3 p-3 bg-slate-700 rounded-lg">
-                              <p className="text-slate-300 text-sm">{client.notes}</p>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2 ml-4">
-                          {onClientSelect && (
-                            <button
-                              onClick={() => handleSelectClient(client)}
-                              className="p-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                              title="Select Client"
-                            >
-                              <Check className="w-4 h-4 text-white" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleEdit(client)}
-                            className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-                            title="Edit Client"
-                          >
-                            <Edit className="w-4 h-4 text-white" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(client.id)}
-                            className="p-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                            title="Delete Client"
-                          >
-                            <Trash2 className="w-4 h-4 text-white" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <>
+                  <Save className="w-4 h-4" />
+                  {editingClient ? 'Update client' : 'Save client'}
+                </>
               )}
-            </div>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+
+  const list = (
+    <div className={embedded ? '' : 'h-full overflow-auto p-4 md:p-6'}>
+      <div className="relative mb-4">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <input
+          type="text"
+          placeholder="Search clients…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className={`${fieldClass} pl-10`}
+        />
+      </div>
+
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent border-t-transparent mx-auto" />
+          <p className="text-[13px] text-slate-400 mt-3">Loading clients…</p>
+        </div>
+      ) : filteredClients.length === 0 ? (
+        <div className="text-center py-12 border border-dashed border-hairline rounded-ot bg-surface">
+          <User className="w-8 h-8 text-slate-400 mx-auto mb-3" />
+          <p className="text-[13.5px] text-slate-600 mb-4">
+            {searchTerm ? 'No clients match that search.' : 'No clients on this job yet.'}
+          </p>
+          {!searchTerm && (
+            <button
+              type="button"
+              onClick={() => setShowAddForm(true)}
+              className="inline-flex items-center bg-accent hover:bg-accent-600 text-white text-[13px] font-bold px-[15px] py-[9px] rounded-ot-sm"
+            >
+              Add your first client
+            </button>
           )}
         </div>
+      ) : (
+        <div className="space-y-2.5">
+          {filteredClients.map((client) => (
+            <div
+              key={client.id}
+              className="bg-surface rounded-ot p-4 border border-hairline hover:border-[#D6D9DD] shadow-whisper"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <h3 className="text-[15px] font-bold text-ink">{client.name}</h3>
+                    {client.company && (
+                      <span className="px-1.5 py-0.5 bg-canvas text-slate-600 text-[11px] font-semibold rounded-ot-sm border border-hairline">
+                        {client.company}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-[13px] text-slate-600">
+                    {client.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-3.5 h-3.5 text-slate-400" />
+                        {client.email}
+                      </div>
+                    )}
+                    {client.phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        {client.phone}
+                      </div>
+                    )}
+                    {client.address && (
+                      <div className="flex items-start gap-2 md:col-span-2">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
+                        <span className="line-clamp-2">{client.address}</span>
+                      </div>
+                    )}
+                    {client.abn && (
+                      <div className="flex items-center gap-2">
+                        <Building className="w-3.5 h-3.5 text-slate-400" />
+                        ABN: {client.abn}
+                      </div>
+                    )}
+                  </div>
+
+                  {client.notes && (
+                    <div className="mt-2 p-2.5 bg-canvas border border-hairline rounded-ot-sm">
+                      <p className="text-[13px] text-slate-600">{client.notes}</p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {onClientSelect && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelectClient(client)}
+                      className="p-2 rounded-ot-sm border border-hairline text-pos hover:bg-pos-tint transition-colors"
+                      title="Select client"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(client)}
+                    className={iconBtn}
+                    title="Edit client"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(client.id)}
+                    className="p-2 rounded-ot-sm border border-hairline text-neg hover:bg-canvas transition-colors"
+                    title="Delete client"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const body = (
+    <>
+      {header}
+      <div className={embedded ? '' : 'flex-1 overflow-hidden'}>{showAddForm ? form : list}</div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="max-w-4xl">{body}</div>;
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-surface border border-hairline rounded-ot w-full max-w-4xl h-[90vh] flex flex-col shadow-whisper">
+        {body}
       </div>
     </div>
   );
 };
 
-export default ClientManager; 
+export default ClientManager;

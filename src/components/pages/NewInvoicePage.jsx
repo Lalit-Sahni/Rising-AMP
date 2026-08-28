@@ -443,7 +443,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       <button
                         type="button"
                         onClick={() => setShowClientManager(true)}
-                        className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg transition-colors flex items-center gap-1"
+                        className="px-3 py-1.5 bg-accent hover:bg-accent-600 text-white text-[12px] font-bold rounded-ot-sm transition-colors flex items-center gap-1"
                       >
                         <User className="w-3 h-3" />
                         Manage Clients
@@ -453,7 +453,7 @@ const NewInvoicePage = ({ onComplete }) => {
 
                   {/* Client Selection */}
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-ink mb-2">
                       Select Client
                     </label>
                     <div className="relative">
@@ -946,11 +946,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       <p className="text-gray-600">Due: {formData.dueDate.toLocaleDateString()}</p>
                     </div>
                     <div className="text-right">
-                      <div className="w-16 h-16 bg-blue-600 rounded-lg flex items-center justify-center mb-2">
-                        <FileText className="w-8 h-8 text-white" />
-                      </div>
-                      <p className="text-sm text-gray-600">BuildTrack</p>
-                      <p className="text-sm text-gray-600">Construction Management</p>
+                      <p className="text-lg font-extrabold text-ink">RisingAMP</p>
                     </div>
                   </div>
                   
@@ -1033,8 +1029,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   
                   {/* Footer */}
                   <div className="text-center text-gray-600 text-sm border-t border-gray-300 pt-4">
-                    <p>Thank you for your business!</p>
-                    <p>BuildTrack - Professional Construction Management</p>
+                    <p>Thank you for your business.</p>
+                    <p>RisingAMP</p>
                   </div>
                 </div>
               </div>
