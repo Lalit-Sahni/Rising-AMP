@@ -34,7 +34,7 @@ function initialsFromEmail(email) {
 }
 
 export default function JobsHomePage() {
-  const { membership, onOpenJob, setCurrentPage } = useApp();
+  const { membership, onOpenJob } = useApp();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -103,7 +103,6 @@ export default function JobsHomePage() {
   const openJob = (project) => {
     if (!project.projectId || !onOpenJob) return;
     onOpenJob(project);
-    setCurrentPage('dashboard');
   };
 
   const startRename = (event, project) => {
@@ -209,7 +208,6 @@ export default function JobsHomePage() {
           ...created,
           expenseCount: 0,
           invoiceCount: 0,
-          metrics: { hasMargin: false, cash: { paid: 0 }, attentionCount: 0, verdict: VERDICT.GETTING_STARTED },
           subtitle: 'New job',
         },
         ...current,
@@ -305,7 +303,7 @@ export default function JobsHomePage() {
               <button
                 type="button"
                 onClick={startCreate}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-bold text-white bg-accent hover:bg-accent-600 rounded-[10px]"
+                className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 px-4 py-2 min-w-[7.5rem] text-[13px] font-bold text-white bg-accent hover:bg-accent-600 rounded-[10px]"
               >
                 <Plus className="w-4 h-4" strokeWidth={2} />
                 New job
@@ -324,12 +322,11 @@ export default function JobsHomePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-[18px]">
+        <div className="grid grid-cols-3 gap-3.5 mb-[18px]">
           {[
             ['Active jobs', loading ? '…' : portfolio.activeJobs],
             ['Expenses', loading ? '…' : portfolio.expenses],
             ['Invoices', loading ? '…' : portfolio.invoices],
-            ['Margin', 'On the job'],
           ].map(([label, value]) => (
             <div key={label} className="bg-surface border border-hairline rounded-ot px-[17px] py-[15px] shadow-whisper">
               <div className="text-[11.5px] text-slate-400 font-semibold">{label}</div>
