@@ -114,7 +114,7 @@ function creatableSelectStyles(hasError) {
   };
 }
 
-const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId = null, uncertainFields = {} }) => {
+const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null, uncertainFields }) => {
   const {
     addExpenseToFirebase,
     updateExpenseInFirebase,
@@ -141,6 +141,10 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
   const [uploadProgress, setUploadProgress] = useState(0);
   const [checkFields, setCheckFields] = useState({});
   const dialogRef = useRef(null);
+  const initialDataRef = useRef(initialData);
+  const uncertainFieldsRef = useRef(uncertainFields);
+  initialDataRef.current = initialData;
+  uncertainFieldsRef.current = uncertainFields;
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -192,29 +196,31 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
         return Number.isNaN(d.getTime()) ? null : d;
       };
 
+      const source = initialDataRef.current || {};
       const initialFormData = {};
       categoryFields[category]?.forEach(field => {
         if (field.type === 'date') {
-          const converted = toSafeDate(initialData[field.name]);
+          const converted = toSafeDate(source[field.name]);
           initialFormData[field.name] = converted || (field.required !== false ? new Date() : null);
         } else {
-          initialFormData[field.name] = initialData[field.name] ?? '';
+          initialFormData[field.name] = source[field.name] ?? '';
         }
       });
-      initialFormData['paidBy'] = initialData['paidBy'] ?? '';
+      initialFormData['paidBy'] = source['paidBy'] ?? '';
       setFormData(initialFormData);
       setValidationErrors({});
-      setCheckFields(uncertainFields || {});
-      
-      // Handle receipt from OCR scanner
-      if (initialData.imageFile) {
-        setReceiptFile(initialData.imageFile);
+      setCheckFields(uncertainFieldsRef.current || {});
+
+      if (source.imageFile) {
+        setReceiptFile(source.imageFile);
         const reader = new FileReader();
         reader.onload = (e) => setReceiptPreview(e.target.result);
-        reader.readAsDataURL(initialData.imageFile);
+        reader.readAsDataURL(source.imageFile);
       }
     }
-  }, [isOpen, category, initialData, uncertainFields]);
+    // Init when this expense opens, not when the parent re-renders.
+    // A default uncertainFields={} (new object every render) used to wipe edits on each keystroke.
+  }, [isOpen, category, expenseId]);
 
   // Worker management functions
   const getWorkerOptions = () => {
@@ -436,7 +442,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
         total: calculateTotal(category, formData),
       };
 
-      if (isEditMode && initialData.receiptImageUrl && !receiptFile) {
+      if (isEditMode && initialData?.receiptImageUrl && !receiptFile) {
         expenseData.receiptImageUrl = initialData.receiptImageUrl;
         expenseData.receiptImagePath = initialData.receiptImagePath;
         expenseData.receiptUploadedAt = initialData.receiptUploadedAt;
@@ -464,10 +470,11 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
         }
       }
 
-      if (isEditMode) {
-        await updateExpenseInFirebase(expenseId, expenseData);
-      } else {
-        await addExpenseToFirebase(expenseData);
+      const result = isEditMode
+        ? await updateExpenseInFirebase(expenseId, expenseData)
+        : await addExpenseToFirebase(expenseData);
+      if (!result?.success) {
+        return;
       }
 
       // Save labour information for autofill
@@ -528,10 +535,9 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
       onClose();
       setFormData({});
       setValidationErrors({});
-      showToast(expenseId ? 'Expense updated successfully!' : 'Expense added successfully!', 'success');
     } catch (error) {
       console.error('Error submitting expense:', error);
-      showToast('Failed to add expense. Please try again.', 'error');
+      showToast(expenseId ? 'Failed to update expense. Please try again.' : 'Failed to add expense. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -813,7 +819,9 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData = {}, expenseId =
                 disabled={isSubmitting}
                 className="px-6 py-2 bg-accent hover:bg-accent-600 disabled:bg-slate-400 text-white font-medium rounded-ot-sm transition-colors"
               >
-                {isSubmitting ? 'Adding...' : 'Add Expense'}
+                {isSubmitting
+                  ? (expenseId ? 'Saving...' : 'Adding...')
+                  : (expenseId ? 'Save changes' : 'Add Expense')}
               </button>
             </div>
           </div>

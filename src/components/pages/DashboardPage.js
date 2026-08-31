@@ -198,7 +198,13 @@ export default function DashboardPage() {
               {formatMoney(metrics.cash.cost)}
             </div>
             <div className="text-xs text-slate-600">
-              <span className="tabular">{metrics.expenseCount}</span> expense{metrics.expenseCount === 1 ? '' : 's'}
+              {metrics.expensesCapped
+                ? 'More than 1,000 expenses — cost not shown'
+                : (
+                  <>
+                    <span className="tabular">{metrics.expenseCount}</span> expense{metrics.expenseCount === 1 ? '' : 's'}
+                  </>
+                )}
             </div>
           </div>
           <div className="relative bg-surface border border-hairline rounded-ot p-[17px] shadow-whisper">
@@ -223,6 +229,8 @@ export default function DashboardPage() {
                     />
                   </span>
                 </>
+              ) : metrics.expensesCapped ? (
+                <span>Not shown while this job cannot be totalled in full</span>
               ) : (
                 <span>Needs a paid invoice total</span>
               )}
@@ -234,7 +242,9 @@ export default function DashboardPage() {
               {formatMoney(metrics.periodSpend)}
             </div>
             <div className="text-xs text-slate-600">
-              {metrics.periodCount === 0 ? 'No dated spend in this period' : 'Spend so far'}
+              {metrics.expensesCapped
+                ? 'Not shown while this job cannot be totalled in full'
+                : metrics.periodCount === 0 ? 'No dated spend in this period' : 'Spend so far'}
             </div>
           </div>
         </div>
@@ -315,7 +325,9 @@ export default function DashboardPage() {
                 View all
               </button>
             </h3>
-            {metrics.categories.length === 0 ? (
+            {metrics.expensesCapped ? (
+              <p className="text-[13px] text-slate-400 mt-4">Spend breakdown is hidden until this job can be totalled in full.</p>
+            ) : metrics.categories.length === 0 ? (
               <p className="text-[13px] text-slate-400 mt-4">Add expenses to see a breakdown.</p>
             ) : (
               metrics.categories.slice(0, 5).map((row) => {

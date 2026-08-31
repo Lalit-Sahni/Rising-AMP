@@ -103,39 +103,61 @@ service cloud.firestore {
         match /expenses/{itemId} {
           allow read: if canUseProject();
           allow create, update: if canUseProject() && expenseOk();
-          allow delete: if canUseProject();
+          allow delete: if canUseProject()
+            && resource.data.keys().hasAny(['status'])
+            && resource.data.status == 'void';
         }
         match /invoices/{itemId} {
           allow read: if canUseProject();
           allow create, update: if canUseProject() && invoiceOk();
-          allow delete: if false;
+          allow delete: if canUseProject()
+            && resource.data.keys().hasAny(['status'])
+            && resource.data.status == 'void';
         }
         match /hiaContracts/{itemId} {
-          allow read, write: if canUseProject();
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
         }
         match /progressPayments/{itemId} {
-          allow read, write: if canUseProject();
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
         }
         match /labour/{itemId} {
-          allow read, write: if canUseProject();
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
         }
         match /trades/{itemId} {
-          allow read, write: if canUseProject();
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
         }
         match /clients/{itemId} {
-          allow read, write: if canUseProject();
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
         }
         match /suppliers/{itemId} {
-          allow read, write: if canUseProject();
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
         }
         match /serviceProviders/{itemId} {
-          allow read, write: if canUseProject();
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
         }
         match /payers/{itemId} {
-          allow read, write: if canUseProject();
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
         }
         match /bankDetails/{itemId} {
-          allow read, write: if canUseProject();
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
         }
         match /{allPaths=**} {
           allow read, write: if false;

@@ -93,7 +93,7 @@ export const useClientManager = (jobId, showToast) => {
       const result = await deleteClient(jobId, clientId);
       
       if (result.success) {
-        showToast?.('Client deleted successfully', 'success');
+        showToast?.('Client removed from this job', 'success');
         await loadClients(); // Reload clients after delete
         return result;
       } else {

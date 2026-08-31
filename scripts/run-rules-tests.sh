@@ -4,7 +4,7 @@ set -e
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
-if ! command -v java >/dev/null 2>&1; then
+if ! java -version >/dev/null 2>&1; then
   if [ -x /opt/homebrew/opt/openjdk@21/bin/java ]; then
     export JAVA_HOME=/opt/homebrew/opt/openjdk@21
     export PATH="$JAVA_HOME/bin:$PATH"

@@ -195,21 +195,5 @@ export async function loadProfilesForEmails(emails) {
     }
   }));
 
-  const missing = wanted.filter((email) => !found.has(email));
-  for (let i = 0; i < missing.length; i += 10) {
-    const chunk = missing.slice(i, i + 10);
-    try {
-      const snap = await getDocs(query(collection(db, 'profiles'), where('email', 'in', chunk)));
-      snap.forEach((row) => {
-        const data = { uid: row.id, ...row.data() };
-        const email = normalizeEmail(data.email);
-        if (!email || found.has(email)) return;
-        found.set(email, asPublicPerson(email, data));
-      });
-    } catch (error) {
-      logger.warn('Profile lookup failed', error && error.code);
-    }
-  }
-
   return wanted.map((email) => found.get(email) || { email, displayName: '', photoUrl: '', setupComplete: false });
 }

@@ -7,6 +7,7 @@ import {
   getMetadata 
 } from "firebase/storage";
 import { getFirebaseStorage } from "./callable";
+import { getActiveOrgId } from "./tenancy";
 
 // Collection names
 const STORAGE_PATHS = {
@@ -48,12 +49,19 @@ export const uploadReceiptImage = async (jobId, expenseId, imageFile) => {
     const fileExtension = imageFile.name.split('.').pop() || 'jpg';
     const fileName = `receipt_${timestamp}.${fileExtension}`;
     
-    // Create storage reference
+    // Create storage reference. Path stays three segments so existing
+    // receipts and currently deployed Storage rules keep working.
+    // orgId is in custom metadata so rules can stop hardcoding the org.
     const storagePath = `${STORAGE_PATHS.RECEIPTS}/${jobId}/${expenseId}/${fileName}`;
     const storageRef = ref(storage, storagePath);
 
-    // Upload file
-    const uploadResult = await uploadBytes(storageRef, compressedFile);
+    const uploadResult = await uploadBytes(storageRef, compressedFile, {
+      contentType: compressedFile.type || imageFile.type,
+      customMetadata: {
+        orgId: getActiveOrgId(),
+        jobId,
+      },
+    });
     
     // Get download URL
     const downloadURL = await getDownloadURL(uploadResult.ref);

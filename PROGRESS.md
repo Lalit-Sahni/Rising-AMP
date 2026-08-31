@@ -2,21 +2,25 @@
 
 ## Current branch
 
-`phase-8-technical-revamp` — Phase 8 **closed and live**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-9-job-files` — Phase 9 **Part A done**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
-Restore tags: `pre-phase8-2026-08-28` (this phase), `pre-phase7-2026-08-28` (Phase 7 unwind), `pre-phase6-2026-08-27` (Phase 6 unwind), `pre-phase1-2026-08-22` (Phase 1 unwind)
+Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local`  
 `.firebaserc` default is **staging**. Git push does not deploy.
 
-## Where we are (2026-08-28)
+## Where we are (2026-08-31)
+
+**Phase 9 Part A is on this branch.** Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. One part per session.
+
+**Part A shipped (not deployed):** Storage rules take org id from upload metadata instead of hardcoding Opal (old receipts without metadata still fall back to Opal). Past 1,000 expenses the app hides cost and margin rather than showing a partial total. Expenses and invoices void first (Recently deleted); permanent delete is only from that view, and only after the row is already voided. Clients, HIA contracts, progress payments, labour and trades are voided, not hard-deleted. `exceljs` loads on click, not with History. Next is **Part B** — job-file data model and rules. Do not start Part C–F in the same session.
 
 **Phases 1–8 are closed and live.** Brief: `PHASE8.md`.
 
-**Phase 8 shipped:** Vite + TypeScript for new files, real URLs, integer cents, server invoice numbers (`YYYY-0001`), void not delete, named collection rules (no wildcard write), org from membership, Vitest + GitHub Action. Profile leak closed on production and verified from a second account that is not on a family job. App Check client is wired; **do not enforce**. Jobs list uses `getCountFromServer`. At 1,000 expenses the app refuses to show a margin.
+**Phase 8 shipped:** Vite + TypeScript for new files, real URLs, integer cents, server invoice numbers (`YYYY-0001`), void not delete, named collection rules (no wildcard write), org from membership, Vitest + GitHub Action. Profile leak closed on production and verified from a second account that is not on a family job. App Check client is wired; **do not enforce**. Jobs list uses `getCountFromServer`. `generateWeeklyReport` was deleted from production by name (it was a callable, unused, no log entries). Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`; deploy **by name**. History edit of an expense no longer resets the form on each keystroke (a default `uncertainFields={}` was a new object every render). Production hosting and Firestore rules were deployed 29 Aug 2026 (expense edit fix).
 
-**Left on purpose:** App Check enforcement, ledger rollup documents, normalising stored money fields, TanStack Query on the ledger, Gmail invite fallback, leftover `generateWeeklyReport`, production Storage rules.
+**Left on purpose:** App Check enforcement, ledger rollup documents, normalising stored money fields, TanStack Query on the ledger, dismantling the remaining AppContext ledger blob, Gmail invite fallback, production Storage rules.
 
 **Phase 7 shipped (28 Aug 2026):** standalone portrait measured `t:0 r:0 b:34 l:0`. Top 0 because iOS reserves the status bar under `default`. Bottom 34 is the home indicator. Manifest / PNG icons skipped on purpose. Orientation not locked. No service worker.
 
@@ -24,7 +28,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 **Phase 5 shipped:** jobs as IDs, create/archive/invite/remove, clients vs suppliers, `DATABASE.md`, `readReceiptImage` on staging and production. Scanner is OpenAI only — if AI fails, show an error (no Tesseract).
 
-**Phase 4 leftovers (not unless he asks):** Gmail invite fallback still in the client; `www.risingamp.com.au` has no matching SSL; leftover `generateWeeklyReport` on production.
+**Phase 4 leftovers (not unless he asks):** Gmail invite fallback still in the client; `www.risingamp.com.au` has no matching SSL.
 
 **Owner already has:**
 - Shopfront `https://risingamp.com.au`, DNS at Crazy Domains.
@@ -34,14 +38,15 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md. Open design/risingamp-vision.html. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part A is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
 
-1. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes); ledger rollups; money-field migration.
-2. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
-3. Offline / service worker — still its own phase.
+1. Phase 9 **Part B** — job-file Firestore model, Storage paths, rules, Zod schema, emulator tests. Then C–F in later sessions. Brief: `PHASE9.md`.
+2. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes); ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
+3. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
+4. Offline / service worker — still its own phase.
 
 ## Next
 
@@ -53,6 +58,8 @@ Read CLAUDE.md, then PROGRESS.md. Open design/risingamp-vision.html. Phases 1–
 - [x] Phase 6 — legacy cut live (`PHASE6.md`)
 - [x] Phase 7 — app feel on a phone (`PHASE7.md`); hosting live; no new icon
 - [x] Phase 8 — foundations live (`PHASE8.md`); leak closed; Vite; routes; cents; server invoice numbers
+- [x] Phase 9 Part A — Phase 8 leftovers (storage org, expense cap, void not delete, lazy exceljs)
+- [ ] Phase 9 Part B — job-file model and rules
 
 ## What shipped (localhost / staging)
 
@@ -106,11 +113,11 @@ OCR “Check this” **was** implemented, but only from real signals: missing/in
 
 - ~~Live OAuth consent for sending invite mail from Gmail~~ — **superseded by Phase 4.** Owner decided to move invite email off `gmail.send` entirely onto Resend instead of pursuing Google verification for that scope. Google sign-in itself needs no verification and is untouched.
 - Unused `users/{code}` PIN folders (do not delete)
-- Unused live function `generateWeeklyReport` (do not deploy functions)
-- Staging has no Storage bucket (receipts missing on localhost)
+- Staging Storage bucket exists; production Storage rules still not deployed
 
 ## Design files
 
+- `design/risingamp-files-vision.html` — Phase 9 Job Files vision
 - `design/risingamp-vision.html` — Phase 3 vision (look source)
 - `design/opal-track-reference.html` — Phase 2 look (tokens)
 - `design/opal-track-redesign.html` — earlier Geist concept, ignore

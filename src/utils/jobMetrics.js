@@ -37,7 +37,11 @@ function moneyCents(value) {
   }
 }
 
-export function getExpenseTotalCents(expense) {
+export function isVoidExpense(expense) {
+  return String((expense && expense.status) || '').toLowerCase() === 'void';
+}
+
+function expenseMoneyCents(expense) {
   if (!expense) return 0;
   if (Number.isInteger(expense.totalCents)) return expense.totalCents;
   if (expense.total != null && expense.total !== '') return moneyCents(expense.total);
@@ -53,8 +57,18 @@ export function getExpenseTotalCents(expense) {
   return 0;
 }
 
+export function getExpenseTotalCents(expense) {
+  if (!expense || isVoidExpense(expense)) return 0;
+  return expenseMoneyCents(expense);
+}
+
 export function getExpenseTotal(expense) {
   return fromCents(getExpenseTotalCents(expense));
+}
+
+/** Amount stored on the row, even when the expense is void. */
+export function getExpenseFaceTotal(expense) {
+  return fromCents(expenseMoneyCents(expense));
 }
 
 export function getInvoiceTotalCents(invoice) {
@@ -130,12 +144,13 @@ export function reviewedFieldInUse(expenses) {
 
 export function deriveCash(invoices = [], expenses = []) {
   const liveInvoices = (invoices || []).filter((invoice) => !isVoidInvoice(invoice));
+  const liveExpenses = (expenses || []).filter((expense) => !isVoidExpense(expense));
   const invoiced = fromCents(addCents(...liveInvoices.map((invoice) => getInvoiceTotalCents(invoice)), 0));
   const paid = fromCents(addCents(
     ...liveInvoices.filter(isPaidInvoice).map((invoice) => getInvoiceTotalCents(invoice)),
     0,
   ));
-  const cost = fromCents(addCents(...(expenses || []).map((expense) => getExpenseTotalCents(expense)), 0));
+  const cost = fromCents(addCents(...liveExpenses.map((expense) => getExpenseTotalCents(expense)), 0));
   return {
     invoiced,
     paid,
@@ -166,7 +181,7 @@ export function deriveVerdict({ hasMargin, marginPct }) {
 
 export function deriveCategorySpend(expenses = []) {
   const grouped = new Map();
-  (expenses || []).forEach((expense) => {
+  (expenses || []).filter((expense) => !isVoidExpense(expense)).forEach((expense) => {
     const key = String(expense.category || '').trim() || 'uncategorized';
     const current = grouped.get(key) || { key, amount: 0, count: 0 };
     current.amount += getExpenseTotal(expense);
@@ -181,7 +196,7 @@ export function deriveCategoryTrend(expenses = [], now = new Date()) {
   const lastKey = previousMonthKey(now);
   const buckets = new Map();
 
-  (expenses || []).forEach((expense) => {
+  (expenses || []).filter((expense) => !isVoidExpense(expense)).forEach((expense) => {
     // Trend only uses the form/receipt date, never created-at timestamp.
     const dated = parseRecordDate(expense && expense.date);
     if (!dated) return;
@@ -232,6 +247,7 @@ export function deriveCategoryTrend(expenses = [], now = new Date()) {
 
 export function deriveAttentionItems({ expenses = [], invoices = [] } = {}, now = new Date()) {
   const items = [];
+  const liveExpenses = (expenses || []).filter((expense) => !isVoidExpense(expense));
   const missingDateInvoices = (invoices || []).filter((invoice) => !invoiceHasDate(invoice));
   if (missingDateInvoices.length > 0) {
     items.push({
@@ -263,7 +279,7 @@ export function deriveAttentionItems({ expenses = [], invoices = [] } = {}, now 
     });
   }
 
-  const noReceipt = (expenses || []).filter((expense) => !expenseHasReceipt(expense));
+  const noReceipt = liveExpenses.filter((expense) => !expenseHasReceipt(expense));
   if (noReceipt.length > 0) {
     const total = noReceipt.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
     items.push({
@@ -279,7 +295,7 @@ export function deriveAttentionItems({ expenses = [], invoices = [] } = {}, now 
     });
   }
 
-  const uncategorized = (expenses || []).filter(
+  const uncategorized = liveExpenses.filter(
     (expense) => !expense.category && !expense.tradeName
   );
   if (uncategorized.length > 0) {
@@ -296,8 +312,8 @@ export function deriveAttentionItems({ expenses = [], invoices = [] } = {}, now 
     });
   }
 
-  if (reviewedFieldInUse(expenses)) {
-    const unreviewed = (expenses || []).filter((expense) => expense.reviewed !== true);
+  if (reviewedFieldInUse(liveExpenses)) {
+    const unreviewed = liveExpenses.filter((expense) => expense.reviewed !== true);
     if (unreviewed.length > 0) {
       items.push({
         id: 'expenses-unreviewed',
@@ -313,7 +329,7 @@ export function deriveAttentionItems({ expenses = [], invoices = [] } = {}, now 
     }
   }
 
-  const trend = deriveCategoryTrend(expenses, now);
+  const trend = deriveCategoryTrend(liveExpenses, now);
   if (trend) {
     items.push({
       id: 'category-trend',
@@ -383,19 +399,25 @@ export function deriveJobMetrics({ expenses = [], invoices = [] } = {}, options 
   const period = options.period || 'month';
   const expensesCapped = Boolean(options.expensesCapped);
   const liveInvoices = (invoices || []).filter((invoice) => !isVoidInvoice(invoice));
-  const cash = deriveCash(liveInvoices, expenses);
+  const liveExpenses = (expenses || []).filter((expense) => !isVoidExpense(expense));
+  const cash = deriveCash(liveInvoices, liveExpenses);
+  if (expensesCapped) {
+    cash.cost = null;
+  }
   const capped = expensesCapped
     ? { hasMargin: false, margin: null, marginPct: null }
     : deriveMargin(cash.paid, cash.cost);
   const { hasMargin, margin, marginPct } = capped;
   const overdueCount = liveInvoices.filter((invoice) => isInvoiceOverdue(invoice, now)).length;
-  const periodExpenses = (expenses || []).filter((expense) => {
+  const periodExpenses = liveExpenses.filter((expense) => {
     const dated = expenseDate(expense);
     return dated && inCalendarPeriod(dated, period, now);
   });
-  const periodSpend = fromCents(addCents(...periodExpenses.map((expense) => getExpenseTotalCents(expense)), 0));
-  const attentionItems = deriveAttentionItems({ expenses, invoices: liveInvoices }, now);
-  const invalidCount = (expenses || []).filter((expense) => expense && expense._invalid).length
+  const periodSpend = expensesCapped
+    ? null
+    : fromCents(addCents(...periodExpenses.map((expense) => getExpenseTotalCents(expense)), 0));
+  const attentionItems = deriveAttentionItems({ expenses: liveExpenses, invoices: liveInvoices }, now);
+  const invalidCount = liveExpenses.filter((expense) => expense && expense._invalid).length
     + (invoices || []).filter((invoice) => invoice && invoice._invalid).length;
   if (invalidCount > 0) {
     attentionItems.unshift({
@@ -408,10 +430,10 @@ export function deriveJobMetrics({ expenses = [], invoices = [] } = {}, options 
     });
   }
   const verdict = expensesCapped ? VERDICT.GETTING_STARTED : deriveVerdict({ hasMargin, marginPct });
-  const categories = deriveCategorySpend(expenses);
+  const categories = expensesCapped ? [] : deriveCategorySpend(liveExpenses);
 
   return {
-    expenseCount: (expenses || []).length,
+    expenseCount: liveExpenses.length,
     invoiceCount: liveInvoices.length,
     cash,
     hasMargin,
@@ -420,11 +442,11 @@ export function deriveJobMetrics({ expenses = [], invoices = [] } = {}, options 
     verdict,
     overdueCount,
     periodSpend,
-    periodCount: periodExpenses.length,
+    periodCount: expensesCapped ? null : periodExpenses.length,
     attentionItems,
     attentionCount: attentionItems.length,
     categories,
-    recent: (expenses || []).slice(0, 4),
+    recent: liveExpenses.slice(0, 4),
     expensesCapped,
   };
 }

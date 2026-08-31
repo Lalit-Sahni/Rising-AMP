@@ -13,9 +13,12 @@ export function UIProvider({ children, jobId }) {
 
   const currentPage = pageFromPath(location.pathname);
 
+  // Always pass the job you mean. The provider's jobId is whatever is
+  // already open, so using it to open a *different* job would send you
+  // back to the previous one.
   const setCurrentPage = useCallback(
-    (page) => {
-      navigate(pathForPage(page, jobId));
+    (page, forJobId) => {
+      navigate(pathForPage(page, forJobId !== undefined ? forJobId : jobId));
     },
     [navigate, jobId],
   );

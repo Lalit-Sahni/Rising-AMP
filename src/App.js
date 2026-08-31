@@ -210,6 +210,7 @@ function AppShell() {
     setProjectName(project.name);
     setJobInvitedEmails(project.invitedEmails || []);
     setProjectStatus(status);
+    navigate(`/jobs/${encodeURIComponent(project.projectId)}`);
   };
 
   const handleJobAccessLost = () => {

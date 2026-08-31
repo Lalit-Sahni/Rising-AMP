@@ -32,7 +32,7 @@ The **real** scale fix is denormalised summary fields on the job document (secti
 
 ### Is it right to scale into a product with many companies and thousands of jobs?
 
-**Not as-is.** The tree can grow, but several habits will hurt: a silent 1,000-expense cap (Phase 8 now **refuses** a margin when the cap is hit), leftover PIN copies, and Storage rules that may still be the old open rules on production. Jobs-list counts and the profile leak were fixed in Phase 8. None of the leftovers is fatal at two jobs.
+**Not as-is.** The tree can grow, but several habits will hurt: a 1,000-expense page (Phase 9 Part A **hides** cost and margin when the cap is hit), leftover PIN copies, and Storage rules that may still be the old open rules on production. Jobs-list counts and the profile leak were fixed in Phase 8. None of the leftovers is fatal at two jobs.
 
 ---
 
@@ -126,9 +126,9 @@ Opening a job (`fetchExpensesFromFirestore` and friends) repeats the same reads.
 
 **Cost today:** a few hundred reads per Jobs visit. Firestore’s bill is still tiny (reads are $0.06 per 100,000). **What you feel is latency and main-thread work**, not the invoice from Google.
 
-### 3.2 Silent 1,000-expense cap
+### 3.2 Expense fetch cap
 
-`fetchExpensesFromFirestore` uses `limit(1000)` and does not tell you if more exist. Centenary is ~124. The day a job passes 1,000, Jobs home **undercounts cost and margin** and History looks complete when it is not. Invoices have no cap (fine for now).
+`fetchExpensesFromFirestore` still pages at `limit(1000)`, but it now compares that page to `getCountFromServer`. A job with exactly 1,000 expenses is complete. A job past 1,000 is **capped**: Overview hides cost and margin instead of totalling a subset and presenting it as fact. Rollup documents (the optimisation that would let a bigger job total correctly) are still deferred. Centenary is ~124. Invoices have no cap.
 
 ### 3.3 Login no longer scans every profile
 
@@ -166,7 +166,7 @@ Rotate the OpenAI key after the function is live. Do not paste keys into chat.
 
 ### 3.8 Storage on production may still be the old rules
 
-Repo `storage.rules` require sign-in and job membership (or a known legacy PIN folder). The 27 Aug production deploy was **hosting + Firestore rules only**. Storage was not named. **Live receipt files may still be world-open** until `firebase deploy --project production --only storage` with an explicit yes.
+Repo `storage.rules` require sign-in and job membership (or a known legacy PIN folder). Org is taken from upload `customMetadata.orgId`, with a fallback to Opal for receipts uploaded before Phase 9. The 27 Aug production deploy was **hosting + Firestore rules only**. Storage was not named. **Live receipt files may still be world-open** until `firebase deploy --project production --only storage` with an explicit yes.
 
 Staging now has a Storage bucket (`rising-amp-staging.firebasestorage.app`, created 28 Aug 2026) so localhost can upload receipts. CORS allows `http://localhost:3000`. Staging Storage rules were deployed the same day. Production Storage rules were not.
 
@@ -176,7 +176,7 @@ Rules: if your email is on `invitedEmails`, you can read and write every subcoll
 
 ### 3.10 One hard-coded organisation
 
-`FAMILY_ORG_ID = 'opal-ss-constructions'` is in the client and in functions. A second company cannot exist without a code change. Org `allow create: if false`. Correct for this family app. A scaled product needs `organizations/{orgId}` chosen at login, not a constant.
+`FAMILY_ORG_ID = 'opal-ss-constructions'` is still the client fallback and the Cloud Function default. Storage rules no longer hardcode that id for membership: they read `customMetadata.orgId` on the object, and only fall back to Opal for receipts uploaded before Phase 9. Org `allow create: if false`. Correct for this family app.
 
 ### 3.11 No server-side aggregation
 
@@ -200,7 +200,7 @@ Firestore does not have SQL `SUM()`. If you want a total on the chooser, you eit
 
 **10× (20 jobs, ~1,300 expenses):** Jobs home might do **thousands of reads** and freeze a phone. Bill still modest. UX is not.
 
-**100× (200 jobs, tens of thousands of expenses):** this pattern is unusable. You will also hit the 1,000 cap and silently lie about margin.
+**100× (200 jobs, tens of thousands of expenses):** this pattern is unusable. You will also hit the 1,000 cap; the app now hides margin rather than silently lying.
 
 ---
 
@@ -242,7 +242,7 @@ Do these in order. Earlier items are worth it even if you never “scale.” Lat
 ### Now (no schema write, or already in the app)
 
 1. **Jobs home: names first, figures second.** Done in this session. Confirms the slowness was “wait for the ledger,” not “Firestore is broken.”
-2. **Put OpenAI behind `readReceiptImage`.** Browser cannot call `api.openai.com`. Deploy **by name only** after the owner sets `OPENAI_API_KEY` at a masked prompt. Staging first (localhost). Never `firebase deploy --only functions`.
+2. **Put OpenAI behind `readReceiptImage`.** Browser cannot call `api.openai.com`. Deploy **by name only** after the owner sets `OPENAI_API_KEY` at a masked prompt. Staging first (localhost). Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`.
 3. **Deploy Storage rules** when the owner names `--only storage`, after a yes. Highest remaining hole if production is still on the old open rules.
 4. **Rotate the OpenAI key** once the function works. The old `REACT_APP_OPENAI_API_KEY` lived in the client.
 
@@ -250,8 +250,8 @@ Do these in order. Earlier items are worth it even if you never “scale.” Lat
 
 5. **Show the job’s `name` on invoice UI**, keep typed `projectName` as PDF history.
 6. **Stop scanning all profiles.** Client is on the branch. Production leak still open. Backfill `publicProfiles` with `scripts/backfill-public-profiles.js` before rules. Hosting before rules.
-7. **Paginate expenses** (page of 100–200) and **surface the 1,000 cap** until pagination exists (“showing first 1,000”).
-8. **Archive instead of hard-delete** on expense/invoice delete buttons, or remove those buttons.
+7. **Paginate expenses** (page of 100–200). The 1,000 cap is now detected and cost/margin are hidden; pagination is still the real fix.
+8. **Void, then Recently deleted.** Done for expenses and invoices in Phase 9 Part A. Clients / HIA / progress payments void with no purge.
 9. **Move Google Vision** to a function the same way as OpenAI, then remove `REACT_APP_GOOGLE_CLOUD_VISION_API_KEY`.
 
 ### When you add a third job, or Jobs home feels slow again
@@ -326,9 +326,9 @@ Firestore is a good database for this product **if** list screens read small doc
 
 ## 10. Rules for later agents
 
-- Do not hard-delete user records.
+- Do not hard-delete live user records. Void first (Recently deleted). Permanent delete is only allowed on already-voided expenses and invoices.
 - Do not run production schema or data writes without a backup, a staging run, and an explicit yes.
-- Do not `firebase deploy --only functions` (would delete leftover `generateWeeklyReport` on production). Deploy functions **by name**.
+- Do not `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`. Deploy **by name**.
 - Do not accept a pasted API key.
 - Do not “fix” localhost receipts by pointing `.env.local` at production.
 - If chat and this file disagree, this file plus `CLAUDE.md` / `PROGRESS.md` win.

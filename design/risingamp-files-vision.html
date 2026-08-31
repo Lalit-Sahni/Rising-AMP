@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RisingAMP — Job Files vision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{
+  --steel-900:#17181C; --steel-800:#1F2127; --ink:#1C1E23;
+  --slate-600:#565B64; --slate-500:#6B7079; --slate-400:#8A9099;
+  --hairline:#E7E9EC; --canvas:#F5F6F8; --surface:#FFFFFF;
+  --accent:#E85D1A; --accent-600:#C64E12; --accent-tint:#FCEEE4;
+  --pos:#2E7D57; --pos-tint:#E7F1EC; --warn:#B7862B; --warn-tint:#F7F0DF; --neg:#C0392B;
+  --t-contract:#5E82A6; --t-variation:#C08A3E; --t-plan:#B5654A;
+  --t-permit:#4E8C82; --t-cert:#7E9B63; --t-photo:#8A9099;
+  --radius:12px; --radius-sm:8px;
+  --shadow:0 1px 2px rgba(23,24,28,.04), 0 1px 3px rgba(23,24,28,.03);
+  --ui:'Manrope',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--ui);background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5}
+.tabular{font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--slate-400);margin:0 0 10px}
+h1,h2,h3,h4{color:var(--steel-900);margin:0;letter-spacing:-.02em}
+h1{font-size:42px;font-weight:800;line-height:1.1}
+h2{font-size:28px;font-weight:800}
+h3{font-size:18px;font-weight:700}
+p{margin:0 0 14px;color:var(--slate-600);font-size:15px}
+.lede{font-size:18px;color:var(--slate-500);max-width:64ch}
+section{padding:64px 0;border-top:1px solid var(--hairline)}
+section.alt{background:var(--surface)}
+.card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow)}
+.pad{padding:20px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:860px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 8px}
+.mono-sm{font-size:12px;color:var(--slate-400)}
+
+/* header */
+header{background:var(--steel-900);color:#fff;padding:72px 0 64px}
+header h1{color:#fff}
+header p{color:#C9CDD4}
+.mark{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;letter-spacing:.01em}
+.mark span{color:var(--accent)}
+.chip{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:rgba(232,93,26,.14);padding:5px 10px;border-radius:999px}
+
+/* app mock */
+.app{border:1px solid var(--hairline);border-radius:var(--radius);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+.app-top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--hairline);background:var(--surface)}
+.crumb{font-size:13px;color:var(--slate-400)}
+.crumb b{color:var(--steel-900);font-weight:700}
+.app-body{display:grid;grid-template-columns:186px 1fr}
+@media(max-width:860px){.app-body{grid-template-columns:1fr}.side{display:none}}
+.side{background:var(--steel-900);padding:16px 12px;min-height:420px}
+.side .lbl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#6E747E;padding:0 8px;margin-bottom:10px}
+.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);color:#C9CDD4;font-size:13.5px;font-weight:500;margin-bottom:2px}
+.nav.on{background:rgba(255,255,255,.07);color:#fff;font-weight:700}
+.nav.on .bar{width:3px;height:14px;background:var(--accent);border-radius:2px}
+.nav .bar{width:3px;height:14px;background:transparent}
+.main{padding:20px}
+
+.search{display:flex;align-items:center;gap:9px;border:1px solid var(--hairline);border-radius:var(--radius-sm);padding:10px 12px;color:var(--slate-400);font-size:14px;background:var(--surface)}
+.filters{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 16px}
+.f{display:flex;align-items:center;gap:7px;border:1px solid var(--hairline);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;color:var(--slate-600);background:var(--surface)}
+.f.on{border-color:var(--steel-900);color:var(--steel-900)}
+.f i{font-style:normal;color:var(--slate-400);font-weight:600}
+
+.row{display:flex;align-items:center;gap:14px;padding:12px;border:1px solid var(--hairline);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--surface)}
+.thumb{width:44px;height:44px;border-radius:6px;flex:0 0 44px;border:1px solid var(--hairline);display:grid;place-items:center;font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--slate-400);background:var(--canvas)}
+.row .nm{font-size:14px;font-weight:700;color:var(--steel-900);margin-bottom:3px}
+.row .meta{font-size:12px;color:var(--slate-400);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+.sz{font-size:12px;color:var(--slate-400);white-space:nowrap}
+
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:0;border-radius:var(--radius-sm);padding:10px 16px;font-family:var(--ui);font-size:13.5px;font-weight:700;cursor:default}
+.btn.ghost{background:var(--surface);color:var(--steel-900);border:1px solid var(--hairline)}
+
+.need{display:flex;gap:12px;padding:13px;border:1px solid var(--hairline);border-radius:var(--radius-sm);margin-bottom:8px;background:var(--surface)}
+.need .t{font-size:13.5px;font-weight:700;color:var(--steel-900)}
+.need .s{font-size:12.5px;color:var(--slate-500)}
+
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--slate-400);padding:0 0 10px;border-bottom:1px solid var(--hairline)}
+td{padding:11px 0;border-bottom:1px solid var(--hairline);color:var(--slate-600)}
+td.n{text-align:right;font-variant-numeric:tabular-nums;color:var(--steel-900);font-weight:600}
+tr:last-child td{border-bottom:0}
+
+.kpi{border:1px solid var(--hairline);border-radius:var(--radius);padding:18px;background:var(--surface);position:relative;overflow:hidden}
+.kpi.lead:before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.kpi .k{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--slate-400);margin-bottom:8px}
+.kpi .v{font-size:30px;font-weight:800;color:var(--steel-900);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .h{font-size:12.5px;color:var(--slate-500);margin-top:6px}
+
+.no{border-left:2px solid var(--hairline);padding-left:16px;margin-bottom:16px}
+.no b{color:var(--steel-900)}
+.phone{max-width:300px;border:1px solid var(--hairline);border-radius:20px;padding:10px;background:var(--surface);box-shadow:var(--shadow)}
+.phone .sheet{border:1px solid var(--hairline);border-radius:var(--radius-sm);padding:14px}
+.drop{border:1.5px dashed #D6D9DD;border-radius:var(--radius-sm);padding:22px 14px;text-align:center;color:var(--slate-400);font-size:13px}
+footer{background:var(--steel-900);color:#8A9099;padding:36px 0;font-size:13px}
+.callout{border:1px solid var(--hairline);border-left:2px solid var(--accent);border-radius:var(--radius-sm);padding:16px 18px;background:var(--accent-tint)}
+.callout p{color:#7A4620;margin:0}
+.callout b{color:#5E340F}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="mark" style="margin-bottom:28px">Rising<span>AMP</span></div>
+    <div class="chip" style="margin-bottom:18px">Phase 9 vision</div>
+    <h1>Job Files</h1>
+    <p class="lede" style="margin-top:16px">Every document for a job in one place, findable in ten seconds, and a handover pack at the end. A filing cabinet with labelled drawers, not a hard drive.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">The problem</p>
+    <h2 style="max-width:22ch;margin-bottom:18px">The app answers every question about money and none about paper</h2>
+    <p class="lede" style="margin-bottom:28px">RisingAMP can tell you a job is making 11.9% and that three invoices are missing dates. It cannot tell you where the engineer's certificate for the slab is, or whether the variation for that extra window was ever signed.</p>
+    <div class="grid g3">
+      <div class="card pad"><h3 style="margin-bottom:8px;font-size:15px">"Where's the slab cert?"</h3><p style="margin:0;font-size:14px">Somewhere in an email thread from March, or on someone's phone.</p></div>
+      <div class="card pad"><h3 style="margin-bottom:8px;font-size:15px">"Did they sign the variation?"</h3><p style="margin:0;font-size:14px">The invoice went out. Whether the paperwork backs it up is a guess.</p></div>
+      <div class="card pad"><h3 style="margin-bottom:8px;font-size:15px">"Client wants the handover pack."</h3><p style="margin:0;font-size:14px">A day of hunting through inboxes at the exact moment you are busiest.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">The screen</p>
+    <h2 style="margin-bottom:10px">Search first, filter second, folders never</h2>
+    <p class="lede" style="margin-bottom:28px">Files belong to a job and carry a type. There is no folder tree, so nothing can be filed in the wrong place.</p>
+
+    <div class="app">
+      <div class="app-top">
+        <div class="crumb">Jobs / <b>72 Centenary Dr</b> / Files</div>
+      </div>
+      <div class="app-body">
+        <div class="side">
+          <div class="lbl">72 Centenary Dr</div>
+          <div class="nav"><span class="bar"></span>Overview</div>
+          <div class="nav"><span class="bar"></span>Add expense</div>
+          <div class="nav"><span class="bar"></span>Invoices</div>
+          <div class="nav on"><span class="bar"></span>Files</div>
+          <div class="nav"><span class="bar"></span>History</div>
+        </div>
+        <div class="main">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:4px">
+            <div class="search grow">Search files, notes and types…</div>
+            <span class="btn">Add files</span>
+          </div>
+
+          <div class="filters">
+            <span class="f on">All <i>34</i></span>
+            <span class="f"><span class="dot" style="background:var(--t-contract)"></span>Contract <i>2</i></span>
+            <span class="f"><span class="dot" style="background:var(--t-variation)"></span>Variation <i>5</i></span>
+            <span class="f"><span class="dot" style="background:var(--t-plan)"></span>Plan <i>4</i></span>
+            <span class="f"><span class="dot" style="background:var(--t-permit)"></span>Permit <i>3</i></span>
+            <span class="f"><span class="dot" style="background:var(--t-cert)"></span>Certificate <i>6</i></span>
+            <span class="f"><span class="dot" style="background:var(--t-photo)"></span>Photo <i>14</i></span>
+          </div>
+
+          <div class="row">
+            <div class="thumb" style="color:var(--t-cert)">PDF</div>
+            <div class="grow">
+              <div class="nm">Slab engineer certificate</div>
+              <div class="meta"><span class="dot" style="background:var(--t-cert)"></span>Certificate <span>·</span> 14 Mar 2026 <span>·</span> added by Lalit</div>
+            </div>
+            <div class="sz tabular">412 KB</div>
+          </div>
+
+          <div class="row">
+            <div class="thumb" style="color:var(--t-variation)">PDF</div>
+            <div class="grow">
+              <div class="nm">Variation 03 — additional window, west elevation</div>
+              <div class="meta"><span class="dot" style="background:var(--t-variation)"></span>Variation <span>·</span> 2 Apr 2026 <span>·</span> linked to INV-2026-0004</div>
+            </div>
+            <div class="sz tabular">288 KB</div>
+          </div>
+
+          <div class="row">
+            <div class="thumb" style="color:var(--t-plan)">DWG</div>
+            <div class="grow">
+              <div class="nm">Structural set, revision C</div>
+              <div class="meta"><span class="dot" style="background:var(--t-plan)"></span>Plan <span>·</span> 9 Feb 2026 <span>·</span> added by Prabhsharan</div>
+            </div>
+            <div class="sz tabular">8.2 MB</div>
+          </div>
+
+          <div class="row">
+            <div class="thumb" style="background:linear-gradient(135deg,#DDE2E6,#C9CFD5);color:#fff">IMG</div>
+            <div class="grow">
+              <div class="nm">Pre-pour reinforcement, grid B</div>
+              <div class="meta"><span class="dot" style="background:var(--t-photo)"></span>Photo <span>·</span> 12 Mar 2026 <span>·</span> added on site</div>
+            </div>
+            <div class="sz tabular">386 KB</div>
+          </div>
+
+          <div class="row" style="border-style:dashed">
+            <div class="thumb" style="background:linear-gradient(135deg,#DDE2E6,#C9CFD5);color:#fff">IMG</div>
+            <div class="grow">
+              <div class="nm">Bunnings receipt, 12 Mar</div>
+              <div class="meta"><span class="dot" style="background:var(--slate-400)"></span>Receipt <span>·</span> from an expense <span>·</span> read only</div>
+            </div>
+            <div class="sz tabular">204 KB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:22px">
+      <p><b>The dashed row matters.</b> Receipts already live in Storage attached to expenses. Files shows them where they belong, read only, linking back to the expense. It does not move them or make a second copy. One place to see a job's paper, not two.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">On site</p>
+    <h2 style="margin-bottom:10px">Photograph the permit, pick a type, done</h2>
+    <p class="lede" style="margin-bottom:28px">The primary case is a phone, one hand, on a site. Camera in one tap, several files at once, real progress, and retry on the one that failed without losing the rest.</p>
+    <div class="grid g2" style="align-items:start">
+      <div class="phone">
+        <div class="sheet">
+          <div style="font-size:15px;font-weight:800;color:var(--steel-900);margin-bottom:4px">Add files</div>
+          <div style="font-size:12.5px;color:var(--slate-400);margin-bottom:14px">72 Centenary Dr</div>
+          <div class="drop" style="margin-bottom:12px">Take a photo, or choose files</div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--slate-400);margin-bottom:8px">What is it?</div>
+          <div class="filters" style="margin:0 0 14px">
+            <span class="f"><span class="dot" style="background:var(--t-contract)"></span>Contract</span>
+            <span class="f on"><span class="dot" style="background:var(--t-permit)"></span>Permit</span>
+            <span class="f"><span class="dot" style="background:var(--t-cert)"></span>Certificate</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <div class="thumb" style="width:32px;height:32px;flex:0 0 32px;background:linear-gradient(135deg,#DDE2E6,#C9CFD5);color:#fff;font-size:9px">IMG</div>
+            <div class="grow"><div style="height:4px;background:var(--hairline);border-radius:2px;overflow:hidden"><div style="width:72%;height:100%;background:var(--accent)"></div></div></div>
+            <span class="mono-sm tabular">72%</span>
+          </div>
+          <span class="btn" style="width:100%;justify-content:center">Add to job</span>
+        </div>
+      </div>
+      <div>
+        <div class="no"><b>Compressed on the way in.</b> The receipt uploader already shrinks a photo to 1920px at 0.8 quality. A 9 MB phone photo becomes about 400 KB before it ever leaves the device.</div>
+        <div class="no"><b>A thumbnail is generated and stored beside it.</b> Every list and grid renders the 320px thumbnail, never the original. This is the single decision that keeps the bill small.</div>
+        <div class="no"><b>The document's own date, not the upload date.</b> A certificate issued in March and uploaded in August is a March document. Sorting by upload date buries it.</div>
+        <div class="no"><b>25 MB a file, and no video.</b> One two-minute site clip costs more to store and serve than a thousand compressed photos.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">The integration</p>
+    <h2 style="margin-bottom:10px">Files feed the panel that already exists</h2>
+    <p class="lede" style="margin-bottom:24px">"What needs you today" reads honest signals from stored data and says nothing when it cannot. Documents give it four more, in exactly that spirit.</p>
+    <div class="card pad" style="max-width:640px">
+      <p class="eyebrow" style="margin-bottom:14px">What needs you today</p>
+      <div class="need"><span class="dot" style="background:var(--warn);margin-top:6px"></span><div><div class="t">No signed contract on this job</div><div class="s">Everything else is filed. This one is not.</div></div></div>
+      <div class="need"><span class="dot" style="background:var(--warn);margin-top:6px"></span><div><div class="t">INV-2026-0004 has no linked variation</div><div class="s">$12,400 invoiced with no paperwork attached.</div></div></div>
+      <div class="need"><span class="dot" style="background:var(--slate-400);margin-top:6px"></span><div><div class="t">2 files still typed "Other"</div><div class="s">Added last week. Give them a type so they can be found.</div></div></div>
+    </div>
+    <p style="margin-top:18px;max-width:64ch">The existing rule holds: if the data to compute something honestly does not exist, the panel says nothing. A check that fires on every job on day one gets ignored, and takes the real warnings down with it.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">The payoff</p>
+    <h2 style="margin-bottom:10px">The handover pack</h2>
+    <p class="lede" style="margin-bottom:28px">At practical completion the client is owed a bundle of certificates, warranties and approved plans. Today that is a day of work. If the documents already live on the job, it is one button.</p>
+    <div class="grid g2" style="align-items:start">
+      <div class="card pad">
+        <p class="eyebrow" style="margin-bottom:12px">Handover pack — 72 Centenary Dr</p>
+        <table>
+          <tr><td>Cover page and contents</td><td class="n">auto</td></tr>
+          <tr><td>Certificates</td><td class="n tabular">6</td></tr>
+          <tr><td>Approved plans</td><td class="n tabular">4</td></tr>
+          <tr><td>Permits</td><td class="n tabular">3</td></tr>
+          <tr><td>Warranties</td><td class="n tabular">2</td></tr>
+          <tr><td style="color:var(--warn)">Termite treatment certificate</td><td class="n" style="color:var(--warn)">missing</td></tr>
+        </table>
+        <div style="display:flex;gap:8px;margin-top:16px"><span class="btn">Generate pack</span><span class="btn ghost">Edit selection</span></div>
+      </div>
+      <div>
+        <div class="no"><b>It says what is missing.</b> A pack that quietly omits a document it should contain is worse than one that lists the gap on the contents page. Same principle as showing a dash instead of a fake $0.</div>
+        <div class="no"><b>One PDF, cover page, contents, then every document.</b> Images become full-page plates, PDFs are appended whole.</div>
+        <div class="no"><b>Built off the main bundle.</b> The PDF library already loads on demand. If a large pack proves too heavy in the browser, it moves to a Cloud Function deployed by name.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">The cost</p>
+    <h2 style="margin-bottom:10px">Files are cheap. Serving them carelessly is not.</h2>
+    <p class="lede" style="margin-bottom:28px">The worry was that storing job files gets expensive. It does not, and knowing exactly why is what dictates the design.</p>
+    <div class="grid g4" style="margin-bottom:26px">
+      <div class="kpi lead"><div class="k">Per job</div><div class="v">270 MB</div><div class="h">Compressed, realistic</div></div>
+      <div class="kpi"><div class="k">10 jobs stored</div><div class="v">$0.13</div><div class="h">per month</div></div>
+      <div class="kpi"><div class="k">100 jobs stored</div><div class="v">$1.30</div><div class="h">per month</div></div>
+      <div class="kpi"><div class="k">Revenue per customer</div><div class="v">$50+</div><div class="h">per month</div></div>
+    </div>
+    <div class="card pad" style="margin-bottom:22px">
+      <table>
+        <tr><th>What</th><th>Count</th><th style="text-align:right">Each</th><th style="text-align:right">Total</th></tr>
+        <tr><td>Site photos, compressed to 1920px</td><td class="tabular">300</td><td class="n tabular">400 KB</td><td class="n tabular">120 MB</td></tr>
+        <tr><td>PDFs: contracts, variations, permits, certs</td><td class="tabular">60</td><td class="n tabular">800 KB</td><td class="n tabular">48 MB</td></tr>
+        <tr><td>Plans and drawings</td><td class="tabular">10</td><td class="n tabular">10 MB</td><td class="n tabular">100 MB</td></tr>
+        <tr><td><b style="color:var(--steel-900)">One job</b></td><td></td><td></td><td class="n"><b>268 MB</b></td></tr>
+      </table>
+    </div>
+    <div class="grid g2">
+      <div class="card pad"><h3 style="margin-bottom:8px;font-size:15px">Where it would get expensive</h3><p style="margin:0;font-size:14px">A gallery rendering 100 full-size images costs 40 MB a page view. The same gallery on 40 KB thumbnails costs 4 MB. Egress is the bill, not storage.</p></div>
+      <div class="card pad"><h3 style="margin-bottom:8px;font-size:15px">So: three rules</h3><p style="margin:0;font-size:14px">Compress every image on upload. Serve a thumbnail in every list. No video in this phase. Hold those and the whole thing stays under a couple of dollars a month.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">The one decision to hold</p>
+    <h2 style="max-width:20ch;margin-bottom:18px">No folders. Not now, not later.</h2>
+    <p class="lede" style="margin-bottom:22px">The instinct is a file explorer with a folder tree. It is the wrong shape, and this is the place to overrule the instinct.</p>
+    <div class="grid g2">
+      <div class="card pad">
+        <h3 style="margin-bottom:10px;font-size:15px">Why folders lose</h3>
+        <p style="margin:0;font-size:14px">Two people file the same certificate in two places. Someone makes "Docs" next to "Documents". Six months on, nobody can find it. That is the same disease as <b style="color:var(--steel-900)">72 Centenary Drive / Road / Rd</b>, wearing a different costume, and Phase 5 spent a whole phase curing it.</p>
+      </div>
+      <div class="card pad">
+        <h3 style="margin-bottom:10px;font-size:15px">What replaces them</h3>
+        <p style="margin:0;font-size:14px">A job, a type from a fixed list, a name, the document's date, and an optional link to the invoice or expense it belongs to. Finding a file is search plus a type filter, and neither can be filed wrong.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">Deliberately not building</p>
+    <h2 style="margin-bottom:22px">Named so it does not arrive by accident</h2>
+    <div class="grid g3">
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Video</h3><p style="margin:0;font-size:13.5px">Outweighs a thousand photos. If it is wanted later it comes with its own cap, deliberately.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Public links and client portals</h3><p style="margin:0;font-size:13.5px">A real feature with a real security surface. Its own phase.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">AI reading documents</h3><p style="margin:0;font-size:13.5px">Receipt OCR is narrow with a safe failure mode. Reading contracts for clauses is neither.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">E-signature and versioning</h3><p style="margin:0;font-size:13.5px">Replacing a file is enough for v1.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Editing documents in the app</h3><p style="margin:0;font-size:13.5px">RisingAMP holds documents. It is not a word processor.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Anything unfiled</h3><p style="margin:0;font-size:13.5px">Every file belongs to a job. There is no loose drawer.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="mark" style="margin-bottom:10px;font-size:17px">Rising<span>AMP</span></div>
+    Phase 9 vision · Job Files · brief in <b style="color:#C9CDD4">PHASE9.md</b>
+  </div>
+</footer>
+
+</body>
+</html>

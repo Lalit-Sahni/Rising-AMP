@@ -1,4 +1,3 @@
-import ExcelJS from 'exceljs';
 import { CATEGORY_COLORS, CELL_STYLES, hexToArgb } from './excelStyles';
 import { 
   formatDateForExcel, 
@@ -623,6 +622,7 @@ const createMasterSheet = (workbook, allExpenses) => {
 // Main export function
 export const exportExpensesToExcel = async (expenses, filename) => {
   try {
+    const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
 
     workbook.creator = 'RisingAMP';
@@ -630,14 +630,15 @@ export const exportExpensesToExcel = async (expenses, filename) => {
     workbook.created = new Date();
     workbook.modified = new Date();
 
-    const summary = generateSummary(expenses);
+    const live = (expenses || []).filter((exp) => String(exp.status || '').toLowerCase() !== 'void');
+    const summary = generateSummary(live);
 
-    const labourExpenses = expenses.filter(exp => exp.category === 'labour');
-    const tradeExpenses = expenses.filter(exp => exp.category === 'trade');
-    const equipmentExpenses = expenses.filter(exp => exp.category === 'equipment');
-    const serviceExpenses = expenses.filter(exp => exp.category === 'service');
-    const purchaseExpenses = expenses.filter(exp => exp.category === 'purchase');
-    const installationExpenses = expenses.filter(exp => exp.category === 'installation');
+    const labourExpenses = live.filter(exp => exp.category === 'labour');
+    const tradeExpenses = live.filter(exp => exp.category === 'trade');
+    const equipmentExpenses = live.filter(exp => exp.category === 'equipment');
+    const serviceExpenses = live.filter(exp => exp.category === 'service');
+    const purchaseExpenses = live.filter(exp => exp.category === 'purchase');
+    const installationExpenses = live.filter(exp => exp.category === 'installation');
 
     createExecutiveSummary(workbook, summary);
     createLabourSheet(workbook, labourExpenses);
@@ -646,7 +647,7 @@ export const exportExpensesToExcel = async (expenses, filename) => {
     createServiceSheet(workbook, serviceExpenses);
     createPurchaseSheet(workbook, purchaseExpenses);
     createInstallationSheet(workbook, installationExpenses);
-    createMasterSheet(workbook, expenses);
+    createMasterSheet(workbook, live);
 
     const buffer = await workbook.xlsx.writeBuffer();
 

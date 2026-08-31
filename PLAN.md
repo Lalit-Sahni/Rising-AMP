@@ -14,7 +14,7 @@ Restore tag: `pre-phase1-2026-08-22`
 
 ## What shipped
 
-A. Site Log and Weekly Report removed from the UI. Old rows remain in production Firestore; staging site-log rows were deleted. Live Cloud Function `generateWeeklyReport` was **not** redeployed (still present, unused).
+A. Site Log and Weekly Report removed from the UI. Old rows remain in production Firestore; staging site-log rows were deleted. The leftover Cloud Function `generateWeeklyReport` was later deleted from production by name (29 Aug 2026); it was unused.
 
 B. Shared PIN replaced with Google / Gmail login. Uninvited accounts see a calm screen. No new empty folder on a typo.
 

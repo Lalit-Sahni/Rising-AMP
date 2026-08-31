@@ -116,7 +116,7 @@ const ClientManager = ({ isOpen, onClose, onClientSelect, embedded = false }) =>
   };
 
   const handleDelete = async (clientId) => {
-    if (window.confirm('Are you sure you want to delete this client?')) {
+    if (window.confirm('Remove this client from the job? The record stays; they will no longer show in the list.')) {
       await removeClient(clientId);
     }
   };
@@ -419,7 +419,7 @@ const ClientManager = ({ isOpen, onClose, onClientSelect, embedded = false }) =>
                     type="button"
                     onClick={() => handleDelete(client.id)}
                     className="p-2 rounded-ot-sm border border-hairline text-neg hover:bg-canvas transition-colors"
-                    title="Delete client"
+                    title="Remove client"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

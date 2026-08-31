@@ -13,6 +13,10 @@ const HIAContractPage = () => {
     showToast
   } = useApp();
 
+  const liveHiaContracts = (hiaContracts || []).filter(
+    (contract) => String(contract.status || '').toLowerCase() !== 'void'
+  );
+
   const [currentStep, setCurrentStep] = useState(1);
   const [uploadedImage, setUploadedImage] = useState(null);
   const [extractedStages, setExtractedStages] = useState([]);
@@ -547,11 +551,11 @@ const HIAContractPage = () => {
         </div>
 
         {/* Saved Contracts Section */}
-        {hiaContracts.length > 0 && (
+        {liveHiaContracts.length > 0 && (
           <div className="bg-surface rounded-ot p-6 border border-hairline shadow-whisper">
             <h2 className="text-lg font-semibold text-ink mb-6">Saved HIA contracts</h2>
             <div className="space-y-4">
-              {hiaContracts.map((contract, index) => (
+              {liveHiaContracts.map((contract, index) => (
                 <div key={index} className="bg-canvas rounded-lg p-4 border border-hairline">
                   <div className="flex justify-between items-start">
                     <div>

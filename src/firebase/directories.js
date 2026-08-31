@@ -1,7 +1,6 @@
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   getDocs,
   serverTimestamp,
@@ -54,9 +53,7 @@ async function upsertDirectory(projectId, collectionName, data, getName, extra =
 
   try {
     const rows = await listAll(projectId, collectionName);
-    const existing = rows
-      .filter(isLiveDirectoryRow)
-      .find((row) => namesMatch(getName(row), displayName));
+    const existing = rows.find((row) => namesMatch(getName(row), displayName));
     const payload = definedFields({
       ...data,
       ...extra,
@@ -238,13 +235,21 @@ export async function updateClient(jobId, clientId, clientData) {
   }
 }
 
-export async function deleteClient(jobId, clientId) {
+async function voidDirectoryRow(jobId, name, id) {
   try {
-    await deleteDoc(rowRef(jobId, DIRECTORY.CLIENTS, clientId));
+    await updateDoc(rowRef(jobId, name, id), {
+      status: 'void',
+      voidedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
   }
+}
+
+export async function deleteClient(jobId, clientId) {
+  return voidDirectoryRow(jobId, DIRECTORY.CLIENTS, clientId);
 }
 
 export async function updateLabour(jobId, labourId, labourData) {
@@ -260,12 +265,7 @@ export async function updateLabour(jobId, labourId, labourData) {
 }
 
 export async function deleteLabour(jobId, labourId) {
-  try {
-    await deleteDoc(rowRef(jobId, DIRECTORY.LABOUR, labourId));
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
+  return voidDirectoryRow(jobId, DIRECTORY.LABOUR, labourId);
 }
 
 export async function updateTrade(jobId, tradeId, tradeData) {
@@ -281,10 +281,5 @@ export async function updateTrade(jobId, tradeId, tradeData) {
 }
 
 export async function deleteTrade(jobId, tradeId) {
-  try {
-    await deleteDoc(rowRef(jobId, DIRECTORY.TRADES, tradeId));
-    return { success: true };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
+  return voidDirectoryRow(jobId, DIRECTORY.TRADES, tradeId);
 }

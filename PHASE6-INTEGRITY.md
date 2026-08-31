@@ -14,7 +14,7 @@ This is still the same family app and the same irreplaceable data. Phase 5 made 
 - Staging first. Production only behind an explicit owner yes.
 - Soft deletes only. Never hard-delete user records.
 - Propose before executing.
-- Never `firebase deploy --only functions` to production (would delete leftover `generateWeeklyReport`). Deploy functions **by name only**.
+- Never `firebase deploy --only functions` to production. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`. Deploy functions **by name**.
 - Never accept a raw API key or secret pasted into chat.
 - Hosting: `firebase deploy --project production --only hosting` when the owner names hosting.
 
@@ -50,7 +50,7 @@ Work from `DATABASE.md` section 7 (“Soon” and “When you add a third job”
 - Billing, Stripe, a second organisation.
 - Deleting leftover PIN trees or site logs.
 - Pointing localhost at production.
-- Removing the Gmail invite fallback, `www` SSL, leftover `generateWeeklyReport`.
+- Removing the Gmail invite fallback, `www` SSL.
 - New npm packages.
 
 ## Continuity

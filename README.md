@@ -35,8 +35,8 @@ npm run build        # uses .env.production.local; do not point .env.local at pr
 - Commit `.env*`, `.phase1-local.json`, or `backups/`
 - Point localhost at production to make receipt photos appear
 - `firebase deploy` without `--project` and an explicit `--only`, and only when the owner names it
-- `firebase deploy --only functions` (would delete leftover `generateWeeklyReport` on production). Deploy functions **by name**.
-- Hard-delete user records. Archive a job; void an invoice; revoke access. Keep the rows.
+- `firebase deploy --only functions` without naming the function. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`. Deploy **by name**.
+- Hard-delete live user records. Archive a job; void an invoice or expense (Recently deleted); revoke access. Permanent delete is only from Recently deleted.
 - Paste API keys into chat
 
 ## Environments

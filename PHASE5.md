@@ -23,7 +23,7 @@ This is the **same family app and the same irreplaceable data**. It is the first
 - Every migration is a reversible, idempotent, dry-runnable script, reviewed before it runs.
 - Destructive user actions are **soft, never hard**. Archiving a job keeps its records. Removing a person revokes access and keeps the data they entered. Nothing user-created is hard-deleted.
 - Propose before executing. One change at a time. The app stays working throughout.
-- Never `firebase deploy --only functions` to production (would delete leftover `generateWeeklyReport`). Deploy functions only if this brief names them, and then **by name**.
+- Never `firebase deploy --only functions` to production. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`. Deploy functions only if this brief names them, and then **by name**.
 - Never accept a raw API key or secret pasted into chat.
 
 ## What is already live (do not redo)
@@ -64,7 +64,7 @@ Only after the owner approves the Part A plan:
 ## Out of scope
 
 - Billing, Stripe, a second product.
-- Phase 4 leftovers (Gmail invite fallback, `www` SSL, leftover `generateWeeklyReport`) unless the owner names them.
+- Phase 4 leftovers (Gmail invite fallback, `www` SSL) unless the owner names them.
 - Pointing localhost at production.
 - Inventing legal text or accepting pasted secrets.
 

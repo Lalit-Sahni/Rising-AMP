@@ -21,7 +21,10 @@ export async function loadInvitedJobSummaries(email, options = {}) {
         (clientResult && clientResult.success && clientResult.clients) || [],
         (row) => row.name || row.clientName
       );
-      const metrics = deriveJobMetrics({ expenses, invoices }, { now });
+      const metrics = deriveJobMetrics({ expenses, invoices }, {
+        now,
+        expensesCapped: Boolean(expenseResult && expenseResult.expensesCapped),
+      });
       return {
         ...project,
         expenseCount: expenses.length,

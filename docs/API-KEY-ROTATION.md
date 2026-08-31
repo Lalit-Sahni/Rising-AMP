@@ -77,7 +77,7 @@ firebase deploy --project rising-amp-staging --only functions:readReceiptImage
 firebase deploy --project production --only functions:readReceiptImage
 ```
 
-Never `firebase deploy --only functions` (that would delete leftover `generateWeeklyReport` on production).
+Never `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`. Deploy **by name**.
 
 4. Remove `REACT_APP_OPENAI_API_KEY` from `.env.local` / `.env.production.local` if it is still there.
 5. Revoke the old OpenAI key in the OpenAI dashboard.

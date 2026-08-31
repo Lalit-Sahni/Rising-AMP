@@ -30,6 +30,7 @@ export const expenseSchema = z
     timestamp: z.unknown().optional(),
     receiptImageUrl: z.string().optional(),
     receiptImagePath: z.string().optional(),
+    status: z.string().optional(),
     jobId: z.string().optional(),
     reviewed: z.boolean().optional(),
   })

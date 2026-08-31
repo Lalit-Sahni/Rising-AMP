@@ -1,11 +1,11 @@
-# Rising AMP — Architecture (after Phase 8, 2026-08-28)
+# Rising AMP — Architecture (after Phase 9 Part A, 2026-08-31)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE8.md`.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE9.md`.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging (localhost): `rising-amp-staging`  
-Working branch: `phase-8-technical-revamp`. Never commit to `master` / `main`.  
+Working branch: `phase-9-job-files`. Never commit to `master` / `main`.  
 App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category colour as data ink only.
 
 ---
@@ -19,7 +19,7 @@ App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category col
 | Money | Integer cents in `src/money.ts`. Parse at the Firestore / form boundary. Stored documents stay mixed until a later migration. |
 | Server state | TanStack Query is provided. Most ledger fetches still run in `AppContext` on mount. |
 | Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions. Analytics removed. App Check client is wired but **not enforced**. |
-| Functions | Node 22. Live: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`. Production still has unused `generateWeeklyReport`. Deploy functions **by name only**. Never `firebase deploy --only functions`. |
+| Functions | Node 22. Live: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`. Deploy functions **by name**. |
 | OCR | OpenAI Vision via Cloud Function `readReceiptImage`. If that fails, show an error. |
 | PWA | Standalone meta tags + safe-area CSS. No `manifest.json`. No service worker. |
 
@@ -115,26 +115,24 @@ Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `o
 
 | Path | What |
 |------|------|
-| `receipts/{legacyWorkspaceId}/{expenseId}/…` | Expense receipt images (live bucket exists) |
+| `receipts/{jobId}/{expenseId}/…` | Expense receipt images. `customMetadata.orgId` is set on new uploads so rules can resolve membership without hardcoding the org. Objects uploaded before Phase 9 have no metadata and fall back to Opal. |
 | `siteLogs/{legacyWorkspaceId}/…` | Old Site Log photos (unused) |
 | `reports/{legacyWorkspaceId}/…` | Old Weekly Report files (unused) |
 
-Staging has a Storage bucket so localhost can upload receipts. Production Storage rules in the repo are tighter than what may still be live; they were **not** deployed unless the owner named Storage.
+Staging has a Storage bucket so localhost can upload receipts. Production Storage rules in the repo are tighter than what may still be live; they were **not** deployed unless the owner named Storage. Do not change the receipt path until Storage rules are deployed — a four-segment path would miss the live matcher.
 
 ---
 
 ## 8. Cloud Functions
 
-Production still has leftover `generateWeeklyReport`. The app UI does not call it.
-
-Callables in use: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` (us-central1). Deploy **by name**:
+Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber` (us-central1, callable). Deploy **by name**:
 
 ```
 firebase deploy --project rising-amp-staging --only functions:allocateInvoiceNumber
 firebase deploy --project production --only functions:allocateInvoiceNumber
 ```
 
-Do **not** run `firebase deploy --only functions` against production — that would delete `generateWeeklyReport`.
+Deploying by name is the habit for this live app. Do not run a bare `firebase deploy --only functions` unless you intend to publish every exported function in `functions/index.js`.
 
 Gmail invite fallback remains in the client until the owner asks to remove it. `sendNewSignInNotice` is still Gmail.
 
@@ -177,10 +175,16 @@ Done in Phase 8:
 - Money is integer cents in one module.
 - Invoice numbers from a server counter. Invoices are voided, not deleted.
 - One import path: `src/data`. `firebaseService.js` is a thin re-export of `directories.js`.
-- Auth / org / UI contexts split. Ledger state still sits in `AppContext`.
+- Auth / org / UI contexts exist; the ledger still sits in a large `AppContext` data provider (ADR 004).
 - Org id from membership. Wildcard project writes are gone.
-- Jobs list counts with `getCountFromServer`. At 1,000 expenses the app refuses to show a margin.
+- Jobs list counts with `getCountFromServer`. Past 1,000 expenses the app hides cost and margin rather than showing a partial total.
 - Vitest + GitHub Action on `phase-*` branches.
+
+Done in Phase 9 Part A:
+
+- Storage rules resolve org from receipt metadata (Opal fallback for old objects).
+- Expenses and invoices void first; purge only from Recently deleted and only when already void. Clients, HIA, labour and trades void with no purge.
+- `exceljs` is a dynamic import.
 
 Left on purpose:
 
@@ -188,7 +192,8 @@ Left on purpose:
 - Ledger rollups (Cloud Function summaries) were skipped. The list no longer reads the ledger; the dashboard still does.
 - TanStack Query is mounted but most fetches are still AppContext.
 - App Check enforcement is off until a site key exists and traffic is clean.
-- Gmail invite fallback; leftover `generateWeeklyReport`; production Storage rules not deployed.
+- Gmail invite fallback; production Storage rules not deployed.
+- Dismantling the remaining AppContext ledger/directory blob.
 
 Decisions: `ADR/`.
 

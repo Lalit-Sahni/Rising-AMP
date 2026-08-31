@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Trash2, Pencil, Filter, Search, Download, Eye, Calendar, DollarSign, Hash } from 'lucide-react';
+import { Trash2, Pencil, Filter, Search, Download, Eye, Calendar, DollarSign, Hash, RotateCcw } from 'lucide-react';
 import ExportDialog from '../ExportDialog';
 import ExpenseModal from '../ExpenseModal';
 import CategoryChip from '../ui/CategoryChip';
 import { CATEGORY_STYLE } from '../../utils/categoryStyle';
-import { getExpenseTotal } from '../../utils/jobMetrics';
+import { getExpenseFaceTotal, getExpenseTotal, isVoidExpense } from '../../utils/jobMetrics';
 import EmptyState from '../EmptyState';
 
 const categoryLabels = {
@@ -18,7 +18,7 @@ const categoryLabels = {
 };
 
 export default function HistoryPage() {
-  const { expenses, showToast, deleteExpenseFromFirebase } = useApp();
+  const { expenses, showToast, deleteExpenseFromFirebase, restoreExpenseFromFirebase, purgeExpenseFromFirebase } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [payerFilter, setPayerFilter] = useState('all');
@@ -29,6 +29,7 @@ export default function HistoryPage() {
     direction: 'desc'
   });
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showRecentlyDeleted, setShowRecentlyDeleted] = useState(false);
 
   // Safe date helper for sorting
   const safeDate = (expense) => {
@@ -90,7 +91,7 @@ export default function HistoryPage() {
 
   // Unique payer names for filter dropdown
   const uniquePayers = useMemo(() => {
-    const names = new Set(expenses.filter(e => e.paidBy).map(e => e.paidBy));
+    const names = new Set(expenses.filter(e => e.paidBy && !isVoidExpense(e)).map(e => e.paidBy));
     return Array.from(names).sort();
   }, [expenses]);
 
@@ -139,8 +140,8 @@ export default function HistoryPage() {
       }
       
       if (sortConfig.key === 'total') {
-        const totalA = getExpenseTotal(a);
-        const totalB = getExpenseTotal(b);
+        const totalA = getExpenseFaceTotal(a);
+        const totalB = getExpenseFaceTotal(b);
         return sortConfig.direction === 'asc' ? totalA - totalB : totalB - totalA;
       }
       
@@ -202,33 +203,36 @@ export default function HistoryPage() {
 
   const handleDelete = async (expenseId) => {
     if (!expenseId) {
-      showToast('Cannot delete expense: No ID found', 'error');
+      showToast('Cannot void expense: No ID found', 'error');
       return;
     }
 
-    // Add confirmation dialog
-    if (!window.confirm('Are you sure you want to delete this expense? This action cannot be undone.')) {
+    if (!window.confirm('Move this expense to Recently deleted? It leaves this list. Totals will ignore it.')) {
       return;
     }
 
-    try {
-      const result = await deleteExpenseFromFirebase(expenseId);
-      if (result.success) {
-        showToast('Expense deleted successfully', 'success');
-      } else {
-        console.error('Deletion failed:', result.error);
-        showToast(`Failed to delete expense: ${result.error}`, 'error');
-      }
-    } catch (error) {
-      console.error('Error deleting expense:', error);
-      showToast(`Error deleting expense: ${error.message}`, 'error');
+    await deleteExpenseFromFirebase(expenseId);
+  };
+
+  const handleRestore = async (expenseId) => {
+    await restoreExpenseFromFirebase(expenseId);
+  };
+
+  const handlePurge = async (expenseId) => {
+    if (!expenseId) return;
+    if (!window.confirm('Remove this expense for good? This cannot be undone.')) {
+      return;
     }
+    await purgeExpenseFromFirebase(expenseId);
   };
 
   const handleExport = async (filename) => {
     try {
       const { exportExpensesToExcel } = await import('../../utils/excelExport');
-      const result = await exportExpensesToExcel(filteredAndSortedExpenses, filename);
+      const result = await exportExpensesToExcel(
+        filteredAndSortedExpenses.filter((expense) => !isVoidExpense(expense)),
+        filename,
+      );
       if (result.success) {
         showToast('Excel file exported successfully!', 'success');
       } else {
@@ -242,7 +246,10 @@ export default function HistoryPage() {
 
 
   // Calculate totals
-  const totalAmount = filteredAndSortedExpenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
+  const liveRows = filteredAndSortedExpenses.filter((expense) => !isVoidExpense(expense));
+  const deletedRows = filteredAndSortedExpenses.filter((expense) => isVoidExpense(expense));
+  const rows = showRecentlyDeleted ? deletedRows : liveRows;
+  const totalAmount = liveRows.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
 
   return (
     <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
@@ -271,7 +278,7 @@ export default function HistoryPage() {
           <div className="relative bg-surface rounded-ot p-[18px] border border-hairline shadow-whisper">
             <span className="absolute left-[18px] right-[18px] top-0 h-0.5 bg-accent rounded-b" />
             <p className="text-slate-400 text-xs font-medium">Total expenses</p>
-            <p className="tabular text-[25px] font-semibold text-ink mt-2.5">{filteredAndSortedExpenses.length}</p>
+            <p className="tabular text-[25px] font-semibold text-ink mt-2.5">{liveRows.length}</p>
           </div>
 
           <div className="bg-surface rounded-ot p-[18px] border border-hairline shadow-whisper">
@@ -358,6 +365,25 @@ export default function HistoryPage() {
 
         {/* Expense Table */}
         <div className="bg-surface rounded-ot border border-hairline shadow-whisper overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-hairline">
+            <p className="text-[13px] text-slate-600">
+              {showRecentlyDeleted
+                ? 'Off the job until you restore them or remove them for good.'
+                : 'Every recorded expense on this job.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setShowRecentlyDeleted((open) => !open);
+                setExpandedExpense(null);
+              }}
+              className="shrink-0 text-[12.5px] font-semibold text-accent hover:text-accent-600"
+            >
+              {showRecentlyDeleted
+                ? 'Back to expenses'
+                : `Recently deleted${deletedRows.length ? ` (${deletedRows.length})` : ''}`}
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-ink">
               <thead className="bg-canvas text-slate-600 text-[11px] uppercase tracking-wide">
@@ -400,8 +426,8 @@ export default function HistoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAndSortedExpenses.length > 0 ? (
-                  filteredAndSortedExpenses.map((expense, index) => (
+                {rows.length > 0 ? (
+                  rows.map((expense, index) => (
                     <React.Fragment key={`${expense.id || index}-${getExpenseDate(expense)}`}>
                       <tr 
                         className="bg-surface border-b border-hairline hover:bg-canvas transition-colors cursor-pointer"
@@ -429,10 +455,35 @@ export default function HistoryPage() {
                           </div>
                         </td>
                         <td className="px-4 py-4 tabular font-medium text-ink">
-                          ${getExpenseTotal(expense).toLocaleString()}
+                          ${getExpenseFaceTotal(expense).toLocaleString()}
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
+                            {showRecentlyDeleted ? (
+                              <>
+                                <button
+                                  className="text-slate-400 hover:text-accent transition-colors"
+                                  title="Restore"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRestore(expense.id);
+                                  }}
+                                >
+                                  <RotateCcw className="w-4 h-4" />
+                                </button>
+                                <button
+                                  className="text-neg hover:opacity-80 transition-colors"
+                                  title="Remove for good"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePurge(expense.id);
+                                  }}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
                             <button
                               className="text-slate-400 hover:text-accent transition-colors"
                               title="Edit"
@@ -445,7 +496,7 @@ export default function HistoryPage() {
                             </button>
                             <button
                               className="text-neg hover:opacity-80 transition-colors"
-                              title="Delete"
+                              title="Move to Recently deleted"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDelete(expense.id);
@@ -453,6 +504,8 @@ export default function HistoryPage() {
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -477,7 +530,7 @@ export default function HistoryPage() {
                                     </div>
                                     <div className="flex justify-between">
                                       <span className="text-slate-600">Amount:</span>
-                                      <span className="tabular text-ink font-medium">${getExpenseTotal(expense).toLocaleString()}</span>
+                                      <span className="tabular text-ink font-medium">${getExpenseFaceTotal(expense).toLocaleString()}</span>
                                     </div>
                                     {expense.paidBy && (
                                       <div className="flex justify-between">
@@ -613,9 +666,11 @@ export default function HistoryPage() {
                     <td colSpan="6" className="px-4 py-8 text-center text-slate-600">
                       <div className="flex flex-col items-center">
                         <Eye className="w-12 h-12 mb-4 opacity-50" />
-                        <h3 className="text-lg font-semibold mb-2">No Expenses Found</h3>
+                        <h3 className="text-lg font-semibold mb-2">{showRecentlyDeleted ? 'Recently deleted is empty' : 'No Expenses Found'}</h3>
                         <p className="text-sm">
-                          {searchTerm || categoryFilter !== 'all'
+                          {showRecentlyDeleted
+                            ? 'Deleted expenses will sit here until you restore them or remove them for good.'
+                            : searchTerm || categoryFilter !== 'all'
                             ? 'Try adjusting your filters to see more results.'
                             : 'Add some expenses to see them here.'
                           }
@@ -636,7 +691,7 @@ export default function HistoryPage() {
         isOpen={showExportDialog}
         onClose={() => setShowExportDialog(false)}
         onExport={handleExport}
-        expenseCount={filteredAndSortedExpenses.length}
+        expenseCount={liveRows.length}
       />
 
       {/* Edit Expense Modal */}
@@ -644,7 +699,7 @@ export default function HistoryPage() {
         <ExpenseModal
           isOpen={true}
           onClose={() => setEditingExpense(null)}
-          category={editingExpense.category}
+          category={editingExpense.category === 'materials' ? 'purchase' : editingExpense.category}
           initialData={editingExpense}
           expenseId={editingExpense.id}
         />

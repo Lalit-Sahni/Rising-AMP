@@ -175,6 +175,24 @@ describe('void invoices and the expense cap', () => {
     expect(cash.cost).toBe(20);
   });
 
+  test('void expenses are excluded from cash and margin', () => {
+    const cash = deriveCash(
+      [{ total: 100, status: 'paid' }],
+      [
+        { total: 20 },
+        { total: 80, status: 'void' },
+      ],
+    );
+    expect(cash.cost).toBe(20);
+    const metrics = deriveJobMetrics({
+      expenses: [{ total: 20 }, { total: 80, status: 'void' }],
+      invoices: [{ total: 100, status: 'paid', invoiceDate: '2026-01-01' }],
+    }, { now });
+    expect(metrics.cash.cost).toBe(20);
+    expect(metrics.hasMargin).toBe(true);
+    expect(metrics.margin).toBe(80);
+  });
+
   test('refuses margin when the 1,000 expense cap is hit', () => {
     const metrics = deriveJobMetrics({
       expenses: [{ total: 20 }],
@@ -182,6 +200,9 @@ describe('void invoices and the expense cap', () => {
     }, { now, expensesCapped: true });
     expect(metrics.hasMargin).toBe(false);
     expect(metrics.margin).toBeNull();
+    expect(metrics.cash.cost).toBeNull();
+    expect(formatMoney(metrics.cash.cost)).toBe('—');
+    expect(metrics.categories).toEqual([]);
     expect(bannerMessage(metrics).line).toMatch(/1,000 expenses/);
   });
 });

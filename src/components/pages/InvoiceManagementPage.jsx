@@ -6,7 +6,8 @@ import {
   Trash2, 
   Search,
   Filter,
-  Eye
+  Eye,
+  RotateCcw
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import NewInvoicePage from './NewInvoicePage';
@@ -26,12 +27,13 @@ function formatInvoiceDate(value) {
 }
 
 const InvoiceManagementPage = () => {
-  const { invoices, deleteInvoiceFromFirebase, updateInvoiceStatus, showToast, projectName: jobName } = useApp();
+  const { invoices, deleteInvoiceFromFirebase, restoreInvoiceFromFirebase, purgeInvoiceFromFirebase, updateInvoiceStatus, showToast, projectName: jobName } = useApp();
   const [showNewInvoice, setShowNewInvoice] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [previewInvoice, setPreviewInvoice] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showRecentlyDeleted, setShowRecentlyDeleted] = useState(false);
 
   // Filter invoices based on search and status
   const filteredInvoices = invoices.filter(invoice => {
@@ -47,17 +49,38 @@ const InvoiceManagementPage = () => {
   });
 
   const liveInvoices = invoices.filter((invoice) => !isVoidInvoice(invoice));
+  const liveRows = filteredInvoices.filter((invoice) => !isVoidInvoice(invoice));
+  const deletedRows = invoices.filter((invoice) => {
+    if (!isVoidInvoice(invoice)) return false;
+    const matchesSearch = 
+      invoice.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.projectName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      jobName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      invoice.invoiceNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+  const rows = showRecentlyDeleted ? deletedRows : liveRows;
   const totalInvoiced = liveInvoices.reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
   const totalPaid = liveInvoices.filter(isPaidInvoice).reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
   const totalPending = totalInvoiced - totalPaid;
 
   const handleDeleteInvoice = async (invoiceId) => {
-    if (window.confirm('Void this invoice? It stays on the job with its number. Totals will ignore it.')) {
+    if (window.confirm('Move this invoice to Recently deleted? It leaves this list. Totals will ignore it. The number is kept until you remove it for good.')) {
       try {
         await deleteInvoiceFromFirebase(invoiceId);
       } catch (error) {
-        showToast('Failed to void invoice', 'error');
+        showToast('Failed to move invoice', 'error');
       }
+    }
+  };
+
+  const handleRestoreInvoice = async (invoiceId) => {
+    await restoreInvoiceFromFirebase(invoiceId);
+  };
+
+  const handlePurgeInvoice = async (invoiceId) => {
+    if (window.confirm('Remove this invoice for good? This cannot be undone. The number will not be reused.')) {
+      await purgeInvoiceFromFirebase(invoiceId);
     }
   };
 
@@ -320,6 +343,22 @@ const InvoiceManagementPage = () => {
 
         {/* Invoices Table */}
         <div className="bg-surface rounded-ot border border-hairline shadow-whisper overflow-hidden">
+          <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-hairline">
+            <p className="text-[13px] text-slate-600">
+              {showRecentlyDeleted
+                ? 'Off the job until you restore them or remove them for good.'
+                : 'Live invoices on this job.'}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowRecentlyDeleted((open) => !open)}
+              className="shrink-0 text-[12.5px] font-semibold text-accent hover:text-accent-600"
+            >
+              {showRecentlyDeleted
+                ? 'Back to invoices'
+                : `Recently deleted${deletedRows.length ? ` (${deletedRows.length})` : ''}`}
+            </button>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-canvas">
@@ -335,7 +374,7 @@ const InvoiceManagementPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
-                {filteredInvoices.map((invoice, index) => (
+                {rows.map((invoice, index) => (
                   <tr key={index} className="hover:bg-canvas transition-colors">
                     <td className="px-5 py-3.5 text-sm text-ink font-medium font-mono">
                       {invoice.invoiceNumber}
@@ -356,8 +395,8 @@ const InvoiceManagementPage = () => {
                       {formatCents(safeParseToCents(invoice.total))}
                     </td>
                     <td className="px-5 py-3.5 text-center">
-                      {isVoidInvoice(invoice) ? (
-                        <span className="text-[12px] font-semibold text-slate-400">Void</span>
+                      {showRecentlyDeleted ? (
+                        <span className="text-[12px] font-semibold text-slate-400">Deleted</span>
                       ) : (
                       <select
                         value={invoice.status || 'draft'}
@@ -387,14 +426,31 @@ const InvoiceManagementPage = () => {
                         >
                           <Download className="w-4 h-4" />
                         </button>
-                        {isVoidInvoice(invoice) ? (
-                          <span className="text-[12px] font-semibold text-slate-400">Void</span>
+                        {showRecentlyDeleted ? (
+                          <>
+                            <button
+                              onClick={() => handleRestoreInvoice(invoice.id)}
+                              className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm text-slate-600 hover:text-ink"
+                              title="Restore invoice"
+                              aria-label={`Restore invoice ${invoice.invoiceNumber || ''}`}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handlePurgeInvoice(invoice.id)}
+                              className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm text-slate-600 hover:text-neg"
+                              title="Remove for good"
+                              aria-label={`Remove invoice ${invoice.invoiceNumber || ''} for good`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
                         ) : (
                           <button
                             onClick={() => handleDeleteInvoice(invoice.id)}
                             className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm text-slate-600 hover:text-neg"
-                            title="Void invoice"
-                            aria-label={`Void invoice ${invoice.invoiceNumber || ''}`}
+                            title="Move to Recently deleted"
+                            aria-label={`Move invoice ${invoice.invoiceNumber || ''} to Recently deleted`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -407,16 +463,18 @@ const InvoiceManagementPage = () => {
             </table>
           </div>
           
-          {filteredInvoices.length === 0 && (
+          {rows.length === 0 && (
             <div className="text-center py-12">
               <FileText className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-              <p className="text-slate-600">No invoices found</p>
+              <p className="text-slate-600">{showRecentlyDeleted ? 'Recently deleted is empty' : 'No invoices found'}</p>
+              {!showRecentlyDeleted && (
               <button
                 onClick={() => setShowNewInvoice(true)}
                 className="mt-4 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[12.5px] font-medium"
               >
                 Create Your First Invoice
               </button>
+              )}
             </div>
           )}
         </div>

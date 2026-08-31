@@ -1,16 +1,15 @@
 /**
- * Invite email only. Do not export or redeploy generateWeeklyReport.
- *
- * Production still has leftover generateWeeklyReport. A full
- * `firebase deploy --only functions` would delete it. Deploy this
- * function by name:
+ * Production functions are sendJobInviteEmail, readReceiptImage and
+ * allocateInvoiceNumber. Deploy by name:
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
  *   firebase deploy --project production --only functions:sendJobInviteEmail
+ *   firebase deploy --project rising-amp-staging --only functions:readReceiptImage
+ *   firebase deploy --project production --only functions:readReceiptImage
  *   firebase deploy --project rising-amp-staging --only functions:allocateInvoiceNumber
  *   firebase deploy --project production --only functions:allocateInvoiceNumber
  *
- * Secrets the owner sets at a masked prompt (never paste into chat or REACT_APP_*):
+ * Secrets the owner sets at a masked prompt (never paste into chat):
  *   RESEND_API_KEY, OPENAI_API_KEY
  */
 

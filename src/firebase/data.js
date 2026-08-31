@@ -7,17 +7,27 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   query,
   orderBy,
   where,
   serverTimestamp,
   limit,
-  writeBatch
+  writeBatch,
+  getCountFromServer,
 } from 'firebase/firestore';
 import { db } from './config';
 import { getActiveOrgId } from './tenancy';
 import { parseAtBoundary, expenseSchema, invoiceSchema } from '../domain/schemas';
 import { parseToCents } from '../money';
+
+function definedFields(data) {
+  const out = {};
+  Object.entries(data || {}).forEach(([key, value]) => {
+    if (value !== undefined) out[key] = value;
+  });
+  return out;
+}
 
 const projectRootRef = async (projectId) => {
   if (!projectId) {
@@ -62,13 +72,19 @@ export const fetchExpensesFromFirestore = async (jobId) => {
     const userDocRef = await projectRootRef(jobId);
     const expensesCollectionRef = collection(userDocRef, 'expenses');
     
-    // Query expenses ordered by timestamp with limit for performance
+    // Query expenses ordered by timestamp with a page-size cap.
+    // Compare to the server count so a job with exactly 1,000 is not
+    // treated as truncated, and a job past 1,000 is.
     const expensesQuery = query(
-      expensesCollectionRef, 
+      expensesCollectionRef,
       orderBy('timestamp', 'desc'),
-      limit(1000) // Limit to prevent excessive data loading
+      limit(1000)
     );
-    const expensesSnapshot = await getDocs(expensesQuery);
+    const [expensesSnapshot, countSnap] = await Promise.all([
+      getDocs(expensesQuery),
+      getCountFromServer(expensesCollectionRef),
+    ]);
+    const totalOnServer = countSnap.data().count || 0;
     
     const expenses = [];
     expensesSnapshot.forEach((row) => {
@@ -96,7 +112,7 @@ export const fetchExpensesFromFirestore = async (jobId) => {
     return { 
       success: true, 
       expenses,
-      expensesCapped: expensesSnapshot.size >= 1000,
+      expensesCapped: totalOnServer > expenses.length,
       budget: userData?.budget || 0
     };
   } catch (error) {
@@ -129,11 +145,11 @@ export const addExpenseToFirestore = async (jobId, expense) => {
     const expenseDocRef = doc(userDocRef, 'expenses', expense.id);
     
     // Use setDoc with the expense's ID as the document ID
-    await setDoc(expenseDocRef, {
+    await setDoc(expenseDocRef, definedFields({
       ...expense,
       jobId: jobId,
       timestamp: serverTimestamp()
-    });
+    }));
     
     const newExpense = {
       ...expense,
@@ -153,10 +169,10 @@ export const updateExpenseInFirestore = async (jobId, expenseId, updatedExpense)
     const userDocRef = await projectRootRef(jobId);
     const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
     
-    await updateDoc(expenseDocRef, {
+    await updateDoc(expenseDocRef, definedFields({
       ...updatedExpense,
       updatedAt: serverTimestamp()
-    });
+    }));
     
     const updatedExpenseWithId = {
       id: expenseId,
@@ -171,74 +187,126 @@ export const updateExpenseInFirestore = async (jobId, expenseId, updatedExpense)
   }
 };
 
-// Delete expense from Firestore
-export const deleteExpenseFromFirestore = async (jobId, expenseId) => {
+async function voidSubdoc(jobId, collectionName, id, label, fallbackStatus = 'active') {
+  if (!jobId) {
+    return { success: false, error: 'Job ID is required' };
+  }
+  if (!id) {
+    return { success: false, error: `${label} ID is required` };
+  }
   try {
-    
-    if (!jobId) {
-      console.error('No job ID provided for deletion');
-      return { success: false, error: 'Job ID is required' };
-    }
-    
-    if (!expenseId) {
-      console.error('No expense ID provided for deletion');
-      return { success: false, error: 'Expense ID is required' };
-    }
-    
     const userDocRef = await projectRootRef(jobId);
-    const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
-    
-    // Verify the document exists before deleting
-    const docSnapshot = await getDoc(expenseDocRef);
-    if (!docSnapshot.exists()) {
-      console.warn('Expense document does not exist:', expenseId);
-      return { success: false, error: 'Expense not found in Firebase' };
+    const itemRef = doc(userDocRef, collectionName, id);
+    const snap = await getDoc(itemRef);
+    if (!snap.exists()) {
+      return { success: false, error: `${label} not found in Firebase` };
     }
-    
-    
-    // Delete the document directly (more reliable than batch for single operations)
-    await deleteDoc(expenseDocRef);
-    
-    // Verify deletion by checking if document still exists
-    const verificationSnapshot = await getDoc(expenseDocRef);
-    if (verificationSnapshot.exists()) {
-      console.error('Document still exists after deletion attempt');
-      return { success: false, error: 'Failed to delete document from Firebase' };
-    }
-    
-    
+    const current = String(snap.data().status || fallbackStatus);
+    const statusBeforeVoid = current.toLowerCase() === 'void' ? fallbackStatus : current;
+    await updateDoc(itemRef, {
+      status: 'void',
+      statusBeforeVoid,
+      voidedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
     return { success: true };
   } catch (error) {
-    console.error('Delete expense error:', error);
-    
-    // Provide more detailed error messages
+    console.error(`Void ${label.toLowerCase()} error:`, error);
     if (error.code === 'permission-denied') {
       return { success: false, error: 'Permission denied - check Firebase rules' };
-    } else if (error.code === 'unavailable') {
-      return { success: false, error: 'Firebase is temporarily unavailable' };
-    } else {
-      return { success: false, error: `Firebase error: ${error.message}` };
     }
+    if (error.code === 'unavailable') {
+      return { success: false, error: 'Firebase is temporarily unavailable' };
+    }
+    return { success: false, error: `Firebase error: ${error.message}` };
   }
+}
+
+export const voidExpenseInFirestore = async (jobId, expenseId) => {
+  return voidSubdoc(jobId, 'expenses', expenseId, 'Expense', 'active');
 };
 
-// Batch delete multiple expenses (for future use)
-export const batchDeleteExpenses = async (jobId, expenseIds) => {
+/** @deprecated Use voidExpenseInFirestore. First step is void, not a hard delete. */
+export const deleteExpenseFromFirestore = async (jobId, expenseId) => {
+  return voidExpenseInFirestore(jobId, expenseId);
+};
+
+async function restoreSubdoc(jobId, collectionName, id, label, fallbackStatus) {
+  if (!jobId || !id) {
+    return { success: false, error: `${label} ID is required` };
+  }
   try {
-    
     const userDocRef = await projectRootRef(jobId);
-    const batch = writeBatch(db);
-    
-    for (const expenseId of expenseIds) {
-      const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
-      batch.delete(expenseDocRef);
+    const itemRef = doc(userDocRef, collectionName, id);
+    const snap = await getDoc(itemRef);
+    if (!snap.exists()) {
+      return { success: false, error: `${label} not found in Firebase` };
     }
-    
-    await batch.commit();
-    
+    const previous = String(snap.data().statusBeforeVoid || fallbackStatus || 'active');
+    const restoredStatus = previous.toLowerCase() === 'void' ? fallbackStatus : previous;
+    await updateDoc(itemRef, {
+      status: restoredStatus,
+      statusBeforeVoid: deleteField(),
+      voidedAt: deleteField(),
+      restoredAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return { success: true, status: restoredStatus };
+  } catch (error) {
+    console.error(`Restore ${label.toLowerCase()} error:`, error);
+    return { success: false, error: error.message };
+  }
+}
+
+async function purgeVoidedSubdoc(jobId, collectionName, id, label) {
+  if (!jobId || !id) {
+    return { success: false, error: `${label} ID is required` };
+  }
+  try {
+    const userDocRef = await projectRootRef(jobId);
+    const itemRef = doc(userDocRef, collectionName, id);
+    const snap = await getDoc(itemRef);
+    if (!snap.exists()) {
+      return { success: false, error: `${label} not found in Firebase` };
+    }
+    if (String(snap.data().status || '').toLowerCase() !== 'void') {
+      return { success: false, error: 'Only recently deleted records can be removed for good' };
+    }
+    await deleteDoc(itemRef);
     return { success: true };
   } catch (error) {
-    console.error('Batch delete expenses error:', error);
+    console.error(`Purge ${label.toLowerCase()} error:`, error);
+    if (error.code === 'permission-denied') {
+      return { success: false, error: 'Permission denied - check Firebase rules' };
+    }
+    return { success: false, error: error.message };
+  }
+}
+
+export const restoreExpenseInFirestore = async (jobId, expenseId) => {
+  return restoreSubdoc(jobId, 'expenses', expenseId, 'Expense', 'active');
+};
+
+export const purgeExpenseFromFirestore = async (jobId, expenseId) => {
+  return purgeVoidedSubdoc(jobId, 'expenses', expenseId, 'Expense');
+};
+
+export const batchDeleteExpenses = async (jobId, expenseIds) => {
+  try {
+    const userDocRef = await projectRootRef(jobId);
+    const batch = writeBatch(db);
+    for (const expenseId of expenseIds) {
+      const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
+      batch.update(expenseDocRef, {
+        status: 'void',
+        voidedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    }
+    await batch.commit();
+    return { success: true };
+  } catch (error) {
+    console.error('Batch void expenses error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -552,18 +620,13 @@ export const updateProgressPayment = async (jobId, paymentId, updatedPayment) =>
   }
 };
 
+export const voidProgressPayment = async (jobId, paymentId) => {
+  return voidSubdoc(jobId, 'progressPayments', paymentId, 'Progress payment');
+};
+
+/** @deprecated Use voidProgressPayment. Progress payments cannot be hard-deleted. */
 export const deleteProgressPayment = async (jobId, paymentId) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const paymentDocRef = doc(userDocRef, 'progressPayments', paymentId);
-    
-    await deleteDoc(paymentDocRef);
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Delete progress payment error:', error);
-    return { success: false, error: error.message };
-  }
+  return voidProgressPayment(jobId, paymentId);
 };
 
 // Invoice functions
@@ -641,24 +704,20 @@ export const updateInvoiceInFirestore = async (jobId, invoiceId, updatedInvoice)
 };
 
 export const voidInvoiceInFirestore = async (jobId, invoiceId) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const invoiceDocRef = doc(userDocRef, 'invoices', invoiceId);
-    await updateDoc(invoiceDocRef, {
-      status: 'void',
-      voidedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    return { success: true };
-  } catch (error) {
-    console.error('Void invoice error:', error);
-    return { success: false, error: error.message };
-  }
+  return voidSubdoc(jobId, 'invoices', invoiceId, 'Invoice', 'draft');
 };
 
-/** @deprecated Use voidInvoiceInFirestore. Invoices cannot be hard-deleted. */
+/** @deprecated Use voidInvoiceInFirestore. First step is void, not a hard delete. */
 export const deleteInvoiceFromFirestore = async (jobId, invoiceId) => {
   return voidInvoiceInFirestore(jobId, invoiceId);
+};
+
+export const restoreInvoiceInFirestore = async (jobId, invoiceId) => {
+  return restoreSubdoc(jobId, 'invoices', invoiceId, 'Invoice', 'draft');
+};
+
+export const purgeInvoiceFromFirestore = async (jobId, invoiceId) => {
+  return purgeVoidedSubdoc(jobId, 'invoices', invoiceId, 'Invoice');
 };
 
 // HIA Contract functions
@@ -731,18 +790,13 @@ export const updateHIAContractInFirestore = async (jobId, contractId, updates) =
   }
 };
 
+export const voidHIAContractInFirestore = async (jobId, contractId) => {
+  return voidSubdoc(jobId, 'hiaContracts', contractId, 'HIA contract');
+};
+
+/** @deprecated Use voidHIAContractInFirestore. HIA contracts cannot be hard-deleted. */
 export const deleteHIAContractFromFirestore = async (jobId, contractId) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const contractDocRef = doc(userDocRef, 'hiaContracts', contractId);
-    
-    await deleteDoc(contractDocRef);
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Delete HIA contract error:', error);
-    return { success: false, error: error.message };
-  }
+  return voidHIAContractInFirestore(jobId, contractId);
 };
 
 // Update client information
@@ -769,13 +823,16 @@ export const updateClientInfo = async (jobId, clientId, clientData) => {
   }
 };
 
-// Delete client information
 export const deleteClientInfo = async (jobId, clientId) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const clientDocRef = doc(userDocRef, 'clients', clientId);
     
-    await deleteDoc(clientDocRef);
+    await updateDoc(clientDocRef, {
+      status: 'void',
+      voidedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
     
     return { success: true };
   } catch (error) {

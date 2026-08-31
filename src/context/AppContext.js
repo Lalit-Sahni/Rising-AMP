@@ -4,6 +4,8 @@ import {
   fetchExpensesFromFirestore,
   updateExpenseInFirestore,
   deleteExpenseFromFirestore,
+  restoreExpenseInFirestore,
+  purgeExpenseFromFirestore,
   addProgressPayment,
   updateProgressPayment,
   deleteProgressPayment,
@@ -12,6 +14,8 @@ import {
   fetchInvoicesFromFirestore,
   updateInvoiceInFirestore,
   voidInvoiceInFirestore,
+  restoreInvoiceInFirestore,
+  purgeInvoiceFromFirestore,
   saveHIAContractToFirestore,
   fetchHIAContractsFromFirestore,
   updateHIAContractInFirestore,
@@ -380,7 +384,9 @@ const AppDataProvider = ({
     try {
       const result = await updateExpenseInFirestore(jobListId, expenseId, expenseData);
       if (result.success) {
-        setExpenses(prev => prev.map(exp => exp.id === expenseId ? result.expense : exp));
+        setExpenses(prev => prev.map(exp => (
+          exp.id === expenseId ? { ...exp, ...result.expense } : exp
+        )));
         showToast('Expense updated successfully', 'success');
         return { success: true, expense: result.expense };
       } else {
@@ -399,16 +405,54 @@ const AppDataProvider = ({
       const result = await deleteExpenseFromFirestore(jobListId, expenseId);
 
       if (result.success) {
-        setExpenses(prev => prev.filter(exp => exp.id !== expenseId));
-        showToast('Expense permanently deleted!', 'success');
+        setExpenses((prev) => prev.map((exp) => (
+          exp.id === expenseId ? { ...exp, status: 'void', voidedAt: new Date() } : exp
+        )));
+        showToast('Moved to Recently deleted', 'success');
         return { success: true };
       } else {
-        console.error('Firebase deletion failed:', result.error);
-        showToast(`Deletion failed: ${result.error}`, 'error');
+        console.error('Firebase void failed:', result.error);
+        showToast(`Could not void expense: ${result.error}`, 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Deletion error:', error);
+      showToast(`Error: ${error.message}`, 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
+  const restoreExpenseFromFirebase = async (expenseId) => {
+    try {
+      const result = await restoreExpenseInFirestore(jobListId, expenseId);
+      if (result.success) {
+        setExpenses((prev) => prev.map((exp) => (
+          exp.id === expenseId
+            ? { ...exp, status: result.status || 'active', voidedAt: null }
+            : exp
+        )));
+        showToast('Expense restored', 'success');
+        return { success: true };
+      }
+      showToast(`Could not restore expense: ${result.error}`, 'error');
+      return { success: false, error: result.error };
+    } catch (error) {
+      showToast(`Error: ${error.message}`, 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
+  const purgeExpenseFromFirebase = async (expenseId) => {
+    try {
+      const result = await purgeExpenseFromFirestore(jobListId, expenseId);
+      if (result.success) {
+        setExpenses((prev) => prev.filter((exp) => exp.id !== expenseId));
+        showToast('Expense removed for good', 'success');
+        return { success: true };
+      }
+      showToast(`Could not remove expense: ${result.error}`, 'error');
+      return { success: false, error: result.error };
+    } catch (error) {
       showToast(`Error: ${error.message}`, 'error');
       return { success: false, error: error.message };
     }
@@ -546,11 +590,13 @@ const AppDataProvider = ({
     try {
       const result = await deleteProgressPayment(jobListId, paymentId);
       if (result.success) {
-        setProgressPayments(prev => prev.filter(payment => payment.id !== paymentId));
-        showToast('Progress payment deleted successfully', 'success');
+        setProgressPayments((prev) => prev.map((payment) => (
+          payment.id === paymentId ? { ...payment, status: 'void' } : payment
+        )));
+        showToast('Progress payment voided', 'success');
         return { success: true };
       } else {
-        showToast('Failed to delete progress payment', 'error');
+        showToast('Failed to void progress payment', 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
@@ -634,8 +680,8 @@ const AppDataProvider = ({
     try {
       const result = await voidInvoiceInFirestore(jobListId, invoiceId);
       if (result.success) {
-        setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status: 'void' } : inv));
-        showToast('Invoice voided. The number is kept.', 'success');
+        setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status: 'void', voidedAt: new Date() } : inv));
+        showToast('Moved to Recently deleted. The number is kept until you remove it for good.', 'success');
         invalidateJobQueries();
         return { success: true };
       } else {
@@ -645,6 +691,44 @@ const AppDataProvider = ({
     } catch (error) {
       console.error('Error voiding invoice:', error);
       showToast('Error voiding invoice', 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
+  const restoreInvoiceFromFirebase = async (invoiceId) => {
+    try {
+      const result = await restoreInvoiceInFirestore(jobListId, invoiceId);
+      if (result.success) {
+        setInvoices((prev) => prev.map((inv) => (
+          inv.id === invoiceId
+            ? { ...inv, status: result.status || 'draft', voidedAt: null }
+            : inv
+        )));
+        showToast('Invoice restored', 'success');
+        invalidateJobQueries();
+        return { success: true };
+      }
+      showToast('Failed to restore invoice', 'error');
+      return { success: false, error: result.error };
+    } catch (error) {
+      showToast('Error restoring invoice', 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
+  const purgeInvoiceFromFirebase = async (invoiceId) => {
+    try {
+      const result = await purgeInvoiceFromFirestore(jobListId, invoiceId);
+      if (result.success) {
+        setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
+        showToast('Invoice removed for good', 'success');
+        invalidateJobQueries();
+        return { success: true };
+      }
+      showToast('Failed to remove invoice', 'error');
+      return { success: false, error: result.error };
+    } catch (error) {
+      showToast('Error removing invoice', 'error');
       return { success: false, error: error.message };
     }
   };
@@ -730,7 +814,7 @@ const AppDataProvider = ({
       const result = await deleteClient(jobListId, clientId);
       if (result.success) {
         setClients(prev => prev.filter(client => client.id !== clientId));
-        showToast('Client deleted successfully', 'success');
+        showToast('Client removed from this job', 'success');
         return { success: true };
       } else {
         showToast('Failed to delete client', 'error');
@@ -799,11 +883,13 @@ const AppDataProvider = ({
     try {
       const result = await deleteHIAContractFromFirestore(jobListId, contractId);
       if (result.success) {
-        setHiaContracts(prev => prev.filter(contract => contract.id !== contractId));
-        showToast('HIA Contract deleted successfully', 'success');
+        setHiaContracts((prev) => prev.map((contract) => (
+          contract.id === contractId ? { ...contract, status: 'void' } : contract
+        )));
+        showToast('HIA contract voided', 'success');
         return { success: true };
       } else {
-        showToast('Failed to delete HIA Contract', 'error');
+        showToast('Failed to void HIA contract', 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
@@ -944,6 +1030,8 @@ const AppDataProvider = ({
     addExpenseToFirebase,
     updateExpenseInFirebase,
     deleteExpenseFromFirebase,
+    restoreExpenseFromFirebase,
+    purgeExpenseFromFirebase,
     updateBudgetInFirebase,
     saveLabourToFirebase,
     saveTradeToFirebase,
@@ -956,6 +1044,8 @@ const AppDataProvider = ({
     addInvoiceToFirebase,
     updateInvoiceInFirebase,
     deleteInvoiceFromFirebase,
+    restoreInvoiceFromFirebase,
+    purgeInvoiceFromFirebase,
     loadInvoices,
     updateInvoiceStatus,
     saveCompanyToFirebase,
