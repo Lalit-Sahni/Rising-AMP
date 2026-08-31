@@ -20,6 +20,10 @@ import {
 
 export { JOB_FILE_MAX_BYTES, jobFileStoragePath, jobFileThumbnailPath };
 
+export function newJobFileId(jobId: string): string {
+  return doc(filesCol(jobId)).id;
+}
+
 function definedFields(data: Record<string, unknown>) {
   const out: Record<string, unknown> = {};
   Object.entries(data || {}).forEach(([key, value]) => {

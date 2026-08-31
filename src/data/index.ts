@@ -37,4 +37,6 @@ export {
   updateJobFileRecord,
   archiveJobFile,
   restoreJobFile,
+  newJobFileId,
 } from '../firebase/jobFiles';
+export { uploadJobFile } from '../firebase/uploadJobFile';

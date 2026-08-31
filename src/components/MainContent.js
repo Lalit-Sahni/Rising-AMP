@@ -12,6 +12,7 @@ const ClientManagerPage = lazy(() => import('./pages/ClientManagerPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+const FilesPage = lazy(() => import('./pages/FilesPage'));
 const BudgetTrackingPage = lazy(() => import('./pages/BudgetTrackingPage'));
 
 function PageFallback() {
@@ -34,6 +35,7 @@ export default function MainContent() {
             <Route path="/jobs/:jobId" element={<DashboardPage />} />
             <Route path="/jobs/:jobId/expenses/new" element={<AddExpensePage />} />
             <Route path="/jobs/:jobId/invoices" element={<InvoiceManagementPage />} />
+            <Route path="/jobs/:jobId/files" element={<FilesPage />} />
             <Route path="/jobs/:jobId/history" element={<HistoryPage />} />
             <Route path="/jobs/:jobId/budget" element={<BudgetTrackingPage />} />
             <Route path="/jobs/:jobId/contracts" element={<HIAContractPage />} />

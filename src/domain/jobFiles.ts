@@ -1,5 +1,7 @@
 /** Fixed job-file drawers. There are no folders — see PHASE9.md. */
 
+import { ymdToLocalDate } from '../dates';
+
 export const JOB_FILE_TYPES = [
   'contract',
   'variation',
@@ -92,4 +94,162 @@ export function jobFileStoragePath(
 
 export function jobFileThumbnailPath(orgId: string, jobId: string, fileId: string): string {
   return `files/${orgId}/${jobId}/${fileId}/thumb.jpg`;
+}
+
+const VIDEO_EXTENSIONS = new Set([
+  'mp4', 'mov', 'm4v', 'webm', 'avi', 'mkv', 'mpeg', 'mpg', '3gp', 'wmv', 'flv',
+]);
+
+const EXTENSION_TO_CONTENT_TYPE: Record<string, string> = {
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  png: 'image/png',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  tif: 'image/tiff',
+  tiff: 'image/tiff',
+  pdf: 'application/pdf',
+  doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel',
+  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ppt: 'application/vnd.ms-powerpoint',
+  pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  txt: 'text/plain',
+  rtf: 'application/rtf',
+  dwg: 'image/vnd.dwg',
+  dxf: 'application/dxf',
+};
+
+/** Chooser accept list. Camera uses image/* separately so iOS can open the camera. */
+export const JOB_FILE_ACCEPT = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'image/tiff',
+  'application/pdf',
+  '.pdf',
+  '.doc',
+  '.docx',
+  '.xls',
+  '.xlsx',
+  '.ppt',
+  '.pptx',
+  '.txt',
+  '.rtf',
+  '.dwg',
+  '.dxf',
+].join(',');
+
+export function fileExtension(name: string): string {
+  const base = String(name || '').split(/[/\\]/).pop() || '';
+  const dot = base.lastIndexOf('.');
+  if (dot <= 0) return '';
+  return base.slice(dot + 1).toLowerCase();
+}
+
+export function isVideoFile(file: { name?: string; type?: string }): boolean {
+  const type = String(file?.type || '').toLowerCase();
+  if (type.startsWith('video/')) return true;
+  return VIDEO_EXTENSIONS.has(fileExtension(file?.name || ''));
+}
+
+export function contentTypeFromFileName(name: string): string | null {
+  const ext = fileExtension(name);
+  return EXTENSION_TO_CONTENT_TYPE[ext] || null;
+}
+
+export function resolveJobFileContentType(file: { name?: string; type?: string }): string | null {
+  const declared = String(file?.type || '').toLowerCase();
+  if (declared.startsWith('video/')) return null;
+  if (declared && declared !== 'application/octet-stream' && isAllowedJobFileContentType(declared)) {
+    return declared;
+  }
+  const fromName = contentTypeFromFileName(file?.name || '');
+  if (fromName && isAllowedJobFileContentType(fromName)) return fromName;
+  return null;
+}
+
+/** Photos we can try to compress. Drawings named as images (DWG) stay as-is. */
+export function isRasterImageContentType(contentType: string): boolean {
+  const type = String(contentType || '').toLowerCase();
+  if (!type.startsWith('image/')) return false;
+  if (type.includes('dwg') || type.includes('dxf') || type === 'image/svg+xml') return false;
+  return true;
+}
+
+export function suggestJobFileType(contentType: string): JobFileType {
+  return isRasterImageContentType(contentType) ? 'photo' : 'other';
+}
+
+export function validateJobFileForUpload(file: { name?: string; size?: number; type?: string }): {
+  ok: true;
+  contentType: string;
+} | {
+  ok: false;
+  error: string;
+} {
+  if (!file || !file.name) {
+    return { ok: false, error: 'Choose a file first' };
+  }
+  if (isVideoFile(file)) {
+    return { ok: false, error: 'Video is not allowed. Photos, PDFs and documents only.' };
+  }
+  const size = Number(file.size) || 0;
+  if (size <= 0) {
+    return { ok: false, error: 'That file is empty' };
+  }
+  if (size > JOB_FILE_MAX_BYTES) {
+    return { ok: false, error: 'Each file must be 25 MB or smaller' };
+  }
+  const contentType = resolveJobFileContentType(file);
+  if (!contentType) {
+    return { ok: false, error: 'That file type is not allowed. Photos, PDFs and common documents only.' };
+  }
+  return { ok: true, contentType };
+}
+
+export function formatJobFileSize(bytes: number): string {
+  const n = Number(bytes) || 0;
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) {
+    const kb = n / 1024;
+    return `${kb < 10 ? kb.toFixed(1) : Math.round(kb)} KB`;
+  }
+  const mb = n / (1024 * 1024);
+  return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`;
+}
+
+export function formatJobFileDocumentDate(ymd: string): string {
+  const date = ymdToLocalDate(ymd);
+  if (!date) return ymd || '—';
+  return date.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+export function jobFileTypeIconLabel(contentType: string): string {
+  const type = String(contentType || '').toLowerCase();
+  if (type === 'application/pdf') return 'PDF';
+  if (type.includes('dwg')) return 'DWG';
+  if (type.includes('dxf')) return 'DXF';
+  if (type.includes('spreadsheet') || type.includes('excel') || type.includes('ms-excel')) return 'XLS';
+  if (type.includes('presentation') || type.includes('powerpoint')) return 'PPT';
+  if (type.includes('word') || type.includes('msword')) return 'DOC';
+  if (type.startsWith('image/')) return 'IMG';
+  if (type === 'text/plain') return 'TXT';
+  if (type.includes('rtf')) return 'RTF';
+  return 'FILE';
+}
+
+/** HEIC/TIFF often will not toBlob as themselves; ask the canvas for JPEG. */
+export function jobFileCompressOutputType(contentType: string): string | null {
+  const type = String(contentType || '').toLowerCase();
+  if (type === 'image/heic' || type === 'image/heif' || type === 'image/tiff') {
+    return 'image/jpeg';
+  }
+  return null;
 }

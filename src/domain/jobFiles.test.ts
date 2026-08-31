@@ -8,7 +8,12 @@ import {
   jobFileThumbnailPath,
   isAllowedJobFileContentType,
   isJobFileType,
+  isRasterImageContentType,
+  isVideoFile,
+  resolveJobFileContentType,
   safeJobFileName,
+  suggestJobFileType,
+  validateJobFileForUpload,
 } from './jobFiles';
 
 describe('job file model', () => {
@@ -58,5 +63,51 @@ describe('job file model', () => {
       'files/org-a/job-1/f1/thumb.jpg',
     );
     expect(safeJobFileName('a/b\\c.pdf')).toBe('a-b-c.pdf');
+  });
+});
+
+describe('job file upload checks', () => {
+  test('rejects video by mime and by extension', () => {
+    expect(validateJobFileForUpload({
+      name: 'site.mp4',
+      type: 'video/mp4',
+      size: 1200,
+    }).ok).toBe(false);
+    expect(isVideoFile({ name: 'clip.MOV', type: '' })).toBe(true);
+    expect(validateJobFileForUpload({
+      name: 'clip.mov',
+      type: '',
+      size: 1200,
+    }).ok).toBe(false);
+  });
+
+  test('rejects a file over 25 MB before upload', () => {
+    const result = validateJobFileForUpload({
+      name: 'plan.pdf',
+      type: 'application/pdf',
+      size: JOB_FILE_MAX_BYTES + 1,
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  test('maps a PDF with an empty or octet-stream type from the name', () => {
+    expect(resolveJobFileContentType({ name: 'permit.pdf', type: '' })).toBe('application/pdf');
+    expect(resolveJobFileContentType({ name: 'permit.pdf', type: 'application/octet-stream' })).toBe(
+      'application/pdf',
+    );
+    const result = validateJobFileForUpload({
+      name: 'permit.pdf',
+      type: '',
+      size: 80_000,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.contentType).toBe('application/pdf');
+  });
+
+  test('suggests photo for images and other for documents', () => {
+    expect(suggestJobFileType('image/jpeg')).toBe('photo');
+    expect(suggestJobFileType('application/pdf')).toBe('other');
+    expect(isRasterImageContentType('image/vnd.dwg')).toBe(false);
+    expect(isRasterImageContentType('image/png')).toBe(true);
   });
 });

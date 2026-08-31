@@ -1,6 +1,7 @@
 import { 
   ref, 
   uploadBytes, 
+  uploadBytesResumable,
   getDownloadURL, 
   deleteObject, 
   listAll,
@@ -241,45 +242,173 @@ export const listReceiptImages = async (jobId) => {
 };
 
 /**
- * Compress image file to reduce size
- * @param {File} file - Original image file
- * @param {number} maxWidth - Maximum width in pixels
- * @param {number} quality - Compression quality (0-1)
- * @returns {Promise<File>} Compressed file
+ * Compress an image. Receipts and job files share this. If the browser
+ * cannot decode the file (common with HEIC on desktop), the original is
+ * returned so the caller can still store it when rules allow.
+ * @param {File} file
+ * @param {number} maxWidth
+ * @param {number} quality
+ * @param {string | null} outputType - e.g. image/jpeg for HEIC
+ * @returns {Promise<File>}
  */
-const compressImage = async (file, maxWidth = 1920, quality = 0.8) => {
+export const compressImage = async (file, maxWidth = 1920, quality = 0.8, outputType = null) => {
   return new Promise((resolve) => {
+    const type = String((file && file.type) || '');
+    if (!file || !type.startsWith('image/') || type.includes('dwg')) {
+      resolve(file);
+      return;
+    }
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
+    const src = URL.createObjectURL(file);
+    const finish = (result) => {
+      URL.revokeObjectURL(src);
+      resolve(result);
+    };
 
     img.onload = () => {
-      // Calculate new dimensions
       let { width, height } = img;
       if (width > maxWidth) {
         height = (height * maxWidth) / width;
         width = maxWidth;
       }
-
-      // Set canvas dimensions
       canvas.width = width;
       canvas.height = height;
-
-      // Draw and compress
+      if (!ctx) {
+        finish(file);
+        return;
+      }
       ctx.drawImage(img, 0, 0, width, height);
-      
+      const blobType = outputType || file.type || 'image/jpeg';
       canvas.toBlob((blob) => {
-        const compressedFile = new File([blob], file.name, {
-          type: file.type,
-          lastModified: Date.now()
-        });
-        resolve(compressedFile);
-      }, file.type, quality);
+        if (!blob) {
+          finish(file);
+          return;
+        }
+        let name = file.name || 'image';
+        if (blobType === 'image/jpeg' && !/\.jpe?g$/i.test(name)) {
+          name = `${String(name).replace(/\.[^.]+$/, '')}.jpg`;
+        }
+        finish(new File([blob], name, {
+          type: blobType,
+          lastModified: Date.now(),
+        }));
+      }, blobType, quality);
     };
 
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => finish(file);
+    img.src = src;
   });
 };
+
+/**
+ * 320px JPEG thumbnail for lists and grids. Never used as a substitute
+ * for the stored original. Returns null if the image cannot be drawn.
+ * @param {File} file
+ * @param {number} maxEdge
+ * @param {number} quality
+ * @returns {Promise<File | null>}
+ */
+export const generateImageThumbnail = async (file, maxEdge = 320, quality = 0.8) => {
+  return new Promise((resolve) => {
+    const type = String((file && file.type) || '');
+    if (!file || !type.startsWith('image/') || type.includes('dwg')) {
+      resolve(null);
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    const src = URL.createObjectURL(file);
+    const finish = (result) => {
+      URL.revokeObjectURL(src);
+      resolve(result);
+    };
+
+    img.onload = () => {
+      let { width, height } = img;
+      const longest = Math.max(width, height) || 1;
+      if (longest > maxEdge) {
+        const scale = maxEdge / longest;
+        width = Math.max(1, Math.round(width * scale));
+        height = Math.max(1, Math.round(height * scale));
+      }
+      canvas.width = width;
+      canvas.height = height;
+      if (!ctx) {
+        finish(null);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          finish(null);
+          return;
+        }
+        finish(new File([blob], 'thumb.jpg', {
+          type: 'image/jpeg',
+          lastModified: Date.now(),
+        }));
+      }, 'image/jpeg', quality);
+    };
+
+    img.onerror = () => finish(null);
+    img.src = src;
+  });
+};
+
+/**
+ * Upload a blob to a known path. Progress is 0–1 when onProgress is set.
+ * Storage first; the caller writes Firestore only after this resolves.
+ * @param {string} path
+ * @param {Blob | File} data
+ * @param {{ contentType?: string, jobId?: string, onProgress?: (fraction: number) => void }} [options]
+ */
+export async function uploadStorageBlob(path, data, options = {}) {
+  const storage = await getFirebaseStorage();
+  const storageRef = ref(storage, path);
+  const metadata = {
+    contentType: options.contentType || (data && data.type) || 'application/octet-stream',
+    customMetadata: {
+      orgId: getActiveOrgId(),
+      jobId: options.jobId || '',
+    },
+  };
+
+  if (typeof options.onProgress !== 'function') {
+    await uploadBytes(storageRef, data, metadata);
+    return { path };
+  }
+
+  await new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(storageRef, data, metadata);
+    task.on(
+      'state_changed',
+      (snapshot) => {
+        if (snapshot.totalBytes > 0) {
+          options.onProgress(snapshot.bytesTransferred / snapshot.totalBytes);
+        }
+      },
+      reject,
+      () => resolve(task.snapshot),
+    );
+  });
+  return { path };
+}
+
+/** Download URL for a Storage path. Lists must pass a thumbnail path, never the original. */
+export async function getDownloadUrlForPath(path) {
+  if (!path) return null;
+  try {
+    const storage = await getFirebaseStorage();
+    return await getDownloadURL(ref(storage, path));
+  } catch (error) {
+    return null;
+  }
+}
 
 /**
  * Get receipt image metadata

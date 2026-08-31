@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Target,
   FileText,
+  Files,
   Users,
   FileCheck,
   Briefcase,
@@ -20,6 +21,7 @@ const navMain = [
   { key: 'dashboard', label: 'Overview', icon: LayoutDashboard, needsJob: true, jobOnly: true },
   { key: 'add-expense', label: 'Add expense', icon: PlusCircle, needsJob: true },
   { key: 'new-invoice', label: 'Invoices', icon: FileText, needsJob: true },
+  { key: 'files', label: 'Files', icon: Files, needsJob: true },
   { key: 'history', label: 'History', icon: Clock, needsJob: true },
 ];
 

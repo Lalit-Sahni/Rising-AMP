@@ -20,6 +20,8 @@ export function pathForPage(page: string, jobId: string | null | undefined): str
       return jobId ? `/jobs/${jobId}/invoices` : '/';
     case 'history':
       return jobId ? `/jobs/${jobId}/history` : '/';
+    case 'files':
+      return jobId ? `/jobs/${jobId}/files` : '/';
     case 'budget-tracking':
       return jobId ? `/jobs/${jobId}/budget` : '/';
     case 'hia-contract':
@@ -40,6 +42,7 @@ export function pageFromPath(pathname: string): string {
   if (!rest) return 'dashboard';
   if (rest === 'expenses/new') return 'add-expense';
   if (rest === 'invoices') return 'new-invoice';
+  if (rest === 'files') return 'files';
   if (rest === 'history') return 'history';
   if (rest === 'budget') return 'budget-tracking';
   if (rest === 'contracts') return 'hia-contract';

@@ -1,4 +1,4 @@
-import { pathForPage } from './navigation';
+import { pathForPage, pageFromPath } from './navigation';
 
 describe('pathForPage', () => {
   test('opening a job overview uses that job id, not a leftover one', () => {
@@ -8,5 +8,10 @@ describe('pathForPage', () => {
 
   test('jobs home does not keep a job in the URL', () => {
     expect(pathForPage('jobs', 'job-78b8dcb3ea6bb3c0')).toBe('/');
+  });
+
+  test('files live on the job', () => {
+    expect(pathForPage('files', 'job-78b8dcb3ea6bb3c0')).toBe('/jobs/job-78b8dcb3ea6bb3c0/files');
+    expect(pageFromPath('/jobs/job-78b8dcb3ea6bb3c0/files')).toBe('files');
   });
 });

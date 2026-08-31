@@ -192,6 +192,12 @@ Done in Phase 9 Part B:
 - Job files live at `organizations/{orgId}/projects/{jobId}/files/{fileId}` with a fixed type list (no folders). Archive, never delete.
 - Storage path `files/{orgId}/{jobId}/{fileId}/…` is gated on job membership. 25 MB, no video.
 
+Done in Phase 9 Part C:
+
+- Job-file uploads reuse `src/firebase/storage.js`. Images compress to 1920px at 0.8 plus a 320px JPEG thumbnail. PDFs store as-is with a type icon. Lists render the thumbnail, never the original.
+- Storage is written first, then Firestore. A failed Storage upload never gets a record. Retry can skip a completed Storage write.
+- Route `/jobs/:jobId/files` with an add-files sheet. Search, type counts, grid, viewer, and receipts are Part D.
+
 Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.
