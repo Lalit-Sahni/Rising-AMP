@@ -35,6 +35,7 @@ export default function FilesPage() {
     profile,
     expenses,
     invoices,
+    hiaContracts,
     showToast,
   } = useApp();
   const [files, setFiles] = useState<JobFile[]>([]);
@@ -94,6 +95,7 @@ export default function FilesPage() {
     type: JobFileType;
     documentDate: string;
     note: string;
+    linkedTo: { kind: 'expense' | 'invoice' | 'hiaContract'; id: string } | null;
   }) => {
     if (!jobId || !openItem?.fileId) return;
     setViewerBusy(true);
@@ -325,6 +327,7 @@ export default function FilesPage() {
         currentName={currentName}
         expenses={expenses || []}
         invoices={invoices || []}
+        hiaContracts={hiaContracts || []}
         busy={viewerBusy}
         onClose={() => setOpenItem(null)}
         onSave={handleSave}

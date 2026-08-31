@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   CalendarDays,
@@ -12,6 +12,7 @@ import { useApp } from '../../context/AppContext';
 import ExportDialog from '../ExportDialog';
 import JobPeople from '../JobPeople';
 import EmptyState from '../EmptyState';
+import { fetchJobFiles } from '../../data';
 import { getCategoryStyle } from '../../utils/categoryStyle';
 import {
   VERDICT,
@@ -49,11 +50,26 @@ export default function DashboardPage() {
   } = useApp();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [showExport, setShowExport] = useState(false);
+  const [jobFiles, setJobFiles] = useState([]);
   const attentionRef = useRef(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!jobId) {
+      setJobFiles([]);
+      return undefined;
+    }
+    fetchJobFiles(jobId).then((result) => {
+      if (!cancelled && result.success) setJobFiles(result.files || []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
   const metrics = useMemo(
-    () => deriveJobMetrics({ expenses, invoices }, { period: selectedPeriod, expensesCapped }),
-    [expenses, invoices, selectedPeriod, expensesCapped]
+    () => deriveJobMetrics({ expenses, invoices, files: jobFiles }, { period: selectedPeriod, expensesCapped }),
+    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped]
   );
   const banner = bannerMessage(metrics);
   const subtitle = jobSubtitle({ clients, invoices, metrics });
@@ -275,6 +291,8 @@ export default function DashboardPage() {
                       <CalendarDays className="w-4 h-4" strokeWidth={1.7} />
                     ) : item.id === 'expenses-no-receipt' ? (
                       <Camera className="w-4 h-4" strokeWidth={1.7} />
+                    ) : item.id.startsWith('files') ? (
+                      <FileText className="w-4 h-4" strokeWidth={1.7} />
                     ) : (
                       <AlertTriangle className="w-4 h-4" strokeWidth={1.7} />
                     )}

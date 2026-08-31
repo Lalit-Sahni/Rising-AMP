@@ -6,10 +6,12 @@ import {
   filesDrawerMeta,
   formatJobFileDocumentDate,
   formatJobFileSize,
+  type JobFileLinkKind,
+  type JobFileLinkedTo,
   type JobFileType,
 } from '../../domain/jobFiles';
 import type { FileBrowserItem } from '../../domain/jobFileBrowser';
-import { fileAddedByLabel, fileLinkLabel } from '../../domain/jobFileBrowser';
+import { expenseDisplayName, fileAddedByLabel, fileLinkLabel } from '../../domain/jobFileBrowser';
 import JobFilePreview from './JobFilePreview';
 
 type JobFileViewerProps = {
@@ -19,6 +21,7 @@ type JobFileViewerProps = {
   currentName: string;
   expenses: unknown[];
   invoices: unknown[];
+  hiaContracts?: unknown[];
   busy?: boolean;
   onClose: () => void;
   onSave: (patch: {
@@ -26,6 +29,7 @@ type JobFileViewerProps = {
     type: JobFileType;
     documentDate: string;
     note: string;
+    linkedTo: JobFileLinkedTo | null;
   }) => Promise<void> | void;
   onArchive: () => Promise<void> | void;
   onOpenExpense: (expenseId: string) => void;
@@ -38,6 +42,7 @@ export default function JobFileViewer({
   currentName,
   expenses,
   invoices,
+  hiaContracts = [],
   busy = false,
   onClose,
   onSave,
@@ -48,6 +53,8 @@ export default function JobFileViewer({
   const [type, setType] = useState<JobFileType>('other');
   const [documentDate, setDocumentDate] = useState('');
   const [note, setNote] = useState('');
+  const [linkKind, setLinkKind] = useState<'none' | JobFileLinkKind>('none');
+  const [linkId, setLinkId] = useState('');
   const [confirmArchive, setConfirmArchive] = useState(false);
 
   useEffect(() => {
@@ -56,6 +63,8 @@ export default function JobFileViewer({
     setType(item.type === 'receipt' ? 'other' : item.type);
     setDocumentDate(item.documentDate);
     setNote(item.note);
+    setLinkKind(item.linkedTo?.kind || 'none');
+    setLinkId(item.linkedTo?.id || '');
     setConfirmArchive(false);
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !busy) onClose();
@@ -147,6 +156,9 @@ export default function JobFileViewer({
                 type,
                 documentDate,
                 note: note.trim(),
+                linkedTo: linkKind === 'none' || !linkId
+                  ? null
+                  : { kind: linkKind, id: linkId },
               });
             }}
           >
@@ -206,6 +218,81 @@ export default function JobFileViewer({
                 className="mt-1 w-full px-3 py-2 rounded-ot-sm border border-hairline text-[14px] text-ink"
               />
             </label>
+            <div>
+              <div className="text-[12.5px] font-medium text-slate-600 mb-1.5">Linked to</div>
+              <select
+                value={linkKind}
+                disabled={busy}
+                onChange={(event) => {
+                  const next = event.target.value as 'none' | JobFileLinkKind;
+                  setLinkKind(next);
+                  setLinkId('');
+                }}
+                className="w-full min-h-[44px] px-3 rounded-ot-sm border border-hairline text-[14px] text-ink mb-2"
+              >
+                <option value="none">Nothing</option>
+                <option value="expense">An expense</option>
+                <option value="invoice">An invoice</option>
+                <option value="hiaContract">The HIA contract</option>
+              </select>
+              {linkKind === 'expense' ? (
+                <select
+                  value={linkId}
+                  disabled={busy}
+                  onChange={(event) => setLinkId(event.target.value)}
+                  className="w-full min-h-[44px] px-3 rounded-ot-sm border border-hairline text-[14px] text-ink"
+                >
+                  <option value="">Choose an expense</option>
+                  {(expenses || []).map((expense) => {
+                    const row = expense as { id?: string; status?: string };
+                    if (!row?.id || String(row.status || '').toLowerCase() === 'void') return null;
+                    return (
+                      <option key={row.id} value={row.id}>
+                        {expenseDisplayName(expense)}
+                      </option>
+                    );
+                  })}
+                </select>
+              ) : null}
+              {linkKind === 'invoice' ? (
+                <select
+                  value={linkId}
+                  disabled={busy}
+                  onChange={(event) => setLinkId(event.target.value)}
+                  className="w-full min-h-[44px] px-3 rounded-ot-sm border border-hairline text-[14px] text-ink"
+                >
+                  <option value="">Choose an invoice</option>
+                  {(invoices || []).map((invoice) => {
+                    const row = invoice as { id?: string; invoiceNumber?: string; status?: string };
+                    if (!row?.id || String(row.status || '').toLowerCase() === 'void') return null;
+                    return (
+                      <option key={row.id} value={row.id}>
+                        {row.invoiceNumber || row.id}
+                      </option>
+                    );
+                  })}
+                </select>
+              ) : null}
+              {linkKind === 'hiaContract' ? (
+                <select
+                  value={linkId}
+                  disabled={busy}
+                  onChange={(event) => setLinkId(event.target.value)}
+                  className="w-full min-h-[44px] px-3 rounded-ot-sm border border-hairline text-[14px] text-ink"
+                >
+                  <option value="">Choose a contract</option>
+                  {(hiaContracts || []).map((contract) => {
+                    const row = contract as { id?: string; projectName?: string; status?: string };
+                    if (!row?.id || String(row.status || '').toLowerCase() === 'void') return null;
+                    return (
+                      <option key={row.id} value={row.id}>
+                        {row.projectName || 'HIA contract'}
+                      </option>
+                    );
+                  })}
+                </select>
+              ) : null}
+            </div>
             <button
               type="submit"
               disabled={busy}

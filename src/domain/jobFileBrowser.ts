@@ -9,6 +9,7 @@ import {
   filesDrawerMeta,
   firstName,
   type FilesDrawerType,
+  type JobFileLinkKind,
   type JobFileLinkedTo,
 } from './jobFiles';
 
@@ -58,7 +59,7 @@ function expenseHasReceipt(expense: unknown): boolean {
   return Boolean(asString(row?.receiptImageUrl) || asString(row?.receiptImagePath));
 }
 
-function expenseDisplayName(expense: unknown): string {
+export function expenseDisplayName(expense: unknown): string {
   const row = asRecord(expense);
   if (!row) return 'Expense';
   switch (asString(row.category)) {
@@ -83,6 +84,19 @@ function expenseDocumentDate(expense: unknown): string {
   const row = asRecord(expense);
   const date = parseCalendarDate(row?.date) || parseCalendarDate(row?.timestamp);
   return date ? toYmd(date) : '';
+}
+
+export function filesLinkedTo(
+  files: JobFile[],
+  kind: JobFileLinkKind,
+  id: string,
+): JobFile[] {
+  if (!id) return [];
+  return (files || []).filter((file) => (
+    file.status !== 'archived'
+    && file.linkedTo?.kind === kind
+    && file.linkedTo.id === id
+  ));
 }
 
 export function jobFileToBrowserItem(file: JobFile): FileBrowserItem {

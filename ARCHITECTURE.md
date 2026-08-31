@@ -202,6 +202,11 @@ Done in Phase 9 Part D:
 
 - Route `/jobs/:jobId/files` with search, type counts (dots, not badges), list/grid, and a viewer. Receipts from expenses appear read-only and are not copied. Lists render `thumb.jpg` only.
 
+Done in Phase 9 Part E:
+
+- What needs you today reads job files: missing contract after other paperwork exists; $5,000+ invoices unlinked only after a quote/variation is on the job; Other files older than a week when `uploadedAt` is known. Certificate age is not treated as expiry.
+- `linkedTo` is set from the file viewer. Expenses and invoices list attached files without copying them.
+
 Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.

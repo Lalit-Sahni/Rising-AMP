@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   FileText, 
   Plus, 
@@ -10,6 +10,8 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { fetchJobFiles } from '../../data';
+import LinkedJobFiles from '../files/LinkedJobFiles';
 import NewInvoicePage from './NewInvoicePage';
 import InvoicePreview from '../ui/InvoicePreview';
 import { getInvoiceTotal, isPaidInvoice, isVoidInvoice } from '../../utils/jobMetrics';
@@ -27,13 +29,28 @@ function formatInvoiceDate(value) {
 }
 
 const InvoiceManagementPage = () => {
-  const { invoices, deleteInvoiceFromFirebase, restoreInvoiceFromFirebase, purgeInvoiceFromFirebase, updateInvoiceStatus, showToast, projectName: jobName } = useApp();
+  const { invoices, deleteInvoiceFromFirebase, restoreInvoiceFromFirebase, purgeInvoiceFromFirebase, updateInvoiceStatus, showToast, projectName: jobName, jobId } = useApp();
   const [showNewInvoice, setShowNewInvoice] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [previewInvoice, setPreviewInvoice] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showRecentlyDeleted, setShowRecentlyDeleted] = useState(false);
+  const [jobFiles, setJobFiles] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!jobId) {
+      setJobFiles([]);
+      return undefined;
+    }
+    fetchJobFiles(jobId).then((result) => {
+      if (!cancelled && result.success) setJobFiles(result.files || []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
 
   // Filter invoices based on search and status
   const filteredInvoices = invoices.filter(invoice => {
@@ -377,7 +394,13 @@ const InvoiceManagementPage = () => {
                 {rows.map((invoice, index) => (
                   <tr key={index} className="hover:bg-canvas transition-colors">
                     <td className="px-5 py-3.5 text-sm text-ink font-medium font-mono">
-                      {invoice.invoiceNumber}
+                      <div>{invoice.invoiceNumber}</div>
+                      <LinkedJobFiles
+                        files={jobFiles}
+                        kind="invoice"
+                        recordId={invoice.id}
+                        compact
+                      />
                     </td>
                     <td className="px-5 py-3.5 text-sm text-slate-600">
                       {invoice.clientName}

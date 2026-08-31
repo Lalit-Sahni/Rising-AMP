@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Image, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { fetchJobFiles } from '../data';
+import LinkedJobFiles from './files/LinkedJobFiles';
 import CreatableSelect from 'react-select/creatable';
 import DatePicker from 'react-datepicker';
 import { useDropzone } from 'react-dropzone';
@@ -140,11 +142,26 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
   const [receiptViewerOpen, setReceiptViewerOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [checkFields, setCheckFields] = useState({});
+  const [jobFiles, setJobFiles] = useState([]);
   const dialogRef = useRef(null);
   const initialDataRef = useRef(initialData);
   const uncertainFieldsRef = useRef(uncertainFields);
   initialDataRef.current = initialData;
   uncertainFieldsRef.current = uncertainFields;
+
+  useEffect(() => {
+    if (!isOpen || !expenseId || !jobId) {
+      setJobFiles([]);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchJobFiles(jobId).then((result) => {
+      if (!cancelled && result.success) setJobFiles(result.files || []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, expenseId, jobId]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -801,6 +818,15 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
                 </div>
               )}
             </div>
+
+            {expenseId ? (
+              <LinkedJobFiles
+                files={jobFiles}
+                kind="expense"
+                recordId={expenseId}
+                jobId={jobId}
+              />
+            ) : null}
 
             {/* Total Calculation */}
             <div className="bg-zinc-50 rounded-lg p-4 border border-zinc-200">

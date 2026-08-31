@@ -5,6 +5,7 @@ import {
 } from './jobFiles';
 import {
   combineJobFilesAndReceipts,
+  filesLinkedTo,
   fileAddedByLabel,
   fileLinkLabel,
   fileTypeCounts,
@@ -119,5 +120,21 @@ describe('Files screen browser', () => {
       { kind: 'invoice', id: 'inv-1' },
       { invoices: [{ id: 'inv-1', invoiceNumber: '2026-0004' }] },
     )).toBe('linked to 2026-0004');
+  });
+
+  test('filesLinkedTo only returns active files for that record', () => {
+    const linked = jobFileSchema.parse({
+      ...sampleFile,
+      id: 'f-link',
+      linkedTo: { kind: 'invoice', id: 'inv-1' },
+      storagePath: 'files/opal-ss-constructions/job-1/f-link/slab.pdf',
+    });
+    const other = jobFileSchema.parse({
+      ...sampleFile,
+      id: 'f-other',
+      linkedTo: { kind: 'invoice', id: 'inv-2' },
+      storagePath: 'files/opal-ss-constructions/job-1/f-other/slab.pdf',
+    });
+    expect(filesLinkedTo([linked, other], 'invoice', 'inv-1').map((file) => file.id)).toEqual(['f-link']);
   });
 });
