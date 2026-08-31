@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { jobFileTypeIconLabel, JOB_FILE_TYPE_META, type JobFileType } from '../../domain/jobFiles';
+import { filesDrawerMeta, jobFileTypeIconLabel, type FilesDrawerType } from '../../domain/jobFiles';
 import { getDownloadUrlForPath } from '../../firebase/storage';
 
 type JobFileThumbProps = {
   thumbnailPath?: string | null;
   contentType: string;
-  type?: JobFileType;
+  type?: FilesDrawerType;
   alt?: string;
   size?: number;
+  className?: string;
 };
 
 /**
@@ -19,10 +20,11 @@ export default function JobFileThumb({
   type,
   alt = '',
   size = 44,
+  className = '',
 }: JobFileThumbProps) {
   const [url, setUrl] = useState<string | null>(null);
   const label = jobFileTypeIconLabel(contentType);
-  const color = (type && JOB_FILE_TYPE_META[type]?.color) || '#8A9099';
+  const color = (type && filesDrawerMeta(type)?.color) || '#8A9099';
 
   useEffect(() => {
     if (!thumbnailPath) {
@@ -40,8 +42,8 @@ export default function JobFileThumb({
 
   return (
     <div
-      className="shrink-0 rounded-ot-sm overflow-hidden bg-canvas border border-hairline grid place-items-center"
-      style={{ width: size, height: size }}
+      className={`shrink-0 rounded-ot-sm overflow-hidden bg-canvas border border-hairline grid place-items-center ${className}`}
+      style={className.includes('w-full') ? undefined : { width: size, height: size }}
       aria-hidden={alt ? undefined : true}
     >
       {url ? (

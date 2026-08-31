@@ -53,7 +53,7 @@ organizations/{orgId}
     budget, expenses[]                         # leftover PIN copy fields; ignore
     expenses/{id}          + jobId
     invoices/{id}          + jobId, invoiceNumber, status including void
-    files/{id}             job documents (Phase 9). type from a fixed list; no folders. status active | archived; delete denied.
+    files/{id}             job documents (Phase 9). type from a fixed list; no folders. status active | archived; delete denied. Files screen also lists expense receipts read-only; it does not copy them.
     clients/{id}           house owner you invoice (one per job, ideally)
     suppliers/{id}         materials (Bunnings, Rodgers, …) upsert by name
     serviceProviders/{id}  same idea as labour, not mixed into clients

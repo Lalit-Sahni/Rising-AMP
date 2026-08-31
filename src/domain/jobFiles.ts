@@ -18,8 +18,11 @@ export type JobFileType = (typeof JOB_FILE_TYPES)[number];
 
 export const JOB_FILE_MAX_BYTES = 25 * 1024 * 1024;
 
-/** Display-only. Receipt images stay on the expense; Files will surface them in Part D. */
-export const RECEIPT_FILE_TYPE = 'receipt';
+/** Display-only. Receipt images stay on the expense; Files never copies them. */
+export const RECEIPT_FILE_TYPE = 'receipt' as const;
+export type FilesDrawerType = JobFileType | typeof RECEIPT_FILE_TYPE;
+
+export const RECEIPT_FILE_TYPE_META = { label: 'Receipt', color: '#8A9099' };
 
 export const JOB_FILE_TYPE_META: Record<JobFileType, { label: string; color: string }> = {
   contract: { label: 'Contract', color: '#5E82A6' },
@@ -69,6 +72,17 @@ export type JobFileLinkedTo = {
 
 export function isJobFileType(value: unknown): value is JobFileType {
   return typeof value === 'string' && (JOB_FILE_TYPES as readonly string[]).includes(value);
+}
+
+export function filesDrawerMeta(type: FilesDrawerType): { label: string; color: string } {
+  if (type === RECEIPT_FILE_TYPE) return RECEIPT_FILE_TYPE_META;
+  return JOB_FILE_TYPE_META[type];
+}
+
+export function firstName(displayName: string): string {
+  const trimmed = String(displayName || '').trim();
+  if (!trimmed) return '';
+  return trimmed.split(/\s+/)[0] || '';
 }
 
 export function isAllowedJobFileContentType(value: unknown): boolean {

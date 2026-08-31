@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-9-job-files` — Phase 9 **Part C done**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-9-job-files` — Phase 9 **Part D done**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -12,9 +12,11 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 ## Where we are (2026-08-31)
 
-**Phase 9 Part C is on this branch.** Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. One part per session.
+**Phase 9 Part D is on this branch.** Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. One part per session.
 
-**Part C shipped (staging rules live, hosting not):** Job files upload through the existing Storage helper. Images compress to 1920px at 0.8 and get a 320px thumbnail; lists never render the original. PDFs store as-is. 25 MB, no video, real progress, retry without re-picking. Storage first, then Firestore. Files sits in the job sidebar at `/jobs/:jobId/files`. Search, filters, grid, viewer and receipts are **Part D**.
+**Part D shipped (not hosted):** Files is search first, then type counts with dots not filled badges, list by default and a grid toggle. Tapping a row opens the original in a viewer (rename, type, note, archive). Receipts from expenses show as a dashed Receipt row, read-only, and open the expense on History. Lists still render `thumb.jpg` only; receipts use a type icon so the original is never pulled into the list. No folders.
+
+**Part C shipped (staging rules live, hosting not):** Job files upload through the existing Storage helper. Images compress to 1920px at 0.8 and get a 320px thumbnail; lists never render the original. PDFs store as-is. 25 MB, no video, real progress, retry without re-picking. Storage first, then Firestore. Files sits in the job sidebar at `/jobs/:jobId/files`.
 
 **Staging so localhost Files works (31 Aug 2026, not production):** `firebase deploy --project staging --only firestore:rules,storage`. Storage membership uses `firestore.get()`, so staging IAM must include `roles/firebaserules.firestoreServiceAgent` and `roles/datastore.viewer` on the Firebase Rules / Storage service accounts (project number `59005813044`). `thumbnailPath` rules use a full-string `matches()`, so the regex has to end in `.+` the same way `storagePath` does — without that, photos fail Firestore after Storage succeeds. Tiny probe objects under `files/…/risingamp-probe*` may still exist; nobody can delete job-file objects.
 
@@ -44,12 +46,12 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part C is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part D is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
 
-1. Phase 9 **Part D** — Files screen (search, type counts, list/grid, viewer, receipts read-only). Then E–F in later sessions. Brief: `PHASE9.md`.
+1. Phase 9 **Part E** — file gaps in What needs you today, and linking files to expenses/invoices. Then F (handover pack) later. Brief: `PHASE9.md`.
 2. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes); ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
 3. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
 4. Offline / service worker — still its own phase.
@@ -65,9 +67,10 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vi
 - [x] Phase 7 — app feel on a phone (`PHASE7.md`); hosting live; no new icon
 - [x] Phase 8 — foundations live (`PHASE8.md`); leak closed; Vite; routes; cents; server invoice numbers
 - [x] Phase 9 Part A — Phase 8 leftovers (storage org, expense cap, void not delete, lazy exceljs)
-- [x] Phase 9 Part B — job-file model and rules
 - [x] Phase 9 Part C — upload, compress, thumbnails
-- [ ] Phase 9 Part D — Files screen
+- [x] Phase 9 Part D — Files screen
+- [ ] Phase 9 Part E — What needs you / linking
+- [ ] Phase 9 Part F — handover pack
 
 ## What shipped (localhost / staging)
 

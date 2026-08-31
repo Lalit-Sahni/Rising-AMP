@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Trash2, Pencil, Filter, Search, Download, Eye, Calendar, DollarSign, Hash, RotateCcw } from 'lucide-react';
 import ExportDialog from '../ExportDialog';
@@ -19,6 +20,8 @@ const categoryLabels = {
 
 export default function HistoryPage() {
   const { expenses, showToast, deleteExpenseFromFirebase, restoreExpenseFromFirebase, purgeExpenseFromFirebase } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [payerFilter, setPayerFilter] = useState('all');
@@ -30,6 +33,15 @@ export default function HistoryPage() {
   });
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showRecentlyDeleted, setShowRecentlyDeleted] = useState(false);
+
+  useEffect(() => {
+    const expenseId = location.state && location.state.openExpenseId;
+    if (!expenseId) return;
+    const match = (expenses || []).find((row) => row && row.id === expenseId);
+    if (!match) return;
+    setEditingExpense(match);
+    navigate('.', { replace: true, state: {} });
+  }, [location.state, expenses, navigate]);
 
   // Safe date helper for sorting
   const safeDate = (expense) => {
