@@ -11,7 +11,7 @@ Read these files **in this order** before touching anything:
 
 Do not rely on chat history. If chat and these files disagree, these files win.
 
-**Where we are (2026-08-31):** Phase 9 **Part C** is on **`phase-9-job-files`**. Phases 1–8 are live. Localhost still uses staging. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`; deploy by name. Never commit to `master` or `main`. Never accept a raw API key or secret pasted into chat.
+**Where we are (2026-08-31):** Phase 9 **Part C** is on **`phase-9-job-files`**. Staging Firestore + Storage rules are live so localhost Files works. Production is not. Phases 1–8 are live. Localhost still uses staging. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`; deploy by name. Never commit to `master` or `main`. Never accept a raw API key or secret pasted into chat.
 
 **Paste this to start a new chat:**
 

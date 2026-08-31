@@ -196,6 +196,7 @@ Done in Phase 9 Part C:
 
 - Job-file uploads reuse `src/firebase/storage.js`. Images compress to 1920px at 0.8 plus a 320px JPEG thumbnail. PDFs store as-is with a type icon. Lists render the thumbnail, never the original.
 - Storage is written first, then Firestore. A failed Storage upload never gets a record. Retry can skip a completed Storage write.
+- Firestore `thumbnailPath` must match `files/{org}/{job}/{fileId}/.+` — `matches()` is a full-string match, so a trailing slash with no `.+` rejects `thumb.jpg`. Staging Firestore + Storage rules are live; production is not.
 - Route `/jobs/:jobId/files` with an add-files sheet. Search, type counts, grid, viewer, and receipts are Part D.
 
 Left on purpose:

@@ -6,7 +6,7 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-9-job-files`**. Phase 9 **Part C** is done (upload, compress, thumbnails). Phases 1–8 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+1. Confirm git branch. Latest work is **`phase-9-job-files`**. Phase 9 **Part C** is done (upload, compress, thumbnails). Staging Firestore + Storage rules are live so localhost Files works. Production is not. Phases 1–8 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
 2. Read `PROGRESS.md` (next concrete step). `PHASE9.md` is the Job Files brief. Open `design/risingamp-files-vision.html` in a browser. `PHASE8.md` is the closed Phase 8 record. `PHASE7.md` is a closed record (app feel). `PHASE6.md` and `PHASE6-INTEGRITY.md` are closed / parked. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
 3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.

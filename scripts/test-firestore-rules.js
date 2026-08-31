@@ -223,6 +223,24 @@ async function main() {
       ...validFile,
       storagePath: `files/${ORG_B}/${JOB_B}/f-path/stolen.pdf`,
     }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/files/f-photo`).set({
+      ...validFile,
+      name: 'Site photo',
+      type: 'photo',
+      storagePath: `files/${ORG}/${JOB}/f-photo/site.jpg`,
+      thumbnailPath: `files/${ORG}/${JOB}/f-photo/thumb.jpg`,
+      contentType: 'image/jpeg',
+      sizeBytes: 10240,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/files/f-thumb`).set({
+      ...validFile,
+      name: 'Stolen thumb',
+      type: 'photo',
+      storagePath: `files/${ORG}/${JOB}/f-thumb/site.jpg`,
+      thumbnailPath: `files/${ORG}/${JOB}/f-photo/thumb.jpg`,
+      contentType: 'image/jpeg',
+      sizeBytes: 10240,
+    }));
     await assertSucceeds(owner.firestore().doc(filePath).update({
       status: 'archived',
       archivedAt: new Date(),

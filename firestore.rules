@@ -211,7 +211,7 @@ service cloud.firestore {
                 || (
                   request.resource.data.thumbnailPath is string
                   && request.resource.data.thumbnailPath.matches(
-                    '^files/' + orgId + '/' + projectId + '/' + itemId + '/'
+                    '^files/' + orgId + '/' + projectId + '/' + itemId + '/.+'
                   )
                 )
               );
