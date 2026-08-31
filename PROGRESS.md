@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-9-job-files` — Phase 9 **Part F done**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-9-job-files` — Phase 9 **Part G done**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -12,7 +12,9 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 ## Where we are (2026-08-31)
 
-**Phase 9 Part F is on this branch.** Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. One part per session.
+**Phase 9 Part G is on this branch.** Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. One part per session.
+
+**Part G shipped (not hosted):** Files is a document register. One table with sortable columns (name, type, date, size), a summary bar, and multi-select to change type, archive, or add to the handover pack. Receipts are labelled “From an expense”, not dashed. Type chips are small and mobile-only; desktop filters from the type column. List/grid is a two-segment control. Copy no longer mentions folders.
 
 **Part F shipped (not hosted):** Handover pack on Files. Tick the documents (contract, variation, plan, permit and certificate on by default). Generate downloads one PDF: cover (job, address, date, builder details from the profile), contents that names missing types, then each document. Images are full-page plates. PDFs are appended with `pdf-lib`, which loads only on Generate. Word files are listed as not included. The pack is not stored. Initial JS gzip is 241.5 KB (budget 250).
 
@@ -50,7 +52,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part F is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part G is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
@@ -75,6 +77,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vi
 - [x] Phase 9 Part D — Files screen
 - [x] Phase 9 Part E — What needs you / linking
 - [x] Phase 9 Part F — handover pack
+- [x] Phase 9 Part G — Files as a document register
 
 ## What shipped (localhost / staging)
 

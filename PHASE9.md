@@ -194,6 +194,111 @@ Commit: `Generate a handover pack from the job's documents.`
 
 ---
 
+---
+
+## Part G — Make Files look like professional software
+
+Parts B to F built the right thing. It does not yet **look** like the right thing. This part changes presentation only: no data model changes, no rule changes, no new fields.
+
+### The diagnosis
+
+The screen is not childish, it is **mobile-app-shaped**. Every element is a rounded card with its own border, its own radius, its own gap, and a 44px minimum height. That is correct for a phone and wrong for a document library, because a document library is a **table**. Professional tools that hold files (a DAM, a document register, a finder) are dense, aligned and scannable. `FilesPage.tsx` renders a stack of separate boxes, and a stack of boxes always reads as an app for consumers rather than a tool for a business.
+
+Fix the shape and most of the feeling goes with it.
+
+### G1. The list becomes a table, not a stack of cards
+
+Today each row is `bg-surface border rounded-ot` inside `space-y-2`, so every file is its own floating card.
+
+Replace with **one bordered container**, hairline dividers between rows, no per-row border, radius or gap. Give it real columns that line up down the page:
+
+`thumbnail | name | type | document date | linked to | size | added by`
+
+Column headers that sort on click. On narrow screens collapse to two columns (thumb plus a stacked name and meta), but the desktop and tablet view is a table.
+
+This single change does more than everything else in this part combined. A reader scans **down a column**. Right now they have to read a sentence in every row.
+
+### G2. Remove every dashed border
+
+`item.kind === 'receipt' ? 'border-dashed border-zinc-300' : 'border-hairline'` appears in both the list and the grid.
+
+**This one is my fault.** The vision guide used a dashed row to *explain* in a diagram that receipts come from somewhere else. That was a diagram convention and it got implemented as a UI specification. Dashed borders mean "placeholder", "drop zone" or "unfinished" in every design language there is, so the app is currently labelling its own real content as provisional.
+
+Receipts are differentiated by **a word, not a texture**: a quiet "From an expense" in the type column, and the link in the linked-to column. Same solid hairline as everything else.
+
+While in there, `border-zinc-300` is a raw Tailwind grey and is off-palette. Every border in this app is `--hairline` `#E7E9EC`.
+
+### G3. Shrink the filter chips
+
+Eight filter chips at `min-h-[44px]` and `rounded-full` form a band of large pills that dominates everything above the content. Large rounded pills are the strongest single "consumer app" signal in the current design.
+
+The 44px rule exists for **primary touch targets**. A secondary filter is not one. Bring them to about 30px tall with `--radius-sm` corners rather than fully round, and drop the count to the same size and weight as the label instead of a separate `<i>`.
+
+Better still on desktop: move type filtering into the table's type column header as a dropdown, and keep the chip row for mobile only. The counts are already visible in the table.
+
+### G4. Add the three things whose absence makes it feel like a toy
+
+- **Sort.** By document date, name, size and type, ascending and descending, from the column headers. A document library without sort is a demo.
+- **Multi-select with bulk actions.** A checkbox column, a select-all in the header, and a bar that appears with a selection: change type, archive, add to handover pack. This is the highest-value item in this part after G1, because bulk work is what separates a tool from a viewer. Nobody re-types eight certificates one at a time.
+- **A summary bar** above the table: file count, total size, and how many of the handover types are present. Gives the screen a reason to exist beyond being a list.
+
+### G5. Density
+
+`px-3.5 py-3` plus 8px gaps shows about six files on a laptop screen. Target row height around 48px with tighter vertical padding and no inter-row gap, which shows twelve to fifteen. Dense is not cramped; dense is what a professional expects from a register.
+
+### G6. The thumbnail fallback
+
+`JobFileThumb` falls back to a 9px extra-bold label ("PDF", "IMG") tinted with the file type colour. Nine-pixel coloured text on a grey square looks cheap at any size.
+
+Use a proper file-format glyph from `lucide-react`, monochrome in `--slate-400`, at a sensible size. **The format is not the data; the type is.** So the colour dot belongs beside the type in the type column, and never on the icon. This is the Phase 2 rule again: colour lives in the data, never on the furniture.
+
+### G7. The view toggle should show its state
+
+One button that swaps between a grid icon and a list icon leaves the user unsure which state they are in. Use a two-segment control with the current view visibly selected.
+
+Also, in grid view the caption repeats the dot and the type under every tile. With tiles already grouped and filtered, that is noise. Name and date is enough.
+
+### G8. Stop talking to the user about internal decisions
+
+Three places currently explain the design rationale to the person using it:
+
+- The header subtitle: "Typed documents for X. **No folders.**"
+- The no-job empty state: "Files live on a job. **There is no unfiled pile.**"
+- The empty library: "...Nothing gets filed in the wrong folder, **because there are no folders.**"
+
+"No folders" is a decision made in a brief. The user never asked for folders and does not need to be told they are not there. It reads as defensive, and defensive copy is one of the clearest amateur tells in a product.
+
+Replace with copy about what the screen does for them:
+
+- Header: "Contracts, variations, permits, certificates and site photos for {job}."
+- Empty: "Nothing here yet. Add the contract, permits and certificates as they come in, and they will be ready as a handover pack at the end."
+- No job: "Open a job to see its documents."
+
+Say the thing. Do not explain the architecture.
+
+### G9. The meta line is a run-on sentence
+
+`Certificate · 14 Mar 2026 · linked to INV-2026-0004` rendered as one grey string at 12px means every row must be **read**. Once G1 puts these in columns the problem solves itself, but the principle holds anywhere else it appears: separate facts go in separate places, aligned, so the eye can scan.
+
+### What not to change
+
+- The data model, the schemas, the rules, the upload and thumbnail path. All correct.
+- `combineJobFilesAndReceipts`. Showing receipts alongside files is right and stays.
+- The 44px minimum on genuinely primary controls: Add files, the rows themselves as tap targets on mobile, and the upload sheet's buttons.
+- The type list. Nine fixed types is right; do not add "Miscellaneous".
+
+### Definition of done for Part G
+
+- The list is one container with aligned, sortable columns, not a stack of cards.
+- No dashed border anywhere, and no `zinc-` colour anywhere; every border is `--hairline`.
+- Multi-select with at least change-type, archive and add-to-pack.
+- Twelve or more rows visible on a 900px-tall laptop screen.
+- No copy anywhere on the screen mentions folders.
+- Colour appears only as type dots and in the data, never on icons, borders or backgrounds.
+- Checked on a phone at 390px wide with the Phase 7 safe areas holding.
+
+Commit: `Rebuild the Files screen as a document register.`
+
 ## Out of scope
 
 - **Video.** Named explicitly so it does not arrive by accident.

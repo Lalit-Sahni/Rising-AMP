@@ -212,6 +212,10 @@ Done in Phase 9 Part F:
 
 - Handover pack on Files. Default selection is contract, variation, plan, permit and certificate. Photos stay off until ticked. Cover page, contents (including missing types), then each document. Images are full-page plates. PDFs are appended with `pdf-lib`, loaded only when Generate is tapped. Word and other office files are named as not included. The pack is not stored.
 
+Done in Phase 9 Part G:
+
+- Files is a document register: one table with sortable columns, a summary bar, and multi-select (change type, archive, add to handover pack). Receipts stay in the list as “From an expense”, same hairline as everything else, and are not selectable. Type chips are mobile-only; desktop filters from the type column. List/grid is a two-segment control. Copy does not mention folders. Presentation only — no model or rule changes.
+
 Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.

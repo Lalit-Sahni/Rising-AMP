@@ -30,6 +30,8 @@ type HandoverPackSheetProps = {
     mobile?: string;
     email?: string;
   } | null;
+  /** When set, those files start ticked instead of the usual defaults. */
+  presetIds?: string[] | null;
   onClose: () => void;
   showToast: (message: string, type?: string) => void;
 };
@@ -54,6 +56,7 @@ export default function HandoverPackSheet({
   files,
   clients = [],
   profile,
+  presetIds = null,
   onClose,
   showToast,
 }: HandoverPackSheetProps) {
@@ -64,14 +67,18 @@ export default function HandoverPackSheet({
 
   useEffect(() => {
     if (!open) return undefined;
-    setSelectedIds(defaultHandoverSelectedIds(files));
+    setSelectedIds(
+      presetIds && presetIds.length > 0
+        ? presetIds.filter((id) => handoverCandidates(files).some((file) => file.id === id))
+        : defaultHandoverSelectedIds(files),
+    );
     setProgress('');
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !busy) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, files, busy, onClose]);
+  }, [open, files, busy, onClose, presetIds]);
 
   const selected = useMemo(
     () => sortHandoverFiles(candidates.filter((file) => selectedIds.includes(file.id as string))),

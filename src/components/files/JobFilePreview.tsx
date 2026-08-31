@@ -86,7 +86,7 @@ export default function JobFilePreview({
       href={url}
       target="_blank"
       rel="noreferrer"
-      className="block text-center text-[13px] font-bold text-accent min-h-[44px] leading-[44px] border border-dashed border-zinc-300 rounded-ot-sm"
+      className="block text-center text-[13px] font-bold text-accent min-h-[44px] leading-[44px] border border-hairline rounded-ot-sm"
     >
       Open {name}
     </a>

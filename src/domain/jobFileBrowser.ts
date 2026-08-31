@@ -1,13 +1,15 @@
-/** Search, type counts, and receipt overlay for the Files screen. No folders. */
+/** Search, type counts, and receipt overlay for the Files screen. */
 
 import { parseCalendarDate, toYmd } from '../dates';
 import type { JobFile } from './schemas';
+import { HANDOVER_EXPECTED_TYPES } from './handoverPack';
 import {
   JOB_FILE_TYPES,
   RECEIPT_FILE_TYPE,
   RECEIPT_FILE_TYPE_META,
   filesDrawerMeta,
   firstName,
+  formatJobFileSize,
   type FilesDrawerType,
   type JobFileLinkKind,
   type JobFileLinkedTo,
@@ -183,11 +185,30 @@ export function filterFileItems(
   return items.filter((item) => item.type === type);
 }
 
-export function sortFileItems(items: FileBrowserItem[]): FileBrowserItem[] {
-  return items.slice().sort((a, b) => {
-    const byDate = String(b.documentDate || '').localeCompare(String(a.documentDate || ''));
-    if (byDate !== 0) return byDate;
-    return a.name.localeCompare(b.name);
+export type FileSortColumn = 'name' | 'type' | 'documentDate' | 'size';
+export type FileSortDirection = 'asc' | 'desc';
+export type FileSort = { column: FileSortColumn; direction: FileSortDirection };
+
+export const DEFAULT_FILE_SORT: FileSort = { column: 'documentDate', direction: 'desc' };
+
+function compareFileItems(left: FileBrowserItem, right: FileBrowserItem, column: FileSortColumn): number {
+  if (column === 'name') return left.name.localeCompare(right.name);
+  if (column === 'type') {
+    return filesDrawerMeta(left.type).label.localeCompare(filesDrawerMeta(right.type).label);
+  }
+  if (column === 'size') return (left.sizeBytes || 0) - (right.sizeBytes || 0);
+  return String(left.documentDate || '').localeCompare(String(right.documentDate || ''));
+}
+
+export function sortFileItems(
+  items: FileBrowserItem[],
+  sort: FileSort = DEFAULT_FILE_SORT,
+): FileBrowserItem[] {
+  const direction = sort.direction === 'asc' ? 1 : -1;
+  return items.slice().sort((left, right) => {
+    const primary = compareFileItems(left, right, sort.column);
+    if (primary !== 0) return primary * direction;
+    return left.name.localeCompare(right.name);
   });
 }
 
@@ -195,8 +216,44 @@ export function visibleFileItems(
   items: FileBrowserItem[],
   query: string,
   type: FileTypeFilter,
+  sort: FileSort = DEFAULT_FILE_SORT,
 ): FileBrowserItem[] {
-  return sortFileItems(filterFileItems(searchFileItems(items, query), type));
+  return sortFileItems(filterFileItems(searchFileItems(items, query), type), sort);
+}
+
+export function isSelectableFileItem(item: FileBrowserItem): boolean {
+  return item.kind === 'file' && Boolean(item.fileId);
+}
+
+export type FileRegisterSummary = {
+  fileCount: number;
+  receiptCount: number;
+  totalBytes: number;
+  handoverPresent: number;
+  handoverExpected: number;
+};
+
+export function fileRegisterSummary(items: FileBrowserItem[]): FileRegisterSummary {
+  const files = (items || []).filter((item) => item.kind === 'file');
+  const types = new Set(files.map((item) => item.type));
+  return {
+    fileCount: files.length,
+    receiptCount: (items || []).length - files.length,
+    totalBytes: files.reduce((sum, item) => sum + (Number(item.sizeBytes) || 0), 0),
+    handoverPresent: HANDOVER_EXPECTED_TYPES.filter((type) => types.has(type)).length,
+    handoverExpected: HANDOVER_EXPECTED_TYPES.length,
+  };
+}
+
+export function formatFileRegisterSummary(summary: FileRegisterSummary): string {
+  const parts: string[] = [];
+  parts.push(summary.fileCount === 1 ? '1 file' : `${summary.fileCount} files`);
+  if (summary.receiptCount > 0) {
+    parts.push(summary.receiptCount === 1 ? '1 receipt' : `${summary.receiptCount} receipts`);
+  }
+  if (summary.totalBytes > 0) parts.push(formatJobFileSize(summary.totalBytes));
+  parts.push(`${summary.handoverPresent} of ${summary.handoverExpected} handover types`);
+  return parts.join(' · ');
 }
 
 export type FileTypeCount = { type: FileTypeFilter; label: string; color: string | null; count: number };
@@ -260,5 +317,26 @@ export function fileLinkLabel(
     return number ? `linked to ${number}` : 'linked to an invoice';
   }
   if (linkedTo.kind === 'hiaContract') return 'linked to the HIA contract';
+  return '';
+}
+
+export function fileLinkColumnLabel(
+  linkedTo: JobFileLinkedTo | null | undefined,
+  lookup: { expenses?: unknown[]; invoices?: unknown[] } = {},
+): string {
+  const label = fileLinkLabel(linkedTo, lookup);
+  return label.replace(/^linked to /, '');
+}
+
+export function fileAddedByColumnLabel(
+  item: FileBrowserItem,
+  currentUid: string,
+  currentName: string,
+): string {
+  if (item.kind === 'receipt') return 'Expense';
+  if (item.uploadedBy && item.uploadedBy === currentUid) {
+    return firstName(currentName) || 'You';
+  }
+  if (item.uploadedBy) return 'Teammate';
   return '';
 }

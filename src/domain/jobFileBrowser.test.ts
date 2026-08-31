@@ -7,10 +7,15 @@ import {
   combineJobFilesAndReceipts,
   filesLinkedTo,
   fileAddedByLabel,
+  fileLinkColumnLabel,
   fileLinkLabel,
+  fileRegisterSummary,
   fileTypeCounts,
+  formatFileRegisterSummary,
+  isSelectableFileItem,
   receiptsFromExpenses,
   searchFileItems,
+  sortFileItems,
   visibleFileItems,
 } from './jobFileBrowser';
 
@@ -136,5 +141,57 @@ describe('Files screen browser', () => {
       storagePath: 'files/opal-ss-constructions/job-1/f-other/slab.pdf',
     });
     expect(filesLinkedTo([linked, other], 'invoice', 'inv-1').map((file) => file.id)).toEqual(['f-link']);
+  });
+
+  test('sorts by name and size when asked', () => {
+    const permit = jobFileSchema.parse({
+      ...sampleFile,
+      id: 'f2',
+      name: 'Permit',
+      type: 'permit',
+      storagePath: 'files/opal-ss-constructions/job-1/f2/permit.pdf',
+      documentDate: '2026-08-31',
+      sizeBytes: 100,
+    });
+    const items = combineJobFilesAndReceipts([sampleFile, permit], []);
+    expect(sortFileItems(items, { column: 'name', direction: 'asc' }).map((item) => item.name)).toEqual([
+      'Permit',
+      'Slab engineer certificate',
+    ]);
+    expect(sortFileItems(items, { column: 'size', direction: 'asc' }).map((item) => item.name)[0]).toBe('Permit');
+  });
+
+  test('summary names file count, size and handover coverage', () => {
+    const items = combineJobFilesAndReceipts(
+      [sampleFile],
+      [{
+        id: 'e1',
+        category: 'purchase',
+        itemName: 'Bunnings',
+        receiptImagePath: 'receipts/org/job/e1/receipt.jpg',
+      }],
+    );
+    const summary = fileRegisterSummary(items);
+    expect(summary.fileCount).toBe(1);
+    expect(summary.receiptCount).toBe(1);
+    expect(summary.handoverPresent).toBe(1);
+    expect(summary.handoverExpected).toBe(4);
+    expect(formatFileRegisterSummary(summary)).toMatch(/1 file/);
+    expect(formatFileRegisterSummary(summary)).toMatch(/1 receipt/);
+    expect(fileLinkColumnLabel(
+      { kind: 'invoice', id: 'inv-1' },
+      { invoices: [{ id: 'inv-1', invoiceNumber: '2026-0004' }] },
+    )).toBe('2026-0004');
+  });
+
+  test('receipts are not selectable', () => {
+    const items = combineJobFilesAndReceipts(
+      [sampleFile],
+      [{ id: 'e1', category: 'purchase', itemName: 'Bunnings', receiptImagePath: 'receipts/org/job/e1/receipt.jpg' }],
+    );
+    expect(items.filter(isSelectableFileItem)).toHaveLength(1);
+    const receipt = items.find((item) => item.kind === 'receipt');
+    expect(receipt).toBeTruthy();
+    expect(isSelectableFileItem(receipt!)).toBe(false);
   });
 });

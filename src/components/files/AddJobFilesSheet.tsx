@@ -220,7 +220,7 @@ export default function AddJobFilesSheet({
             type="button"
             onClick={() => cameraRef.current?.click()}
             disabled={uploading}
-            className="min-h-[44px] flex items-center justify-center gap-2 px-3 py-3 border-2 border-dashed border-zinc-300 rounded-ot-sm text-[13px] font-medium text-slate-600 hover:border-accent hover:bg-accent-tint"
+            className="min-h-[44px] flex items-center justify-center gap-2 px-3 py-3 border border-hairline rounded-ot-sm text-[13px] font-medium text-slate-600 hover:border-accent hover:bg-accent-tint"
           >
             <Camera className="w-4 h-4" />
             Take a photo
@@ -229,7 +229,7 @@ export default function AddJobFilesSheet({
             type="button"
             onClick={() => filesRef.current?.click()}
             disabled={uploading}
-            className="min-h-[44px] flex items-center justify-center gap-2 px-3 py-3 border-2 border-dashed border-zinc-300 rounded-ot-sm text-[13px] font-medium text-slate-600 hover:border-accent hover:bg-accent-tint"
+            className="min-h-[44px] flex items-center justify-center gap-2 px-3 py-3 border border-hairline rounded-ot-sm text-[13px] font-medium text-slate-600 hover:border-accent hover:bg-accent-tint"
           >
             <Upload className="w-4 h-4" />
             Choose files
