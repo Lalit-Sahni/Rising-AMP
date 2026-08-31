@@ -1,4 +1,4 @@
-# Rising AMP — Architecture (after Phase 9 Part A, 2026-08-31)
+# Rising AMP — Architecture (after Phase 9 Part F, 2026-08-31)
 
 This describes the **running app**. Phase records: `PLAN.md` through `PHASE9.md`.
 
@@ -27,7 +27,7 @@ Entry: `index.html` → `src/index.js` → `src/App.js`.
 
 Localhost must load `.env.local` (staging). Production builds must load `.env.production.local`. Do not swap them.
 
-**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Measured 28 Aug 2026: **238.9 KB** initial gzip (main chunk ~245 KB gzip in the Vite reporter). `exceljs` and `jspdf`/`html2canvas` load on click. See `build/stats.html` after `npm run build`.
+**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Measured 31 Aug 2026: **241.5 KB** initial gzip. `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. See `build/stats.html` after `npm run build`.
 
 ---
 
@@ -42,6 +42,7 @@ Wired in `src/components/MainContent.js`. Map: `src/navigation.ts`.
 | `/jobs/:jobId/expenses/new` | `AddExpensePage.js` |
 | `/jobs/:jobId/invoices` | `InvoiceManagementPage.jsx` |
 | `/jobs/:jobId/history` | `HistoryPage.js` |
+| `/jobs/:jobId/files` | `FilesPage.tsx` |
 | `/jobs/:jobId/budget` | `BudgetTrackingPage.js` |
 | `/jobs/:jobId/contracts` | `HIAContractPage.jsx` |
 | `/clients` | `ClientManagerPage.jsx` |
@@ -175,7 +176,7 @@ Done in Phase 8:
 - Real URLs. Refresh stays on the same screen.
 - Money is integer cents in one module.
 - Invoice numbers from a server counter. Invoices are voided, not deleted.
-- One import path: `src/data`. `firebaseService.js` is a thin re-export of `directories.js`.
+- One import path: `src/data` for the ledger. Job files are imported from `src/firebase/jobFiles.ts` so they stay off the first JS load. `firebaseService.js` is a thin re-export of `directories.js`.
 - Auth / org / UI contexts exist; the ledger still sits in a large `AppContext` data provider (ADR 004).
 - Org id from membership. Wildcard project writes are gone.
 - Jobs list counts with `getCountFromServer`. Past 1,000 expenses the app hides cost and margin rather than showing a partial total.
@@ -207,6 +208,10 @@ Done in Phase 9 Part E:
 - What needs you today reads job files: missing contract after other paperwork exists; $5,000+ invoices unlinked only after a quote/variation is on the job; Other files older than a week when `uploadedAt` is known. Certificate age is not treated as expiry.
 - `linkedTo` is set from the file viewer. Expenses and invoices list attached files without copying them.
 
+Done in Phase 9 Part F:
+
+- Handover pack on Files. Default selection is contract, variation, plan, permit and certificate. Photos stay off until ticked. Cover page, contents (including missing types), then each document. Images are full-page plates. PDFs are appended with `pdf-lib`, loaded only when Generate is tapped. Word and other office files are named as not included. The pack is not stored.
+
 Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.
@@ -216,7 +221,7 @@ Left on purpose:
 - Gmail invite fallback; production Storage rules not deployed.
 - Dismantling the remaining AppContext ledger/directory blob.
 
-Decisions: `ADR/`.
+Decisions: `ADR/` (including `006-no-folders.md`).
 
 ---
 

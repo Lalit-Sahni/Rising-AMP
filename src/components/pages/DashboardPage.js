@@ -12,7 +12,8 @@ import { useApp } from '../../context/AppContext';
 import ExportDialog from '../ExportDialog';
 import JobPeople from '../JobPeople';
 import EmptyState from '../EmptyState';
-import { fetchJobFiles } from '../../data';
+import { fetchJobFiles } from '../../firebase/jobFiles';
+import { withFileAttention } from '../../domain/jobFileAttention';
 import { getCategoryStyle } from '../../utils/categoryStyle';
 import {
   VERDICT,
@@ -68,7 +69,10 @@ export default function DashboardPage() {
   }, [jobId]);
 
   const metrics = useMemo(
-    () => deriveJobMetrics({ expenses, invoices, files: jobFiles }, { period: selectedPeriod, expensesCapped }),
+    () => withFileAttention(
+      deriveJobMetrics({ expenses, invoices }, { period: selectedPeriod, expensesCapped }),
+      { files: jobFiles, invoices },
+    ),
     [expenses, invoices, jobFiles, selectedPeriod, expensesCapped]
   );
   const banner = bannerMessage(metrics);

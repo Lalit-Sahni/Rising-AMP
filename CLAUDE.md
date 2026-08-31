@@ -6,18 +6,18 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-9-job-files`**. Phase 9 **Part E** is done (file gaps in What needs you today, and linking files to expenses/invoices). Staging Firestore + Storage rules are live so localhost Files works. Production is not. Phases 1–8 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+1. Confirm git branch. Latest work is **`phase-9-job-files`**. Phase 9 **Part F** is done (handover pack). Staging Firestore + Storage rules are live so localhost Files works. Production is not. Phases 1–8 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
 2. Read `PROGRESS.md` (next concrete step). `PHASE9.md` is the Job Files brief. Open `design/risingamp-files-vision.html` in a browser. `PHASE8.md` is the closed Phase 8 record. `PHASE7.md` is a closed record (app feel). `PHASE6.md` and `PHASE6-INTEGRITY.md` are closed / parked. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
 3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 9 **Part F** — handover pack. One part per session. Do not deploy unless he names it. Leftovers still parked: App Check **enforcement**, ledger rollups, normalising stored money fields, TanStack Query on the ledger, dismantling the remaining AppContext ledger blob, `PHASE6-INTEGRITY.md`.
+5. **Next:** leftovers only if he asks. App Check **enforcement**, ledger rollups, normalising stored money fields, TanStack Query on the ledger, dismantling the remaining AppContext ledger blob, `PHASE6-INTEGRITY.md`. Do not deploy unless he names it.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. **All new files are TypeScript.** Existing JS converts only when a brief says so, or when the file is being substantially rewritten anyway.
 8. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part E is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part F is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -90,7 +90,7 @@ Brief: `PHASE8.md`. Vite, routes, integer cents, server invoice numbers (`YYYY-0
 
 ## Phase 9 (in progress — Job Files)
 
-Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. Branch: `phase-9-job-files`. Restore tag: `pre-phase9-2026-08-31`. **One part per session.** Parts A–E are done. Next is Part F: handover pack. No folders. No video. Do not deploy unless named.
+Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. Branch: `phase-9-job-files`. Restore tag: `pre-phase9-2026-08-31`. **One part per session.** Parts A–F are done. Not hosted. No folders. No video. Do not deploy unless named.
 
 ## Out of scope until asked
 

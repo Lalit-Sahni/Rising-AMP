@@ -1,6 +1,5 @@
 import { addCents, fromCents, labourCents, lineCents, parseToCents } from '../money';
 import { parseCalendarDate } from '../dates';
-import { deriveFileAttentionItems } from '../domain/jobFileAttention';
 
 /**
  * Read-only derived job metrics.
@@ -246,7 +245,7 @@ export function deriveCategoryTrend(expenses = [], now = new Date()) {
   return best;
 }
 
-export function deriveAttentionItems({ expenses = [], invoices = [], files = [] } = {}, now = new Date()) {
+export function deriveAttentionItems({ expenses = [], invoices = [] } = {}, now = new Date()) {
   const items = [];
   const liveExpenses = (expenses || []).filter((expense) => !isVoidExpense(expense));
   const missingDateInvoices = (invoices || []).filter((invoice) => !invoiceHasDate(invoice));
@@ -343,8 +342,6 @@ export function deriveAttentionItems({ expenses = [], invoices = [], files = [] 
     });
   }
 
-  items.push(...deriveFileAttentionItems({ files, invoices }, now));
-
   return items;
 }
 
@@ -397,7 +394,7 @@ export function periodLabel(period) {
   return 'This month';
 }
 
-export function deriveJobMetrics({ expenses = [], invoices = [], files = [] } = {}, options = {}) {
+export function deriveJobMetrics({ expenses = [], invoices = [] } = {}, options = {}) {
   const now = options.now || new Date();
   const period = options.period || 'month';
   const expensesCapped = Boolean(options.expensesCapped);
@@ -422,7 +419,6 @@ export function deriveJobMetrics({ expenses = [], invoices = [], files = [] } = 
   const attentionItems = deriveAttentionItems({
     expenses: liveExpenses,
     invoices: liveInvoices,
-    files,
   }, now);
   const invalidCount = liveExpenses.filter((expense) => expense && expense._invalid).length
     + (invoices || []).filter((invoice) => invoice && invoice._invalid).length;

@@ -135,3 +135,18 @@ export function deriveFileAttentionItems(
 
   return items;
 }
+
+export function withFileAttention<T extends { attentionItems?: FileAttentionItem[]; attentionCount?: number }>(
+  metrics: T,
+  { files = [], invoices = [] }: { files?: JobFile[]; invoices?: unknown[] } = {},
+  now = new Date(),
+): T {
+  const extra = deriveFileAttentionItems({ files, invoices }, now);
+  if (!metrics || extra.length === 0) return metrics;
+  const attentionItems = [...(metrics.attentionItems || []), ...extra];
+  return {
+    ...metrics,
+    attentionItems,
+    attentionCount: attentionItems.length,
+  };
+}

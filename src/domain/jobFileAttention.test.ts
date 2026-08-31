@@ -2,6 +2,7 @@ import { jobFileSchema } from './schemas';
 import {
   FILE_INVOICE_LINK_MIN_CENTS,
   deriveFileAttentionItems,
+  withFileAttention,
 } from './jobFileAttention';
 
 const now = new Date('2026-08-31T12:00:00+10:00');
@@ -143,5 +144,27 @@ describe('file attention items', () => {
       })],
     }, now);
     expect(items.some((item) => /certificate/i.test(item.id) && item.id !== 'files-no-contract')).toBe(false);
+  });
+
+  test('withFileAttention appends file gaps without changing the rest of the metrics', () => {
+    const next = withFileAttention(
+      {
+        attentionItems: [{
+          id: 'invoices-overdue',
+          page: 'new-invoice',
+          title: 'Overdue',
+          detail: 'Pay',
+          action: 'Open',
+          tone: 'warn' as const,
+        }],
+        attentionCount: 1,
+        cash: { paid: 1 },
+      },
+      { files: [file({ type: 'permit' })], invoices: [] },
+      now,
+    );
+    expect(next.cash).toEqual({ paid: 1 });
+    expect(next.attentionItems.map((item) => item.id)).toEqual(['invoices-overdue', 'files-no-contract']);
+    expect(next.attentionCount).toBe(2);
   });
 });

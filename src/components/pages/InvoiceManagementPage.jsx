@@ -10,7 +10,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { fetchJobFiles } from '../../data';
+import { fetchJobFiles } from '../../firebase/jobFiles';
 import LinkedJobFiles from '../files/LinkedJobFiles';
 import NewInvoicePage from './NewInvoicePage';
 import InvoicePreview from '../ui/InvoicePreview';

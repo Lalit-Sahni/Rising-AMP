@@ -5,9 +5,10 @@ import { useApp } from '../../context/AppContext';
 import EmptyState from '../EmptyState';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
 import AddJobFilesSheet from '../files/AddJobFilesSheet';
+import HandoverPackSheet from '../files/HandoverPackSheet';
 import JobFileThumb from '../files/JobFileThumb';
 import JobFileViewer from '../files/JobFileViewer';
-import { archiveJobFile, fetchJobFiles, updateJobFileRecord } from '../../data';
+import { archiveJobFile, fetchJobFiles, updateJobFileRecord } from '../../firebase/jobFiles';
 import {
   filesDrawerMeta,
   formatJobFileDocumentDate,
@@ -36,12 +37,14 @@ export default function FilesPage() {
     expenses,
     invoices,
     hiaContracts,
+    clients,
     showToast,
   } = useApp();
   const [files, setFiles] = useState<JobFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [handoverOpen, setHandoverOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<FileTypeFilter>('all');
   const [view, setView] = useState<'list' | 'grid'>('list');
@@ -165,7 +168,7 @@ export default function FilesPage() {
               className="w-full min-h-[44px] pl-10 pr-3 rounded-ot-sm border border-hairline bg-surface text-[14px] text-ink"
             />
           </label>
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 flex-wrap">
             <button
               type="button"
               onClick={() => setView(view === 'list' ? 'grid' : 'list')}
@@ -173,6 +176,13 @@ export default function FilesPage() {
               aria-label={view === 'list' ? 'Show as grid' : 'Show as list'}
             >
               {view === 'list' ? <LayoutGrid className="w-4 h-4" /> : <List className="w-4 h-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setHandoverOpen(true)}
+              className="inline-flex items-center min-h-[44px] border border-hairline bg-surface text-ink text-[13px] font-bold px-[15px] rounded-[9px]"
+            >
+              Handover pack
             </button>
             <button
               type="button"
@@ -317,6 +327,16 @@ export default function FilesPage() {
         uploadedBy={currentUid}
         onClose={() => setSheetOpen(false)}
         onUploaded={loadFiles}
+        showToast={showToast}
+      />
+
+      <HandoverPackSheet
+        open={handoverOpen}
+        jobName={projectName}
+        files={files}
+        clients={clients || []}
+        profile={profile}
+        onClose={() => setHandoverOpen(false)}
         showToast={showToast}
       />
 

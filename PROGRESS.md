@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-9-job-files` — Phase 9 **Part E done**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-9-job-files` — Phase 9 **Part F done**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -12,7 +12,9 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 ## Where we are (2026-08-31)
 
-**Phase 9 Part E is on this branch.** Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. One part per session.
+**Phase 9 Part F is on this branch.** Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. One part per session.
+
+**Part F shipped (not hosted):** Handover pack on Files. Tick the documents (contract, variation, plan, permit and certificate on by default). Generate downloads one PDF: cover (job, address, date, builder details from the profile), contents that names missing types, then each document. Images are full-page plates. PDFs are appended with `pdf-lib`, which loads only on Generate. Word files are listed as not included. The pack is not stored. Initial JS gzip is 241.5 KB (budget 250).
 
 **Part E shipped (not hosted):** What needs you today can name a missing contract (only after other paperwork is filed), large invoices with no linked quote/variation (only after that drawer is in use, $5,000+), and Other files older than a week when upload date is known. An old certificate date is not treated as expiry. From a file you can link an expense, invoice or HIA contract; those records show the attached files. Jobs home still does not load files, so it stays quiet.
 
@@ -48,15 +50,14 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part E is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part F is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
 
-1. Phase 9 **Part F** — handover pack. Brief: `PHASE9.md`.
-2. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes); ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
-3. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
-4. Offline / service worker — still its own phase.
+1. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes); ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
+2. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
+3. Offline / service worker — still its own phase.
 
 ## Next
 
@@ -73,7 +74,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vi
 - [x] Phase 9 Part C — upload, compress, thumbnails
 - [x] Phase 9 Part D — Files screen
 - [x] Phase 9 Part E — What needs you / linking
-- [ ] Phase 9 Part F — handover pack
+- [x] Phase 9 Part F — handover pack
 
 ## What shipped (localhost / staging)
 

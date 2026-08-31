@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Upload, Image, Trash2, Eye, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { fetchJobFiles } from '../data';
+import { fetchJobFiles } from '../firebase/jobFiles';
 import LinkedJobFiles from './files/LinkedJobFiles';
 import CreatableSelect from 'react-select/creatable';
 import DatePicker from 'react-datepicker';
