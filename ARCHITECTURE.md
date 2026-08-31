@@ -1,4 +1,4 @@
-# Rising AMP — Architecture (after Phase 9 Part F, 2026-08-31)
+# Rising AMP — Architecture (after Phase 9, 2026-08-31)
 
 This describes the **running app**. Phase records: `PLAN.md` through `PHASE9.md`.
 
@@ -216,13 +216,15 @@ Done in Phase 9 Part G:
 
 - Files is a document register: one table with sortable columns, a summary bar, and multi-select (change type, archive, add to handover pack). Receipts stay in the list as “From an expense”, same hairline as everything else, and are not selectable. Type chips are mobile-only; desktop filters from the type column. List/grid is a two-segment control. Copy does not mention folders. Presentation only — no model or rule changes.
 
+Phase 9 closed 31 Aug 2026: production hosting, Firestore rules and Storage rules. No new Cloud Functions. Localhost stays on staging.
+
 Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.
 - Ledger rollups (Cloud Function summaries) were skipped. The list no longer reads the ledger; the dashboard still does.
 - TanStack Query is mounted but most fetches are still AppContext.
 - App Check enforcement is off until a site key exists and traffic is clean.
-- Gmail invite fallback; production Storage rules not deployed.
+- Gmail invite fallback remains until the owner asks to remove it.
 - Dismantling the remaining AppContext ledger/directory blob.
 
 Decisions: `ADR/` (including `006-no-folders.md`).

@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-9-job-files` — Phase 9 **Part G done**. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-9-job-files` — **Phase 9 closed and live.** Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -12,33 +12,35 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 ## Where we are (2026-08-31)
 
-**Phase 9 Part G is on this branch.** Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. One part per session.
+**Phase 9 is closed and live (31 Aug 2026).** Brief: `PHASE9.md` (closed record). Mockup: `design/risingamp-files-vision.html`.
 
-**Part G shipped (not hosted):** Files is a document register. One table with sortable columns (name, type, date, size), a summary bar, and multi-select to change type, archive, or add to the handover pack. Receipts are labelled “From an expense”, not dashed. Type chips are small and mobile-only; desktop filters from the type column. List/grid is a two-segment control. Copy no longer mentions folders.
+**Production (31 Aug 2026):** `firebase deploy --project production --only hosting`, then `firestore:rules`, then `storage`. No functions. Backup first: `backups/production-2026-08-31T11-25-12-856Z` (503 Firestore documents, 22 Storage files; restore dry-run parsed, not applied). Storage rules IAM on production matches staging (`roles/datastore.viewer` and `roles/firebaserules.firestoreServiceAgent` on the Firebase Rules / Storage service accounts, project number `446685609209`). Receipts are no longer world-open. Live shopfront: https://risingamp.com.au.
 
-**Part F shipped (not hosted):** Handover pack on Files. Tick the documents (contract, variation, plan, permit and certificate on by default). Generate downloads one PDF: cover (job, address, date, builder details from the profile), contents that names missing types, then each document. Images are full-page plates. PDFs are appended with `pdf-lib`, which loads only on Generate. Word files are listed as not included. The pack is not stored. Initial JS gzip is 241.5 KB (budget 250).
+**Part G shipped:** Files is a document register. One table with sortable columns (name, type, date, size), a summary bar, and multi-select to change type, archive, or add to the handover pack. Receipts are labelled “From an expense”, not dashed. Type chips are small and mobile-only; desktop filters from the type column. List/grid is a two-segment control. Copy no longer mentions folders.
 
-**Part E shipped (not hosted):** What needs you today can name a missing contract (only after other paperwork is filed), large invoices with no linked quote/variation (only after that drawer is in use, $5,000+), and Other files older than a week when upload date is known. An old certificate date is not treated as expiry. From a file you can link an expense, invoice or HIA contract; those records show the attached files. Jobs home still does not load files, so it stays quiet.
+**Part F shipped:** Handover pack on Files. Tick the documents (contract, variation, plan, permit and certificate on by default). Generate downloads one PDF: cover (job, address, date, builder details from the profile), contents that names missing types, then each document. Images are full-page plates. PDFs are appended with `pdf-lib`, which loads only on Generate. Word files are listed as not included. The pack is not stored. Initial JS gzip is 241.5 KB (budget 250).
 
-**Part D shipped (not hosted):** Files is search first, then type counts with dots not filled badges, list by default and a grid toggle. Tapping a row opens the original in a viewer (rename, type, note, archive). Receipts from expenses show as a dashed Receipt row, read-only, and open the expense on History. Lists still render `thumb.jpg` only; receipts use a type icon so the original is never pulled into the list. No folders.
+**Part E shipped:** What needs you today can name a missing contract (only after other paperwork is filed), large invoices with no linked quote/variation (only after that drawer is in use, $5,000+), and Other files older than a week when upload date is known. An old certificate date is not treated as expiry. From a file you can link an expense, invoice or HIA contract; those records show the attached files. Jobs home still does not load files, so it stays quiet.
 
-**Part C shipped (staging rules live, hosting not):** Job files upload through the existing Storage helper. Images compress to 1920px at 0.8 and get a 320px thumbnail; lists never render the original. PDFs store as-is. 25 MB, no video, real progress, retry without re-picking. Storage first, then Firestore. Files sits in the job sidebar at `/jobs/:jobId/files`.
+**Part D shipped:** Files is search first, then type counts with dots not filled badges, list by default and a grid toggle. Tapping a row opens the original in a viewer (rename, type, note, archive). Receipts from expenses show as a dashed Receipt row, read-only, and open the expense on History. Lists still render `thumb.jpg` only; receipts use a type icon so the original is never pulled into the list. No folders. Part G later replaced the dashed receipt border with the words “From an expense”.
 
-**Staging so localhost Files works (31 Aug 2026, not production):** `firebase deploy --project staging --only firestore:rules,storage`. Storage membership uses `firestore.get()`, so staging IAM must include `roles/firebaserules.firestoreServiceAgent` and `roles/datastore.viewer` on the Firebase Rules / Storage service accounts (project number `59005813044`). `thumbnailPath` rules use a full-string `matches()`, so the regex has to end in `.+` the same way `storagePath` does — without that, photos fail Firestore after Storage succeeds. Tiny probe objects under `files/…/risingamp-probe*` may still exist; nobody can delete job-file objects.
+**Part C shipped:** Job files upload through the existing Storage helper. Images compress to 1920px at 0.8 and get a 320px thumbnail; lists never render the original. PDFs store as-is. 25 MB, no video, real progress, retry without re-picking. Storage first, then Firestore. Files sits in the job sidebar at `/jobs/:jobId/files`.
 
-**Part B shipped (staging rules live, production not):** Job files are a subcollection on the job (`files/{fileId}`) with a fixed type list — no folders. Storage path is `files/{orgId}/{jobId}/{fileId}/…`. Members can read and write a valid shape; nobody can delete. 25 MB and no video, in Firestore and in Storage.
+**Staging (31 Aug 2026):** `firebase deploy --project staging --only firestore:rules,storage` so localhost Files worked first. Storage membership uses `firestore.get()`, so IAM must include `roles/firebaserules.firestoreServiceAgent` and `roles/datastore.viewer` on the Firebase Rules / Storage service accounts (staging project number `59005813044`; production `446685609209`). `thumbnailPath` rules use a full-string `matches()`, so the regex has to end in `.+` the same way `storagePath` does — without that, photos fail Firestore after Storage succeeds. Tiny probe objects under `files/…/risingamp-probe*` may still exist on staging; nobody can delete job-file objects.
 
-**Part A shipped (not deployed):** Storage rules take org id from upload metadata instead of hardcoding Opal (old receipts without metadata still fall back to Opal). Past 1,000 expenses the app hides cost and margin rather than showing a partial total. Expenses and invoices void first (Recently deleted); permanent delete is only from that view, and only after the row is already voided. Clients, HIA contracts, progress payments, labour and trades are voided, not hard-deleted. `exceljs` loads on click, not with History.
+**Part B shipped:** Job files are a subcollection on the job (`files/{fileId}`) with a fixed type list — no folders. Storage path is `files/{orgId}/{jobId}/{fileId}/…`. Members can read and write a valid shape; nobody can delete. 25 MB and no video, in Firestore and in Storage.
+
+**Part A shipped:** Storage rules take org id from upload metadata instead of hardcoding Opal (old receipts without metadata still fall back to Opal). Past 1,000 expenses the app hides cost and margin rather than showing a partial total. Expenses and invoices void first (Recently deleted); permanent delete is only from that view, and only after the row is already voided. Clients, HIA contracts, progress payments, labour and trades are voided, not hard-deleted. `exceljs` loads on click, not with History.
 
 **Phases 1–8 are closed and live.** Brief: `PHASE8.md`.
 
 **Phase 8 shipped:** Vite + TypeScript for new files, real URLs, integer cents, server invoice numbers (`YYYY-0001`), void not delete, named collection rules (no wildcard write), org from membership, Vitest + GitHub Action. Profile leak closed on production and verified from a second account that is not on a family job. App Check client is wired; **do not enforce**. Jobs list uses `getCountFromServer`. `generateWeeklyReport` was deleted from production by name (it was a callable, unused, no log entries). Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`; deploy **by name**. History edit of an expense no longer resets the form on each keystroke (a default `uncertainFields={}` was a new object every render). Production hosting and Firestore rules were deployed 29 Aug 2026 (expense edit fix).
 
-**Left on purpose:** App Check enforcement, ledger rollup documents, normalising stored money fields, TanStack Query on the ledger, dismantling the remaining AppContext ledger blob, Gmail invite fallback, production Storage rules.
+**Left on purpose:** App Check enforcement, ledger rollup documents, normalising stored money fields, TanStack Query on the ledger, dismantling the remaining AppContext ledger blob, Gmail invite fallback.
 
 **Phase 7 shipped (28 Aug 2026):** standalone portrait measured `t:0 r:0 b:34 l:0`. Top 0 because iOS reserves the status bar under `default`. Bottom 34 is the home indicator. Manifest / PNG icons skipped on purpose. Orientation not locked. No service worker.
 
-**Phase 6 shipped (28 Aug 2026):** unreachable code cut, Tesseract gone, Quick Access box gone, `accessCode` renamed to `jobId` in code, leftover navy Receipt Viewer / Clients restyled. Hosting live on https://risingamp.com.au. Staging Storage bucket exists so localhost can upload receipts. Production Storage rules still not deployed. Integrity leftovers: `PHASE6-INTEGRITY.md`.
+**Phase 6 shipped (28 Aug 2026):** unreachable code cut, Tesseract gone, Quick Access box gone, `accessCode` renamed to `jobId` in code, leftover navy Receipt Viewer / Clients restyled. Hosting live on https://risingamp.com.au. Staging Storage bucket exists so localhost can upload receipts. Production Storage rules shipped with Phase 9 (31 Aug 2026). Integrity leftovers: `PHASE6-INTEGRITY.md`.
 
 **Phase 5 shipped:** jobs as IDs, create/archive/invite/remove, clients vs suppliers, `DATABASE.md`, `readReceiptImage` on staging and production. Scanner is OpenAI only — if AI fails, show an error (no Tesseract).
 
@@ -52,12 +54,12 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part G is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Phase 9 Job Files is live. Phases 1–9 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
 
-1. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; production Storage rules (owner yes); ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
+1. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
 2. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
 3. Offline / service worker — still its own phase.
 
@@ -78,6 +80,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vi
 - [x] Phase 9 Part E — What needs you / linking
 - [x] Phase 9 Part F — handover pack
 - [x] Phase 9 Part G — Files as a document register
+- [x] Phase 9 live — hosting, Firestore rules, Storage rules
 
 ## What shipped (localhost / staging)
 
@@ -131,7 +134,7 @@ OCR “Check this” **was** implemented, but only from real signals: missing/in
 
 - ~~Live OAuth consent for sending invite mail from Gmail~~ — **superseded by Phase 4.** Owner decided to move invite email off `gmail.send` entirely onto Resend instead of pursuing Google verification for that scope. Google sign-in itself needs no verification and is untouched.
 - Unused `users/{code}` PIN folders (do not delete)
-- Staging Storage bucket exists; production Storage rules still not deployed
+- Staging Storage bucket exists; production Storage rules shipped with Phase 9 (31 Aug 2026)
 
 ## Design files
 

@@ -32,7 +32,7 @@ The **real** scale fix is denormalised summary fields on the job document (secti
 
 ### Is it right to scale into a product with many companies and thousands of jobs?
 
-**Not as-is.** The tree can grow, but several habits will hurt: a 1,000-expense page (Phase 9 Part A **hides** cost and margin when the cap is hit), leftover PIN copies, and Storage rules that may still be the old open rules on production. Jobs-list counts and the profile leak were fixed in Phase 8. None of the leftovers is fatal at two jobs.
+**Not as-is.** The tree can grow, but several habits will hurt: a 1,000-expense page (Phase 9 Part A **hides** cost and margin when the cap is hit), leftover PIN copies, and Jobs-list counts that used to download the ledger. Jobs-list counts and the profile leak were fixed in Phase 8. Storage rules are membership-gated on production as of Phase 9. None of the leftovers is fatal at two jobs.
 
 ---
 
@@ -166,11 +166,11 @@ Some labour/trade “already saved?” checks need composite indexes that were n
 
 Rotate the OpenAI key after the function is live. Do not paste keys into chat.
 
-### 3.8 Storage on production may still be the old rules
+### 3.8 Storage rules are membership-gated
 
-Repo `storage.rules` require sign-in and job membership (or a known legacy PIN folder). Org is taken from upload `customMetadata.orgId`, with a fallback to Opal for receipts uploaded before Phase 9. The 27 Aug production deploy was **hosting + Firestore rules only**. Storage was not named. **Live receipt files may still be world-open** until `firebase deploy --project production --only storage` with an explicit yes.
+Repo `storage.rules` require sign-in and job membership (or a known legacy PIN folder). Org is taken from upload `customMetadata.orgId`, with a fallback to Opal for receipts uploaded before Phase 9. **Production Storage rules shipped 31 Aug 2026** (`firebase deploy --project production --only storage`) after hosting and Firestore rules. Receipts are no longer world-open. Job files live under `files/{orgId}/{jobId}/{fileId}/…`. Nobody can delete a Storage object; archive is a Firestore status change.
 
-Staging now has a Storage bucket (`rising-amp-staging.firebasestorage.app`, created 28 Aug 2026) so localhost can upload receipts. CORS allows `http://localhost:3000`. Staging Storage rules were deployed the same day. Production Storage rules were not.
+Staging has a Storage bucket (`rising-amp-staging.firebasestorage.app`, created 28 Aug 2026) so localhost can upload receipts and job files. CORS allows `http://localhost:3000`.
 
 ### 3.9 Anyone on a job can write everything on that job
 
@@ -215,7 +215,7 @@ Firestore does not have SQL `SUM()`. If you want a total on the chooser, you eit
 | Job delete | Denied. Archive only. |
 | `users/**` PIN copies | Repo + production Firestore: **deny**. Documents kept. |
 | `profiles` | Owner (or same email) can read private fields. `publicProfiles` is name + photo, get-only. Production rules deploy still outstanding. |
-| Storage receipts | **Repo is tight; production deploy of Storage rules is still outstanding.** |
+| Storage receipts and job files | Membership-gated on production (31 Aug 2026). |
 | Client API keys | Vision key in the bundle. OpenAI must not be. |
 
 Gmail dots: rules compare lowercased strings. Invite writes variants. Remove-person must remove **all** variants (the app does this).
@@ -246,7 +246,7 @@ Do these in order. Earlier items are worth it even if you never “scale.” Lat
 
 1. **Jobs home: names first, figures second.** Done in this session. Confirms the slowness was “wait for the ledger,” not “Firestore is broken.”
 2. **Put OpenAI behind `readReceiptImage`.** Browser cannot call `api.openai.com`. Deploy **by name only** after the owner sets `OPENAI_API_KEY` at a masked prompt. Staging first (localhost). Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`.
-3. **Deploy Storage rules** when the owner names `--only storage`, after a yes. Highest remaining hole if production is still on the old open rules.
+3. **Deploy Storage rules.** Done 31 Aug 2026 with Phase 9. Receipts and job files are membership-gated.
 4. **Rotate the OpenAI key** once the function works. The old `REACT_APP_OPENAI_API_KEY` lived in the client.
 
 ### Soon (Part C, additive / reversible — owner yes)

@@ -1,4 +1,14 @@
-# Phase 9 — Job Files (agent brief)
+# Phase 9 — Job Files (closed record)
+
+Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
+
+Working branch: **`phase-9-job-files`**. Never commit to `master` or `main`. Restore tag: `pre-phase9-2026-08-31`.
+
+**Closed 31 Aug 2026.** Parts A–G shipped. Live on https://risingamp.com.au: hosting, Firestore rules, and Storage rules. No new Cloud Functions. Localhost stays on staging. No folders. No video.
+
+The rest of this file is the original brief. Do not re-run Parts A–G.
+
+---
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything. Open `design/risingamp-files-vision.html` in a browser before writing any code.
 

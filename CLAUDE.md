@@ -6,8 +6,8 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-9-job-files`**. Phase 9 **Part G** is done (Files as a document register). Staging Firestore + Storage rules are live so localhost Files works. Production is not. Phases 1–8 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
-2. Read `PROGRESS.md` (next concrete step). `PHASE9.md` is the Job Files brief. Open `design/risingamp-files-vision.html` in a browser. `PHASE8.md` is the closed Phase 8 record. `PHASE7.md` is a closed record (app feel). `PHASE6.md` and `PHASE6-INTEGRITY.md` are closed / parked. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
+1. Confirm git branch. Latest work is **`phase-9-job-files`**. **Phase 9 is closed and live** (Job Files). Production hosting, Firestore rules and Storage rules were deployed 31 Aug 2026. Phases 1–9 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next concrete step). `PHASE9.md` is the closed Job Files record. Open `design/risingamp-files-vision.html` if you are changing Files. `PHASE8.md` is the closed Phase 8 record. `PHASE7.md` is a closed record (app feel). `PHASE6.md` and `PHASE6-INTEGRITY.md` are closed / parked. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
 3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
 5. **Next:** leftovers only if he asks. App Check **enforcement**, ledger rollups, normalising stored money fields, TanStack Query on the ledger, dismantling the remaining AppContext ledger blob, `PHASE6-INTEGRITY.md`. Do not deploy unless he names it.
@@ -17,7 +17,7 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Open design/risingamp-files-vision.html. Phase 9 Part G is on phase-9-job-files. Phases 1–8 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Phase 9 Job Files is live. Phases 1–9 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -88,9 +88,9 @@ Brief: `PHASE7.md`. Safe areas, `default` status bar, pinch zoom, selectable con
 
 Brief: `PHASE8.md`. Vite, routes, integer cents, server invoice numbers (`YYYY-0001`), void not delete, tighter rules, org from membership. Profile leak closed on production and verified from a second account that is not on a family job. App Check client is present; **do not enforce**. Restore tag: `pre-phase8-2026-08-28`. **New files are TypeScript; existing files convert only when a brief says so.**
 
-## Phase 9 (in progress — Job Files)
+## Phase 9 (closed 2026-08-31; live hosting, Firestore rules, Storage rules)
 
-Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. Branch: `phase-9-job-files`. Restore tag: `pre-phase9-2026-08-31`. **One part per session.** Parts A–G are done. Not hosted. No folders. No video. Do not deploy unless named.
+Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. Branch: `phase-9-job-files`. Restore tag: `pre-phase9-2026-08-31`. Job files live on a job with a fixed type list, thumbnails, a 25 MB cap, no video, no folders, and a handover pack. Production Storage rules are live (receipts are no longer world-open). No new Cloud Functions. Localhost stays on staging.
 
 ## Out of scope until asked
 
@@ -99,7 +99,7 @@ Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. Branch: `phase
 ## Continuity
 
 - `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
-- `PHASE9.md` — Job Files brief (this phase).
+- `PHASE9.md` — Job Files — closed record.
 - `PHASE8.md` — foundations / technical revamp — closed record.
 - `PHASE7.md` — app feel on a phone — closed record.
 - `PHASE6.md` — legacy cut — closed record.
