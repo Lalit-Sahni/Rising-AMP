@@ -1,6 +1,6 @@
 # Rising AMP — Database (living guide)
 
-**Start here for the database.** This is what is true after Phase 5 Part B and the clients / suppliers / service-providers split (live on production 27 August 2026).
+**Start here for the database.** This is what is true on the Phase 10 Part A branch. Production remains Phase 9 until an explicit deploy; the Cost Plan rules below are tested but not live.
 
 `DATABASE-AUDIT.md` is the **26 August 2026 read-only scan**. It is still useful as a snapshot (counts, invoice name spellings, Storage file list). Parts of it are **stale**: `jobId` is backfilled, `users/` rules are closed in the repo and on production Firestore, jobs can be created / archived, people can be added / removed, and `clients` is no longer a mixed pile of house-owners and Bunnings. Prefer this file when the two disagree.
 
@@ -54,6 +54,7 @@ organizations/{orgId}
     expenses/{id}          + jobId
     invoices/{id}          + jobId, invoiceNumber, status including void
     files/{id}             job documents (Phase 9). type from a fixed list; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored.
+    costPlan/current        optional Phase 10 target. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections stay empty in Part A. Members only; delete denied. Rules branch-only until deployed.
     clients/{id}           house owner you invoice (one per job, ideally)
     suppliers/{id}         materials (Bunnings, Rodgers, …) upsert by name
     serviceProviders/{id}  same idea as labour, not mixed into clients
@@ -83,6 +84,8 @@ Staging may also have Part B test jobs. Localhost always talks to staging.
 
 **A job is an ID.** Expenses live under that ID. Renaming the job document changes the card and header. Invoices still also store a free-text `projectName` typed at save time (six spellings on Centenary). That string is a snapshot for PDFs, not the source of truth. Screens should show the job’s `name`.
 
+**A cost plan is optional and additive.** No `costPlan/current` document means the job behaves exactly as it did before Phase 10. Part A compares one GST-inclusive target against active expense totals. It does not use paid invoices, the legacy job `budget` field, or the job `trades` directory. Derived spend, percentage and remaining amounts are never stored.
+
 **Directories (after the split):**
 
 | Collection | Meaning |
@@ -107,6 +110,7 @@ Canonical matching lives in `src/firebase/partyName.js`. Soft-moved old rows kee
 7. **Firestore is the system of record.** Derived things (margin %, verdict, “needs you”) are computed in the client today. That is honest. Do not store a verdict unless you also define who updates it.
 8. **Staging vs production.** Localhost → staging. Production only behind an explicit yes. That split is correct and must stay.
 9. **Job files have a type, not a folder.** Certificates, variations, plans live as typed records on the job. Do not add a folder tree. Archive, never hard-delete.
+10. **Cost Plan expenses will code to stable trades, never imported sections.** Sections belong to a replaceable estimate. Part A ships the stable ids in code; organisation trade documents wait for Part B.
 
 These are product-grade decisions. Scaling does not mean throwing them away.
 
@@ -216,6 +220,7 @@ Firestore does not have SQL `SUM()`. If you want a total on the chooser, you eit
 | `users/**` PIN copies | Repo + production Firestore: **deny**. Documents kept. |
 | `profiles` | Owner (or same email) can read private fields. `publicProfiles` is name + photo, get-only. Production rules deploy still outstanding. |
 | Storage receipts and job files | Membership-gated on production (31 Aug 2026). |
+| Cost Plan | Membership-gated, shape-validated, fixed `current` id, delete denied on the branch. Not deployed yet. |
 | Client API keys | Vision key in the bundle. OpenAI must not be. |
 
 Gmail dots: rules compare lowercased strings. Invite writes variants. Remove-person must remove **all** variants (the app does this).

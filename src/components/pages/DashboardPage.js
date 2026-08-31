@@ -7,6 +7,8 @@ import {
   Download,
   FileText,
   PlusCircle,
+  Target,
+  X,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import ExportDialog from '../ExportDialog';
@@ -14,6 +16,8 @@ import JobPeople from '../JobPeople';
 import EmptyState from '../EmptyState';
 import { fetchJobFiles } from '../../firebase/jobFiles';
 import { withFileAttention } from '../../domain/jobFileAttention';
+import { useCostPlan } from '../../hooks/useCostPlan';
+import SetTargetCostSheet from '../costPlan/SetTargetCostSheet';
 import { getCategoryStyle } from '../../utils/categoryStyle';
 import {
   VERDICT,
@@ -36,8 +40,13 @@ function marginBarWidth(marginPct) {
   return Math.max(0, Math.min(100, marginPct));
 }
 
+function costPlanDismissKey(jobId) {
+  return `risingAmp.costPlan.setupDismissed.${jobId}`;
+}
+
 export default function DashboardPage() {
   const {
+    orgId,
     expenses,
     invoices,
     clients,
@@ -48,11 +57,23 @@ export default function DashboardPage() {
     setCurrentPage,
     showToast,
     jobInvitedEmails,
+    authUser,
   } = useApp();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [showExport, setShowExport] = useState(false);
   const [jobFiles, setJobFiles] = useState([]);
+  const [targetSheetOpen, setTargetSheetOpen] = useState(false);
+  const [costPlanSetupDismissed, setCostPlanSetupDismissed] = useState(false);
   const attentionRef = useRef(null);
+  const costPlanQuery = useCostPlan(orgId, jobId);
+
+  useEffect(() => {
+    if (!jobId) {
+      setCostPlanSetupDismissed(false);
+      return;
+    }
+    setCostPlanSetupDismissed(localStorage.getItem(costPlanDismissKey(jobId)) === '1');
+  }, [jobId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +119,13 @@ export default function DashboardPage() {
     if (attentionRef.current) {
       attentionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  };
+
+  const dismissCostPlanSetup = () => {
+    if (jobId) {
+      localStorage.setItem(costPlanDismissKey(jobId), '1');
+    }
+    setCostPlanSetupDismissed(true);
   };
 
   if (!jobId) {
@@ -268,6 +296,38 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {!costPlanQuery.isLoading
+          && !costPlanQuery.isError
+          && costPlanQuery.data === null
+          && !costPlanSetupDismissed && (
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 bg-surface border border-dashed border-hairline rounded-ot px-5 py-4 mb-4">
+            <span className="w-9 h-9 rounded-[9px] bg-canvas border border-hairline grid place-items-center text-slate-600 shrink-0">
+              <Target className="w-[17px] h-[17px]" strokeWidth={1.7} />
+            </span>
+            <div className="flex-1 min-w-0 pr-7 sm:pr-0">
+              <b className="block text-[14px] font-extrabold text-ink">Know roughly what this job should cost?</b>
+              <p className="text-[12.5px] text-slate-600 mt-0.5">
+                Put in one number and every expense from here on is measured against it. Break it into trades later, or never.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTargetSheetOpen(true)}
+              className="min-h-[44px] inline-flex items-center justify-center px-3.5 py-2 rounded-ot-sm bg-accent hover:bg-accent-600 text-white text-[13px] font-bold shrink-0"
+            >
+              Set a target cost
+            </button>
+            <button
+              type="button"
+              onClick={dismissCostPlanSetup}
+              className="absolute top-2 right-2 w-11 h-11 grid place-items-center rounded-ot-sm text-slate-400 hover:bg-canvas hover:text-ink"
+              aria-label="Dismiss cost plan suggestion"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-3.5 mb-4">
           <div ref={attentionRef} className="bg-surface border border-hairline rounded-ot px-5 py-[18px] shadow-whisper">
@@ -445,6 +505,20 @@ export default function DashboardPage() {
         onClose={() => setShowExport(false)}
         onExport={handleExport}
         expenseCount={(expenses || []).length}
+      />
+      <SetTargetCostSheet
+        open={targetSheetOpen}
+        orgId={orgId || ''}
+        jobId={jobId}
+        jobName={projectName}
+        userId={(authUser && authUser.uid) || ''}
+        plan={null}
+        onClose={() => setTargetSheetOpen(false)}
+        onSaved={() => {
+          setTargetSheetOpen(false);
+          setCurrentPage('cost-plan');
+        }}
+        showToast={showToast}
       />
     </div>
   );

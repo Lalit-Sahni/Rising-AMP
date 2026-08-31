@@ -71,6 +71,10 @@ export function getExpenseFaceTotal(expense) {
   return fromCents(expenseMoneyCents(expense));
 }
 
+export function getExpenseFaceTotalCents(expense) {
+  return expenseMoneyCents(expense);
+}
+
 export function getInvoiceTotalCents(invoice) {
   if (!invoice || isVoidInvoice(invoice)) return 0;
   if (Number.isInteger(invoice.totalCents)) return invoice.totalCents;

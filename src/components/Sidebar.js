@@ -12,13 +12,17 @@ import {
   Users,
   FileCheck,
   Briefcase,
+  BarChart3,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { hasActiveCostPlan } from '../domain/costPlan';
+import { useCostPlan } from '../hooks/useCostPlan';
 import BrandMark from './BrandMark';
 
 const navMain = [
   { key: 'jobs', label: 'Jobs', icon: Briefcase, needsJob: false },
   { key: 'dashboard', label: 'Overview', icon: LayoutDashboard, needsJob: true, jobOnly: true },
+  { key: 'cost-plan', label: 'Cost plan', icon: BarChart3, needsJob: true, costPlanOnly: true },
   { key: 'add-expense', label: 'Add expense', icon: PlusCircle, needsJob: true },
   { key: 'new-invoice', label: 'Invoices', icon: FileText, needsJob: true },
   { key: 'files', label: 'Files', icon: Files, needsJob: true },
@@ -39,7 +43,17 @@ function initials(name, email) {
 }
 
 export default function Sidebar({ user, projectName, onSwitchProject }) {
-  const { currentPage, setCurrentPage, showToast, jobId, profile, mobileMenuOpen, setMobileMenuOpen } = useApp();
+  const {
+    currentPage,
+    setCurrentPage,
+    showToast,
+    orgId,
+    jobId,
+    profile,
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  } = useApp();
+  const { data: costPlan } = useCostPlan(orgId, jobId);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const [moreOpen, setMoreOpen] = useState(
     () => navMore.some((item) => item.key === currentPage)
@@ -58,6 +72,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
   const visibleMain = navMain.filter((item) => {
     if (item.key === 'jobs') return onJobsHome;
     if (item.jobOnly) return !onJobsHome;
+    if (item.costPlanOnly) return !onJobsHome && hasActiveCostPlan(costPlan);
     return true;
   });
 

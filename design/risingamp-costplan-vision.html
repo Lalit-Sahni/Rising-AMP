@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RisingAMP: Cost plan vision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{
+  --steel-900:#17181C; --steel-800:#1F2127; --ink:#1C1E23;
+  --slate-600:#565B64; --slate-500:#6B7079; --slate-400:#8A9099;
+  --hairline:#E7E9EC; --canvas:#F5F6F8; --surface:#FFFFFF;
+  --accent:#E85D1A; --accent-600:#C64E12; --accent-tint:#FCEEE4;
+  --pos:#2E7D57; --pos-tint:#E7F1EC; --warn:#B7862B; --warn-tint:#F7F0DF;
+  --neg:#C0392B; --neg-tint:#F7E9E7;
+  --l-est:#8A9099; --l-quote:#5E82A6; --l-paid:#2E7D57;
+  --radius:12px; --radius-sm:8px;
+  --shadow:0 1px 2px rgba(23,24,28,.04), 0 1px 3px rgba(23,24,28,.03);
+  --ui:'Manrope',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--ui);background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5}
+.tabular{font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--slate-400);margin:0 0 10px}
+h1,h2,h3,h4{color:var(--steel-900);margin:0;letter-spacing:-.02em}
+h1{font-size:42px;font-weight:800;line-height:1.1}
+h2{font-size:28px;font-weight:800}
+h3{font-size:18px;font-weight:700}
+h4{font-size:14px;font-weight:700}
+p{margin:0 0 14px;color:var(--slate-600);font-size:15px}
+.lede{font-size:18px;color:var(--slate-500);max-width:64ch}
+section{padding:64px 0;border-top:1px solid var(--hairline)}
+section.alt{background:var(--surface)}
+.card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow)}
+.pad{padding:20px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:860px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 8px}
+.mono-sm{font-size:12px;color:var(--slate-400)}
+.n{font-variant-numeric:tabular-nums}
+
+header{background:var(--steel-900);color:#fff;padding:72px 0 64px}
+header h1{color:#fff}
+header p{color:#C9CDD4}
+.mark{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;letter-spacing:.01em}
+.mark span{color:var(--accent)}
+.chip{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:rgba(232,93,26,.14);padding:5px 10px;border-radius:999px}
+
+.app{border:1px solid var(--hairline);border-radius:var(--radius);overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+.app-top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--hairline);background:var(--surface)}
+.crumb{font-size:13px;color:var(--slate-400)}
+.crumb b{color:var(--steel-900);font-weight:700}
+.app-body{display:grid;grid-template-columns:186px 1fr}
+@media(max-width:860px){.app-body{grid-template-columns:1fr}.side{display:none}}
+.side{background:var(--steel-900);padding:16px 12px;min-height:520px}
+.side .lbl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#6E747E;padding:0 8px;margin-bottom:10px}
+.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--radius-sm);color:#C9CDD4;font-size:13.5px;font-weight:500;margin-bottom:2px}
+.nav.on{background:rgba(255,255,255,.07);color:#fff;font-weight:700}
+.nav.on .bar{width:3px;height:14px;background:var(--accent);border-radius:2px}
+.nav .bar{width:3px;height:14px;background:transparent}
+.main{padding:20px}
+
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:0;border-radius:var(--radius-sm);padding:10px 16px;font-family:var(--ui);font-size:13.5px;font-weight:700;cursor:default}
+.btn.ghost{background:var(--surface);color:var(--steel-900);border:1px solid var(--hairline)}
+.btn.sm{padding:7px 12px;font-size:12.5px}
+
+.kpi{border:1px solid var(--hairline);border-radius:var(--radius);padding:16px;background:var(--surface);position:relative;overflow:hidden}
+.kpi.lead:before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--accent)}
+.kpi .k{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--slate-400);margin-bottom:7px}
+.kpi .v{font-size:26px;font-weight:800;color:var(--steel-900);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .h{font-size:12px;color:var(--slate-500);margin-top:5px}
+
+/* the three layer bar */
+.bar{height:10px;border-radius:999px;background:var(--canvas);border:1px solid var(--hairline);display:flex;overflow:hidden}
+.bar i{display:block;height:100%}
+.bar .paid{background:var(--l-paid)}
+.bar .committed{background:var(--l-quote)}
+.bar .open{background:#D6D9DD}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--slate-500)}
+.legend span{display:flex;align-items:center;gap:6px}
+
+/* section rows */
+.srow{border:1px solid var(--hairline);border-radius:var(--radius-sm);margin-bottom:7px;background:var(--surface)}
+.srow .top{display:flex;align-items:center;gap:12px;padding:11px 13px}
+.srow .code{font-size:11px;font-weight:700;color:var(--slate-400);font-variant-numeric:tabular-nums;width:52px;flex:0 0 52px}
+.srow .nm{font-size:14px;font-weight:700;color:var(--steel-900)}
+.srow .sub{font-size:12px;color:var(--slate-400);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grow{flex:1;min-width:0}
+.amt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.amt .big{font-size:14.5px;font-weight:700;color:var(--steel-900)}
+.amt .small{font-size:11.5px;color:var(--slate-400);margin-top:2px}
+.var{font-size:11.5px;font-weight:700;white-space:nowrap}
+.var.pos{color:var(--pos)} .var.neg{color:var(--neg)} .var.zero{color:var(--slate-400)}
+.mini{height:5px;border-radius:999px;background:#EDEFF2;display:flex;overflow:hidden;width:96px;flex:0 0 96px}
+.mini i{display:block;height:100%}
+.st{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.st.none{color:var(--slate-400);background:var(--canvas)}
+.st.quoted{color:#3D6486;background:#E9F0F6}
+.st.doing{color:#8A6416;background:var(--warn-tint)}
+.st.done{color:var(--pos);background:var(--pos-tint)}
+.st.over{color:var(--neg);background:var(--neg-tint)}
+
+.expand{border-top:1px solid var(--hairline);padding:14px 13px;background:#FBFCFD}
+.sublbl{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--slate-400);margin:0 0 8px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--slate-400);padding:0 0 8px;border-bottom:1px solid var(--hairline)}
+td{padding:9px 0;border-bottom:1px solid var(--hairline);color:var(--slate-600)}
+td.r{text-align:right;font-variant-numeric:tabular-nums;color:var(--steel-900);font-weight:600}
+tr:last-child td{border-bottom:0}
+
+.bucket{display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px dashed #D6D9DD;border-radius:var(--radius-sm);margin-bottom:7px;background:var(--surface)}
+
+.no{border-left:2px solid var(--hairline);padding-left:16px;margin-bottom:18px}
+.no b{color:var(--steel-900)}
+.callout{border:1px solid var(--hairline);border-left:2px solid var(--accent);border-radius:var(--radius-sm);padding:16px 18px;background:var(--accent-tint)}
+.callout p{color:#7A4620;margin:0}
+.callout b{color:#5E340F}
+.warnbox{border:1px solid var(--hairline);border-left:2px solid var(--warn);border-radius:var(--radius-sm);padding:16px 18px;background:var(--warn-tint)}
+.warnbox p{color:#6E5316;margin:0}
+.warnbox b{color:#4E3A0D}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--canvas);border:1px solid var(--hairline);border-radius:4px;padding:1px 5px;color:var(--steel-800)}
+pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.65;background:var(--steel-900);color:#C9CDD4;padding:18px;border-radius:var(--radius-sm);overflow-x:auto;margin:0}
+pre b{color:var(--accent);font-weight:600}
+.q{display:flex;align-items:center;gap:11px;padding:10px 12px;border:1px solid var(--hairline);border-radius:var(--radius-sm);margin-bottom:6px;background:var(--surface)}
+.q .who{font-size:13.5px;font-weight:700;color:var(--steel-900)}
+.q .det{font-size:12px;color:var(--slate-400)}
+.tick{width:16px;height:16px;border-radius:50%;border:1.5px solid #D6D9DD;flex:0 0 16px}
+.tick.on{background:var(--pos);border-color:var(--pos)}
+.phase{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid var(--hairline)}
+.phase:last-child{border-bottom:0}
+.phase .lt{font-size:11px;font-weight:800;letter-spacing:.1em;color:var(--accent);width:52px;flex:0 0 52px;padding-top:2px}
+
+.level{border:1px solid var(--hairline);border-radius:var(--radius);background:var(--surface);overflow:hidden}
+.level .lh{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid var(--hairline)}
+.level .num{width:24px;height:24px;border-radius:50%;background:var(--canvas);color:var(--slate-500);font-size:11.5px;font-weight:800;display:grid;place-items:center;flex:0 0 24px}
+.level.on .num{background:var(--accent);color:#fff}
+.level .lb{padding:16px}
+.level .lb p{font-size:13.5px;margin:0 0 10px}
+.level .lb p:last-child{margin:0}
+.empty{border:1.5px dashed #D6D9DD;border-radius:var(--radius-sm);padding:34px 20px;text-align:center}
+.empty .et{font-size:15px;font-weight:700;color:var(--steel-900);margin-bottom:6px}
+.empty .es{font-size:13px;color:var(--slate-400);max-width:44ch;margin:0 auto 16px}
+.map{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--hairline);border-radius:var(--radius-sm);margin-bottom:6px;background:var(--surface);font-size:13px}
+.map .from{color:var(--slate-600);flex:1;min-width:0}
+.map .arrow{color:var(--slate-400);font-size:12px}
+.map .to{font-weight:700;color:var(--steel-900);flex:0 0 190px}
+.map.warn{border-color:var(--warn);background:var(--warn-tint)}
+.inp{display:flex;align-items:center;gap:10px;padding:9px 11px;border:1px solid var(--hairline);border-radius:var(--radius-sm);margin-bottom:6px;font-size:13.5px}
+.inp .lbl2{color:var(--slate-600);flex:1}
+.inp .val{font-weight:700;color:var(--steel-900);font-variant-numeric:tabular-nums}
+.inp .ph{font-weight:600;color:#C3C8CE;font-variant-numeric:tabular-nums}
+footer{background:var(--steel-900);color:#8A9099;padding:36px 0;font-size:13px}
+footer b{color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="mark" style="margin-bottom:28px">Rising<span>AMP</span></div>
+    <div class="chip" style="margin-bottom:18px">Phase 10 vision · Part A built on branch</div>
+    <h1>Cost plan</h1>
+    <p class="lede" style="margin-top:16px">The estimate stops being a PDF with pen marks on it and becomes the spine of the job. Three numbers on every trade: what you estimated, what you were quoted, what you have actually paid. One screen that answers "are we winning or losing, and where", on a job with a 120 line estimate and on a job with nothing but a number in your head.</p>
+  </div>
+</header>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">The problem, stated plainly</p>
+    <h2>Right now the estimate and the ledger are two different worlds</h2>
+    <p class="lede" style="margin:16px 0 28px">RisingAMP knows what you <b>paid</b>. The Bill of Quantities knows what you <b>planned</b>. Nothing joins them, so the only place they meet is in biro in the right margin of a printout.</p>
+
+    <div class="grid g3">
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">What the app has today</h4>
+        <p style="font-size:14px;margin:0">Expenses, invoices, suppliers, files. A running total of money out. No idea whether that total is good or bad, because there is nothing to compare it to.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">What the estimate has</h4>
+        <p style="font-size:14px;margin:0">21 trade sections, about 120 lines, quantities, unit rates. $321,916 ex GST, $354,108 with GST. A plan, frozen the day it was written.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">What is missing</h4>
+        <p style="font-size:14px;margin:0">The middle layer. Quotes. The real prices that came back from real people, which are almost never the estimated price and almost never line up with the lines.</p>
+      </div>
+    </div>
+
+    <div class="warnbox" style="margin-top:26px">
+      <p><b>Found while reading your estimate.</b> Some of your margin notes are quotes and some are just GST conversions, and there is no way to tell them apart on paper. Air-conditioning is estimated at $6,363.64 and the note says "$7000 Incl 10 kW Daikin", but 6,363.64 &times; 1.1 is exactly $7,000, so that note is the same number with GST on it. Painting is $10,386.36 and the note says "11425", and 10,386.36 &times; 1.1 is exactly $11,425. Same again. But "6500 actual asif bhai gave" on the same air-con row <b>is</b> a real quote, and so is "$39,500 Plus GST, Mark gave prices" on the kitchen. Four notes, two meanings, one column. That ambiguity is the thing the app should delete.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">The one decision that dissolves the mess</p>
+    <h2>The section is the unit of truth. The line is only the unit of the estimate.</h2>
+    <p class="lede" style="margin:16px 0 28px">You asked how to handle a concreter who says $30,000 for the job including piering, benching, excavation and the slab. The answer is not to make him itemise. The answer is to stop pretending quotes and bills happen at line level.</p>
+
+    <div class="grid g2">
+      <div class="card pad">
+        <h4 style="margin-bottom:10px;color:var(--neg)">If you match at line level</h4>
+        <p style="font-size:14px">You have to split $30,000 across 2.001 Benching, 2.002 Excavation, 2.003 Piering, 2.005 Slab and 2.006 Drop edge beams. He never gave you that split. So you invent one. Every number after that is fiction, and you will spend your evenings maintaining it.</p>
+        <p style="font-size:14px;margin:0"><b>This is the version that gets abandoned in three weeks.</b></p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:10px;color:var(--pos)">If you match at section level</h4>
+        <p style="font-size:14px">Piering, benching, excavation, slab and drop edge beams are <b>all inside 2.000 Concreting</b>. His $30,000 is one quote against one section. No split, no invention, no maintenance. Estimated $41,110 with GST, quoted $30,000, and you are $11,110 up on concreting.</p>
+        <p style="font-size:14px;margin:0"><b>Nothing to decide. It just lands.</b></p>
+      </div>
+    </div>
+
+    <div class="no" style="margin-top:28px">
+      <p style="margin:0"><b>The estimate lines stay.</b> They are how you check the quote is sane, and how you argue with a concreter who forgot the pump hire. They are read only. You never tick them off, you never code an expense to one, and you never have to keep them current.</p>
+    </div>
+    <div class="no">
+      <p style="margin:0"><b>A quote that genuinely spans two trades gets split, and only then.</b> A plumber whose price includes the driveway drainage in 18.000 gets two allocation lines. Rare, and the one place the app asks you to do arithmetic.</p>
+    </div>
+    <div class="no">
+      <p style="margin:0"><b>Every section is optional.</b> No quote is a normal state. No expenses is a normal state. The screen is honest about not knowing rather than showing zero and implying it is finished.</p>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">The screen</p>
+    <h2>Cost plan, sitting beside Overview and Files</h2>
+    <p class="lede" style="margin:16px 0 24px">Kelly St, using the real section totals from your estimate with GST added, and made-up spend so you can see the shape. Every number below the summary is derived. Nothing here is a verdict you have to keep up to date.</p>
+
+    <div class="app">
+      <div class="app-top">
+        <div class="crumb">Jobs &rsaquo; <b>Kelly St</b> &rsaquo; Cost plan</div>
+        <div class="grow"></div>
+        <div class="mono-sm">Showing GST inclusive</div>
+      </div>
+      <div class="app-body">
+        <div class="side">
+          <div class="lbl">Kelly St</div>
+          <div class="nav"><i class="bar"></i>Overview</div>
+          <div class="nav on"><i class="bar"></i>Cost plan</div>
+          <div class="nav"><i class="bar"></i>Add expense</div>
+          <div class="nav"><i class="bar"></i>History</div>
+          <div class="nav"><i class="bar"></i>Files</div>
+          <div class="nav"><i class="bar"></i>Invoices</div>
+          <div class="nav"><i class="bar"></i>People</div>
+        </div>
+        <div class="main">
+
+          <div class="grid g4" style="margin-bottom:18px">
+            <div class="kpi">
+              <div class="k">Estimated</div>
+              <div class="v">$354,108</div>
+              <div class="h">Baseline, 29 May 2026</div>
+            </div>
+            <div class="kpi lead">
+              <div class="k">Expected final</div>
+              <div class="v">$362,052</div>
+              <div class="h" style="color:var(--neg);font-weight:700">$7,944 over the estimate</div>
+            </div>
+            <div class="kpi">
+              <div class="k">Paid so far</div>
+              <div class="v">$69,130</div>
+              <div class="h">19% of expected</div>
+            </div>
+            <div class="kpi">
+              <div class="k">Left to pay</div>
+              <div class="v">$292,922</div>
+              <div class="h">17 trades not quoted yet</div>
+            </div>
+          </div>
+
+          <div style="margin-bottom:22px">
+            <div class="bar">
+              <i class="paid" style="width:19%"></i>
+              <i class="committed" style="width:23%"></i>
+              <i class="open" style="width:58%"></i>
+            </div>
+            <div class="legend">
+              <span><i class="dot" style="background:var(--l-paid)"></i> Paid $69,130</span>
+              <span><i class="dot" style="background:var(--l-quote)"></i> Quoted, not yet paid $84,950</span>
+              <span><i class="dot" style="background:#D6D9DD"></i> Still only estimated $207,972</span>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+            <h3 style="font-size:15px">21 trades</h3>
+            <div class="grow"></div>
+            <div class="btn ghost sm">Sort: by code</div>
+            <div class="btn sm">Add a quote</div>
+          </div>
+
+          <!-- 1.000 -->
+          <div class="srow">
+            <div class="top">
+              <div class="code">1.000</div>
+              <div class="grow">
+                <div class="nm">Site works</div>
+                <div class="sub">No quote, paying as it goes &middot; 9 expenses</div>
+              </div>
+              <div class="mini"><i style="width:75%;background:var(--l-paid)"></i></div>
+              <div class="amt">
+                <div class="big">$24,880 paid</div>
+                <div class="small">of $33,188 estimated</div>
+              </div>
+              <div class="st doing">In progress</div>
+            </div>
+          </div>
+
+          <!-- 2.000 open -->
+          <div class="srow" style="border-color:#CFD4DA">
+            <div class="top">
+              <div class="code">2.000</div>
+              <div class="grow">
+                <div class="nm">Concreting</div>
+                <div class="sub">Asif, quoted $30,000 for the lot &middot; 3 expenses</div>
+              </div>
+              <div class="mini"><i style="width:100%;background:var(--l-paid)"></i></div>
+              <div class="amt">
+                <div class="big">$30,000 paid</div>
+                <div class="small">of $41,110 estimated</div>
+              </div>
+              <div class="var pos">$11,110 under</div>
+              <div class="st done">Done</div>
+            </div>
+            <div class="expand">
+              <div class="grid g2">
+                <div>
+                  <p class="sublbl">The estimate said</p>
+                  <table>
+                    <tr><td>2.001 Benching</td><td class="r">$1,650</td></tr>
+                    <tr><td>2.002 Excavation, 5 loads</td><td class="r">$3,575</td></tr>
+                    <tr><td>2.003 Piering, 60 LM</td><td class="r">$5,940</td></tr>
+                    <tr><td>2.004 Pump hire, 2</td><td class="r">$1,430</td></tr>
+                    <tr><td>2.005 Slab, 167.22 sqm</td><td class="r">$26,755</td></tr>
+                    <tr><td>2.006 Drop edge beams</td><td class="r">$1,760</td></tr>
+                    <tr><td style="font-weight:700;color:var(--steel-900)">Section total</td><td class="r">$41,110</td></tr>
+                  </table>
+                  <p style="font-size:12px;color:var(--slate-400);margin:10px 0 0">Read only. Here to check a quote against, not to tick off.</p>
+                </div>
+                <div>
+                  <p class="sublbl">Quotes received</p>
+                  <div class="q">
+                    <div class="tick on"></div>
+                    <div class="grow"><div class="who">Asif</div><div class="det">Whole section: piering, benching, excavation, slab</div></div>
+                    <div class="amt"><div class="big">$30,000</div><div class="small">14 Jun 2026</div></div>
+                  </div>
+                  <p class="sublbl" style="margin-top:16px">Paid against this trade</p>
+                  <table>
+                    <tr><td>Asif, deposit</td><td class="r">$10,000</td></tr>
+                    <tr><td>Asif, slab poured</td><td class="r">$15,000</td></tr>
+                    <tr><td>Asif, final</td><td class="r">$5,000</td></tr>
+                  </table>
+                  <p style="font-size:12px;color:var(--slate-400);margin:10px 0 0">Expenses you already entered. Coding one to a trade is a single tap on History.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3.000 -->
+          <div class="srow">
+            <div class="top">
+              <div class="code">3.000</div>
+              <div class="grow">
+                <div class="nm">Plumbing</div>
+                <div class="sub">No quote on file &middot; 2 expenses</div>
+              </div>
+              <div class="mini"><i style="width:43%;background:var(--l-paid)"></i></div>
+              <div class="amt">
+                <div class="big">$8,200 paid</div>
+                <div class="small">of $19,000 estimated</div>
+              </div>
+              <div class="st doing">In progress</div>
+            </div>
+          </div>
+
+          <!-- 4.000 -->
+          <div class="srow">
+            <div class="top">
+              <div class="code">4.000</div>
+              <div class="grow">
+                <div class="nm">Carpentry</div>
+                <div class="sub">Biggest trade on the job. Nothing quoted yet.</div>
+              </div>
+              <div class="mini"><i style="width:0%"></i></div>
+              <div class="amt">
+                <div class="big">$64,210</div>
+                <div class="small">estimated only</div>
+              </div>
+              <div class="st none">Not started</div>
+            </div>
+          </div>
+
+          <!-- 5.000 -->
+          <div class="srow">
+            <div class="top">
+              <div class="code">5.000</div>
+              <div class="grow">
+                <div class="nm">Bricks</div>
+                <div class="sub">Lee, hebel, $30,000 to $35,000 &middot; not accepted yet</div>
+              </div>
+              <div class="mini"><i style="width:0%"></i></div>
+              <div class="amt">
+                <div class="big">$35,000 quoted</div>
+                <div class="small">of $41,283 estimated</div>
+              </div>
+              <div class="var pos">$6,283 under</div>
+              <div class="st quoted">Quoted</div>
+            </div>
+          </div>
+
+          <!-- 11.000 -->
+          <div class="srow">
+            <div class="top">
+              <div class="code">11.000</div>
+              <div class="grow">
+                <div class="nm">Air conditioning</div>
+                <div class="sub">2 quotes &middot; Asif $6,500 chosen, 10 kW Daikin</div>
+              </div>
+              <div class="mini"><i style="width:0%"></i></div>
+              <div class="amt">
+                <div class="big">$6,500 quoted</div>
+                <div class="small">of $7,000 estimated</div>
+              </div>
+              <div class="var pos">$500 under</div>
+              <div class="st quoted">Quoted</div>
+            </div>
+          </div>
+
+          <!-- 12.000 the blowout -->
+          <div class="srow" style="border-color:#E4BDB7">
+            <div class="top">
+              <div class="code">12.000</div>
+              <div class="grow">
+                <div class="nm">Kitchen, laundry, vanities and appliances</div>
+                <div class="sub">Mark, $39,500 plus GST &middot; 1 quote</div>
+              </div>
+              <div class="mini"><i style="width:0%"></i></div>
+              <div class="amt">
+                <div class="big">$43,450 quoted</div>
+                <div class="small">of $21,813 estimated</div>
+              </div>
+              <div class="var neg">$21,637 over</div>
+              <div class="st over">Over</div>
+            </div>
+          </div>
+
+          <div style="text-align:center;padding:12px 0;font-size:12.5px;color:var(--slate-400)">14 more trades</div>
+
+          <!-- buckets -->
+          <div class="bucket">
+            <div class="grow">
+              <div class="nm" style="font-size:14px;font-weight:700;color:var(--steel-900)">Not in the estimate</div>
+              <div class="sub" style="font-size:12px;color:var(--slate-400);margin-top:2px">Skip bin twice, temporary power, extra survey, 6 expenses</div>
+            </div>
+            <div class="amt"><div class="big">$4,200</div><div class="small">added to expected final</div></div>
+          </div>
+
+          <div class="bucket" style="border-color:var(--accent);background:var(--accent-tint)">
+            <div class="grow">
+              <div class="nm" style="font-size:14px;font-weight:700;color:#5E340F">Not coded to a trade yet</div>
+              <div class="sub" style="font-size:12px;color:#7A4620;margin-top:2px">11 expenses. The app has a guess for 9 of them.</div>
+            </div>
+            <div class="amt"><div class="big" style="color:#5E340F">$1,850</div></div>
+            <div class="btn sm">Code these</div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:26px">
+      <p><b>Read the kitchen row again.</b> Estimated $21,813, quoted $43,450, and you have not spent a dollar on it yet. That single row is worth more than the rest of the feature put together, because it is the kind of thing that currently only becomes real at the end. Here it is visible the day Mark sends his price, while you can still do something about it.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">The messy cases, one by one</p>
+    <h2>You said it gets hella messy. Here is every mess and what happens to it.</h2>
+
+    <div class="grid g2" style="margin-top:24px">
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">"$30,000 including piering, benching, etc"</h4>
+        <p style="font-size:14px;margin:0">One quote, one section, no split. Covered above. This is the common case and it costs you nothing.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">An expense that is not in the estimate at all</h4>
+        <p style="font-size:14px;margin:0">It goes to <b>Not in the estimate</b>, which is a real bucket, not an error. It adds to expected final and it is listed by name so you can see what the extras actually were. Never hidden inside Miscellaneous.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">You cannot be bothered coding an expense</h4>
+        <p style="font-size:14px;margin:0"><b>Uncoded</b> is allowed and visible. Section variances stay true, only the whole-job forecast has a pool sitting outside it. The app guesses from the supplier, Rodgers to Bricks, your sparky to Electrical, and you confirm with one tap. It never guesses silently.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Three prices for the same trade</h4>
+        <p style="font-size:14px;margin:0">All three are quotes on that section. One is marked chosen and drives the forecast. The other two stay on file, which is how you later prove you could have had it for $30,000.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">A range, "30 to 35K"</h4>
+        <p style="font-size:14px;margin:0">A quote can carry a low and a high. The forecast uses the high, so the number is never optimistic. The row says "$30,000 to $35,000" so you remember it is not firm.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">One quote covering two trades</h4>
+        <p style="font-size:14px;margin:0">Split it across sections with an amount each. The form will not let the parts add to something other than the total. This is the only arithmetic the app ever asks for, and it is rare.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Plus GST or including GST</h4>
+        <p style="font-size:14px;margin:0">The single worst source of fake variance, and you have already hit it twice in the margins. Every quote records which it was and the app stores both. One toggle at the top of the screen switches the whole page. Your bills are GST inclusive, so that is the default.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">The scope changes halfway through</h4>
+        <p style="font-size:14px;margin:0"><b>The baseline never gets edited.</b> Once the estimate is locked, a change is a new quote or a not-in-estimate cost. If you rewrite the estimate you can no longer answer "did we beat the plan", which is the only question the screen exists to answer.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">The real question</p>
+    <h2>It has to work on a job with no estimate at all</h2>
+    <p class="lede" style="margin:16px 0 28px">Kelly St has a 120 line Bill of Quantities because someone was paid to write one. Most jobs will never have that. If the feature only works when a spreadsheet exists, it is a Kelly St screen, not a feature. So the spreadsheet is the <b>richest</b> input, not the required one.</p>
+
+    <div class="grid g2" style="margin-bottom:14px">
+      <div class="level">
+        <div class="lh"><div class="num">0</div><h3 style="font-size:15px">Nothing</h3><div class="grow"></div><span class="st none">Default</span></div>
+        <div class="lb">
+          <p>The Cost plan tab is not in the sidebar. Overview looks exactly like it does today. No empty card, no nag, no half a feature sitting there looking broken.</p>
+          <p><b>This is where every job starts and where some jobs stay forever.</b> Centenary probably never leaves it, and that has to be completely fine.</p>
+        </div>
+      </div>
+      <div class="level on">
+        <div class="lh"><div class="num">1</div><h3 style="font-size:15px">One number</h3><div class="grow"></div><span class="st quoted">10 seconds</span></div>
+        <div class="lb">
+          <p>"This job should cost about $340,000." That is the whole setup.</p>
+          <p>You immediately get a bar, a percentage, and a verdict: paid $69,130 of $340,000, on track. <b>No coding, no trades, no spreadsheet.</b> That alone is more than the app tells you today, and it works on a job that is already 124 expenses deep.</p>
+        </div>
+      </div>
+      <div class="level on">
+        <div class="lh"><div class="num">2</div><h3 style="font-size:15px">Trades with numbers</h3><div class="grow"></div><span class="st doing">10 minutes</span></div>
+        <div class="lb">
+          <p>Pick trades off a standard list, type an amount on each. Twenty rows, done on a phone at the kitchen table.</p>
+          <p>Now you get per trade variance, quotes, and the whole screen from earlier. <b>This is the level most jobs will actually reach</b>, and it needs no file of any kind.</p>
+        </div>
+      </div>
+      <div class="level on">
+        <div class="lh"><div class="num">3</div><h3 style="font-size:15px">Import an estimate</h3><div class="grow"></div><span class="st done">Kelly St</span></div>
+        <div class="lb">
+          <p>Upload the spreadsheet. Same screen as level 2, plus the line detail sitting underneath each trade so you can check a quote against it.</p>
+          <p><b>Line detail is decoration on top of level 2</b>, not the thing itself. A trade with no lines behaves identically to one with six.</p>
+        </div>
+      </div>
+    </div>
+
+    <p style="margin-top:22px">One screen, four levels of effort, and you can move up whenever you feel like it. Level 1 to level 2 is typing numbers into rows that already exist. Level 2 to level 3 is an import that fills in detail under trades you already have.</p>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">Blank state</p>
+    <h2>What a new job actually sees</h2>
+    <div class="grid g2" style="margin-top:22px;align-items:start">
+      <div>
+        <h4 style="margin-bottom:10px">Before you do anything</h4>
+        <div class="app">
+          <div class="app-top"><div class="crumb">Jobs &rsaquo; <b>New job</b> &rsaquo; Overview</div></div>
+          <div class="main" style="padding:18px">
+            <div class="grid g2" style="gap:10px;margin-bottom:14px">
+              <div class="kpi" style="padding:13px"><div class="k">Paid so far</div><div class="v" style="font-size:22px">$0</div></div>
+              <div class="kpi" style="padding:13px"><div class="k">Invoiced</div><div class="v" style="font-size:22px">$0</div></div>
+            </div>
+            <div class="empty">
+              <div class="et">Know roughly what this job should cost?</div>
+              <div class="es">Put in a number and every expense from here on gets measured against it. You can break it into trades later, or never.</div>
+              <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+                <div class="btn sm">Set a target cost</div>
+                <div class="btn ghost sm">Import an estimate</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:13px;color:var(--slate-400);margin-top:10px">One quiet card on Overview. Not a tab, not a badge, not a red dot. Dismissible, and it stays dismissed.</p>
+      </div>
+      <div>
+        <h4 style="margin-bottom:10px">Level 1, thirty seconds later</h4>
+        <div class="app">
+          <div class="app-top"><div class="crumb">Jobs &rsaquo; <b>New job</b> &rsaquo; Cost plan</div></div>
+          <div class="main" style="padding:18px">
+            <div class="grid g2" style="gap:10px;margin-bottom:16px">
+              <div class="kpi" style="padding:13px"><div class="k">Target cost</div><div class="v" style="font-size:22px">$340,000</div></div>
+              <div class="kpi lead" style="padding:13px"><div class="k">Paid so far</div><div class="v" style="font-size:22px">$69,130</div><div class="h">20% of target</div></div>
+            </div>
+            <div class="bar" style="margin-bottom:10px"><i class="paid" style="width:20%"></i><i class="open" style="width:80%"></i></div>
+            <div class="legend" style="margin-bottom:18px"><span><i class="dot" style="background:var(--l-paid)"></i> Paid</span><span><i class="dot" style="background:#D6D9DD"></i> Left, $270,870</span></div>
+            <div class="empty" style="padding:22px 16px">
+              <div class="et" style="font-size:14px">Want to know which trade is eating it?</div>
+              <div class="es" style="margin-bottom:12px">Break the target into trades. You can do the ones you care about and leave the rest.</div>
+              <div class="btn ghost sm">Break it into trades</div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:13px;color:var(--slate-400);margin-top:10px">Useful on its own. The invitation to go deeper is an offer, not an unfinished setup wizard.</p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:26px">
+      <p><b>The rule that keeps this out of everyone's way.</b> A job with no cost plan behaves exactly as it does today, everywhere in the app. No tab, no empty screen, no "0 of 0" on Overview, no expense form asking for a trade. The feature is invisible until someone asks for it, and it stays per job, so Kelly St can have a full plan while Centenary has nothing.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Different looking estimates</p>
+    <h2>Two lists, and only one of them belongs to the estimate</h2>
+    <p class="lede" style="margin:16px 0 26px">Your 21 sections came from your estimator. Someone else's will have 12, with different names, in a different order. If expenses code to whatever a particular spreadsheet happened to call things, the feature falls apart the second a second estimate exists.</p>
+
+    <div class="grid g2">
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Trades, which the app owns</h4>
+        <p style="font-size:14px">About twenty, shipped with the app, shared by every job. Site works, Concreting, Plumbing, Carpentry, Bricks, Electrical, Roofing, Windows and doors, Kitchen and joinery, Tiling and flooring, Painting, Waterproofing, HVAC, External works, Other. You can add to the list for your business, never per job.</p>
+        <p style="font-size:14px;margin:0"><b>Expenses code to a trade.</b> Stable, comparable across jobs, and it lets the app learn that Rodgers means Bricks once and for all.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Sections, which the estimate owns</h4>
+        <p style="font-size:14px">Whatever your file literally says, codes and all. "1.000 Site Works, Planning, approval and site requirements" stays exactly that, because that is what you will be reading when you argue with someone about scope.</p>
+        <p style="font-size:14px;margin:0"><b>Each section is mapped to a trade at import.</b> That mapping is the only place the two worlds meet, and you see it before anything is saved.</p>
+      </div>
+    </div>
+
+    <div class="warnbox" style="margin-top:24px">
+      <p><b>Why the mapping step is not optional, from your own file.</b> Your estimate uses the code <b>15.000 twice</b>, once for Painting and once for Scaffolding. Section 14.000 is "Wardrobes, Walk-ins &amp; Shower screens" and 16.000 is "Shower screens, fixtures &amp; accessories", so shower screens appear in two places. There is no 10.000 at all. Item codes in a real Bill of Quantities are a human habit, not an identifier. An importer that trusts them silently produces a wrong screen, which is worse than one that asks you a question.</p>
+    </div>
+
+    <h3 style="margin:34px 0 12px">The import screen, mapping before saving</h3>
+    <div class="card pad">
+      <div class="map"><div class="from">1.000 Site Works, Planning, approval and site requirements &middot; 13 lines &middot; $33,188</div><div class="arrow">to</div><div class="to">Site works</div></div>
+      <div class="map"><div class="from">2.000 Concreting &middot; 7 lines &middot; $41,110</div><div class="arrow">to</div><div class="to">Concreting</div></div>
+      <div class="map warn"><div class="from">15.000 Painting &middot; 1 line &middot; $11,425<br><span style="font-size:12px">15.000 Scaffolding also uses this code</span></div><div class="arrow">to</div><div class="to">Painting</div></div>
+      <div class="map warn"><div class="from">15.000 Scaffolding &middot; 1 line &middot; $0</div><div class="arrow">to</div><div class="to">Not sure, pick one</div></div>
+      <div class="map"><div class="from">21.000 Miscellaneous Items, General requirements &middot; 3 lines &middot; $7,828</div><div class="arrow">to</div><div class="to">Other</div></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:14px;padding-top:14px;border-top:1px solid var(--hairline)">
+        <div style="font-size:13px;color:var(--slate-500)">21 sections read, 118 lines, total <b class="n" style="color:var(--steel-900)">$354,108</b>. Your file says <b class="n" style="color:var(--steel-900)">$354,107.92</b>.</div>
+        <div class="grow"></div>
+        <div class="btn ghost sm">Cancel</div>
+        <div class="btn sm">Save the plan</div>
+      </div>
+    </div>
+    <p style="margin-top:14px">If the two totals do not match you see it here, before a single document is written. The uploaded file is kept on the job as an <b>estimate</b> in Files, so the source is always one tap away.</p>
+
+    <h3 style="margin:34px 0 12px">Any spreadsheet, not just yours</h3>
+    <p>The parser must not be a Bill of Quantities parser. It is a column mapper, the same thing every bank import has done for twenty years: show the first few rows, ask which column is what, remember the answer for next time.</p>
+    <div class="card pad" style="max-width:520px">
+      <div class="inp"><div class="lbl2">Description</div><div class="val">Column B</div></div>
+      <div class="inp"><div class="lbl2">Amount</div><div class="val">Column G, "Total"</div></div>
+      <div class="inp"><div class="lbl2">Section name</div><div class="val">Detected from bold header rows</div></div>
+      <div class="inp"><div class="lbl2">Quantity and unit</div><div class="ph">Optional, skip</div></div>
+      <div class="inp"><div class="lbl2">Prices are</div><div class="val">Excluding GST</div></div>
+    </div>
+    <p style="margin-top:14px">A PDF only quote from a builder does not get parsed at all. It goes into Files as an estimate and you type the trade totals, which is level 2 and takes ten minutes. Honest, cheap, and it never invents a number.</p>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">Where it lives</p>
+    <h2>Additive. Nothing existing changes shape.</h2>
+    <p class="lede" style="margin:16px 0 24px">Two new subcollections under the job and one optional field on an expense. Every expense you already have stays valid and simply lands in Uncoded until you touch it.</p>
+
+<pre>organizations/{orgId}/
+  <b>tradeList</b>                      about 20 app trades plus anything you add.
+                                 Shared by every job. Never per job.
+
+organizations/{orgId}/projects/{jobId}/
+
+  <b>costPlan/{planId}</b>              one document, the whole plan
+    level: target | trades | imported
+    targetCents                  level 1 stops here
+    sourceFileId?, baselineDate, gstMode, status: draft | locked
+    sections: [ { id, <b>tradeId</b>, code?: "2.000", name, order,
+                  amountCents,
+                  lines?: [ { code, description, qty, unit,
+                              unitPriceCents, totalCents } ] } ]
+
+  <b>quotes/{quoteId}</b>               they arrive over time, so their own docs
+    party, partyId, receivedDate, status: received | chosen | passed
+    amountCents, amountHighCents?, gstMode, note, fileId
+    allocations: [ { <b>tradeId</b>, amountCents } ]
+
+  expenses/{id}
+    ... everything it has today ...
+    <b>+ tradeId?</b>                   null, a trade id, or "not-in-estimate"</pre>
+
+    <div class="grid g2" style="margin-top:24px">
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Why expenses code to a trade, not a section</h4>
+        <p style="font-size:14px;margin:0"><b>The single most important line in the schema.</b> Sections belong to a document that gets replaced when a revised estimate arrives. Trades do not. Code an expense to a section and re-importing wipes six months of coding. Code it to a trade and the plan can be swapped underneath it as often as you like.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Why one document, not a subcollection of lines</h4>
+        <p style="font-size:14px;margin:0">120 lines is roughly 20 KB, well inside Firestore's 1 MB limit. One read draws the whole screen. No fan-out, no new rules, no index. The boring option is the right one at your size.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Why quotes are separate documents</h4>
+        <p style="font-size:14px;margin:0">They arrive one at a time over months, they get a file attached, and they get voided rather than deleted. Same shape as invoices, same rules pattern, nothing new to learn.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Nothing derived is stored</h4>
+        <p style="font-size:14px;margin:0">Expected final, variance, and the trade status are all computed on read, same as margin and the verdict today. DATABASE.md item 7 already says do not store a verdict unless you define who updates it. Nobody would.</p>
+      </div>
+    </div>
+
+    <div class="warnbox" style="margin-top:24px">
+      <p><b>Kelly St already has a ledger.</b> It was Gurner St and it has real expenses on it, which means the paid column is populated the moment the estimate is imported. That is the good news. The other side is that coding the existing expenses is a real backfill, done by hand, one job, one evening. Worth doing on staging first with a copy, so the tap-to-code flow gets fixed before it touches production.</p>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">The thing to decide before any of this</p>
+    <h2>Kelly St is your own build, and the app assumes you are invoicing someone</h2>
+    <p class="lede" style="margin:16px 0 22px">Centenary has a client, invoices and a margin. Kelly St has none of those, so today the app shows it as a job with no income and no margin, which reads as broken rather than as a different kind of job.</p>
+    <div class="grid g2">
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Building for a client</h4>
+        <p style="font-size:14px;margin:0">The question is <b>margin</b>. Invoiced minus cost. The cost plan is a second opinion: are you going to make what you thought you would make.</p>
+      </div>
+      <div class="card pad">
+        <h4 style="margin-bottom:8px">Building for yourself</h4>
+        <p style="font-size:14px;margin:0">There is no invoice and no margin. The question is <b>estimate against actual</b>, full stop. The cost plan is not a second opinion, it is the whole scoreboard, and the Overview verdict should say so instead of showing a margin of zero.</p>
+      </div>
+    </div>
+    <p style="margin-top:20px">That is one field on the job, <code>kind: client | own</code>, and a different verdict line on Overview. Small, but it should be decided before the cost plan lands, otherwise Kelly St gets a beautiful new screen sitting above a header that still says there is no income.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">How it would ship</p>
+    <h2>Five parts, smallest first, and every one of them lands on all jobs</h2>
+    <p class="lede" style="margin:16px 0 0">Deliberately ordered so the import, the part that only matters to Kelly St, is not the part everything else waits on.</p>
+    <div class="card pad" style="margin-top:20px">
+      <div class="phase">
+        <div class="lt">Part A</div>
+        <div>
+          <h4>Trade list, target cost, and the screen</h4>
+          <p style="font-size:14px;margin:6px 0 0">Level 1. Ship the twenty trades, let a job carry a single target number, draw the Cost plan screen against the paid total. No coding, no quotes, no file. <b>Nothing writes to the ledger, and it works on Centenary the same day it works on Kelly St.</b></p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="lt">Part B</div>
+        <div>
+          <h4>Break it into trades, and code expenses</h4>
+          <p style="font-size:14px;margin:6px 0 0">Level 2. Type an amount per trade, add one optional <code>tradeId</code> to an expense, a tap on History, a suggestion from the supplier, and the Uncoded bucket. This is where the screen comes alive, and it still needs no spreadsheet.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="lt">Part C</div>
+        <div>
+          <h4>Quotes</h4>
+          <p style="font-size:14px;margin:6px 0 0">Add a quote, allocate it across one or more trades, mark one chosen, attach the PDF, record whether it included GST. Expected final becomes a forecast rather than a copy of the plan.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="lt">Part D</div>
+        <div>
+          <h4>Import a spreadsheet</h4>
+          <p style="font-size:14px;margin:6px 0 0">Level 3. The column mapper, the section to trade mapping screen, the totals check, line detail under each trade. Kelly St gets its 120 lines. Every other job carries on unaffected.</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="lt">Part E</div>
+        <div>
+          <h4>Job kind and what needs you</h4>
+          <p style="font-size:14px;margin:6px 0 0">Own build versus client build. Then the signals: a trade quoted well over plan, a trade paid past its quote, an expense uncoded for two weeks, a trade with spend but no quote.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">Deliberately not in this</p>
+    <h2>What the cost plan is not</h2>
+    <div class="grid g2" style="margin-top:20px">
+      <div class="no"><p style="margin:0"><b>Not a schedule.</b> No dates, no dependencies, no Gantt. Money only.</p></div>
+      <div class="no"><p style="margin:0"><b>Not a takeoff tool.</b> It never calculates a quantity. It reads what your estimator wrote.</p></div>
+      <div class="no"><p style="margin:0"><b>Not a purchase order system.</b> A quote is a record of a price, not a commitment you issue.</p></div>
+      <div class="no"><p style="margin:0"><b>Not per-line reconciliation.</b> Said once already, worth saying again. That is the version that dies.</p></div>
+      <div class="no"><p style="margin:0"><b>Not editable after lock.</b> The baseline is the baseline. Changes are quotes and extras.</p></div>
+      <div class="no"><p style="margin:0"><b>Not a new backend service.</b> No Cloud Functions and no new packages. New collections get narrow, membership-gated Firestore rules.</p></div>
+      <div class="no"><p style="margin:0"><b>Not compulsory.</b> A job with no plan looks exactly like it does today. No tab, no empty card, no trade field on the expense form.</p></div>
+      <div class="no"><p style="margin:0"><b>Not a PDF reader.</b> Spreadsheets and typing only. A number the app guessed wrong is worse than a number you spent a minute entering.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <b>RisingAMP, Cost plan vision.</b> Part A is built on the Phase 10 branch; nothing is deployed. Section totals are the real ones from the Kelly St Bill of Quantities dated 29 May 2026, converted to GST inclusive. Spend figures are illustrative.
+  </div>
+</footer>
+
+</body>
+</html>

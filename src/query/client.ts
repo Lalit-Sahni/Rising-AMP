@@ -18,4 +18,5 @@ export const queryKeys = {
   labour: (orgId: string, jobId: string) => ['labour', orgId, jobId] as const,
   trades: (orgId: string, jobId: string) => ['trades', orgId, jobId] as const,
   suppliers: (orgId: string, jobId: string) => ['suppliers', orgId, jobId] as const,
+  costPlan: (orgId: string, jobId: string) => ['cost-plan', orgId, jobId] as const,
 };

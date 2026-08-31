@@ -12,6 +12,7 @@ import {
   deriveVerdict,
   formatMoney,
   expenseDate,
+  getExpenseFaceTotalCents,
   getExpenseTotal,
   invoiceHasDate,
   isInvoiceOverdue,
@@ -64,6 +65,12 @@ describe('getExpenseTotal', () => {
     expect(getExpenseTotal({ category: 'labour', hours: 8, rate: 50 })).toBe(400);
     expect(getExpenseTotal({ quantity: 2, unitCost: '3.5' })).toBe(7);
     expect(getExpenseTotal({})).toBe(0);
+  });
+
+  test('the Firestore boundary keeps labour and quantity totals in cents', () => {
+    expect(getExpenseFaceTotalCents({ category: 'labour', hours: 8, rate: 50 })).toBe(40000);
+    expect(getExpenseFaceTotalCents({ quantity: 2, unitCost: '3.5' })).toBe(700);
+    expect(getExpenseFaceTotalCents({ totalCents: 1234, total: 99 })).toBe(1234);
   });
 });
 

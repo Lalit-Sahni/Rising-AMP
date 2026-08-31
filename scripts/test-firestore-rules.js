@@ -182,6 +182,56 @@ async function main() {
     await assertSucceeds(stranger.firestore().doc(`organizations/${ORG_B}/projects/${JOB_B}`).get());
     await assertFails(owner.firestore().doc(`organizations/${ORG_B}/projects/${JOB_B}`).get());
 
+    const costPlanPath = `organizations/${ORG}/projects/${JOB}/costPlan/current`;
+    const validCostPlan = {
+      jobId: JOB,
+      level: 'target',
+      targetCents: 34000000,
+      baselineDate: '2026-08-31',
+      gstMode: 'inclusive',
+      status: 'draft',
+      sections: [],
+      createdBy: OWNER.uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      archivedAt: null,
+    };
+    await assertSucceeds(owner.firestore().doc(costPlanPath).set(validCostPlan));
+    await assertSucceeds(owner.firestore().doc(costPlanPath).get());
+    await assertFails(stranger.firestore().doc(costPlanPath).get());
+    await assertFails(stranger.firestore().doc(costPlanPath).set(validCostPlan));
+    await assertFails(owner.firestore().doc(costPlanPath).delete());
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/costPlan/other`).set(validCostPlan));
+    await assertFails(owner.firestore().doc(costPlanPath).set({
+      ...validCostPlan,
+      targetCents: '34000000',
+    }));
+    await assertFails(owner.firestore().doc(costPlanPath).set({
+      ...validCostPlan,
+      targetCents: -1,
+    }));
+    await assertFails(owner.firestore().doc(costPlanPath).set({
+      ...validCostPlan,
+      unexpected: true,
+    }));
+    await assertFails(owner.firestore().doc(costPlanPath).set({
+      ...validCostPlan,
+      level: 'trades',
+    }));
+    await assertSucceeds(owner.firestore().doc(costPlanPath).update({
+      targetCents: 35000000,
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(costPlanPath).update({
+      status: 'locked',
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(costPlanPath).update({
+      status: 'archived',
+      archivedAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
     const filePath = `organizations/${ORG}/projects/${JOB}/files/f1`;
     const validFile = {
       name: 'Slab engineer certificate',
@@ -272,7 +322,7 @@ async function main() {
       ),
     );
 
-    console.log('firestore.rules and storage.rules job-file tests passed');
+    console.log('firestore.rules cost-plan and job-file tests passed; storage.rules job-file tests passed');
   } finally {
     await testEnv.cleanup();
   }

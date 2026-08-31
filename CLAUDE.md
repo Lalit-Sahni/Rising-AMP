@@ -6,18 +6,18 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-9-job-files`**. **Phase 9 is closed and live** (Job Files). Production hosting, Firestore rules and Storage rules were deployed 31 Aug 2026. Phases 1–9 are live. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
-2. Read `PROGRESS.md` (next concrete step). `PHASE9.md` is the closed Job Files record. Open `design/risingamp-files-vision.html` if you are changing Files. `PHASE8.md` is the closed Phase 8 record. `PHASE7.md` is a closed record (app feel). `PHASE6.md` and `PHASE6-INTEGRITY.md` are closed / parked. `PHASE5.md`, `PHASE4.md`, `PHASE3.md`, `PHASE2.md`, and `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
+1. Confirm git branch. Latest work is **`phase-10-cost-plan`**. **Phase 10 Cost Plan is active.** Part A (target cost and Level 1 screen) is implemented on the branch and not deployed. Production remains Phase 9: Job Files is live, including hosting, Firestore rules and Storage rules from 31 Aug 2026. Localhost still uses **staging**. Never commit to `master` or `main`. Restore tags: `pre-phase10-2026-08-31` (this phase), `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next concrete step), then `PHASE10.md`. Open `design/risingamp-costplan-vision.html` before changing Cost Plan. `PHASE9.md` is the closed Job Files record. `PHASE8.md` through `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
 3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** leftovers only if he asks. App Check **enforcement**, ledger rollups, normalising stored money fields, TanStack Query on the ledger, dismantling the remaining AppContext ledger blob, `PHASE6-INTEGRITY.md`. Do not deploy unless he names it.
+5. **Next:** Phase 10 Part B only after Part A is reviewed: trade amounts and explicit expense coding. The new Cost Plan rules are tested but not deployed to staging or production. Do not deploy unless he names the project and surface.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. **All new files are TypeScript.** Existing JS converts only when a brief says so, or when the file is being substantially rewritten anyway.
 8. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Phase 9 Job Files is live. Phases 1–9 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan Part A is implemented on `phase-10-cost-plan`, not deployed. Production remains Phase 9. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tag: pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -39,6 +39,7 @@ If you are unsure whether a command writes to production, do not run it.
 - Live shopfront: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)
 - Design mockup (Phase 3): `design/risingamp-vision.html`
 - Job Files vision (Phase 9): `design/risingamp-files-vision.html`
+- Cost Plan vision (Phase 10): `design/risingamp-costplan-vision.html`
 - Auth mockups: `design/risingamp-auth.html`, `design/risingamp-signin-email.html`
 - Live look (Phase 2): `design/opal-track-reference.html`
 - Never run `firebase deploy` against production unless the owner explicitly asks. Hosting only: `firebase deploy --project production --only hosting`. Do not deploy functions, Firestore rules, or Storage unless he names them. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`. Deploy functions **by name**.
@@ -92,6 +93,10 @@ Brief: `PHASE8.md`. Vite, routes, integer cents, server invoice numbers (`YYYY-0
 
 Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. Branch: `phase-9-job-files`. Restore tag: `pre-phase9-2026-08-31`. Job files live on a job with a fixed type list, thumbnails, a 25 MB cap, no video, no folders, and a handover pack. Production Storage rules are live (receipts are no longer world-open). No new Cloud Functions. Localhost stays on staging.
 
+## Phase 10 (active; branch only)
+
+Brief: `PHASE10.md`. Mockup: `design/risingamp-costplan-vision.html`. Branch: `phase-10-cost-plan`. Restore tag: `pre-phase10-2026-08-31`. Part A adds an optional per-job target cost and a Level 1 Cost Plan screen. Jobs without a plan are unchanged. Spend comes from active expenses, not paid invoices, and is hidden when the 1,000-expense cap is reached. Rules are tested but not deployed. No new Cloud Functions or packages.
+
 ## Out of scope until asked
 
 - Billing, Stripe, a second product, deleting leftover PIN folders unless the owner asks, deploying functions beyond what the current phase names, new npm packages except the list already in `PHASE8.md`, Phase 4 Gmail-fallback removal, a service worker / offline queue, App Check **enforcement** until staging traffic is clean, normalising stored money fields, ledger rollup documents, dismantling the remaining AppContext ledger blob
@@ -99,6 +104,7 @@ Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. Branch: `phase
 ## Continuity
 
 - `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
+- `PHASE10.md` — Cost Plan — active brief.
 - `PHASE9.md` — Job Files — closed record.
 - `PHASE8.md` — foundations / technical revamp — closed record.
 - `PHASE7.md` — app feel on a phone — closed record.

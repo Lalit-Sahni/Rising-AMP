@@ -2,15 +2,23 @@
 
 ## Current branch
 
-`phase-9-job-files` — **Phase 9 closed and live.** Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-10-cost-plan` — **Phase 10 active. Part A is implemented on the branch, not deployed.** Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
-Restore tags: `pre-phase9-2026-08-31` (this phase), `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
+Restore tags: `pre-phase10-2026-08-31` (this phase), `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local`  
 `.firebaserc` default is **staging**. Git push does not deploy.
 
 ## Where we are (2026-08-31)
+
+**Phase 10 Cost Plan is active.** Brief: `PHASE10.md`. Vision: `design/risingamp-costplan-vision.html`.
+
+**Part A is implemented on the branch, not deployed.** A job can carry one GST-inclusive target cost at `costPlan/current`. The lazy `/jobs/:jobId/cost-plan` screen shows target, spent, left and progress. Spend comes from active expenses, not paid invoices. Jobs with no plan remain unchanged except for a dismissible Overview suggestion; the Cost Plan nav item stays hidden until a plan exists. TanStack Query shares the plan read without adding it to AppContext. The 1,000-expense cap hides spend and progress rather than showing a partial total.
+
+The Part A rules validate membership, fixed document id, integer cents, baseline date, lifecycle and immutable audit fields. Delete is denied. Typecheck, 127 Vitest tests, 3 function tests, rules tests and the production build pass. Initial JS is 246.1 KB gzip under the 250 KB budget. **Rules are not deployed to staging or production**, so target writes are not yet enabled on localhost or live. No production data was read or written. No Cloud Functions or packages.
+
+The expense read boundary now preserves labour `hours × rate` and `quantity × unitCost` totals instead of attaching a false zero `totalCents`. This keeps Cost Plan and the existing Overview cost honest.
 
 **Phase 9 is closed and live (31 Aug 2026).** Brief: `PHASE9.md` (closed record). Mockup: `design/risingamp-files-vision.html`.
 
@@ -54,14 +62,15 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Phase 9 Job Files is live. Phases 1–9 are live. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase9-2026-08-31, pre-phase8-2026-08-28, pre-phase7-2026-08-28, pre-phase6-2026-08-27, pre-phase1-2026-08-22. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan Part A is implemented on the branch, not deployed. Production remains Phase 9. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tag: pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
 
-1. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
-2. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
-3. Offline / service worker — still its own phase.
+1. Phase 10 Part B after Part A review: trade amounts and explicit expense coding. Deploy the Part A Firestore rules to staging only if Lalit names that deploy.
+2. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
+3. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
+4. Offline / service worker — still its own phase.
 
 ## Next
 
@@ -81,6 +90,8 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE9.md. Phase 9 Job Files is live. Pha
 - [x] Phase 9 Part F — handover pack
 - [x] Phase 9 Part G — Files as a document register
 - [x] Phase 9 live — hosting, Firestore rules, Storage rules
+- [x] Phase 10 Part A — target cost and Level 1 screen (branch only; rules not deployed)
+- [ ] Phase 10 Part B — trade amounts and expense coding
 
 ## What shipped (localhost / staging)
 
@@ -138,6 +149,7 @@ OCR “Check this” **was** implemented, but only from real signals: missing/in
 
 ## Design files
 
+- `design/risingamp-costplan-vision.html` — Phase 10 Cost Plan vision
 - `design/risingamp-files-vision.html` — Phase 9 Job Files vision
 - `design/risingamp-vision.html` — Phase 3 vision (look source)
 - `design/opal-track-reference.html` — Phase 2 look (tokens)

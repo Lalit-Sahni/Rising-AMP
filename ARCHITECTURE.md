@@ -1,11 +1,11 @@
-# Rising AMP — Architecture (after Phase 9, 2026-08-31)
+# Rising AMP — Architecture (Phase 10 Part A, 2026-08-31)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE9.md`.
+This describes the **branch app**. Phase records: `PLAN.md` through `PHASE10.md`. Production remains Phase 9 until an explicit deploy.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging (localhost): `rising-amp-staging`  
-Working branch: `phase-9-job-files`. Never commit to `master` / `main`.  
+Working branch: `phase-10-cost-plan`. Never commit to `master` / `main`.
 App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category colour as data ink only.
 
 ---
@@ -27,7 +27,7 @@ Entry: `index.html` → `src/index.js` → `src/App.js`.
 
 Localhost must load `.env.local` (staging). Production builds must load `.env.production.local`. Do not swap them.
 
-**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Measured 31 Aug 2026: **241.5 KB** initial gzip. `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. See `build/stats.html` after `npm run build`.
+**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 10 Part A branch: **246.1 KB** initial gzip (Phase 9 production baseline: 241.5 KB). `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
 
 ---
 
@@ -43,6 +43,7 @@ Wired in `src/components/MainContent.js`. Map: `src/navigation.ts`.
 | `/jobs/:jobId/invoices` | `InvoiceManagementPage.jsx` |
 | `/jobs/:jobId/history` | `HistoryPage.js` |
 | `/jobs/:jobId/files` | `FilesPage.tsx` |
+| `/jobs/:jobId/cost-plan` | `CostPlanPage.tsx` |
 | `/jobs/:jobId/budget` | `BudgetTrackingPage.js` |
 | `/jobs/:jobId/contracts` | `HIAContractPage.jsx` |
 | `/clients` | `ClientManagerPage.jsx` |
@@ -82,6 +83,7 @@ Old PIN trees `users/{accessCode}/…` still exist. The live app does not use th
 - `organizations/{orgId}` — signed-in email must be in `invitedEmails`.
 - `organizations/{orgId}/projects/{projectId}` — signed-in email must be in that project’s `invitedEmails`. List queries use `resource.data.invitedEmails` so they match `array-contains`. Owner-only: create job, archive, invite, remove person. Delete job is denied.
 - Project subcollections use a `get()` of the parent project’s `invitedEmails`.
+- `costPlan/current` — members can read and write a valid target plan; audit fields stay fixed and delete is denied. These Phase 10 rules are branch-only until a named deploy.
 
 `storage.rules` in the repo: receipts require sign-in and job membership (or a known legacy PIN folder). Production Storage rules were **not** deployed on 27 Aug 2026 (hosting + Firestore only). See `DATABASE.md`.
 
@@ -102,13 +104,15 @@ organizations/{orgId}
   invitedEmails, ownerEmail, name
   counters/invoices            # year + next sequence; written by allocateInvoiceNumber
   projects/{projectId}
-    expenses, invoices, files, clients, labour, trades, …
+    expenses, invoices, files, costPlan, clients, labour, trades, …
 profiles/{uid}              # private: name, mobile, ABN, address, photo
 publicProfiles/{email}      # display name + photo only
 users/{accessCode}          # leftover copies, unused by the app
 ```
 
 Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `orgId`.
+
+`costPlan/current` is optional. Part A stores one GST-inclusive target in integer cents with a baseline date and `draft | locked | archived` lifecycle. A job with no document has no Cost Plan nav item. The one plan read is shared through TanStack Query between Sidebar, Overview and the lazy Cost Plan route; it is not added to AppContext.
 
 ---
 
@@ -217,6 +221,16 @@ Done in Phase 9 Part G:
 - Files is a document register: one table with sortable columns, a summary bar, and multi-select (change type, archive, add to handover pack). Receipts stay in the list as “From an expense”, same hairline as everything else, and are not selectable. Type chips are mobile-only; desktop filters from the type column. List/grid is a two-segment control. Copy does not mention folders. Presentation only — no model or rule changes.
 
 Phase 9 closed 31 Aug 2026: production hosting, Firestore rules and Storage rules. No new Cloud Functions. Localhost stays on staging.
+
+Done on the Phase 10 Part A branch:
+
+- Optional `costPlan/current` target per job. Target money is integer cents; spend is derived from active expenses.
+- Lazy `/jobs/:jobId/cost-plan` route with target, spent, remaining and progress. No plan means no nav item and the direct route returns to Overview.
+- A dismissible Overview suggestion starts Level 1. Jobs without a plan otherwise behave exactly as before.
+- Cost Plan refuses to show spend when the 1,000-expense cap is reached.
+- Twenty stable app trade ids exist in code for Part B; there is no org trade-list write yet.
+- Firestore rules gate the fixed plan document on job membership, validate shape and deny delete. Emulator-tested, not deployed to staging or production.
+- Expense fetch now derives `totalCents` from labour hours/rate and quantity/unit cost when no direct total field exists.
 
 Left on purpose:
 

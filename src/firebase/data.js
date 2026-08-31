@@ -19,7 +19,7 @@ import {
 import { db } from './config';
 import { getActiveOrgId } from './tenancy';
 import { parseAtBoundary, expenseSchema, invoiceSchema } from '../domain/schemas';
-import { parseToCents } from '../money';
+import { getExpenseFaceTotalCents } from '../utils/jobMetrics';
 
 function definedFields(data) {
   const out = {};
@@ -91,12 +91,7 @@ export const fetchExpensesFromFirestore = async (jobId) => {
       const data = row.data();
       const parsed = parseAtBoundary(expenseSchema, { id: row.id, ...data });
       const body = parsed.ok ? parsed.data : parsed.data;
-      let totalCents = 0;
-      try {
-        totalCents = parseToCents(body.total ?? body.amount ?? body.cost ?? body.totalPrice ?? 0);
-      } catch (error) {
-        totalCents = 0;
-      }
+      const totalCents = getExpenseFaceTotalCents(body);
       expenses.push({
         ...body,
         id: row.id,

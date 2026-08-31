@@ -10,6 +10,7 @@ const PAGE_TITLES = {
   history: 'History',
   'new-invoice': 'Invoices',
   files: 'Files',
+  'cost-plan': 'Cost plan',
   'budget-tracking': 'Budget tracking',
   'hia-contract': 'HIA contracts',
   'client-manager': 'Clients',
