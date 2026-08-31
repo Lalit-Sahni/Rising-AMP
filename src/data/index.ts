@@ -31,3 +31,10 @@ export {
   savePayerToFirestore,
   fetchPayersFromFirestore,
 } from '../firebase/data';
+export {
+  fetchJobFiles,
+  createJobFileRecord,
+  updateJobFileRecord,
+  archiveJobFile,
+  restoreJobFile,
+} from '../firebase/jobFiles';

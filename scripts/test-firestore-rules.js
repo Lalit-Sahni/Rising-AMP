@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 /**
- * Phase 8 A1: a signed-in stranger who shares no job cannot read another
- * person's private profile. Run with:
- *   npm run test:rules
+ * Rules tests: profiles, ledger void/purge, org isolation, and job files.
+ * Run with: npm run test:rules
  */
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
 const fs = require('fs');
@@ -35,9 +34,14 @@ const PUBLIC_CARD = {
 
 async function main() {
   const testEnv = await initializeTestEnvironment({
-    projectId: 'demo-rising-amp-rules',
+    // Must match `firebase emulators:exec --project` so Storage rules
+    // firestore.get() sees the same job documents.
+    projectId: 'rising-amp-staging',
     firestore: {
       rules: fs.readFileSync(path.join(__dirname, '../firestore.rules'), 'utf8'),
+    },
+    storage: {
+      rules: fs.readFileSync(path.join(__dirname, '../storage.rules'), 'utf8'),
     },
   });
 
@@ -48,8 +52,14 @@ async function main() {
       await db.doc(`publicProfiles/${OWNER.email}`).set(PUBLIC_CARD);
     });
 
-    const owner = testEnv.authenticatedContext(OWNER.uid, { email: OWNER.email });
-    const stranger = testEnv.authenticatedContext(STRANGER.uid, { email: STRANGER.email });
+    const owner = testEnv.authenticatedContext(OWNER.uid, {
+      email: OWNER.email,
+      email_verified: true,
+    });
+    const stranger = testEnv.authenticatedContext(STRANGER.uid, {
+      email: STRANGER.email,
+      email_verified: true,
+    });
     const anon = testEnv.unauthenticatedContext();
 
     await assertSucceeds(owner.firestore().doc(`profiles/${OWNER.uid}`).get());
@@ -172,7 +182,79 @@ async function main() {
     await assertSucceeds(stranger.firestore().doc(`organizations/${ORG_B}/projects/${JOB_B}`).get());
     await assertFails(owner.firestore().doc(`organizations/${ORG_B}/projects/${JOB_B}`).get());
 
-    console.log('firestore.rules profile, invoice, org and expense tests passed');
+    const filePath = `organizations/${ORG}/projects/${JOB}/files/f1`;
+    const validFile = {
+      name: 'Slab engineer certificate',
+      type: 'certificate',
+      storagePath: `files/${ORG}/${JOB}/f1/slab.pdf`,
+      thumbnailPath: null,
+      contentType: 'application/pdf',
+      sizeBytes: 412000,
+      uploadedBy: OWNER.uid,
+      uploadedAt: new Date(),
+      documentDate: '2026-03-14',
+      note: 'Engineer cert',
+      linkedTo: null,
+      status: 'active',
+      archivedAt: null,
+      jobId: JOB,
+    };
+    await assertSucceeds(owner.firestore().doc(filePath).set(validFile));
+    await assertSucceeds(owner.firestore().doc(filePath).get());
+    await assertFails(stranger.firestore().doc(filePath).get());
+    await assertFails(stranger.firestore().doc(filePath).set(validFile));
+    await assertFails(owner.firestore().doc(filePath).delete());
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/files/f-big`).set({
+      ...validFile,
+      storagePath: `files/${ORG}/${JOB}/f-big/huge.pdf`,
+      sizeBytes: 26214401,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/files/f-video`).set({
+      ...validFile,
+      storagePath: `files/${ORG}/${JOB}/f-video/clip.mp4`,
+      contentType: 'video/mp4',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/files/f-type`).set({
+      ...validFile,
+      storagePath: `files/${ORG}/${JOB}/f-type/docs.pdf`,
+      type: 'folder',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/files/f-path`).set({
+      ...validFile,
+      storagePath: `files/${ORG_B}/${JOB_B}/f-path/stolen.pdf`,
+    }));
+    await assertSucceeds(owner.firestore().doc(filePath).update({
+      status: 'archived',
+      archivedAt: new Date(),
+    }));
+
+    const storageRefPath = `files/${ORG}/${JOB}/f1/slab.pdf`;
+    await assertSucceeds(
+      owner.storage().ref(storageRefPath).put(Buffer.from('%PDF-1.4'), { contentType: 'application/pdf' }),
+    );
+    await assertSucceeds(owner.storage().ref(storageRefPath).getDownloadURL());
+    await assertFails(stranger.storage().ref(storageRefPath).getDownloadURL());
+    await assertFails(owner.storage().ref(storageRefPath).delete());
+    await assertFails(
+      owner.storage().ref(`files/${ORG}/${JOB}/f-video/clip.mp4`).put(
+        Buffer.from('video'),
+        { contentType: 'video/mp4' },
+      ),
+    );
+    await assertFails(
+      owner.storage().ref(`files/${ORG}/${JOB}/f-big/huge.pdf`).put(
+        Buffer.alloc(26214401),
+        { contentType: 'application/pdf' },
+      ),
+    );
+    await assertFails(
+      stranger.storage().ref(`files/${ORG}/${JOB}/f-stranger/x.pdf`).put(
+        Buffer.from('%PDF-1.4'),
+        { contentType: 'application/pdf' },
+      ),
+    );
+
+    console.log('firestore.rules and storage.rules job-file tests passed');
   } finally {
     await testEnv.cleanup();
   }

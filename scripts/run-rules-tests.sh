@@ -18,4 +18,4 @@ if ! java -version >/dev/null 2>&1; then
   fi
 fi
 
-exec firebase emulators:exec --only firestore --project rising-amp-staging "node scripts/test-firestore-rules.js"
+exec firebase emulators:exec --only firestore,storage --project rising-amp-staging "node scripts/test-firestore-rules.js"

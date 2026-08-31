@@ -159,6 +159,101 @@ service cloud.firestore {
           allow create, update: if canUseProject();
           allow delete: if false;
         }
+        match /files/{itemId} {
+          function jobFileTypeOk() {
+            return request.resource.data.type in [
+              'contract', 'variation', 'plan', 'permit', 'certificate',
+              'quote', 'photo', 'invoiceReceived', 'other'
+            ];
+          }
+
+          function jobFileContentTypeOk() {
+            return request.resource.data.contentType is string
+              && !request.resource.data.contentType.matches('^video/.*')
+              && request.resource.data.contentType in [
+                'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+                'image/heic', 'image/heif', 'image/tiff',
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain',
+                'application/rtf',
+                'application/acad',
+                'image/vnd.dwg',
+                'application/dxf',
+                'application/x-dxf'
+              ];
+          }
+
+          function jobFileLinkedToOk() {
+            return !request.resource.data.keys().hasAny(['linkedTo'])
+              || request.resource.data.linkedTo == null
+              || (
+                request.resource.data.linkedTo.keys().hasAll(['kind', 'id'])
+                && request.resource.data.linkedTo.kind in ['expense', 'invoice', 'hiaContract']
+                && request.resource.data.linkedTo.id is string
+                && request.resource.data.linkedTo.id.size() > 0
+              );
+          }
+
+          function jobFilePathOk() {
+            return request.resource.data.storagePath is string
+              && request.resource.data.storagePath.matches(
+                '^files/' + orgId + '/' + projectId + '/' + itemId + '/.+'
+              )
+              && (
+                !request.resource.data.keys().hasAny(['thumbnailPath'])
+                || request.resource.data.thumbnailPath == null
+                || (
+                  request.resource.data.thumbnailPath is string
+                  && request.resource.data.thumbnailPath.matches(
+                    '^files/' + orgId + '/' + projectId + '/' + itemId + '/'
+                  )
+                )
+              );
+          }
+
+          function jobFileOk() {
+            return request.resource.data.name is string
+              && request.resource.data.name.size() > 0
+              && request.resource.data.name.size() <= 200
+              && jobFileTypeOk()
+              && jobFilePathOk()
+              && jobFileContentTypeOk()
+              && request.resource.data.sizeBytes is number
+              && request.resource.data.sizeBytes >= 0
+              && request.resource.data.sizeBytes <= 26214400
+              && request.resource.data.uploadedBy is string
+              && request.resource.data.uploadedBy.size() > 0
+              && request.resource.data.documentDate is string
+              && request.resource.data.documentDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+              && (
+                !request.resource.data.keys().hasAny(['note'])
+                || request.resource.data.note is string
+              )
+              && request.resource.data.status in ['active', 'archived']
+              && (
+                request.resource.data.status == 'active'
+                || request.resource.data.archivedAt is timestamp
+              )
+              && jobFileLinkedToOk();
+          }
+
+          allow read: if canUseProject();
+          allow create: if canUseProject()
+            && jobFileOk()
+            && request.resource.data.uploadedBy == request.auth.uid
+            && request.resource.data.status == 'active';
+          allow update: if canUseProject()
+            && jobFileOk()
+            && request.resource.data.uploadedBy == resource.data.uploadedBy
+            && request.resource.data.storagePath == resource.data.storagePath;
+          allow delete: if false;
+        }
         match /{allPaths=**} {
           allow read, write: if false;
         }

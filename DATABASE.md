@@ -53,6 +53,7 @@ organizations/{orgId}
     budget, expenses[]                         # leftover PIN copy fields; ignore
     expenses/{id}          + jobId
     invoices/{id}          + jobId, invoiceNumber, status including void
+    files/{id}             job documents (Phase 9). type from a fixed list; no folders. status active | archived; delete denied.
     clients/{id}           house owner you invoice (one per job, ideally)
     suppliers/{id}         materials (Bunnings, Rodgers, …) upsert by name
     serviceProviders/{id}  same idea as labour, not mixed into clients
@@ -105,6 +106,7 @@ Canonical matching lives in `src/firebase/partyName.js`. Soft-moved old rows kee
 6. **Clients ≠ suppliers.** Mixing them made the invoice picker unusable. Keep them split.
 7. **Firestore is the system of record.** Derived things (margin %, verdict, “needs you”) are computed in the client today. That is honest. Do not store a verdict unless you also define who updates it.
 8. **Staging vs production.** Localhost → staging. Production only behind an explicit yes. That split is correct and must stay.
+9. **Job files have a type, not a folder.** Certificates, variations, plans live as typed records on the job. Do not add a folder tree. Archive, never hard-delete.
 
 These are product-grade decisions. Scaling does not mean throwing them away.
 
@@ -228,6 +230,7 @@ Production bucket: `rising-amp-467702-b5.firebasestorage.app` (audit: 21 files, 
 |--------|------|
 | `receipts/{legacy PIN}/…` | Original photos; URLs stored on old expenses. Do not move. |
 | `receipts/{jobId}/…` | New uploads. Keep using job ID. |
+| `files/{orgId}/{jobId}/{fileId}/…` | Job files (Phase 9). Original plus optional `thumb.jpg`. Gated on job membership. 25 MB, no video. |
 | `siteLogs/{legacy PIN}/…` | Unused by UI. |
 | `avatars/{uid}/…` | Profile photos. |
 

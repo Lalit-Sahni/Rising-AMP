@@ -1,4 +1,11 @@
 import { z } from 'zod';
+import {
+  ALLOWED_JOB_FILE_CONTENT_TYPES,
+  JOB_FILE_LINK_KINDS,
+  JOB_FILE_MAX_BYTES,
+  JOB_FILE_TYPES,
+  isAllowedJobFileContentType,
+} from './jobFiles';
 
 const looseString = z.union([z.string(), z.number()]).optional();
 const moneyInput = z.union([z.string(), z.number(), z.null()]).optional();
@@ -89,6 +96,37 @@ export const clientSchema = z
 
 export const supplierSchema = clientSchema;
 
+export const jobFileTypeSchema = z.enum(JOB_FILE_TYPES);
+
+export const jobFileLinkedToSchema = z.object({
+  kind: z.enum(JOB_FILE_LINK_KINDS),
+  id: z.string().min(1),
+});
+
+export const jobFileSchema = z
+  .object({
+    id: z.string().optional(),
+    name: z.string().trim().min(1).max(200),
+    type: jobFileTypeSchema,
+    storagePath: z.string().min(1),
+    thumbnailPath: z.string().min(1).nullable().optional(),
+    contentType: z.string().min(1).refine(isAllowedJobFileContentType, {
+      message: 'That file type is not allowed',
+    }),
+    sizeBytes: z.number().int().nonnegative().max(JOB_FILE_MAX_BYTES),
+    uploadedBy: z.string().min(1),
+    uploadedAt: z.unknown().optional(),
+    documentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Document date must be YYYY-MM-DD'),
+    note: z.string().max(2000).optional(),
+    linkedTo: jobFileLinkedToSchema.nullable().optional(),
+    status: z.enum(['active', 'archived']),
+    archivedAt: z.unknown().nullable().optional(),
+    jobId: z.string().optional(),
+  })
+  .passthrough();
+
+export const JOB_FILE_CONTENT_TYPES = ALLOWED_JOB_FILE_CONTENT_TYPES;
+
 export type Expense = z.infer<typeof expenseSchema>;
 export type Invoice = z.infer<typeof invoiceSchema>;
 export type Job = z.infer<typeof jobSchema>;
@@ -96,6 +134,7 @@ export type Profile = z.infer<typeof profileSchema>;
 export type Organisation = z.infer<typeof organisationSchema>;
 export type Client = z.infer<typeof clientSchema>;
 export type Supplier = z.infer<typeof supplierSchema>;
+export type JobFile = z.infer<typeof jobFileSchema>;
 
 export function parseAtBoundary<T>(
   schema: z.ZodType<T>,

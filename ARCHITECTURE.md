@@ -101,7 +101,7 @@ organizations/{orgId}
   invitedEmails, ownerEmail, name
   counters/invoices            # year + next sequence; written by allocateInvoiceNumber
   projects/{projectId}
-    expenses, invoices, clients, labour, trades, …
+    expenses, invoices, files, clients, labour, trades, …
 profiles/{uid}              # private: name, mobile, ABN, address, photo
 publicProfiles/{email}      # display name + photo only
 users/{accessCode}          # leftover copies, unused by the app
@@ -116,6 +116,7 @@ Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `o
 | Path | What |
 |------|------|
 | `receipts/{jobId}/{expenseId}/…` | Expense receipt images. `customMetadata.orgId` is set on new uploads so rules can resolve membership without hardcoding the org. Objects uploaded before Phase 9 have no metadata and fall back to Opal. |
+| `files/{orgId}/{jobId}/{fileId}/…` | Job files. Org is in the path. Members only. Delete denied. 25 MB, images/PDFs/common documents, no video. Lists render `thumb.jpg`, never the original. |
 | `siteLogs/{legacyWorkspaceId}/…` | Old Site Log photos (unused) |
 | `reports/{legacyWorkspaceId}/…` | Old Weekly Report files (unused) |
 
@@ -185,6 +186,11 @@ Done in Phase 9 Part A:
 - Storage rules resolve org from receipt metadata (Opal fallback for old objects).
 - Expenses and invoices void first; purge only from Recently deleted and only when already void. Clients, HIA, labour and trades void with no purge.
 - `exceljs` is a dynamic import.
+
+Done in Phase 9 Part B:
+
+- Job files live at `organizations/{orgId}/projects/{jobId}/files/{fileId}` with a fixed type list (no folders). Archive, never delete.
+- Storage path `files/{orgId}/{jobId}/{fileId}/…` is gated on job membership. 25 MB, no video.
 
 Left on purpose:
 
