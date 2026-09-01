@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Clock,
   X,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
   Target,
@@ -15,8 +16,6 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { hasActiveCostPlan } from '../domain/costPlan';
-import { useCostPlan } from '../hooks/useCostPlan';
 import BrandMark from './BrandMark';
 
 const navMain = [
@@ -47,13 +46,11 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
     currentPage,
     setCurrentPage,
     showToast,
-    orgId,
     jobId,
     profile,
     mobileMenuOpen,
     setMobileMenuOpen,
   } = useApp();
-  const { data: costPlan } = useCostPlan(orgId, jobId);
   const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(false);
   const [moreOpen, setMoreOpen] = useState(
     () => navMore.some((item) => item.key === currentPage)
@@ -71,8 +68,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
   const onJobsHome = currentPage === 'jobs' || !jobId;
   const visibleMain = navMain.filter((item) => {
     if (item.key === 'jobs') return onJobsHome;
-    if (item.jobOnly) return !onJobsHome;
-    if (item.costPlanOnly) return !onJobsHome && hasActiveCostPlan(costPlan);
+    if (item.needsJob) return !onJobsHome;
     return true;
   });
 
@@ -116,7 +112,7 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
           title={isDesktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           aria-label={isDesktopCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          {isDesktopCollapsed ? <ChevronRight className="w-4 h-4" /> : <X className="w-3.5 h-3.5" />}
+          {isDesktopCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-3.5 h-3.5" />}
         </button>
 
         <div className="sidebar-safe flex flex-col flex-1 min-h-0">
