@@ -12,6 +12,7 @@ export const FILE_PAPERWORK_TYPES: JobFileType[] = [
   'permit',
   'certificate',
   'quote',
+  'estimate',
   'invoiceReceived',
 ];
 

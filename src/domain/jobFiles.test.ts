@@ -107,6 +107,7 @@ describe('job file upload checks', () => {
   test('suggests photo for images and other for documents', () => {
     expect(suggestJobFileType('image/jpeg')).toBe('photo');
     expect(suggestJobFileType('application/pdf')).toBe('other');
+    expect(suggestJobFileType('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')).toBe('estimate');
     expect(isRasterImageContentType('image/vnd.dwg')).toBe(false);
     expect(isRasterImageContentType('image/png')).toBe(true);
   });

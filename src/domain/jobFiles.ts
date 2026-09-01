@@ -9,6 +9,7 @@ export const JOB_FILE_TYPES = [
   'permit',
   'certificate',
   'quote',
+  'estimate',
   'photo',
   'invoiceReceived',
   'other',
@@ -31,6 +32,7 @@ export const JOB_FILE_TYPE_META: Record<JobFileType, { label: string; color: str
   permit: { label: 'Permit', color: '#4E8C82' },
   certificate: { label: 'Certificate', color: '#7E9B63' },
   quote: { label: 'Quote', color: '#5E82A6' },
+  estimate: { label: 'Estimate', color: '#7E9B63' },
   photo: { label: 'Photo', color: '#8A9099' },
   invoiceReceived: { label: 'Invoice received', color: '#C08A3E' },
   other: { label: 'Other', color: '#8A9099' },
@@ -198,7 +200,16 @@ export function isRasterImageContentType(contentType: string): boolean {
 }
 
 export function suggestJobFileType(contentType: string): JobFileType {
-  return isRasterImageContentType(contentType) ? 'photo' : 'other';
+  if (isRasterImageContentType(contentType)) return 'photo';
+  if (
+    contentType === 'application/vnd.ms-excel'
+    || contentType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    || contentType === 'text/csv'
+    || contentType === 'text/plain'
+  ) {
+    return 'estimate';
+  }
+  return 'other';
 }
 
 export function validateJobFileForUpload(file: { name?: string; size?: number; type?: string }): {

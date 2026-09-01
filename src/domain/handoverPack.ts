@@ -82,7 +82,7 @@ export function handoverTypeCounts(selected: JobFile[] = []): Array<{ type: JobF
     counts.set(file.type, (counts.get(file.type) || 0) + 1);
   });
   return HANDOVER_DEFAULT_TYPES
-    .concat(['quote', 'photo', 'invoiceReceived', 'other'])
+    .concat(['quote', 'estimate', 'photo', 'invoiceReceived', 'other'])
     .filter((type, index, list) => list.indexOf(type) === index)
     .map((type) => ({
       type,
