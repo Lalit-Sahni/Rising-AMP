@@ -222,13 +222,119 @@ async function main() {
       targetCents: 35000000,
       updatedAt: new Date(),
     }));
+    await assertSucceeds(owner.firestore().doc(costPlanPath).update({
+      level: 'trades',
+      sections: [{
+        id: 'plumbing',
+        tradeId: 'plumbing',
+        name: 'Plumbing',
+        order: 0,
+        amountCents: 35000000,
+      }],
+      updatedAt: new Date(),
+    }));
     await assertFails(owner.firestore().doc(costPlanPath).update({
+      status: 'locked',
+      targetCents: 36000000,
+      updatedAt: new Date(),
+    }));
+    await assertSucceeds(owner.firestore().doc(costPlanPath).update({
       status: 'locked',
       updatedAt: new Date(),
     }));
     await assertFails(owner.firestore().doc(costPlanPath).update({
+      targetCents: 36000000,
+      updatedAt: new Date(),
+    }));
+    await assertSucceeds(owner.firestore().doc(costPlanPath).update({
       status: 'archived',
       archivedAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(costPlanPath).update({
+      targetCents: 36000000,
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(costPlanPath).delete());
+    await assertSucceeds(owner.firestore().doc(costPlanPath).update({
+      status: 'draft',
+      archivedAt: null,
+      level: 'target',
+      sections: [],
+      sourceFileId: null,
+      targetCents: 1000000,
+      baselineDate: '2026-09-01',
+      updatedAt: new Date(),
+    }));
+    await assertSucceeds(owner.firestore().doc(costPlanPath).update({
+      targetCents: 2000000,
+      updatedAt: new Date(),
+    }));
+
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-code`).set({
+      category: 'purchase',
+      total: 40,
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-code`).update({
+      tradeId: 'plumbing',
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-code`).update({
+      tradeId: 'not-in-estimate',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-code`).update({
+      tradeId: '',
+    }));
+
+    const quotePath = `organizations/${ORG}/projects/${JOB}/quotes/q1`;
+    const validQuote = {
+      jobId: JOB,
+      party: 'Asif',
+      receivedDate: '2026-08-31',
+      status: 'received',
+      amountCents: 3000000,
+      amountHighCents: null,
+      gstMode: 'inclusive',
+      allocations: [{ tradeId: 'concreting', amountCents: 3000000 }],
+      createdBy: OWNER.uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      voidedAt: null,
+    };
+    await assertSucceeds(owner.firestore().doc(quotePath).set(validQuote));
+    await assertSucceeds(owner.firestore().doc(quotePath).update({
+      status: 'chosen',
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(quotePath).delete());
+    await assertFails(stranger.firestore().doc(quotePath).get());
+    await assertSucceeds(owner.firestore().doc(quotePath).update({
+      status: 'void',
+      voidedAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    const tradeListPath = `organizations/${ORG}/tradeList/plumbing`;
+    await assertSucceeds(owner.firestore().doc(tradeListPath).set({
+      name: 'Plumbing',
+      order: 0,
+      isAppDefault: true,
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    await assertSucceeds(stranger.firestore().doc(tradeListPath).get());
+    await assertFails(stranger.firestore().doc(tradeListPath).set({
+      name: 'Hacked',
+      order: 0,
+      isAppDefault: true,
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(tradeListPath).delete());
+
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}`).update({
+      kind: 'own',
       updatedAt: new Date(),
     }));
 
@@ -272,6 +378,14 @@ async function main() {
     await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/files/f-path`).set({
       ...validFile,
       storagePath: `files/${ORG_B}/${JOB_B}/f-path/stolen.pdf`,
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/files/f-estimate`).set({
+      ...validFile,
+      name: 'Kelly St estimate',
+      type: 'estimate',
+      storagePath: `files/${ORG}/${JOB}/f-estimate/kelly.xlsx`,
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      sizeBytes: 12000,
     }));
     await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/files/f-photo`).set({
       ...validFile,
