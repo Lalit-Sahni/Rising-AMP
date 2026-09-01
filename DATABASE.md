@@ -1,6 +1,6 @@
 # Rising AMP — Database (living guide)
 
-**Start here for the database.** This is what is true on the Phase 10 Part A branch. Production remains Phase 9 until an explicit deploy; the Cost Plan rules below are tested but not live.
+**Start here for the database.** This is what is true on the Phase 10 branch. Production remains Phase 9 until an explicit deploy; the Cost Plan rules below are tested but not live for Parts B–E.
 
 `DATABASE-AUDIT.md` is the **26 August 2026 read-only scan**. It is still useful as a snapshot (counts, invoice name spellings, Storage file list). Parts of it are **stale**: `jobId` is backfilled, `users/` rules are closed in the repo and on production Firestore, jobs can be created / archived, people can be added / removed, and `clients` is no longer a mixed pile of house-owners and Bunnings. Prefer this file when the two disagree.
 
@@ -44,17 +44,20 @@ Three root collections on the default Firestore database. Production project: `r
 organizations/{orgId}
   name, ownerEmail, invitedEmails
   counters/invoices                            # year + next; Cloud Function only
+  tradeList/{tradeId}                          # cost-plan categories; not job trade contacts
   legacyWorkspaceIds, legacyWorkspaceNames     # leftover PIN folder map; keep
   projects/{jobId}                             # THE job record
     name, orgId, status                        # active | archived
+    kind                               # client | own; missing means client
     invitedEmails, formerEmails
     archivedAt, archivedBy, createdAt, updatedAt
     legacyWorkspaceId, accessCode              # only on the two original jobs
     budget, expenses[]                         # leftover PIN copy fields; ignore
-    expenses/{id}          + jobId
+    files/{id}             job documents (Phase 9). type from a fixed list including estimate; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored.
+    costPlan/current        optional Phase 10 plan. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections hold trade amounts and optional imported lines. sourceFileId optional. Members only; delete denied. Archiving is reversible: the same `current` document can be replaced with a new draft.
+    quotes/{id}            optional Phase 10 quotes. Allocations must sum to amountCents. status received | chosen | passed | void. Delete denied.
+    expenses/{id}          + jobId, optional tradeId (or not-in-estimate)
     invoices/{id}          + jobId, invoiceNumber, status including void
-    files/{id}             job documents (Phase 9). type from a fixed list; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored.
-    costPlan/current        optional Phase 10 target. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections stay empty in Part A. Members only; delete denied. Rules branch-only until deployed.
     clients/{id}           house owner you invoice (one per job, ideally)
     suppliers/{id}         materials (Bunnings, Rodgers, …) upsert by name
     serviceProviders/{id}  same idea as labour, not mixed into clients
@@ -84,7 +87,7 @@ Staging may also have Part B test jobs. Localhost always talks to staging.
 
 **A job is an ID.** Expenses live under that ID. Renaming the job document changes the card and header. Invoices still also store a free-text `projectName` typed at save time (six spellings on Centenary). That string is a snapshot for PDFs, not the source of truth. Screens should show the job’s `name`.
 
-**A cost plan is optional and additive.** No `costPlan/current` document means the job behaves exactly as it did before Phase 10. Part A compares one GST-inclusive target against active expense totals. It does not use paid invoices, the legacy job `budget` field, or the job `trades` directory. Derived spend, percentage and remaining amounts are never stored.
+**A cost plan is optional and additive.** No `costPlan/current` document means the job behaves exactly as it did before Phase 10. Spend is always active expenses, never paid invoices. Expenses code to a trade id, never to an estimate section. Quotes are their own documents. Derived forecast, variance and progress are never stored. The job `trades` directory is still saved trade contacts; the org `tradeList` is the cost-plan category list.
 
 **Directories (after the split):**
 

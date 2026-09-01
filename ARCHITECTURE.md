@@ -1,4 +1,4 @@
-# Rising AMP — Architecture (Phase 10 Part A, 2026-08-31)
+# Rising AMP — Architecture (Phase 10 Parts A–E, 2026-08-31)
 
 This describes the **branch app**. Phase records: `PLAN.md` through `PHASE10.md`. Production remains Phase 9 until an explicit deploy.
 
@@ -27,7 +27,7 @@ Entry: `index.html` → `src/index.js` → `src/App.js`.
 
 Localhost must load `.env.local` (staging). Production builds must load `.env.production.local`. Do not swap them.
 
-**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 10 Part A branch: **246.1 KB** initial gzip (Phase 9 production baseline: 241.5 KB). `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
+**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 10 branch: **244.8 KB** initial gzip (Phase 9 production baseline: 241.5 KB). `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
 
 ---
 
@@ -83,7 +83,10 @@ Old PIN trees `users/{accessCode}/…` still exist. The live app does not use th
 - `organizations/{orgId}` — signed-in email must be in `invitedEmails`.
 - `organizations/{orgId}/projects/{projectId}` — signed-in email must be in that project’s `invitedEmails`. List queries use `resource.data.invitedEmails` so they match `array-contains`. Owner-only: create job, archive, invite, remove person. Delete job is denied.
 - Project subcollections use a `get()` of the parent project’s `invitedEmails`.
-- `costPlan/current` — members can read and write a valid target plan; audit fields stay fixed and delete is denied. These Phase 10 rules are branch-only until a named deploy.
+- `costPlan/current` — members can read and write a valid plan; Level 1 creates as `target`; updates may raise `level` and `sections`. Audit fields stay fixed and delete is denied.
+- `quotes/{quoteId}` — members can create/update a valid quote; delete is denied (void instead).
+- `organizations/{orgId}/tradeList/{tradeId}` — signed-in read; org-invited write; delete denied.
+- These Phase 10 rules are branch-only until a named deploy.
 
 `storage.rules` in the repo: receipts require sign-in and job membership (or a known legacy PIN folder). Production Storage rules were **not** deployed on 27 Aug 2026 (hosting + Firestore only). See `DATABASE.md`.
 
@@ -103,16 +106,17 @@ The dashboard is **one job at a time**. The job id is in the URL. `localStorage`
 organizations/{orgId}
   invitedEmails, ownerEmail, name
   counters/invoices            # year + next sequence; written by allocateInvoiceNumber
+  tradeList/{tradeId}          org-wide cost-plan trades (not job trade contacts)
   projects/{projectId}
-    expenses, invoices, files, costPlan, clients, labour, trades, …
+    expenses, invoices, files, costPlan, quotes, clients, labour, trades, …
 profiles/{uid}              # private: name, mobile, ABN, address, photo
 publicProfiles/{email}      # display name + photo only
 users/{accessCode}          # leftover copies, unused by the app
 ```
 
-Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `orgId`.
+Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `orgId`, optional `kind` (`client` | `own`).
 
-`costPlan/current` is optional. Part A stores one GST-inclusive target in integer cents with a baseline date and `draft | locked | archived` lifecycle. A job with no document has no Cost Plan nav item. The one plan read is shared through TanStack Query between Sidebar, Overview and the lazy Cost Plan route; it is not added to AppContext.
+`costPlan/current` is optional. Level 1 stores one GST-inclusive target. Level 2 adds `sections` keyed by trade. Level 3 adds imported lines under those trades. `quotes/{quoteId}` are separate documents. Expenses may carry optional `tradeId`. A job with no document has no Cost Plan nav item. Plan, quotes and the org trade list are shared through TanStack Query; they are not added to AppContext.
 
 ---
 
@@ -222,14 +226,16 @@ Done in Phase 9 Part G:
 
 Phase 9 closed 31 Aug 2026: production hosting, Firestore rules and Storage rules. No new Cloud Functions. Localhost stays on staging.
 
-Done on the Phase 10 Part A branch:
+Done on the Phase 10 branch:
 
-- Optional `costPlan/current` target per job. Target money is integer cents; spend is derived from active expenses.
-- Lazy `/jobs/:jobId/cost-plan` route with target, spent, remaining and progress. No plan means no nav item and the direct route returns to Overview.
-- A dismissible Overview suggestion starts Level 1. Jobs without a plan otherwise behave exactly as before.
+- Optional `costPlan/current` per job. Target money is integer cents; spend is derived from active expenses.
+- Lazy `/jobs/:jobId/cost-plan` route. No plan means no nav item and the direct route returns to Overview.
+- Trade amounts, History coding, Uncoded / Not in the estimate buckets.
+- Quotes with allocations, chosen forecast, GST conversion and optional Files link.
+- Spreadsheet column mapper; source file stored as Files type `estimate`.
+- `job.kind: client | own` and factual Cost Plan attention.
 - Cost Plan refuses to show spend when the 1,000-expense cap is reached.
-- Twenty stable app trade ids exist in code for Part B; there is no org trade-list write yet.
-- Firestore rules gate the fixed plan document on job membership, validate shape and deny delete. Emulator-tested, not deployed to staging or production.
+- Firestore rules gate plans, quotes, trade list, expense `tradeId` and job kind. Emulator-tested, not deployed for the later parts.
 - Expense fetch now derives `totalCents` from labour hours/rate and quantity/unit cost when no direct total field exists.
 
 Left on purpose:

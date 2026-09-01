@@ -7,12 +7,12 @@ Working branch: **`phase-10-cost-plan`**, created from the closed Phase 9 branch
 ## Status
 
 - [x] Part A — target cost and Level 1 screen — implemented on the branch, not deployed
-- [ ] Part B — trade amounts and expense coding
-- [ ] Part C — quotes
-- [ ] Part D — spreadsheet import
-- [ ] Part E — own build/client build and attention signals
+- [x] Part B — trade amounts and expense coding
+- [x] Part C — quotes
+- [x] Part D — spreadsheet import
+- [x] Part E — own build/client build and attention signals
 
-Production remains Phase 9. Localhost remains on staging. The new Firestore rules have passed the emulator tests but have not been deployed to staging or production. Do not deploy unless Lalit names the project and surface.
+Production remains Phase 9. Localhost remains on staging. Parts B–E are implemented on the branch. Firestore rules are tested and cover trades, quotes, the org trade list, job kind and estimate files. They have not been deployed to staging or production since those writes were added. Do not deploy unless Lalit names the project and surface.
 
 ## The call
 
@@ -30,14 +30,14 @@ All forecast, variance and progress figures are derived on read. Do not store a 
 
 ## Rules that do not move
 
-- A job with no cost plan behaves exactly as it did before Phase 10. No Cost Plan tab and no trade field on expenses.
+- A job with no cost plan behaves exactly as it did before Phase 10, except Cost Plan is in the job nav with an empty state. No trade field on expenses until the job has a trades or imported plan.
 - Level 1 is useful by itself: one target cost measured against active expenses.
 - “Spent” means money out through expenses. It never means paid invoices.
 - If the 1,000-expense cap is reached, spend and progress are hidden. A partial total is not presented as fact.
 - Stored money is integer cents on every new Cost Plan record.
 - The baseline is GST inclusive by default.
-- No hard delete. Cost plans are draft, locked or archived; Firestore delete is denied.
-- No Cloud Functions and no new packages in this phase unless a later part proves they are necessary and Lalit approves them.
+- No hard delete. Cost plans are draft, locked or archived; Firestore delete is denied. Lock and archive are status-only writes. An archived plan can be replaced with a new draft on the same `current` document.
+- No new npm packages in this phase. BOQ import is Excel or CSV in the browser. Do not add an estimate Cloud Function.
 - No production data write or deploy without the existing backup, staging and explicit-approval process.
 
 ## Data model
@@ -63,9 +63,8 @@ Twenty stable app trade ids ship in `src/domain/costPlan.ts`. They stay in code 
 
 Shipped on the branch:
 
-- `/jobs/:jobId/cost-plan`, lazy loaded.
-- A dismissible Overview prompt for a job with no plan.
-- The Cost Plan navigation item appears only after a non-archived plan exists.
+- `/jobs/:jobId/cost-plan`, lazy loaded. The Cost Plan nav item is on every job; with no plan the page offers a target or a BOQ import.
+- A dismissible Overview prompt for a job with no plan, including an import path.
 - Target, spent so far, left before target and progress.
 - Target input parses through `src/money.ts` and stores integer cents.
 - Spend comes from the existing active-expense total and excludes void rows.
@@ -78,29 +77,40 @@ Part A does not add trade rows, expense coding, quotes, imports, job kind, atten
 
 ## Part B — trade amounts and expense coding
 
-When Lalit asks:
+Shipped on the branch:
 
-- Persist the organisation trade list from the stable app defaults and allow organisation additions.
-- Upgrade a plan from `target` to `trades`.
-- Add optional `tradeId` to expenses plus the explicit `not-in-estimate` bucket.
-- Code from History with one tap. Supplier-based suggestions are shown for confirmation and never saved silently.
-- Existing expenses remain valid and appear as Uncoded until touched.
+- Organisation trade list at `organizations/{orgId}/tradeList/{tradeId}`, seeded from the twenty app defaults. Organisation additions are allowed. The job `trades` directory is still saved trade contacts.
+- A draft Level 1 plan can be upgraded to `trades` with integer-cent amounts that add up to the target (or the target is updated in the same save).
+- Optional expense `tradeId`, including the explicit `not-in-estimate` bucket. Existing expenses stay valid and appear as Uncoded until touched.
+- History one-tap coding. Supplier suggestions are shown for confirmation and never saved silently.
+- The expense form only asks for a cost-plan trade when the job already has a trades or imported plan.
 
 ## Part C — quotes
 
-Add `quotes/{quoteId}` documents under the job. A quote can allocate to one or more trades, carry a low/high range, record GST mode, link to a file and be received/chosen/passed. Quotes are voided or archived, never hard-deleted.
+Shipped on the branch:
+
+- `quotes/{quoteId}` under the job. Received, chosen or passed; voided, never hard-deleted.
+- Allocations across one or more trades must sum to the quote total. A range uses the high figure in the forecast.
+- GST inclusive/exclusive is stored on the quote and converted into the plan’s GST mode on read.
+- Optional link to an existing Files quote. Chosen quotes on overlapping trades demote the previous chosen quote to received. Quotes on a trade are listed on the Cost Plan row; tap to edit or void. Void stays on file.
 
 ## Part D — spreadsheet import
 
-Import spreadsheets through a column mapper, then map source sections to stable trades before saving. Duplicate or missing source codes are warnings, never identifiers. Totals must reconcile before a document is written. Keep the source spreadsheet in Files as an estimate.
+Shipped on the branch:
 
-PDF estimates are not parsed. Add them to Files and type trade totals.
+- Column mapper for `.xlsx` / `.csv` using the existing `exceljs` package, loaded on click. A Bill of Quantities is read by row shape (`boqLayout.ts`), not as a flat table. Section vs line is the code shape `/^\d+(\.0+)?$/`. Excel formula cells go through `cellToText`. Save is blocked unless the mapped sections add up to a **positive** figure the file itself states. Trade names use `TRADE_SYNONYMS`, not a model. Photos and PDFs are not parsed; export to Excel first.
+- Cost is not price. The imported total is construction cost. GST or a builder's margin on top is the final price and is not the thing being matched.
+- Source sections are mapped to stable trades before save. Duplicate source codes are warnings, not identifiers.
+- Totals must match the target, or the imported total becomes the new target in the same save.
+- The source file is kept on the job as Files type `estimate`.
 
 ## Part E — job kind and attention
 
-Decide and add `job.kind: client | own`. Client builds continue to lead with margin. Own builds lead with estimate against actual and do not pretend missing invoices are a margin problem.
+Shipped on the branch:
 
-Only then add factual attention signals: materially over-plan quotes, spend past a chosen quote, old uncoded expenses and spend on a trade with no quote. If the data is not sufficient, say nothing.
+- `job.kind: client | own`. Missing kind is treated as client. Own builds lead with estimate against actual and do not show missing invoices as a broken margin.
+- Overview can switch kind. New jobs pick client or own at create.
+- Attention only after the facts exist: a trade quoted well over plan, spend past a chosen quote, uncoded expenses older than two weeks once some coding has started, and spend on a trade with no quote once the job has quotes.
 
 ## Out of scope
 
@@ -108,7 +118,7 @@ Only then add factual attention signals: materially over-plan quotes, spend past
 - Quantity takeoff
 - Purchase orders
 - Per-line expense reconciliation
-- AI/PDF estimate reading
+- PDF estimate parsing (photograph the pages or export to Excel)
 - Automatic silent expense coding
 - Billing, Stripe, offline work or a second product
 - Any deployment not explicitly named by Lalit

@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-10-cost-plan` — **Phase 10 active. Part A is implemented on the branch, not deployed.** Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-10-cost-plan` — **Phase 10 active. Parts A–E are implemented on the branch, not deployed.** Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase10-2026-08-31` (this phase), `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -14,9 +14,9 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 **Phase 10 Cost Plan is active.** Brief: `PHASE10.md`. Vision: `design/risingamp-costplan-vision.html`.
 
-**Part A is implemented on the branch, not deployed.** A job can carry one GST-inclusive target cost at `costPlan/current`. The lazy `/jobs/:jobId/cost-plan` screen shows target, spent, left and progress. Spend comes from active expenses, not paid invoices. Jobs with no plan remain unchanged except for a dismissible Overview suggestion; the Cost Plan nav item stays hidden until a plan exists. TanStack Query shares the plan read without adding it to AppContext. The 1,000-expense cap hides spend and progress rather than showing a partial total.
+**Parts A–E are implemented on the branch, not deployed.** A job can carry a GST-inclusive target, then optional trade amounts, quotes and an imported spreadsheet or photo. Cost Plan is in the job sidebar even before a plan exists. Spend comes from active expenses, not paid invoices. Jobs with no plan remain unchanged except for Overview and Cost Plan empty states. Own builds (`job.kind: own`) lead with estimate against actual instead of a missing-invoice margin. TanStack Query shares the plan, quotes and org trade list. The 1,000-expense cap hides spend and progress rather than showing a partial total.
 
-The Part A rules validate membership, fixed document id, integer cents, baseline date, lifecycle and immutable audit fields. Delete is denied. Typecheck, 127 Vitest tests, 3 function tests, rules tests and the production build pass. Initial JS is 246.1 KB gzip under the 250 KB budget. **Rules are not deployed to staging or production**, so target writes are not yet enabled on localhost or live. No production data was read or written. No Cloud Functions or packages.
+The rules validate membership, integer cents, quote allocations, the org trade list, job kind and estimate files. Delete of plans and quotes is denied. Archiving a cost plan can be followed by a new draft on the same `current` document. **Rules are not deployed to staging or production for Parts B–E**, so trade/quote/import writes are not yet enabled on localhost or live. Part A staging rules may already be live from an earlier named deploy. There is no estimate Cloud Function. Initial JS gzip on this branch is **244.8 KB** (budget 250). No production data was read or written.
 
 The expense read boundary now preserves labour `hours × rate` and `quantity × unitCost` totals instead of attaching a false zero `totalCents`. This keeps Cost Plan and the existing Overview cost honest.
 
@@ -62,12 +62,12 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan Part A is implemented on the branch, not deployed. Production remains Phase 9. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tag: pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan Parts A–E are implemented on the branch, not deployed. Production remains Phase 9. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tag: pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
 
-1. Phase 10 Part B after Part A review: trade amounts and explicit expense coding. Deploy the Part A Firestore rules to staging only if Lalit names that deploy.
+1. Deploy Phase 10 Firestore rules to staging only if Lalit names that deploy, then click through Cost Plan on localhost (sidebar **Cost plan**, then import a BOQ).
 2. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
 3. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
 4. Offline / service worker — still its own phase.
@@ -90,8 +90,11 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan Part A is 
 - [x] Phase 9 Part F — handover pack
 - [x] Phase 9 Part G — Files as a document register
 - [x] Phase 9 live — hosting, Firestore rules, Storage rules
-- [x] Phase 10 Part A — target cost and Level 1 screen (branch only; rules not deployed)
-- [ ] Phase 10 Part B — trade amounts and expense coding
+- [x] Phase 10 Part A — target cost and Level 1 screen (branch only)
+- [x] Phase 10 Part B — trade amounts and expense coding (branch only)
+- [x] Phase 10 Part C — quotes (branch only)
+- [x] Phase 10 Part D — spreadsheet import (branch only)
+- [x] Phase 10 Part E — job kind and attention (branch only)
 
 ## What shipped (localhost / staging)
 
