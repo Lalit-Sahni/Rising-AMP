@@ -2,21 +2,21 @@
 
 ## Current branch
 
-`phase-10-cost-plan` — **Phase 10 active. Parts A–E are implemented on the branch, not deployed.** Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-10-cost-plan` — **Phase 10 active. Parts A–E are on the branch. Staging Firestore rules are live (2 Sep 2026). Production remains Phase 9.** Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
-Restore tags: `pre-phase10-2026-08-31` (this phase), `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
+Restore tags: `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31` (this phase), `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local`  
 `.firebaserc` default is **staging**. Git push does not deploy.
 
-## Where we are (2026-08-31)
+## Where we are (2026-09-02)
 
 **Phase 10 Cost Plan is active.** Brief: `PHASE10.md`. Vision: `design/risingamp-costplan-vision.html`.
 
-**Parts A–E are implemented on the branch, not deployed.** A job can carry a GST-inclusive target, then optional trade amounts, quotes and an imported spreadsheet or photo. Cost Plan is in the job sidebar even before a plan exists. Spend comes from active expenses, not paid invoices. Jobs with no plan remain unchanged except for Overview and Cost Plan empty states. Own builds (`job.kind: own`) lead with estimate against actual instead of a missing-invoice margin. TanStack Query shares the plan, quotes and org trade list. The 1,000-expense cap hides spend and progress rather than showing a partial total.
+**Parts A–E are on the branch.** A job can carry a GST-inclusive target, then optional trade amounts, quotes and an imported spreadsheet. Cost Plan is in the job sidebar even before a plan exists. Spend comes from active expenses, not paid invoices. Jobs with no plan remain unchanged except for Overview and Cost Plan empty states. Own builds (`job.kind: own`) lead with estimate against actual instead of a missing-invoice margin. TanStack Query shares the plan, quotes and org trade list. The 1,000-expense cap hides spend and progress rather than showing a partial total.
 
-The rules validate membership, integer cents, quote allocations, the org trade list, job kind and estimate files. Delete of plans and quotes is denied. Archiving a cost plan can be followed by a new draft on the same `current` document. **Rules are not deployed to staging or production for Parts B–E**, so trade/quote/import writes are not yet enabled on localhost or live. Part A staging rules may already be live from an earlier named deploy. There is no estimate Cloud Function. Initial JS gzip on this branch is **244.8 KB** (budget 250). No production data was read or written.
+The rules validate membership, integer cents, quote allocations, the org trade list, job kind and estimate files. Delete of plans and quotes is denied. Archiving a cost plan can be followed by a new draft on the same `current` document. **Staging Firestore rules were deployed 2 Sep 2026** (`firebase deploy --project staging --only firestore:rules`). Production hosting and rules remain Phase 9. There is no estimate Cloud Function. Initial JS gzip on this branch is **244.8 KB** (budget 250). No production data was read or written.
 
 The expense read boundary now preserves labour `hours × rate` and `quantity × unitCost` totals instead of attaching a false zero `totalCents`. This keeps Cost Plan and the existing Overview cost honest.
 
@@ -62,12 +62,12 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan Parts A–E are implemented on the branch, not deployed. Production remains Phase 9. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tag: pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan Parts A–E are on `phase-10-cost-plan`. Staging Firestore rules are live; production remains Phase 9. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase10-2026-09-02, pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 ```
 
 ## Remaining work
 
-1. Deploy Phase 10 Firestore rules to staging only if Lalit names that deploy, then click through Cost Plan on localhost (sidebar **Cost plan**, then import a BOQ).
+1. Click through Cost Plan on localhost (sidebar **Cost plan**, then import a BOQ or set trades). Production hosting and Firestore rules stay off until Lalit names them.
 2. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
 3. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
 4. Offline / service worker — still its own phase.
@@ -95,6 +95,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan Parts A–
 - [x] Phase 10 Part C — quotes (branch only)
 - [x] Phase 10 Part D — spreadsheet import (branch only)
 - [x] Phase 10 Part E — job kind and attention (branch only)
+- [x] Phase 10 staging Firestore rules (2 Sep 2026) — localhost can save a plan
 
 ## What shipped (localhost / staging)
 

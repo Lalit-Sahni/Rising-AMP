@@ -235,7 +235,7 @@ Done on the Phase 10 branch:
 - Spreadsheet column mapper; source file stored as Files type `estimate`.
 - `job.kind: client | own` and factual Cost Plan attention.
 - Cost Plan refuses to show spend when the 1,000-expense cap is reached.
-- Firestore rules gate plans, quotes, trade list, expense `tradeId` and job kind. Emulator-tested, not deployed for the later parts.
+- Firestore rules gate plans, quotes, trade list, expense `tradeId` and job kind. Emulator-tested. Staging rules live 2 Sep 2026. Production still Phase 9.
 - Expense fetch now derives `totalCents` from labour hours/rate and quantity/unit cost when no direct total field exists.
 
 Left on purpose:

@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md`, then `PROGRESS.md`, then this file. Open `design/risingamp-costplan-vision.html` before changing Cost Plan.
 
-Working branch: **`phase-10-cost-plan`**, created from the closed Phase 9 branch. Never commit to `master` or `main`. Restore tag: `pre-phase10-2026-08-31`.
+Working branch: **`phase-10-cost-plan`**, created from the closed Phase 9 branch. Never commit to `master` or `main`. Restore tags: `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31` (this phase).
 
 ## Status
 
@@ -11,8 +11,11 @@ Working branch: **`phase-10-cost-plan`**, created from the closed Phase 9 branch
 - [x] Part C — quotes
 - [x] Part D — spreadsheet import
 - [x] Part E — own build/client build and attention signals
+- [x] Staging Firestore rules — `firebase deploy --project staging --only firestore:rules` on 2 Sep 2026. Localhost can save trades, quotes and an import.
+- [ ] Production hosting
+- [ ] Production Firestore rules
 
-Production remains Phase 9. Localhost remains on staging. Parts B–E are implemented on the branch. Firestore rules are tested and cover trades, quotes, the org trade list, job kind and estimate files. They have not been deployed to staging or production since those writes were added. Do not deploy unless Lalit names the project and surface.
+Production remains Phase 9. Localhost remains on staging. Do not deploy production unless Lalit names the project and surface. No functions in this phase.
 
 ## The call
 
