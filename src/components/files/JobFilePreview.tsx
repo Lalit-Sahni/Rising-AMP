@@ -63,21 +63,14 @@ export default function JobFilePreview({
 
   if (String(contentType || '').toLowerCase() === 'application/pdf') {
     return (
-      <div className="space-y-2">
-        <iframe
-          title={name}
-          src={url}
-          className="w-full h-[42vh] rounded-ot-sm border border-hairline bg-canvas"
-        />
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="text-[13px] font-bold text-accent"
-        >
-          Open PDF
-        </a>
-      </div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="block text-center text-[13px] font-bold text-accent min-h-[44px] leading-[44px] border border-hairline rounded-ot-sm"
+      >
+        Open PDF
+      </a>
     );
   }
 

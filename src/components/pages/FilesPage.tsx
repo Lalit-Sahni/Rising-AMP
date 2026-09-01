@@ -43,6 +43,7 @@ export default function FilesPage() {
     hiaContracts,
     clients,
     showToast,
+    expensesLoaded,
   } = useApp();
   const [files, setFiles] = useState<JobFile[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,8 +227,9 @@ export default function FilesPage() {
     );
   }
 
-  const emptyLibrary = !loading && !error && items.length === 0;
-  const noMatches = !loading && !error && items.length > 0 && visible.length === 0;
+  const emptyLibrary = !loading && expensesLoaded && !error && items.length === 0;
+  const noMatches = !loading && expensesLoaded && !error && items.length > 0 && visible.length === 0;
+  const registerLoading = loading || !expensesLoaded;
 
   return (
     <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
@@ -298,7 +300,7 @@ export default function FilesPage() {
           </div>
         </div>
 
-        {loading ? (
+        {registerLoading ? (
           <LoadingSkeleton type="job" lines={4} />
         ) : error ? (
           <EmptyState
@@ -318,7 +320,7 @@ export default function FilesPage() {
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[12.5px] text-slate-500">{summary}</p>
-              <div className="flex flex-wrap gap-1 md:hidden">
+              <div className="flex gap-1 md:hidden overflow-x-auto max-w-full pb-1 -mx-1 px-1">
                 {chips.map((chip) => {
                   const selected = typeFilter === chip.type;
                   return (
@@ -326,7 +328,7 @@ export default function FilesPage() {
                       key={chip.type}
                       type="button"
                       onClick={() => setTypeFilter(chip.type)}
-                      className={`inline-flex items-center gap-1 h-[30px] px-2.5 rounded-ot-sm text-[12px] font-medium border ${
+                      className={`inline-flex items-center gap-1 h-[30px] px-2.5 rounded-ot-sm text-[12px] font-medium border shrink-0 whitespace-nowrap ${
                         selected
                           ? 'border-ink text-ink bg-surface'
                           : 'border-hairline text-slate-600 bg-surface'
@@ -342,10 +344,11 @@ export default function FilesPage() {
               </div>
             </div>
 
+            <div className="min-h-[52px]">
             {selectedItems.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2 border border-hairline rounded-ot-sm bg-surface px-3 py-2">
                 <span className="text-[12.5px] font-semibold text-ink">
-                  {selectedItems.length} selected
+                  {selectedItems.length} of {selectableVisible.length} selected
                 </span>
                 <label className="text-[12.5px] text-slate-600 inline-flex items-center gap-1.5">
                   Change type
@@ -417,7 +420,12 @@ export default function FilesPage() {
                   Clear
                 </button>
               </div>
-            ) : null}
+            ) : (
+              <p className="text-[12.5px] text-slate-400 py-2">
+                Select files to change type, archive, or add to the handover pack. Receipts stay with their expenses.
+              </p>
+            )}
+            </div>
 
             {noMatches ? (
               <EmptyState
@@ -450,6 +458,7 @@ export default function FilesPage() {
                         <JobFileThumb
                           thumbnailPath={item.thumbnailPath}
                           contentType={item.contentType}
+                          kind={item.kind}
                           className="w-full aspect-square rounded-none border-0 border-b border-hairline"
                           alt=""
                         />

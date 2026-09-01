@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { File, FileSpreadsheet, FileText, Image } from 'lucide-react';
+import { Camera, File, FileSpreadsheet, FileText, Image } from 'lucide-react';
 import { getDownloadUrlForPath } from '../../firebase/storage';
 
 type JobFileThumbProps = {
@@ -7,14 +7,24 @@ type JobFileThumbProps = {
   contentType: string;
   /** Ignored. Colour lives on the type column, not this icon. */
   type?: string;
+  kind?: 'file' | 'receipt';
   alt?: string;
   size?: number;
   className?: string;
 };
 
-function FormatIcon({ contentType, size }: { contentType: string; size: number }) {
+function FormatIcon({
+  contentType,
+  size,
+  kind,
+}: {
+  contentType: string;
+  size: number;
+  kind?: 'file' | 'receipt';
+}) {
   const type = String(contentType || '').toLowerCase();
   const props = { className: 'text-slate-400', strokeWidth: 1.6, size };
+  if (kind === 'receipt') return <Camera {...props} />;
   if (type.startsWith('image/')) return <Image {...props} />;
   if (type.includes('spreadsheet') || type.includes('excel') || type.includes('ms-excel')) {
     return <FileSpreadsheet {...props} />;
@@ -32,6 +42,7 @@ function FormatIcon({ contentType, size }: { contentType: string; size: number }
 export default function JobFileThumb({
   thumbnailPath,
   contentType,
+  kind,
   alt = '',
   size = 32,
   className = '',
@@ -62,7 +73,7 @@ export default function JobFileThumb({
       {url ? (
         <img src={url} alt={alt} className="w-full h-full object-cover" />
       ) : (
-        <FormatIcon contentType={contentType} size={className.includes('w-full') ? 28 : iconSize} />
+        <FormatIcon contentType={contentType} kind={kind} size={className.includes('w-full') ? 28 : iconSize} />
       )}
     </div>
   );

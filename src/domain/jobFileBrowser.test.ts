@@ -6,6 +6,7 @@ import {
 import {
   combineJobFilesAndReceipts,
   filesLinkedTo,
+  fileAddedByColumnLabel,
   fileAddedByLabel,
   fileLinkColumnLabel,
   fileLinkLabel,
@@ -182,6 +183,17 @@ describe('Files screen browser', () => {
       { kind: 'invoice', id: 'inv-1' },
       { invoices: [{ id: 'inv-1', invoiceNumber: '2026-0004' }] },
     )).toBe('2026-0004');
+  });
+
+  test('added-by column names a person on files and a source on receipts', () => {
+    const items = combineJobFilesAndReceipts(
+      [sampleFile],
+      [{ id: 'e1', category: 'purchase', itemName: 'Bunnings', receiptImagePath: 'receipts/org/job/e1/receipt.jpg' }],
+    );
+    const file = items.find((item) => item.kind === 'file');
+    const receipt = items.find((item) => item.kind === 'receipt');
+    expect(fileAddedByColumnLabel(file!, 'owner-1', 'Lalit Sahni')).toBe('Lalit');
+    expect(fileAddedByColumnLabel(receipt!, 'owner-1', 'Lalit Sahni')).toBe('From an expense');
   });
 
   test('receipts are not selectable', () => {

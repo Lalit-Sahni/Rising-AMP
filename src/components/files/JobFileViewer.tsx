@@ -95,7 +95,7 @@ export default function JobFileViewer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="file-viewer-title"
-        className="relative w-full md:max-w-lg max-h-[92vh] overflow-y-auto bg-surface rounded-t-ot md:rounded-ot border border-hairline shadow-whisper px-4 pt-4 pb-4 md:mx-4 safe-area-bottom"
+        className="relative w-full md:max-w-lg max-h-[100dvh] md:max-h-[88vh] overflow-y-auto bg-surface rounded-t-ot md:rounded-ot border border-hairline shadow-whisper px-4 pt-4 pb-4 md:mx-4 safe-area-bottom"
       >
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
@@ -296,7 +296,7 @@ export default function JobFileViewer({
             <button
               type="submit"
               disabled={busy}
-              className="w-full min-h-[44px] rounded-ot-sm bg-accent hover:bg-accent-600 disabled:opacity-50 text-white text-[13px] font-bold"
+              className="w-full min-h-[44px] rounded-ot-sm bg-accent hover:bg-accent-600 disabled:opacity-50 text-white text-[13px] font-bold sticky bottom-0"
             >
               {busy ? 'Saving…' : 'Save'}
             </button>

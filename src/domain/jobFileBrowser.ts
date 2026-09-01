@@ -333,7 +333,7 @@ export function fileAddedByColumnLabel(
   currentUid: string,
   currentName: string,
 ): string {
-  if (item.kind === 'receipt') return 'Expense';
+  if (item.kind === 'receipt') return 'From an expense';
   if (item.uploadedBy && item.uploadedBy === currentUid) {
     return firstName(currentName) || 'You';
   }

@@ -423,7 +423,12 @@ const InvoiceManagementPage = () => {
                       ) : (
                       <select
                         value={invoice.status || 'draft'}
-                        onChange={(e) => handleStatusUpdate(invoice.id, e.target.value)}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          if (next === (invoice.status || 'draft')) return;
+                          if (next === 'paid' && !window.confirm('Mark this invoice as paid?')) return;
+                          handleStatusUpdate(invoice.id, next);
+                        }}
                         className="px-2.5 py-1 bg-surface border border-hairline rounded-ot-sm text-sm text-ink focus:outline-none focus:border-accent"
                       >
                         <option value="draft">Draft</option>

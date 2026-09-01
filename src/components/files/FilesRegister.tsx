@@ -103,7 +103,7 @@ export default function FilesRegister({
             className="accent-[#E85D1A]"
             aria-label="Select all files"
           />
-          Select
+          Select files
         </label>
         {items.map((item) => {
           const selectableRow = isSelectableFileItem(item);
@@ -134,6 +134,7 @@ export default function FilesRegister({
                 <JobFileThumb
                   thumbnailPath={item.thumbnailPath}
                   contentType={item.contentType}
+                  kind={item.kind}
                   size={32}
                   alt=""
                 />
@@ -234,6 +235,7 @@ export default function FilesRegister({
                     <JobFileThumb
                       thumbnailPath={item.thumbnailPath}
                       contentType={item.contentType}
+                      kind={item.kind}
                       size={32}
                       alt=""
                     />
