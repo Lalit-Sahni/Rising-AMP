@@ -82,3 +82,7 @@ backups/**
 
 # dataconnect generated files
 .dataconnect
+
+# Finder junk
+.DS_Store
+**/.DS_Store
