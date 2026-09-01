@@ -8,6 +8,9 @@ import CategoryChip from '../ui/CategoryChip';
 import { CATEGORY_STYLE } from '../../utils/categoryStyle';
 import { getExpenseFaceTotal, getExpenseTotal, isVoidExpense } from '../../utils/jobMetrics';
 import EmptyState from '../EmptyState';
+import ExpenseTradePicker from '../costPlan/ExpenseTradePicker';
+import { useCostPlan, useTradeList } from '../../hooks/useCostPlan';
+import { activeTrades, canCodeExpenses } from '../../domain/costPlan';
 
 const categoryLabels = {
   labour: 'Labour',
@@ -19,7 +22,20 @@ const categoryLabels = {
 };
 
 export default function HistoryPage() {
-  const { expenses, showToast, deleteExpenseFromFirebase, restoreExpenseFromFirebase, purgeExpenseFromFirebase } = useApp();
+  const {
+    expenses,
+    showToast,
+    deleteExpenseFromFirebase,
+    restoreExpenseFromFirebase,
+    purgeExpenseFromFirebase,
+    orgId,
+    jobId,
+    codeExpenseTrade,
+  } = useApp();
+  const planQuery = useCostPlan(orgId, jobId);
+  const tradeQuery = useTradeList(orgId);
+  const showTradeCoding = canCodeExpenses(planQuery.data);
+  const trades = activeTrades(tradeQuery.data || []);
   const location = useLocation();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -422,6 +438,11 @@ export default function HistoryPage() {
                   <th className="px-4 py-3">
                     <span>Description</span>
                   </th>
+                  {showTradeCoding && !showRecentlyDeleted ? (
+                    <th className="px-4 py-3">
+                      <span>Cost plan</span>
+                    </th>
+                  ) : null}
                   <th 
                     className="px-4 py-3 cursor-pointer hover:text-ink"
                     onClick={() => handleSort('total')}
@@ -466,6 +487,17 @@ export default function HistoryPage() {
                             )}
                           </div>
                         </td>
+                        {showTradeCoding && !showRecentlyDeleted ? (
+                          <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
+                            <ExpenseTradePicker
+                              expense={expense}
+                              expenses={expenses}
+                              trades={trades}
+                              compact
+                              onCode={(tradeId) => codeExpenseTrade(expense.id, tradeId)}
+                            />
+                          </td>
+                        ) : null}
                         <td className="px-4 py-4 tabular font-medium text-ink">
                           ${getExpenseFaceTotal(expense).toLocaleString()}
                         </td>
@@ -525,7 +557,7 @@ export default function HistoryPage() {
                       {/* Expanded Details Row */}
                       {expandedExpense === expense.id && (
                         <tr className="bg-canvas border-b border-hairline">
-                          <td colSpan="6" className="px-4 py-6">
+                          <td colSpan={showTradeCoding && !showRecentlyDeleted ? '6' : '5'} className="px-4 py-6">
                             <div className="bg-surface rounded-ot p-5 border border-hairline">
                               <h3 className="text-sm font-semibold text-ink mb-4 flex items-center gap-2">
                                 <CategoryChip category={expense.category} />

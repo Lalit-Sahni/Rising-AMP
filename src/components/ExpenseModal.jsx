@@ -13,6 +13,9 @@ import { dollarsFromUnknown, fromCents, labourCents, lineCents, parseQuantity } 
 import { doc, collection } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getActiveOrgId } from '../firebase/tenancy';
+import { useCostPlan, useTradeList } from '../hooks/useCostPlan';
+import { activeTrades, canCodeExpenses } from '../domain/costPlan';
+import ExpenseTradePicker from './costPlan/ExpenseTradePicker';
 import "react-datepicker/dist/react-datepicker.css";
 
 const categoryFields = {
@@ -131,8 +134,14 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
     saveCompanyToFirebase,
     saveServiceProviderToFirebase,
     savePayerToFirebase,
-    jobId
+    jobId,
+    orgId,
+    expenses = [],
   } = useApp();
+  const planQuery = useCostPlan(orgId, jobId);
+  const tradeQuery = useTradeList(orgId);
+  const showTradeCoding = canCodeExpenses(planQuery.data);
+  const trades = activeTrades(tradeQuery.data || []);
 
   const [formData, setFormData] = useState({});
   const [validationErrors, setValidationErrors] = useState({});
@@ -143,6 +152,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
   const [uploadProgress, setUploadProgress] = useState(0);
   const [checkFields, setCheckFields] = useState({});
   const [jobFiles, setJobFiles] = useState([]);
+  const [tradeId, setTradeId] = useState(null);
   const dialogRef = useRef(null);
   const initialDataRef = useRef(initialData);
   const uncertainFieldsRef = useRef(uncertainFields);
@@ -225,6 +235,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
       });
       initialFormData['paidBy'] = source['paidBy'] ?? '';
       setFormData(initialFormData);
+      setTradeId(source.tradeId || null);
       setValidationErrors({});
       setCheckFields(uncertainFieldsRef.current || {});
 
@@ -458,6 +469,9 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
         paidBy: formData.paidBy || '',
         total: calculateTotal(category, formData),
       };
+      if (showTradeCoding) {
+        expenseData.tradeId = tradeId || null;
+      }
 
       if (isEditMode && initialData?.receiptImageUrl && !receiptFile) {
         expenseData.receiptImageUrl = initialData.receiptImageUrl;
@@ -718,6 +732,20 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
                 </div>
               ))}
             </div>
+
+            {showTradeCoding ? (
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Cost plan trade <span className="text-zinc-400 font-normal">(optional)</span>
+                </label>
+                <ExpenseTradePicker
+                  expense={{ ...formData, category, tradeId }}
+                  expenses={expenses}
+                  trades={trades}
+                  onCode={(next) => setTradeId(next)}
+                />
+              </div>
+            ) : null}
 
             {/* Paid By */}
             <div>

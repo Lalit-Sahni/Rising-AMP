@@ -40,6 +40,7 @@ export const expenseSchema = z
     status: z.string().optional(),
     jobId: z.string().optional(),
     reviewed: z.boolean().optional(),
+    tradeId: z.string().min(1).max(80).nullable().optional(),
   })
   .passthrough();
 
@@ -63,6 +64,7 @@ export const jobSchema = z
     orgId: z.string().optional(),
     invitedEmails: z.array(z.string()).optional(),
     status: z.enum(['active', 'archived']).optional(),
+    kind: z.enum(['client', 'own']).optional(),
   })
   .passthrough();
 
@@ -129,6 +131,25 @@ export const costPlanLevelSchema = z.enum(['target', 'trades', 'imported']);
 export const costPlanGstModeSchema = z.enum(['inclusive', 'exclusive']);
 export const costPlanStatusSchema = z.enum(['draft', 'locked', 'archived']);
 
+export const costPlanLineSchema = z.object({
+  code: z.string().max(40).optional(),
+  description: z.string().min(1).max(500),
+  qty: z.number().finite().nullable().optional(),
+  unit: z.string().max(40).optional(),
+  unitPriceCents: z.number().int().nullable().optional(),
+  totalCents: z.number().int(),
+});
+
+export const costPlanSectionSchema = z.object({
+  id: z.string().min(1).max(80),
+  tradeId: z.string().min(1).max(80),
+  code: z.string().max(40).optional(),
+  name: z.string().min(1).max(120),
+  order: z.number().int().nonnegative(),
+  amountCents: z.number().int().nonnegative(),
+  lines: z.array(costPlanLineSchema).max(400).optional(),
+});
+
 export const costPlanSchema = z
   .object({
     id: z.string().optional(),
@@ -138,13 +159,74 @@ export const costPlanSchema = z
     baselineDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Baseline date must be YYYY-MM-DD'),
     gstMode: costPlanGstModeSchema,
     status: costPlanStatusSchema,
-    sections: z.array(z.unknown()).max(250),
+    sections: z.array(costPlanSectionSchema).max(120),
+    sourceFileId: z.string().min(1).max(80).nullable().optional(),
     createdBy: z.string().min(1),
     createdAt: z.unknown().optional(),
     updatedAt: z.unknown().optional(),
     archivedAt: z.unknown().nullable().optional(),
   })
   .passthrough();
+
+export const tradeListItemSchema = z.object({
+  id: z.string().min(1).max(80),
+  name: z.string().min(1).max(80),
+  order: z.number().int().nonnegative(),
+  isAppDefault: z.boolean(),
+  status: z.enum(['active', 'archived']),
+  createdAt: z.unknown().optional(),
+  updatedAt: z.unknown().optional(),
+});
+
+export const quoteAllocationSchema = z.object({
+  tradeId: z.string().min(1).max(80),
+  amountCents: z.number().int().positive(),
+});
+
+export const costPlanQuoteSchema = z
+  .object({
+    id: z.string().optional(),
+    jobId: z.string().min(1),
+    party: z.string().min(1).max(120),
+    partyId: z.string().max(80).nullable().optional(),
+    receivedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Quote date must be YYYY-MM-DD'),
+    status: z.enum(['received', 'chosen', 'passed', 'void']),
+    amountCents: z.number().int().positive(),
+    amountHighCents: z.number().int().positive().nullable().optional(),
+    gstMode: costPlanGstModeSchema,
+    note: z.string().max(2000).nullable().optional(),
+    fileId: z.string().min(1).max(80).nullable().optional(),
+    allocations: z.array(quoteAllocationSchema).min(1).max(20),
+    createdBy: z.string().min(1),
+    createdAt: z.unknown().optional(),
+    updatedAt: z.unknown().optional(),
+    voidedAt: z.unknown().nullable().optional(),
+  })
+  .passthrough()
+  .superRefine((quote, ctx) => {
+    const allocated = quote.allocations.reduce((sum, row) => sum + row.amountCents, 0);
+    if (allocated !== quote.amountCents) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Quote parts must add up to the total',
+        path: ['allocations'],
+      });
+    }
+    if (quote.amountHighCents != null && quote.amountHighCents < quote.amountCents) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'The high figure cannot be below the low figure',
+        path: ['amountHighCents'],
+      });
+    }
+    if (quote.status === 'void' && quote.voidedAt == null) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'A voided quote needs a voided date',
+        path: ['voidedAt'],
+      });
+    }
+  });
 
 export const JOB_FILE_CONTENT_TYPES = ALLOWED_JOB_FILE_CONTENT_TYPES;
 
@@ -157,6 +239,10 @@ export type Client = z.infer<typeof clientSchema>;
 export type Supplier = z.infer<typeof supplierSchema>;
 export type JobFile = z.infer<typeof jobFileSchema>;
 export type CostPlan = z.infer<typeof costPlanSchema>;
+export type CostPlanLine = z.infer<typeof costPlanLineSchema>;
+export type CostPlanSection = z.infer<typeof costPlanSectionSchema>;
+export type TradeListItem = z.infer<typeof tradeListItemSchema>;
+export type CostPlanQuote = z.infer<typeof costPlanQuoteSchema>;
 
 export function parseAtBoundary<T>(
   schema: z.ZodType<T>,

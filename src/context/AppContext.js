@@ -73,6 +73,8 @@ export const AppProvider = (props) => {
     profile,
     setProfile,
     jobInvitedEmails,
+    jobKind,
+    onJobKindChange,
   } = props;
   return (
     <AuthProvider authUser={authUser} profile={profile} setProfile={setProfile}>
@@ -83,6 +85,8 @@ export const AppProvider = (props) => {
         projectName={projectName}
         jobStatus={jobStatus}
         jobInvitedEmails={jobInvitedEmails}
+        jobKind={jobKind}
+        onJobKindChange={onJobKindChange}
         onOpenJob={onOpenJob}
         onJobAccessLost={onJobAccessLost}
       >
@@ -96,6 +100,8 @@ export const AppProvider = (props) => {
             onJobAccessLost={onJobAccessLost}
             jobStatus={jobStatus}
             jobInvitedEmails={jobInvitedEmails}
+            jobKind={jobKind}
+            onJobKindChange={onJobKindChange}
           >
             {children}
           </AppDataProvider>
@@ -115,10 +121,13 @@ const AppDataProvider = ({
   onJobAccessLost = null,
   jobStatus = 'active',
   jobInvitedEmails = [],
+  jobKind = 'client',
+  onJobKindChange = null,
 }) => {
   const { showToast } = useUI();
   const [expenses, setExpenses] = useState([]);
   const [expensesCapped, setExpensesCapped] = useState(false);
+  const [expensesLoaded, setExpensesLoaded] = useState(false);
   const [budget, setBudget] = useState(0);
   const [savedLabour, setSavedLabour] = useState([]);
   const [savedTrades, setSavedTrades] = useState([]);
@@ -136,6 +145,9 @@ const AppDataProvider = ({
   useEffect(() => {
     if (jobListId) {
       logger.firebase('LOAD_DATA', 'Loading job data');
+      setExpensesLoaded(false);
+      setExpenses([]);
+      setExpensesCapped(false);
       
       // Add a loading state to prevent multiple simultaneous loads
       let isMounted = true;
@@ -161,6 +173,8 @@ const AppDataProvider = ({
           } else if (isMounted) {
             logger.error('Error loading expenses and budget:', error);
           }
+        } finally {
+          if (isMounted) setExpensesLoaded(true);
         }
       };
 
@@ -396,6 +410,21 @@ const AppDataProvider = ({
     } catch (error) {
       console.error('Error updating expense:', error);
       showToast('Error updating expense', 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
+  const codeExpenseTrade = async (expenseId, tradeId) => {
+    try {
+      const { setExpenseTradeId } = await import('../firebase/expenseTrade');
+      await setExpenseTradeId(jobListId, expenseId, tradeId);
+      setExpenses((prev) => prev.map((exp) => (
+        exp.id === expenseId ? { ...exp, tradeId } : exp
+      )));
+      return { success: true };
+    } catch (error) {
+      console.error('Error coding expense:', error);
+      showToast(error.message || 'Could not code that expense', 'error');
       return { success: false, error: error.message };
     }
   };
@@ -1013,8 +1042,11 @@ const AppDataProvider = ({
     membership,
     onOpenJob,
     jobInvitedEmails,
+    jobKind,
+    onJobKindChange,
     expenses,
     expensesCapped,
+    expensesLoaded,
     budget,
     savedLabour,
     savedTrades,
@@ -1029,6 +1061,7 @@ const AppDataProvider = ({
     userBankDetails,
     addExpenseToFirebase,
     updateExpenseInFirebase,
+    codeExpenseTrade,
     deleteExpenseFromFirebase,
     restoreExpenseFromFirebase,
     purgeExpenseFromFirebase,
