@@ -97,6 +97,17 @@ describe('margin and verdict', () => {
     expect(deriveVerdict(deriveMargin(1000, 960))).toBe(VERDICT.MARGIN_AT_RISK);
     expect(deriveVerdict(deriveMargin(1000, 1100))).toBe(VERDICT.MARGIN_AT_RISK);
   });
+
+  test('own builds do not pretend missing invoices are a margin problem', () => {
+    const metrics = deriveJobMetrics({
+      expenses: [{ total: 40, category: 'purchase', receiptImageUrl: 'x' }],
+      invoices: [],
+    }, { now, jobKind: 'own' });
+    expect(metrics.verdict).toBe(VERDICT.OWN_BUILD);
+    expect(metrics.hasMargin).toBe(false);
+    expect(bannerMessage(metrics).label).toBe('Own build');
+    expect(bannerMessage(metrics).line).toMatch(/own build/i);
+  });
 });
 
 describe('attention items', () => {

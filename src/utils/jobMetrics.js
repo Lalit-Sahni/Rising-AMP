@@ -1,5 +1,6 @@
 import { addCents, fromCents, labourCents, lineCents, parseToCents } from '../money';
 import { parseCalendarDate } from '../dates';
+import { normalizeJobKind } from '../domain/jobKind';
 
 /**
  * Read-only derived job metrics.
@@ -19,6 +20,7 @@ export const VERDICT = {
   ON_TRACK: 'on-track',
   MARGIN_AT_RISK: 'margin-at-risk',
   GETTING_STARTED: 'getting-started',
+  OWN_BUILD: 'own-build',
 };
 
 export function isValidDate(value) {
@@ -402,13 +404,15 @@ export function deriveJobMetrics({ expenses = [], invoices = [] } = {}, options 
   const now = options.now || new Date();
   const period = options.period || 'month';
   const expensesCapped = Boolean(options.expensesCapped);
+  const jobKind = normalizeJobKind(options.jobKind);
   const liveInvoices = (invoices || []).filter((invoice) => !isVoidInvoice(invoice));
   const liveExpenses = (expenses || []).filter((expense) => !isVoidExpense(expense));
   const cash = deriveCash(liveInvoices, liveExpenses);
   if (expensesCapped) {
     cash.cost = null;
   }
-  const capped = expensesCapped
+  const ownBuild = jobKind === 'own';
+  const capped = expensesCapped || ownBuild
     ? { hasMargin: false, margin: null, marginPct: null }
     : deriveMargin(cash.paid, cash.cost);
   const { hasMargin, margin, marginPct } = capped;
@@ -436,7 +440,9 @@ export function deriveJobMetrics({ expenses = [], invoices = [] } = {}, options 
       tone: 'warn',
     });
   }
-  const verdict = expensesCapped ? VERDICT.GETTING_STARTED : deriveVerdict({ hasMargin, marginPct });
+  const verdict = ownBuild
+    ? VERDICT.OWN_BUILD
+    : (expensesCapped ? VERDICT.GETTING_STARTED : deriveVerdict({ hasMargin, marginPct }));
   const categories = expensesCapped ? [] : deriveCategorySpend(liveExpenses);
 
   return {
@@ -455,6 +461,7 @@ export function deriveJobMetrics({ expenses = [], invoices = [] } = {}, options 
     categories,
     recent: liveExpenses.slice(0, 4),
     expensesCapped,
+    jobKind,
   };
 }
 
@@ -485,6 +492,9 @@ export function verdictCopy(verdict) {
   }
   if (verdict === VERDICT.GETTING_STARTED) {
     return { label: 'Getting started', tone: 'new' };
+  }
+  if (verdict === VERDICT.OWN_BUILD) {
+    return { label: 'Own build', tone: 'ok' };
   }
   return { label: 'On track', tone: 'ok' };
 }
@@ -548,6 +558,15 @@ export function bannerMessage(metrics) {
     return {
       ...copy,
       line: `There is no paid invoice total yet, so margin cannot be shown. ${tidy}`,
+    };
+  }
+
+  if (metrics.verdict === VERDICT.OWN_BUILD) {
+    return {
+      ...copy,
+      line: metrics.expensesCapped
+        ? 'This is your own build. Spend is hidden until the job can be totalled in full.'
+        : 'This is your own build, so there is no client margin to show. Cost against the plan is the number that matters.',
     };
   }
 

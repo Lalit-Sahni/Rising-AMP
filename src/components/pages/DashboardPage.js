@@ -16,9 +16,11 @@ import JobPeople from '../JobPeople';
 import EmptyState from '../EmptyState';
 import { fetchJobFiles } from '../../firebase/jobFiles';
 import { withFileAttention } from '../../domain/jobFileAttention';
-import { useCostPlan } from '../../hooks/useCostPlan';
+import { withCostPlanAttention, deriveCostPlanProgress, hasActiveCostPlan, planHasTrades } from '../../domain/costPlan';
+import { useCostPlan, useCostPlanQuotes } from '../../hooks/useCostPlan';
 import SetTargetCostSheet from '../costPlan/SetTargetCostSheet';
 import { getCategoryStyle } from '../../utils/categoryStyle';
+import { formatCents } from '../../money';
 import {
   VERDICT,
   bannerMessage,
@@ -58,6 +60,8 @@ export default function DashboardPage() {
     showToast,
     jobInvitedEmails,
     authUser,
+    jobKind,
+    onJobKindChange,
   } = useApp();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [showExport, setShowExport] = useState(false);
@@ -65,7 +69,9 @@ export default function DashboardPage() {
   const [targetSheetOpen, setTargetSheetOpen] = useState(false);
   const [costPlanSetupDismissed, setCostPlanSetupDismissed] = useState(false);
   const attentionRef = useRef(null);
+  const [kindBusy, setKindBusy] = useState(false);
   const costPlanQuery = useCostPlan(orgId, jobId);
+  const quotesQuery = useCostPlanQuotes(orgId, jobId, planHasTrades(costPlanQuery.data));
 
   useEffect(() => {
     if (!jobId) {
@@ -90,13 +96,36 @@ export default function DashboardPage() {
   }, [jobId]);
 
   const metrics = useMemo(
-    () => withFileAttention(
-      deriveJobMetrics({ expenses, invoices }, { period: selectedPeriod, expensesCapped }),
-      { files: jobFiles, invoices },
-    ),
-    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped]
+    () => {
+      const base = withFileAttention(
+        deriveJobMetrics({ expenses, invoices }, { period: selectedPeriod, expensesCapped, jobKind }),
+        { files: jobFiles, invoices },
+      );
+      return withCostPlanAttention(base, {
+        plan: costPlanQuery.data,
+        expenses,
+        quotes: quotesQuery.data || [],
+        expensesCapped,
+      });
+    },
+    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped, jobKind, costPlanQuery.data, quotesQuery.data]
   );
-  const banner = bannerMessage(metrics);
+  const planProgress = useMemo(
+    () => (
+      hasActiveCostPlan(costPlanQuery.data)
+        ? deriveCostPlanProgress(costPlanQuery.data.targetCents, expenses || [], expensesCapped)
+        : null
+    ),
+    [costPlanQuery.data, expenses, expensesCapped],
+  );
+  let banner = bannerMessage(metrics);
+  if (jobKind === 'own' && planProgress?.spentCents != null) {
+    banner = {
+      ...banner,
+      tone: planProgress.overTarget ? 'warn' : 'ok',
+      line: `${formatCents(planProgress.spentCents, { whole: true })} spent of ${formatCents(planProgress.targetCents, { whole: true })} target.`,
+    };
+  }
   const subtitle = jobSubtitle({ clients, invoices, metrics });
   const maxCategory = metrics.categories[0]?.amount || 1;
 
@@ -126,6 +155,21 @@ export default function DashboardPage() {
       localStorage.setItem(costPlanDismissKey(jobId), '1');
     }
     setCostPlanSetupDismissed(true);
+  };
+
+  const handleKind = async (next) => {
+    if (!jobId || next === jobKind || kindBusy) return;
+    setKindBusy(true);
+    try {
+      const { setOrgProjectKind } = await import('../../firebase/projectCatalog');
+      const saved = await setOrgProjectKind(jobId, next);
+      if (onJobKindChange) onJobKindChange(saved);
+      showToast(saved === 'own' ? 'This job is now an own build.' : 'This job is now a client build.', 'success');
+    } catch (error) {
+      showToast(error.message || 'Could not update this job.', 'error');
+    } finally {
+      setKindBusy(false);
+    }
   };
 
   if (!jobId) {
@@ -164,6 +208,24 @@ export default function DashboardPage() {
             )}
             <p className="text-[13.5px] text-slate-600 mt-0.5">{subtitle}</p>
             <JobPeople emails={jobInvitedEmails} />
+            <div className="inline-flex mt-3 bg-surface border border-hairline rounded-[9px] p-[3px]">
+              {[
+                { id: 'client', label: 'Client build' },
+                { id: 'own', label: 'Own build' },
+              ].map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  disabled={kindBusy}
+                  onClick={() => handleKind(option.id)}
+                  className={`px-3 py-1.5 rounded-md text-[12.5px] font-medium ${
+                    jobKind === option.id ? 'bg-accent text-white' : 'text-slate-600 hover:text-ink'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex bg-surface border border-hairline rounded-[9px] p-[3px]">
@@ -192,7 +254,7 @@ export default function DashboardPage() {
 
         <div className={`flex items-center gap-4 bg-surface border border-hairline ${leftTone} border-l-[3px] rounded-ot p-4 md:px-5 shadow-whisper mb-4`}>
           <span className={`w-[34px] h-[34px] rounded-[9px] grid place-items-center shrink-0 ${iconTone}`}>
-            {metrics.verdict === VERDICT.ON_TRACK ? (
+            {metrics.verdict === VERDICT.ON_TRACK || metrics.verdict === VERDICT.OWN_BUILD ? (
               <Check className="w-[18px] h-[18px]" strokeWidth={2} />
             ) : (
               <AlertTriangle className="w-[18px] h-[18px]" strokeWidth={2} />
@@ -234,11 +296,17 @@ export default function DashboardPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-4">
           <div className="bg-surface border border-hairline rounded-ot p-[17px] shadow-whisper">
-            <div className="text-[11.5px] text-slate-400 font-semibold">Contract</div>
+            <div className="text-[11.5px] text-slate-400 font-semibold">{jobKind === 'own' ? 'Target' : 'Contract'}</div>
             <div className="tabular font-extrabold text-[23px] tracking-tight my-2">
-              {metrics.cash.paid > 0 ? formatMoney(metrics.cash.paid) : '—'}
+              {jobKind === 'own'
+                ? (planProgress ? formatCents(planProgress.targetCents, { whole: true }) : '—')
+                : (metrics.cash.paid > 0 ? formatMoney(metrics.cash.paid) : '—')}
             </div>
-            <div className="text-xs text-slate-600">{contractSubtitle(metrics.cash)}</div>
+            <div className="text-xs text-slate-600">
+              {jobKind === 'own'
+                ? (planProgress ? 'Cost plan baseline' : 'Set a target on Cost plan')
+                : contractSubtitle(metrics.cash)}
+            </div>
           </div>
           <div className="bg-surface border border-hairline rounded-ot p-[17px] shadow-whisper">
             <div className="text-[11.5px] text-slate-400 font-semibold">Cost to date</div>
@@ -257,12 +325,16 @@ export default function DashboardPage() {
           </div>
           <div className="relative bg-surface border border-hairline rounded-ot p-[17px] shadow-whisper">
             <span className="absolute left-[17px] right-[17px] top-0 h-0.5 bg-accent rounded-b" />
-            <div className="text-[11.5px] text-slate-400 font-semibold">Margin</div>
+            <div className="text-[11.5px] text-slate-400 font-semibold">{jobKind === 'own' ? 'Vs target' : 'Margin'}</div>
             <div className="tabular font-extrabold text-[23px] tracking-tight my-2">
-              {metrics.hasMargin ? formatMoney(metrics.margin) : '—'}
+              {jobKind === 'own'
+                ? formatCents(planProgress?.leftCents, { whole: true })
+                : (metrics.hasMargin ? formatMoney(metrics.margin) : '—')}
             </div>
             <div className="text-xs text-slate-600 flex items-center gap-1.5">
-              {metrics.hasMargin ? (
+              {jobKind === 'own' ? (
+                <span>{planProgress?.overTarget ? 'Past the baseline' : 'Left before target'}</span>
+              ) : metrics.hasMargin ? (
                 <>
                   <span className={`font-bold ${metrics.margin < 0 ? 'text-neg' : metrics.verdict === VERDICT.MARGIN_AT_RISK ? 'text-warn' : 'text-pos'}`}>
                     {formatPercent(metrics.marginPct)}
@@ -308,16 +380,25 @@ export default function DashboardPage() {
             <div className="flex-1 min-w-0 pr-7 sm:pr-0">
               <b className="block text-[14px] font-extrabold text-ink">Know roughly what this job should cost?</b>
               <p className="text-[12.5px] text-slate-600 mt-0.5">
-                Put in one number and every expense from here on is measured against it. Break it into trades later, or never.
+                Put in one number, or import your bill of quantities. Excel, CSV, or a photo. You check it before it saves.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setTargetSheetOpen(true)}
-              className="min-h-[44px] inline-flex items-center justify-center px-3.5 py-2 rounded-ot-sm bg-accent hover:bg-accent-600 text-white text-[13px] font-bold shrink-0"
-            >
-              Set a target cost
-            </button>
+            <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setTargetSheetOpen(true)}
+                className="min-h-[44px] inline-flex items-center justify-center px-3.5 py-2 rounded-ot-sm bg-accent hover:bg-accent-600 text-white text-[13px] font-bold"
+              >
+                Set a target cost
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage('cost-plan')}
+                className="min-h-[44px] inline-flex items-center justify-center px-3.5 py-2 rounded-ot-sm bg-surface border border-hairline text-[13px] font-bold"
+              >
+                Import a BOQ
+              </button>
+            </div>
             <button
               type="button"
               onClick={dismissCostPlanSetup}

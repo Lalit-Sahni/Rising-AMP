@@ -10,6 +10,8 @@ export function OrgProvider({
   projectName,
   jobStatus,
   jobInvitedEmails,
+  jobKind,
+  onJobKindChange,
   onOpenJob,
   onJobAccessLost,
 }) {
@@ -22,6 +24,8 @@ export function OrgProvider({
         projectName,
         jobStatus,
         jobInvitedEmails,
+        jobKind: jobKind === 'own' ? 'own' : 'client',
+        onJobKindChange,
         onOpenJob,
         onJobAccessLost,
         orgId: (membership && membership.orgId) || null,

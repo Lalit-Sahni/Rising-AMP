@@ -46,6 +46,7 @@ export default function JobsHomePage() {
   const [draftEmail, setDraftEmail] = useState('');
   const [savingId, setSavingId] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [draftKind, setDraftKind] = useState('client');
   const [showArchived, setShowArchived] = useState(false);
   const isOwner = membership && membership.role === 'owner';
   const ownerEmail = membership && membership.ownerEmail;
@@ -130,6 +131,7 @@ export default function JobsHomePage() {
     setCreating(false);
     setDraftName('');
     setDraftEmail('');
+    setDraftKind('client');
   };
 
   const saveRename = async (event, project) => {
@@ -202,7 +204,7 @@ export default function JobsHomePage() {
     setSavingId('new');
     setError('');
     try {
-      const created = await createOrgProject({ name: nextName, ownerEmail });
+      const created = await createOrgProject({ name: nextName, ownerEmail, kind: draftKind });
       setJobs((current) => [
         {
           ...created,
@@ -277,6 +279,7 @@ export default function JobsHomePage() {
     setInvitingId(null);
     setCreating(true);
     setDraftName('');
+    setDraftKind('client');
     setError('');
   };
 
@@ -384,6 +387,23 @@ export default function JobsHomePage() {
                 maxLength={80}
                 placeholder="72 Example Street"
               />
+              <div className="mt-3 inline-flex bg-canvas border border-hairline rounded-[9px] p-[3px]">
+                {[
+                  { id: 'client', label: 'Client build' },
+                  { id: 'own', label: 'Own build' },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => setDraftKind(option.id)}
+                    className={`px-3 py-1.5 rounded-md text-[12.5px] font-medium ${
+                      draftKind === option.id ? 'bg-accent text-white' : 'text-slate-600 hover:text-ink'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
               <div className="mt-3 flex items-center justify-end gap-2">
                 <button type="button" onClick={cancelPanels} disabled={savingId === 'new'} className="px-3 py-1.5 text-sm text-slate-600">
                   Cancel

@@ -29,6 +29,7 @@ function mapProjectDoc(projectDoc) {
     invitedEmails: (data.invitedEmails || []).map((value) => normalizeEmail(value)),
     formerEmails: (data.formerEmails || []).map((value) => normalizeEmail(value)),
     status: isJobArchived(data) ? 'archived' : 'active',
+    kind: data.kind === 'own' ? 'own' : 'client',
   };
 }
 
@@ -110,7 +111,7 @@ export async function renameOrgProject(projectId, name, legacyWorkspaceId) {
   return trimmed;
 }
 
-export async function createOrgProject({ name, ownerEmail }) {
+export async function createOrgProject({ name, ownerEmail, kind }) {
   const trimmed = String(name || '').trim();
   if (!trimmed) {
     throw new Error('Please enter a name.');
@@ -121,12 +122,14 @@ export async function createOrgProject({ name, ownerEmail }) {
   }
 
   const projectId = newJobId();
+  const jobKind = kind === 'own' ? 'own' : 'client';
   await setDoc(doc(db, 'organizations', orgId(), 'projects', projectId), {
     name: trimmed,
     orgId: orgId(),
     invitedEmails: variants,
     formerEmails: [],
     status: 'active',
+    kind: jobKind,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -138,6 +141,7 @@ export async function createOrgProject({ name, ownerEmail }) {
       invitedEmails: variants,
       formerEmails: [],
       status: 'active',
+      kind: jobKind,
     }),
   });
 }
@@ -156,6 +160,18 @@ export async function setOrgProjectArchived(projectId, archived, actorEmail) {
   }
   await updateDoc(doc(db, 'organizations', orgId(), 'projects', projectId), payload);
   return archived ? 'archived' : 'active';
+}
+
+export async function setOrgProjectKind(projectId, kind) {
+  if (!projectId) {
+    throw new Error('Missing job.');
+  }
+  const next = kind === 'own' ? 'own' : 'client';
+  await updateDoc(doc(db, 'organizations', orgId(), 'projects', projectId), {
+    kind: next,
+    updatedAt: serverTimestamp(),
+  });
+  return next;
 }
 
 export async function inviteEmailToProject(projectId, email) {

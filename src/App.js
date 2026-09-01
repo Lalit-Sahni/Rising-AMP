@@ -54,6 +54,7 @@ function AppShell() {
   const [projectName, setProjectName] = useState(() => readSession().projectName);
   const [jobInvitedEmails, setJobInvitedEmails] = useState(() => readSession().invitedEmails || []);
   const [projectStatus, setProjectStatus] = useState(() => readSession().projectStatus || 'active');
+  const [projectKind, setProjectKind] = useState('client');
   const [allowedJobs, setAllowedJobs] = useState([]);
 
   useEffect(() => {
@@ -132,6 +133,7 @@ function AppShell() {
           setProjectName(current.name);
           setJobInvitedEmails(current.invitedEmails || []);
           setProjectStatus(current.status || 'active');
+          setProjectKind(current.kind === 'own' ? 'own' : 'client');
         } else {
           writeSession({
             projectId: null,
@@ -146,6 +148,7 @@ function AppShell() {
           setProjectName(null);
           setJobInvitedEmails([]);
           setProjectStatus('active');
+          setProjectKind('client');
         }
         setMembershipLoading(false);
       })
@@ -190,6 +193,7 @@ function AppShell() {
     setProjectName(null);
     setJobInvitedEmails([]);
     setProjectStatus('active');
+    setProjectKind('client');
   };
 
   const handlePickProject = (project) => {
@@ -210,7 +214,16 @@ function AppShell() {
     setProjectName(project.name);
     setJobInvitedEmails(project.invitedEmails || []);
     setProjectStatus(status);
+    setProjectKind(project.kind === 'own' ? 'own' : 'client');
     navigate(`/jobs/${encodeURIComponent(project.projectId)}`);
+  };
+
+  const handleJobKindChange = (kind) => {
+    const next = kind === 'own' ? 'own' : 'client';
+    setProjectKind(next);
+    setAllowedJobs((jobs) => jobs.map((job) => (
+      job.projectId === projectId ? { ...job, kind: next } : job
+    )));
   };
 
   const handleJobAccessLost = () => {
@@ -227,6 +240,7 @@ function AppShell() {
     setProjectName(null);
     setJobInvitedEmails([]);
     setProjectStatus('active');
+    setProjectKind('client');
   };
 
   const handleSwitchProject = () => {
@@ -243,6 +257,7 @@ function AppShell() {
     setProjectName(null);
     setJobInvitedEmails([]);
     setProjectStatus('active');
+    setProjectKind('client');
     navigate('/');
   };
 
@@ -266,6 +281,7 @@ function AppShell() {
         setProjectName(row.name);
         setJobInvitedEmails(row.invitedEmails || []);
         setProjectStatus(status);
+        setProjectKind(row.kind === 'own' ? 'own' : 'client');
       }
       return undefined;
     }
@@ -323,6 +339,8 @@ function AppShell() {
       profile={shownProfile}
       setProfile={setProfile}
       jobInvitedEmails={jobInvitedEmails}
+      jobKind={projectKind}
+      onJobKindChange={handleJobKindChange}
     >
       <div className="app-shell flex bg-canvas text-ink overflow-hidden">
         <Sidebar
