@@ -77,7 +77,7 @@ firebase deploy --project rising-amp-staging --only functions:readReceiptImage
 firebase deploy --project production --only functions:readReceiptImage
 ```
 
-Never `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport`. Deploy **by name**. `checkEstimateImport` also uses `OPENAI_API_KEY`; redeploy it by name after rotating that secret.
+Never `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`. Deploy **by name**. `checkEstimateImport` and `readQuoteFile` also use `OPENAI_API_KEY`; redeploy them by name after rotating that secret.
 
 4. Remove `REACT_APP_OPENAI_API_KEY` from `.env.local` / `.env.production.local` if it is still there.
 5. Revoke the old OpenAI key in the OpenAI dashboard.

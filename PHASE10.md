@@ -16,8 +16,9 @@ Working branch: **`phase-10-cost-plan`**, created from the closed Phase 9 branch
 - [x] Production hosting — `firebase deploy --project production --only hosting` on 2 Sep 2026
 - [x] Production Firestore rules — `firebase deploy --project production --only firestore:rules` on 2 Sep 2026
 - [x] `checkEstimateImport` — `firebase deploy --project staging --only functions:checkEstimateImport` then `--project production` on 2 Sep 2026
+- [x] `readQuoteFile` — quote photo/PDF fill; deploy by name (staging then production)
 
-Cost Plan is live on production hosting and Firestore rules. Localhost remains on staging. Storage rules were not redeployed because they did not change: quote files use the Phase 9 Files path, already live since 31 Aug 2026. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport`.
+Cost Plan is live on production hosting and Firestore rules. Localhost remains on staging. Storage rules were not redeployed because they did not change: quote files use the Phase 9 Files path, already live since 31 Aug 2026. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`.
 
 ## The call
 
@@ -98,6 +99,7 @@ Shipped on the branch:
 - Allocations across one or more trades must sum to the quote total. A range uses the high figure in the forecast.
 - GST inclusive/exclusive is stored on the quote and converted into the plan’s GST mode on read.
 - Optional `fileIds` (max 10) pointing at job files, with `fileId` kept as the first pointer for older rows. The quote sheet can attach several files at once. Files can also assign a document to a live quote. Upload uses Files (`type: quote`, 25 MB, membership Storage path `files/{orgId}/{jobId}/{fileId}/…`) and stores only those ids — not a second copy of the bytes. A file sits on one live quote. Unlinking does not delete the file. Chosen quotes on overlapping trades demote the previous chosen quote to received. Quotes on a trade are listed on the Cost Plan row; tap to edit or void. Void stays on file.
+- Quote form can fill from a photo or PDF via `readQuoteFile` (same OpenAI secret as receipts). Attachments sit at the top. A new file is uploaded in parallel with the read. Ticking a quote already on the job also reads it. Empty fields fill; **Read with AI** overwrites. Uncertain fields get the same Check this tint as expenses. Word/Excel and large PDFs are not read — photograph the total page. `readReceiptImage` stays receipt-only.
 
 ## Part D — spreadsheet import
 

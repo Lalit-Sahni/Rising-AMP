@@ -19,8 +19,8 @@ App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category col
 | Money | Integer cents in `src/money.ts`. Parse at the Firestore / form boundary. Stored documents stay mixed until a later migration. |
 | Server state | TanStack Query is provided. Most ledger fetches still run in `AppContext` on mount. |
 | Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions. Analytics removed. App Check client is wired but **not enforced**. |
-| Functions | Node 22. Live: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`. Deploy functions **by name**. |
-| OCR | OpenAI Vision via Cloud Function `readReceiptImage`. If that fails, show an error. |
+| Functions | Node 22. Live: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile`. Deploy functions **by name**. |
+| OCR | OpenAI Vision via Cloud Function `readReceiptImage` (receipts) and `readQuoteFile` (quote photo or PDF). If that fails, show an error. |
 | PWA | Standalone meta tags + safe-area CSS. No `manifest.json`. No service worker. |
 
 Entry: `index.html` → `src/index.js` → `src/App.js`.
@@ -135,11 +135,11 @@ Staging has a Storage bucket so localhost can upload receipts. Production Storag
 
 ## 8. Cloud Functions
 
-Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport` (us-central1, callable). Deploy **by name**:
+Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile` (us-central1, callable). Deploy **by name**:
 
 ```
-firebase deploy --project rising-amp-staging --only functions:checkEstimateImport
-firebase deploy --project production --only functions:checkEstimateImport
+firebase deploy --project rising-amp-staging --only functions:readQuoteFile
+firebase deploy --project production --only functions:readQuoteFile
 ```
 
 Deploying by name is the habit for this live app. Do not run a bare `firebase deploy --only functions` unless you intend to publish every exported function in `functions/index.js`.
@@ -231,7 +231,7 @@ Done on the Phase 10 branch:
 - Optional `costPlan/current` per job. Target money is integer cents; spend is derived from active expenses.
 - Lazy `/jobs/:jobId/cost-plan` route. No plan means no nav item and the direct route returns to Overview.
 - Trade amounts, History coding and History category retag (Investor codes off construction).
-- Quotes with allocations, chosen forecast, GST conversion and optional `fileIds` into existing Files (`type: quote`). Bytes stay in Storage; the quote document is a pointer list. Files can assign documents onto a live quote.
+- Quotes with allocations, chosen forecast, GST conversion and optional `fileIds` into existing Files (`type: quote`). Bytes stay in Storage; the quote document is a pointer list. Files can assign documents onto a live quote. The quote sheet fills from a photo or PDF via `readQuoteFile`. Add files can set the display name before upload (Storage path still uses the original filename).
 - Spreadsheet column mapper; source file stored as Files type `estimate`. `checkEstimateImport` reviews the mapping; live on staging and production 2 Sep 2026.
 - `job.kind: client | own` and factual Cost Plan attention.
 - Cost Plan refuses to show spend when the 1,000-expense cap is reached.

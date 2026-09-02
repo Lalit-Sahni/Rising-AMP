@@ -253,7 +253,7 @@ Do these in order. Earlier items are worth it even if you never “scale.” Lat
 ### Now (no schema write, or already in the app)
 
 1. **Jobs home: names first, figures second.** Done in this session. Confirms the slowness was “wait for the ledger,” not “Firestore is broken.”
-2. **Put OpenAI behind `readReceiptImage`.** Browser cannot call `api.openai.com`. Deploy **by name only** after the owner sets `OPENAI_API_KEY` at a masked prompt. Staging first (localhost). Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport`.
+2. **Put OpenAI behind `readReceiptImage`.** Browser cannot call `api.openai.com`. Deploy **by name only** after the owner sets `OPENAI_API_KEY` at a masked prompt. Staging first (localhost). Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`.
 3. **Deploy Storage rules.** Done 31 Aug 2026 with Phase 9. Receipts and job files are membership-gated.
 4. **Rotate the OpenAI key** once the function works. The old `REACT_APP_OPENAI_API_KEY` lived in the client.
 
@@ -339,7 +339,7 @@ Firestore is a good database for this product **if** list screens read small doc
 
 - Do not hard-delete live user records. Void first (Recently deleted). Permanent delete is only allowed on already-voided expenses and invoices.
 - Do not run production schema or data writes without a backup, a staging run, and an explicit yes.
-- Do not `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport`. Deploy **by name**.
+- Do not `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`. Deploy **by name**.
 - Do not accept a pasted API key.
 - Do not “fix” localhost receipts by pointing `.env.local` at production.
 - If chat and this file disagree, this file plus `CLAUDE.md` / `PROGRESS.md` win.

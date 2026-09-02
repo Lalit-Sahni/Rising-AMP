@@ -1,6 +1,6 @@
 /**
  * Production functions are sendJobInviteEmail, readReceiptImage,
- * allocateInvoiceNumber and checkEstimateImport. Deploy by name:
+ * allocateInvoiceNumber, checkEstimateImport and readQuoteFile. Deploy by name:
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
  *   firebase deploy --project production --only functions:sendJobInviteEmail
@@ -10,6 +10,8 @@
  *   firebase deploy --project production --only functions:allocateInvoiceNumber
  *   firebase deploy --project rising-amp-staging --only functions:checkEstimateImport
  *   firebase deploy --project production --only functions:checkEstimateImport
+ *   firebase deploy --project rising-amp-staging --only functions:readQuoteFile
+ *   firebase deploy --project production --only functions:readQuoteFile
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):
  *   RESEND_API_KEY, OPENAI_API_KEY
@@ -33,6 +35,11 @@ const {
   parseEstimateCheckContent,
   sanitizeEstimateCheckInput,
 } = require('./lib/estimateCheck');
+const {
+  QUOTE_READ_PROMPT,
+  parseQuoteReadContent,
+  sanitizeQuoteReadInput,
+} = require('./lib/quoteRead');
 const resendApiKey = defineSecret('RESEND_API_KEY');
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
@@ -343,6 +350,128 @@ exports.checkEstimateImport = onCall(
       return parseEstimateCheckContent(content);
     } catch (error) {
       throw new HttpsError('internal', 'The AI check did not return a usable result.');
+    }
+  }
+);
+
+exports.readQuoteFile = onCall(
+  {
+    region: 'us-central1',
+    secrets: [openaiApiKey],
+    cors: true,
+    maxInstances: 10,
+    timeoutSeconds: 60,
+    memory: '512MiB',
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to read a quote.');
+    }
+    const callerEmail = normalizeEmail(request.auth.token && request.auth.token.email);
+    if (!callerEmail) {
+      throw new HttpsError('unauthenticated', 'Sign in to read a quote.');
+    }
+
+    const data = request.data && typeof request.data === 'object' ? request.data : {};
+    const mimeType = String(data.mimeType || '').toLowerCase();
+    const imageBase64 = String(data.imageBase64 || '').replace(/\s/g, '');
+    const fileBase64 = String(data.fileBase64 || '').replace(/\s/g, '');
+    const isPdf = mimeType === 'application/pdf';
+    const isImage = /^image\/(jpeg|jpg|png|webp|gif)$/i.test(mimeType);
+    const base64 = isPdf ? fileBase64 : imageBase64;
+
+    if (!isPdf && !isImage) {
+      throw new HttpsError('invalid-argument', 'Use a photo or a PDF.');
+    }
+    if (!base64 || base64.length < 100) {
+      throw new HttpsError('invalid-argument', 'That file was empty.');
+    }
+    if (base64.length > 4 * 1024 * 1024) {
+      throw new HttpsError(
+        'invalid-argument',
+        'That file is too large to read. Photograph the page with the total.',
+      );
+    }
+
+    const db = admin.firestore();
+    const orgSnap = await db.collection('organizations').doc(FAMILY_ORG_ID).get();
+    if (!orgSnap.exists) {
+      throw new HttpsError('not-found', 'Organisation is not set up.');
+    }
+    const org = orgSnap.data() || {};
+    if (!isEmailOnList(org.invitedEmails || [], callerEmail)) {
+      throw new HttpsError('permission-denied', 'You are not on this organisation.');
+    }
+
+    const apiKey = openaiApiKey.value();
+    if (!apiKey) {
+      throw new HttpsError('failed-precondition', 'OpenAI is not configured.');
+    }
+
+    const cleaned = sanitizeQuoteReadInput(data);
+    const tradeLines = cleaned.trades
+      .map((trade) => `${trade.id}: ${trade.name}`)
+      .join('\n');
+    const prompt = [
+      QUOTE_READ_PROMPT,
+      tradeLines ? `Trade ids on this job:\n${tradeLines}` : 'No trades on this job yet.',
+    ].join('\n\n');
+
+    const fileName = /\.pdf$/i.test(cleaned.fileName) ? cleaned.fileName : 'quote.pdf';
+    const content = [
+      { type: 'text', text: prompt },
+      isPdf
+        ? {
+            type: 'file',
+            file: {
+              filename: fileName,
+              file_data: `data:application/pdf;base64,${base64}`,
+            },
+          }
+        : {
+            type: 'image_url',
+            image_url: {
+              url: `data:${mimeType};base64,${base64}`,
+              detail: 'high',
+            },
+          },
+    ];
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content }],
+        max_tokens: 800,
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      const details = await response.text();
+      console.error('OpenAI quote read failed', response.status, details.slice(0, 500));
+      throw new HttpsError('internal', 'Could not read that quote. Photograph the page with the total.');
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    const message =
+      payload &&
+      payload.choices &&
+      payload.choices[0] &&
+      payload.choices[0].message &&
+      payload.choices[0].message.content;
+    if (!message) {
+      throw new HttpsError('internal', 'OpenAI returned an empty read.');
+    }
+
+    try {
+      return parseQuoteReadContent(message, cleaned.trades.map((trade) => trade.id));
+    } catch (error) {
+      throw new HttpsError('internal', 'The quote read did not return a usable result.');
     }
   }
 );
