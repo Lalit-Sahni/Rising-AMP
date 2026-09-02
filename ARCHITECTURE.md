@@ -1,6 +1,6 @@
-# Rising AMP — Architecture (Phase 10 Parts A–E, 2026-08-31)
+# Rising AMP — Architecture (Phase 10 live, 2026-09-02)
 
-This describes the **branch app**. Phase records: `PLAN.md` through `PHASE10.md`. Production remains Phase 9 until an explicit deploy.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE10.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026).
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
@@ -27,7 +27,7 @@ Entry: `index.html` → `src/index.js` → `src/App.js`.
 
 Localhost must load `.env.local` (staging). Production builds must load `.env.production.local`. Do not swap them.
 
-**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 10 branch: **244.8 KB** initial gzip (Phase 9 production baseline: 241.5 KB). `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
+**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 10 production: **245.4 KB** initial gzip (Phase 9 production baseline: 241.5 KB). `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
 
 ---
 
@@ -235,7 +235,7 @@ Done on the Phase 10 branch:
 - Spreadsheet column mapper; source file stored as Files type `estimate`.
 - `job.kind: client | own` and factual Cost Plan attention.
 - Cost Plan refuses to show spend when the 1,000-expense cap is reached.
-- Firestore rules gate plans, quotes, trade list, expense `tradeId` and job kind. Emulator-tested. Staging rules live 2 Sep 2026. Production still Phase 9.
+- Firestore rules gate plans, quotes, trade list, expense `tradeId` and job kind. Emulator-tested. Staging and production rules live 2 Sep 2026.
 - Expense fetch now derives `totalCents` from labour hours/rate and quantity/unit cost when no direct total field exists.
 
 Left on purpose:

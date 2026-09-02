@@ -6,16 +6,17 @@ Working branch: **`phase-10-cost-plan`**, created from the closed Phase 9 branch
 
 ## Status
 
-- [x] Part A — target cost and Level 1 screen — implemented on the branch, not deployed
+- [x] Part A — target cost and Level 1 screen
 - [x] Part B — trade amounts and expense coding
 - [x] Part C — quotes
 - [x] Part D — spreadsheet import
 - [x] Part E — own build/client build and attention signals
-- [x] Staging Firestore rules — `firebase deploy --project staging --only firestore:rules` on 2 Sep 2026. Localhost can save trades, quotes and an import.
-- [ ] Production hosting
-- [ ] Production Firestore rules
+- [x] Staging Firestore rules — `firebase deploy --project staging --only firestore:rules` on 2 Sep 2026, then again with quote `fileIds` the same day. Localhost can save trades, quotes and an import.
+- [x] Staging hosting — `firebase deploy --project staging --only hosting` on 2 Sep 2026
+- [x] Production hosting — `firebase deploy --project production --only hosting` on 2 Sep 2026
+- [x] Production Firestore rules — `firebase deploy --project production --only firestore:rules` on 2 Sep 2026
 
-Production remains Phase 9. Localhost remains on staging. Do not deploy production unless Lalit names the project and surface. No functions in this phase.
+Cost Plan is live on production hosting and Firestore rules. Localhost remains on staging. Storage rules were not redeployed. `checkEstimateImport` is in the repo and is not live. Production functions remain `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`.
 
 ## The call
 

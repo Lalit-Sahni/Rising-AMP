@@ -11,8 +11,8 @@ Read these files **in this order** before touching anything:
 
 Do not rely on chat history. If chat and these files disagree, these files win.
 
-**Where we are (2026-09-02):** **Phase 10 Cost Plan is active on `phase-10-cost-plan`.** Parts A–E are on the branch. Staging Firestore rules are live. Production remains Phase 9. Localhost still uses staging. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`; deploy by name. Never commit to `master` or `main`. Never accept a raw API key or secret pasted into chat.
+**Where we are (2026-09-02):** **Phase 10 Cost Plan is live on production hosting and Firestore rules.** Branch `phase-10-cost-plan`. Staging hosting and rules are live. Localhost still uses staging. Storage rules were not redeployed. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`; deploy by name. Never commit to `master` or `main`. Never accept a raw API key or secret pasted into chat.
 
 **Paste this to start a new chat:**
 
-Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan Parts A–E are on `phase-10-cost-plan`. Staging Firestore rules are live; production remains Phase 9. Shopfront is https://risingamp.com.au. Localhost stays on staging. Restore tags: pre-phase10-2026-09-02, pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan is live on production hosting and Firestore rules. Branch `phase-10-cost-plan`. Localhost stays on staging. Restore tags: pre-phase10-2026-09-02, pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.

@@ -1,6 +1,6 @@
 # Rising AMP — Database (living guide)
 
-**Start here for the database.** This is what is true on the Phase 10 branch. Production remains Phase 9 until an explicit deploy; the Cost Plan rules below are tested but not live for Parts B–E.
+**Start here for the database.** This is what is true on production and on the Phase 10 branch. Cost Plan rules are live on staging and production (2 Sep 2026). Storage rules were not redeployed with Phase 10.
 
 `DATABASE-AUDIT.md` is the **26 August 2026 read-only scan**. It is still useful as a snapshot (counts, invoice name spellings, Storage file list). Parts of it are **stale**: `jobId` is backfilled, `users/` rules are closed in the repo and on production Firestore, jobs can be created / archived, people can be added / removed, and `clients` is no longer a mixed pile of house-owners and Bunnings. Prefer this file when the two disagree.
 
