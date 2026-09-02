@@ -1,12 +1,13 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { Trash2, Pencil, Filter, Search, Download, Eye, Calendar, DollarSign, Hash, RotateCcw } from 'lucide-react';
+import { Trash2, Pencil, Filter, Search, Download, Eye, Calendar, DollarSign, Hash, RotateCcw, Image } from 'lucide-react';
 import ExportDialog from '../ExportDialog';
 import ExpenseModal from '../ExpenseModal';
+import ReceiptViewer from '../ReceiptViewer';
 import CategoryChip from '../ui/CategoryChip';
 import { CATEGORY_STYLE } from '../../utils/categoryStyle';
-import { getExpenseFaceTotal, getExpenseTotal, isVoidExpense } from '../../utils/jobMetrics';
+import { getExpenseFaceTotal, getExpenseTotal, isVoidExpense, expenseHasReceipt } from '../../utils/jobMetrics';
 import EmptyState from '../EmptyState';
 import ExpenseTradePicker from '../costPlan/ExpenseTradePicker';
 import ExpenseCategoryPicker from '../costPlan/ExpenseCategoryPicker';
@@ -52,6 +53,7 @@ export default function HistoryPage() {
   });
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showRecentlyDeleted, setShowRecentlyDeleted] = useState(false);
+  const [receiptView, setReceiptView] = useState(null);
 
   useEffect(() => {
     const expenseId = location.state && location.state.openExpenseId;
@@ -59,6 +61,7 @@ export default function HistoryPage() {
     const match = (expenses || []).find((row) => row && row.id === expenseId);
     if (!match) return;
     setEditingExpense(match);
+    setExpandedExpense(match.id);
     navigate('.', { replace: true, state: {} });
   }, [location.state, expenses, navigate]);
 
@@ -120,6 +123,22 @@ export default function HistoryPage() {
       default:
         return expense.category || 'Unknown';
     }
+  };
+
+  const openHistoryReceipt = async (expense) => {
+    const { resolveExpenseReceiptUrl } = await import('../../firebase/resolveReceiptUrl');
+    const url = await resolveExpenseReceiptUrl(expense, {
+      jobId,
+      expenseId: expense && expense.id,
+    });
+    if (!url) {
+      showToast('Could not open that receipt', 'error');
+      return;
+    }
+    setReceiptView({
+      url,
+      name: getExpenseDisplayName(expense),
+    });
   };
 
   // Unique payer names for filter dropdown
@@ -487,7 +506,23 @@ export default function HistoryPage() {
                         </td>
                         <td className="px-4 py-4 font-medium text-ink">
                           <div>
-                            <div>{getExpenseDisplayName(expense)}</div>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="truncate">{getExpenseDisplayName(expense)}</span>
+                              {expenseHasReceipt(expense) ? (
+                                <button
+                                  type="button"
+                                  className="shrink-0 p-1 rounded text-slate-400 hover:text-accent"
+                                  aria-label="View receipt"
+                                  title="View receipt"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    openHistoryReceipt(expense);
+                                  }}
+                                >
+                                  <Image className="w-3.5 h-3.5" />
+                                </button>
+                              ) : null}
+                            </div>
                             {expense.paidBy && (
                               <div className="text-xs text-slate-400 mt-0.5">
                                 Paid by: {expense.paidBy}
@@ -542,6 +577,18 @@ export default function HistoryPage() {
                               </>
                             ) : (
                               <>
+                            {expenseHasReceipt(expense) ? (
+                            <button
+                              className="text-slate-400 hover:text-accent transition-colors"
+                              title="View receipt"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openHistoryReceipt(expense);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            ) : null}
                             <button
                               className="text-slate-400 hover:text-accent transition-colors"
                               title="Edit"
@@ -726,6 +773,22 @@ export default function HistoryPage() {
                                   </div>
                                 </div>
                               </div>
+                              {expenseHasReceipt(expense) ? (
+                                <div className="mt-5 pt-4 border-t border-hairline">
+                                  <h4 className="text-sm font-semibold text-ink mb-2">Receipt</h4>
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      openHistoryReceipt(expense);
+                                    }}
+                                    className="inline-flex items-center gap-2 min-h-[40px] px-3 rounded-ot-sm border border-hairline text-[13px] font-bold text-ink"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View receipt
+                                  </button>
+                                </div>
+                              ) : null}
                             </div>
                           </td>
                         </tr>
@@ -765,9 +828,19 @@ export default function HistoryPage() {
         expenseCount={liveRows.length}
       />
 
+      {receiptView ? (
+        <ReceiptViewer
+          isOpen
+          onClose={() => setReceiptView(null)}
+          receiptUrl={receiptView.url}
+          receiptMetadata={{ fileName: receiptView.name }}
+        />
+      ) : null}
+
       {/* Edit Expense Modal */}
       {editingExpense && (
         <ExpenseModal
+          key={editingExpense.id}
           isOpen={true}
           onClose={() => setEditingExpense(null)}
           category={editingExpense.category === 'materials' ? 'purchase' : editingExpense.category}

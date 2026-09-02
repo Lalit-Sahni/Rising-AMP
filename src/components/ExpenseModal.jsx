@@ -17,6 +17,7 @@ import { useCostPlan, useTradeList } from '../hooks/useCostPlan';
 import { activeTrades, canCodeExpenses, INVESTOR_TRADE_ID } from '../domain/costPlan';
 import { EXPENSE_CATEGORIES, tradeIdAfterCategoryChange } from '../domain/expenseCategory';
 import ExpenseTradePicker from './costPlan/ExpenseTradePicker';
+import { expenseHasReceipt } from '../utils/jobMetrics';
 import "react-datepicker/dist/react-datepicker.css";
 
 const categoryFields = {
@@ -85,6 +86,15 @@ function toSafeDate(val) {
   if (typeof val?.toDate === 'function') return val.toDate();
   const d = new Date(val);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function nextExpenseCategory(value) {
+  return value === 'materials' ? 'purchase' : value;
+}
+
+function storedReceiptPreviewUrl(source) {
+  const url = typeof source?.receiptImageUrl === 'string' ? source.receiptImageUrl.trim() : '';
+  return url || null;
 }
 
 function seedFormForCategory(nextCategory, source) {
@@ -197,12 +207,15 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
   const showTradeCoding = canCodeExpenses(planQuery.data);
   const trades = activeTrades(tradeQuery.data || []);
 
-  const [formData, setFormData] = useState({});
-  const [category, setCategory] = useState(categoryProp);
+  const [formData, setFormData] = useState(() => {
+    if (!categoryProp) return {};
+    return seedFormForCategory(nextExpenseCategory(categoryProp), initialData || {});
+  });
+  const [category, setCategory] = useState(() => nextExpenseCategory(categoryProp));
   const [validationErrors, setValidationErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
-  const [receiptPreview, setReceiptPreview] = useState(null);
+  const [receiptPreview, setReceiptPreview] = useState(() => storedReceiptPreviewUrl(initialData));
   const [receiptViewerOpen, setReceiptViewerOpen] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [checkFields, setCheckFields] = useState({});
@@ -268,22 +281,36 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
 
   // Initialize form data
   useEffect(() => {
-    if (isOpen && categoryProp) {
-      const source = initialDataRef.current || {};
-      const nextCategory = categoryProp === 'materials' ? 'purchase' : categoryProp;
-      setCategory(nextCategory);
-      setFormData(seedFormForCategory(nextCategory, source));
-      setTradeId(source.tradeId || null);
-      setValidationErrors({});
-      setCheckFields(uncertainFieldsRef.current || {});
+    if (!isOpen || !categoryProp) return undefined;
+    const source = initialDataRef.current || {};
+    const nextCategory = nextExpenseCategory(categoryProp);
+    setCategory(nextCategory);
+    setFormData(seedFormForCategory(nextCategory, source));
+    setTradeId(source.tradeId || null);
+    setValidationErrors({});
+    setCheckFields(uncertainFieldsRef.current || {});
+    setReceiptFile(null);
+    setReceiptPreview(storedReceiptPreviewUrl(source));
+    setReceiptViewerOpen(false);
 
-      if (source.imageFile) {
-        setReceiptFile(source.imageFile);
-        const reader = new FileReader();
-        reader.onload = (e) => setReceiptPreview(e.target.result);
-        reader.readAsDataURL(source.imageFile);
-      }
+    let cancelled = false;
+    if (source.imageFile) {
+      setReceiptFile(source.imageFile);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (!cancelled) setReceiptPreview(e.target.result);
+      };
+      reader.readAsDataURL(source.imageFile);
+    } else if (expenseHasReceipt(source)) {
+      import('../firebase/resolveReceiptUrl').then(({ resolveExpenseReceiptUrl }) => (
+        resolveExpenseReceiptUrl(source, { jobId, expenseId: expenseId || source.id }).then((url) => {
+          if (!cancelled && url) setReceiptPreview(url);
+        })
+      ));
     }
+    return () => {
+      cancelled = true;
+    };
     // Init when this expense opens, not when the parent re-renders.
     // A default uncertainFields={} (new object every render) used to wipe edits on each keystroke.
   }, [isOpen, categoryProp, expenseId]);
@@ -514,7 +541,20 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
     setReceiptPreview(null);
   };
 
-  const openReceiptViewer = () => {
+  const openReceiptViewer = async () => {
+    let url = receiptPreview;
+    if (!url) {
+      const { resolveExpenseReceiptUrl } = await import('../firebase/resolveReceiptUrl');
+      url = await resolveExpenseReceiptUrl(initialDataRef.current || {}, {
+        jobId,
+        expenseId,
+      });
+      if (url) setReceiptPreview(url);
+    }
+    if (!url) {
+      showToast('Could not open that receipt', 'error');
+      return;
+    }
     setReceiptViewerOpen(true);
   };
 
@@ -555,7 +595,7 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
         expenseData.tradeId = tradeId || null;
       }
 
-      if (isEditMode && initialData?.receiptImageUrl && !receiptFile) {
+      if (isEditMode && expenseHasReceipt(initialData) && !receiptFile) {
         expenseData.receiptImageUrl = initialData.receiptImageUrl;
         expenseData.receiptImagePath = initialData.receiptImagePath;
         expenseData.receiptUploadedAt = initialData.receiptUploadedAt;
@@ -659,6 +699,11 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
   if (!isOpen || !categoryProp) return null;
 
   const fields = categoryFields[category] || [];
+  const receiptOnFile = Boolean(
+    receiptFile
+    || receiptPreview
+    || (expenseId && expenseHasReceipt(initialData))
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
@@ -698,17 +743,29 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
             )}
           </div>
           
-          <button
-            onClick={() => {
-              onClose();
-              setFormData({});
-              setValidationErrors({});
-            }}
-            className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
-            aria-label="Close"
-          >
-            <X className="w-5 h-5 text-zinc-500" />
-          </button>
+          <div className="flex items-center gap-2">
+            {receiptOnFile ? (
+              <button
+                type="button"
+                onClick={openReceiptViewer}
+                className="inline-flex items-center gap-1.5 min-h-[40px] px-3 rounded-lg border border-zinc-300 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+              >
+                <Eye className="w-4 h-4" />
+                View receipt
+              </button>
+            ) : null}
+            <button
+              onClick={() => {
+                onClose();
+                setFormData({});
+                setValidationErrors({});
+              }}
+              className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5 text-zinc-500" />
+            </button>
+          </div>
         </div>
 
         {/* Form */}
@@ -871,24 +928,33 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                 Receipt Attachment
               </h3>
               
-              {receiptFile ? (
+              {receiptOnFile ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-zinc-200">
-                    <div className="w-12 h-12 bg-zinc-100 rounded-lg flex items-center justify-center overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={openReceiptViewer}
+                      className="w-12 h-12 bg-zinc-100 rounded-lg flex items-center justify-center overflow-hidden shrink-0"
+                      title="View receipt"
+                    >
                       {receiptPreview ? (
-                        <img 
-                          src={receiptPreview} 
-                          alt="Receipt preview" 
+                        <img
+                          src={receiptPreview}
+                          alt="Receipt preview"
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <Image className="w-6 h-6 text-zinc-400" />
                       )}
-                    </div>
+                    </button>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{receiptFile.name}</p>
+                      <p className="text-sm font-medium text-ink truncate">
+                        {receiptFile?.name || 'Receipt on file'}
+                      </p>
                       <p className="text-xs text-zinc-500">
-                        {(receiptFile.size / 1024 / 1024).toFixed(2)} MB
+                        {receiptFile
+                          ? `${(receiptFile.size / 1024 / 1024).toFixed(2)} MB`
+                          : 'Tap to view'}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -896,20 +962,37 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                         type="button"
                         onClick={openReceiptViewer}
                         className="p-2 hover:bg-zinc-200 rounded-lg text-zinc-600 hover:text-zinc-900 transition-colors"
-                        title="View Receipt"
+                        title="View receipt"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button
-                        type="button"
-                        onClick={removeReceipt}
-                        className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 hover:text-red-300 transition-colors"
-                        title="Remove Receipt"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {receiptFile ? (
+                        <button
+                          type="button"
+                          onClick={removeReceipt}
+                          className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 hover:text-red-300 transition-colors"
+                          title="Remove Receipt"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      ) : null}
                     </div>
                   </div>
+                  {!receiptFile ? (
+                    <div
+                      {...getRootProps()}
+                      className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                        isDragActive
+                          ? 'border-accent bg-accent-tint'
+                          : 'border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50'
+                      }`}
+                    >
+                      <input {...getInputProps()} />
+                      <p className="text-xs text-zinc-600">
+                        {isDragActive ? 'Drop to replace this receipt' : 'Replace with another photo'}
+                      </p>
+                    </div>
+                  ) : null}
                   
                   {uploadProgress > 0 && uploadProgress < 100 && (
                     <div className="space-y-2">
@@ -988,12 +1071,12 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
         onClose={() => setReceiptViewerOpen(false)}
         receiptUrl={receiptPreview}
         receiptMetadata={{
-          fileName: receiptFile?.name,
+          fileName: receiptFile?.name || 'Receipt on file',
           size: receiptFile?.size,
           contentType: receiptFile?.type,
-          uploadedAt: new Date().toISOString()
+          uploadedAt: initialData?.receiptUploadedAt || null
         }}
-        onDelete={removeReceipt}
+        onDelete={receiptFile ? removeReceipt : undefined}
       />
     </div>
   );

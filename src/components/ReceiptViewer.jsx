@@ -104,11 +104,12 @@ const ReceiptViewer = ({ isOpen, onClose, receiptUrl, receiptMetadata, onDelete 
   };
 
   const formatFileSize = (bytes) => {
+    if (bytes == null || Number.isNaN(Number(bytes))) return '';
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
   };
 
   const formatDate = (dateString) => {
@@ -125,7 +126,7 @@ const ReceiptViewer = ({ isOpen, onClose, receiptUrl, receiptMetadata, onDelete 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center p-4">
       <div
         className={`bg-surface border border-hairline rounded-ot shadow-whisper overflow-hidden flex flex-col ${
           isFullscreen ? 'w-full h-full max-w-none max-h-none' : 'w-full max-w-6xl max-h-[90vh]'
@@ -226,30 +227,36 @@ const ReceiptViewer = ({ isOpen, onClose, receiptUrl, receiptMetadata, onDelete 
           </div>
         </div>
 
-        {receiptMetadata && (
+        {receiptMetadata ? (
           <div className="border-t border-hairline bg-surface px-4 py-3">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-[12px]">
-              <div>
-                <p className="eyebrow">File size</p>
-                <p className="text-ink mt-0.5">{formatFileSize(receiptMetadata.size)}</p>
-              </div>
-              <div>
-                <p className="eyebrow">Uploaded</p>
-                <p className="text-ink mt-0.5">{formatDate(receiptMetadata.uploadedAt)}</p>
-              </div>
-              <div>
-                <p className="eyebrow">Format</p>
-                <p className="text-ink mt-0.5">
-                  {receiptMetadata.contentType?.split('/')[1]?.toUpperCase() || 'Unknown'}
-                </p>
-              </div>
+              {formatFileSize(receiptMetadata.size) ? (
+                <div>
+                  <p className="eyebrow">File size</p>
+                  <p className="text-ink mt-0.5">{formatFileSize(receiptMetadata.size)}</p>
+                </div>
+              ) : null}
+              {receiptMetadata.uploadedAt ? (
+                <div>
+                  <p className="eyebrow">Uploaded</p>
+                  <p className="text-ink mt-0.5">{formatDate(receiptMetadata.uploadedAt)}</p>
+                </div>
+              ) : null}
+              {receiptMetadata.contentType ? (
+                <div>
+                  <p className="eyebrow">Format</p>
+                  <p className="text-ink mt-0.5">
+                    {receiptMetadata.contentType.split('/')[1]?.toUpperCase() || receiptMetadata.contentType}
+                  </p>
+                </div>
+              ) : null}
               <div>
                 <p className="eyebrow">Zoom</p>
                 <p className="text-ink mt-0.5 tabular">{Math.round(zoom * 100)}%</p>
               </div>
             </div>
           </div>
-        )}
+        ) : null}
 
         <div className="border-t border-hairline bg-canvas px-4 py-2.5">
           <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-slate-400">

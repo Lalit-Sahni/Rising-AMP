@@ -22,6 +22,8 @@ The rules validate membership, integer cents, quote allocations, the org trade l
 
 The expense read boundary now preserves labour `hours × rate` and `quantity × unitCost` totals instead of attaching a false zero `totalCents`. This keeps Cost Plan and the existing Overview cost honest.
 
+**History receipts (2 Sep 2026):** An expense with a stored photo now has View receipt on the History row (eye and the small image icon). Edit shows Receipt on file and View receipt in the header. The photo is the stored file, not only a newly picked upload. Verified on Kelly Street staging.
+
 **Phase 9 is closed and live (31 Aug 2026).** Brief: `PHASE9.md` (closed record). Mockup: `design/risingamp-files-vision.html`.
 
 **Production (31 Aug 2026):** `firebase deploy --project production --only hosting`, then `firestore:rules`, then `storage`. No functions. Backup first: `backups/production-2026-08-31T11-25-12-856Z` (503 Firestore documents, 22 Storage files; restore dry-run parsed, not applied). Storage rules IAM on production matches staging (`roles/datastore.viewer` and `roles/firebaserules.firestoreServiceAgent` on the Firebase Rules / Storage service accounts, project number `446685609209`). Receipts are no longer world-open. Live shopfront: https://risingamp.com.au.
