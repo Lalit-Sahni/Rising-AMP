@@ -6,18 +6,18 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-10-cost-plan`**. **Phase 10 Cost Plan is live.** Parts A–E are on production hosting and Firestore rules (2 Sep 2026). Staging hosting and rules are live too. Localhost still uses **staging**. Storage rules were not redeployed (Phase 9 storage still stands). Never commit to `master` or `main`. Restore tags: `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31` (this phase), `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+1. Confirm git branch. Latest work is **`phase-10-cost-plan`**. **Phase 10 Cost Plan is live.** Parts A–E are on production hosting and Firestore rules (2 Sep 2026). Staging hosting and rules are live too. Localhost still uses **staging**. Storage rules were not redeployed because they did not change: quote files use the Phase 9 Files path (`files/{orgId}/{jobId}/{fileId}/…`), already live since 31 Aug 2026. Never commit to `master` or `main`. Restore tags: `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31` (this phase), `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
 2. Read `PROGRESS.md` (next concrete step), then `PHASE10.md`. Open `design/risingamp-costplan-vision.html` before changing Cost Plan. `PHASE9.md` is the closed Job Files record. `PHASE8.md` through `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
 3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Cost Plan is live on https://risingamp.com.au. Localhost stays on staging. `checkEstimateImport` is in the repo and is not deployed; BOQ import is Excel/CSV, and the optional AI check can wait. Do not deploy unless he names the project and surface.
+5. **Next:** Cost Plan is live on https://risingamp.com.au. Localhost stays on staging. `checkEstimateImport` is live on staging and production (2 Sep 2026). Do not deploy unless he names the project and surface.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. **All new files are TypeScript.** Existing JS converts only when a brief says so, or when the file is being substantially rewritten anyway.
 8. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan is live on production hosting and Firestore rules. Branch `phase-10-cost-plan`. Localhost stays on staging. Restore tags: pre-phase10-2026-09-02, pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan is live on production hosting and Firestore rules. `checkEstimateImport` is live. Branch `phase-10-cost-plan`. Localhost stays on staging. Restore tags: pre-phase10-2026-09-02, pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -42,7 +42,7 @@ If you are unsure whether a command writes to production, do not run it.
 - Cost Plan vision (Phase 10): `design/risingamp-costplan-vision.html`
 - Auth mockups: `design/risingamp-auth.html`, `design/risingamp-signin-email.html`
 - Live look (Phase 2): `design/opal-track-reference.html`
-- Never run `firebase deploy` against production unless the owner explicitly asks. Hosting only: `firebase deploy --project production --only hosting`. Do not deploy functions, Firestore rules, or Storage unless he names them. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`. Deploy functions **by name**.
+- Never run `firebase deploy` against production unless the owner explicitly asks. Hosting only: `firebase deploy --project production --only hosting`. Do not deploy functions, Firestore rules, or Storage unless he names them. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport`. Deploy functions **by name**.
 
 ## Environments
 
@@ -71,7 +71,7 @@ Same app, same data. Brief: `PHASE3.md`. Mockup: `design/risingamp-vision.html`.
 
 ## Phase 4 (closed 2026-08-26; live)
 
-Brief: `PHASE4.md`. Legal pages, Resend invite function on staging and production (`invites@risingamp.com.au`), shopfront `https://risingamp.com.au`, Google login on that domain. Gmail invite fallback still in the client until the owner asks to remove it. Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`; deploy **by name**.
+Brief: `PHASE4.md`. Legal pages, Resend invite function on staging and production (`invites@risingamp.com.au`), shopfront `https://risingamp.com.au`, Google login on that domain. Gmail invite fallback still in the client until the owner asks to remove it. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport`; deploy **by name**.
 
 ## Phase 5 (closed 2026-08-27; live)
 
@@ -95,7 +95,7 @@ Brief: `PHASE9.md`. Mockup: `design/risingamp-files-vision.html`. Branch: `phase
 
 ## Phase 10 (live on production hosting and Firestore rules, 2 Sep 2026)
 
-Brief: `PHASE10.md`. Mockup: `design/risingamp-costplan-vision.html`. Branch: `phase-10-cost-plan`. Restore tags: `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31` (this phase). Parts A–E are live: target cost, trade amounts, expense coding, quotes, spreadsheet import (Excel/CSV, layout reader, file-total gate), job kind and attention. Jobs without a plan still work; Cost Plan is in the job nav. Spend comes from active expenses, not paid invoices, and is hidden when the 1,000-expense cap is reached. **Production hosting and Firestore rules were deployed 2 Sep 2026.** Storage rules were not redeployed. `checkEstimateImport` is not live. Production functions remain `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`.
+Brief: `PHASE10.md`. Mockup: `design/risingamp-costplan-vision.html`. Branch: `phase-10-cost-plan`. Restore tags: `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31` (this phase). Parts A–E are live: target cost, trade amounts, expense coding, quotes, spreadsheet import (Excel/CSV, layout reader, file-total gate), job kind and attention. Jobs without a plan still work; Cost Plan is in the job nav. Spend comes from active expenses, not paid invoices, and is hidden when the 1,000-expense cap is reached. **Production hosting and Firestore rules were deployed 2 Sep 2026.** Storage rules were not redeployed: quote files use the existing Files path, already live since Phase 9 (31 Aug 2026). `checkEstimateImport` is live on staging and production (2 Sep 2026). Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport`.
 
 ## Out of scope until asked
 

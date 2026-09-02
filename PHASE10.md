@@ -15,8 +15,9 @@ Working branch: **`phase-10-cost-plan`**, created from the closed Phase 9 branch
 - [x] Staging hosting — `firebase deploy --project staging --only hosting` on 2 Sep 2026
 - [x] Production hosting — `firebase deploy --project production --only hosting` on 2 Sep 2026
 - [x] Production Firestore rules — `firebase deploy --project production --only firestore:rules` on 2 Sep 2026
+- [x] `checkEstimateImport` — `firebase deploy --project staging --only functions:checkEstimateImport` then `--project production` on 2 Sep 2026
 
-Cost Plan is live on production hosting and Firestore rules. Localhost remains on staging. Storage rules were not redeployed. `checkEstimateImport` is in the repo and is not live. Production functions remain `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`.
+Cost Plan is live on production hosting and Firestore rules. Localhost remains on staging. Storage rules were not redeployed because they did not change: quote files use the Phase 9 Files path, already live since 31 Aug 2026. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport`.
 
 ## The call
 
@@ -41,7 +42,7 @@ All forecast, variance and progress figures are derived on read. Do not store a 
 - Stored money is integer cents on every new Cost Plan record.
 - The baseline is GST inclusive by default.
 - No hard delete. Cost plans are draft, locked or archived; Firestore delete is denied. Lock and archive are status-only writes. An archived plan can be replaced with a new draft on the same `current` document.
-- No new npm packages in this phase. BOQ import is Excel or CSV in the browser. An AI check of the mapping is a named function (`checkEstimateImport`); do not deploy it unless Lalit names it.
+- No new npm packages in this phase. BOQ import is Excel or CSV in the browser. An AI check of the mapping is the named function `checkEstimateImport` (live on staging and production 2 Sep 2026).
 - No production data write or deploy without the existing backup, staging and explicit-approval process.
 
 ## Data model
@@ -102,7 +103,7 @@ Shipped on the branch:
 
 Shipped on the branch:
 
-- Column mapper for `.xlsx` / `.csv` using the existing `exceljs` package, loaded on click. A Bill of Quantities is read by row shape (`boqLayout.ts`), not as a flat table. Section vs line is the code shape `/^\d+(\.0+)?$/`. Excel formula cells go through `cellToText`. Save is allowed when the figures being saved match a **positive** figure the file itself states, when the heading amounts have been edited, or when **Save these figures anyway** is ticked. After that read is trusted, each heading amount is editable. **Add GST (10%)** is a checkbox; it is suggested when the file states both construction cost and that figure plus GST. Trade names use `TRADE_SYNONYMS`, not a model. Photos and PDFs are not parsed; export to Excel first. An AI **check** (`checkEstimateImport`) reviews the mapping only. It is not deployed until Lalit names that function.
+- Column mapper for `.xlsx` / `.csv` using the existing `exceljs` package, loaded on click. A Bill of Quantities is read by row shape (`boqLayout.ts`), not as a flat table. Section vs line is the code shape `/^\d+(\.0+)?$/`. Excel formula cells go through `cellToText`. Save is allowed when the figures being saved match a **positive** figure the file itself states, when the heading amounts have been edited, or when **Save these figures anyway** is ticked. After that read is trusted, each heading amount is editable. **Add GST (10%)** is a checkbox; it is suggested when the file states both construction cost and that figure plus GST. Trade names use `TRADE_SYNONYMS`, not a model. Photos and PDFs are not parsed; export to Excel first. An AI **check** (`checkEstimateImport`) reviews the mapping only. Live on staging and production 2 Sep 2026.
 - Cost is not price. The imported total is construction cost. GST or a builder's margin on top is the final price and is not the thing being matched.
 - Source sections are mapped to stable trades before save. Duplicate source codes are warnings, not identifiers.
 - Totals must match the target, or the imported total becomes the new target in the same save.

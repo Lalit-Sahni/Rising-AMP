@@ -1,7 +1,6 @@
 /**
- * Production functions are sendJobInviteEmail, readReceiptImage and
- * allocateInvoiceNumber. Deploy by name. checkEstimateImport is in this
- * file but is not live until Lalit names that function:
+ * Production functions are sendJobInviteEmail, readReceiptImage,
+ * allocateInvoiceNumber and checkEstimateImport. Deploy by name:
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
  *   firebase deploy --project production --only functions:sendJobInviteEmail
