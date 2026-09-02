@@ -308,3 +308,53 @@ describe('trade naming needs a synonym table, not a model', () => {
     expect(sections.filter((section) => matchTradeForSection(section.name))).toHaveLength(sections.length);
   });
 });
+
+/**
+ * A working estimate tracks actuals beside the estimate. Those columns are money
+ * shaped and sit to the right, so "rightmost money column wins" gave the amount
+ * role to "Actual Total", which is all zeros until the job is spent. The real
+ * 167sqm single-storey estimate read as $0.00 for all 22 sections because of it,
+ * and the file-total check correctly refused to save the plan.
+ */
+describe('estimate columns beat the file\'s own actuals columns', () => {
+  const header = ['Item Code', 'Description', 'Qty', 'Unit', 'Price', 'Total', 'Comments', '', '', '', 'Actual Price', 'Actual Total'];
+  const rows = [
+    ['Single Storey', '', '', '', '', '', '', '', '', '', '', ''],
+    ['1', 'Site Works', '', '', '', '', '', '', '', '', '', ''],
+    header,
+    ['1.001', 'Temporary Fence', '92', 'LS', '9', '828', '', '', '', '', '', '0'],
+    ['1.002', 'Toilet', '1', 'LS', '950', '950', '', '', '', '', '', '0'],
+    ['', '', '', '', 'Total', '1778', '', '', '', '', '', '0'],
+  ];
+
+  it('ignores Actual Price and Actual Total by their headers alone', () => {
+    const map = guessColumnMapStrict(header);
+    expect(map[5]).toBe('amount');
+    expect(map[4]).toBe('unitPrice');
+    expect(map[10]).toBe('ignore');
+    expect(map[11]).toBe('ignore');
+  });
+
+  it('reads the estimate, not zero', () => {
+    const index = findHeaderRowIndex(rows);
+    const layout = readBoqLayout(rows, guessColumnMapStrict(rows[index], rows), index);
+    expect(layout.sections).toHaveLength(1);
+    expect(layout.sections[0].amountCents).toBe(177800);
+  });
+
+  it('drops a money column that holds no figures, whatever its header says', () => {
+    const quiet = ['Code', 'Description', 'Qty', 'Unit', 'Rate', 'Total', 'Committed Cost'];
+    const quietRows = [
+      ['1', 'Concreting', '', '', '', '', ''],
+      quiet,
+      ['1.001', 'Slab', '1', 'LS', '500', '500', ''],
+      ['1.002', 'Piering', '1', 'LS', '250', '250', '0'],
+    ];
+    const index = findHeaderRowIndex(quietRows);
+    const map = guessColumnMapStrict(quietRows[index], quietRows);
+    expect(map[5]).toBe('amount');
+    expect(map[6]).toBe('ignore');
+    const layout = readBoqLayout(quietRows, map, index);
+    expect(layout.sections[0].amountCents).toBe(75000);
+  });
+});

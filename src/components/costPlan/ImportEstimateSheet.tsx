@@ -306,7 +306,7 @@ export default function ImportEstimateSheet({
     const sheetRows = nextSheets[nextSheetIndex]?.rows || [];
     const nextHeaderRow = findHeaderRowIndex(sheetRows);
     setHeaderRowIndex(nextHeaderRow);
-    setColumnMap(guessColumnMapStrict(sheetRows[nextHeaderRow] || []));
+    setColumnMap(guessColumnMapStrict(sheetRows[nextHeaderRow] || [], sheetRows));
     setTradeBySection({});
     setAmountBySection({});
     setAddGstTouched(false);
@@ -465,7 +465,7 @@ export default function ImportEstimateSheet({
                   onChange={(event) => {
                     const nextIndex = Number(event.target.value);
                     setHeaderRowIndex(nextIndex);
-                    setColumnMap(guessColumnMapStrict(rows[nextIndex] || []));
+                    setColumnMap(guessColumnMapStrict(rows[nextIndex] || [], rows));
                     setTradeBySection({});
                     setAmountBySection({});
                   }}

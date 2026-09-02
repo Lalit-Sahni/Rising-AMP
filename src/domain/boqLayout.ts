@@ -22,6 +22,15 @@ const HEADER_WORDS: Record<string, RegExp> = {
 
 const TOTAL_LABEL = /^(sub[- ]?)?total$|^sum$/i;
 /**
+ * A working estimate tracks its own actuals beside the estimate: "Actual Price",
+ * "Actual Total", "Paid", "Variance". Those columns are money-shaped and sit to
+ * the RIGHT of the estimate columns, so "rightmost money column wins" hands the
+ * amount role to a column that is all zeros until the job is spent. The whole
+ * file then reads as $0.00. A column whose header says actual is never the
+ * estimate.
+ */
+const ACTUALS_HEADER = /actual|\bpaid\b|\bspent\b|variance|committed|forecast|invoiced|to\s*date|remaining/;
+/**
  * A section code is a whole number, or a whole number with only zeros after the
  * point: 1, 2, 15, 1.000, 2.00. A line code has a real decimal part: 1.001,
  * 1.02, 3.004. This is the only signal that survives a file whose line items
@@ -85,9 +94,21 @@ export function findHeaderRowIndex(rows: string[][], limit = 40): number {
  * "Price" column is claimed as the line total and the unit rate is never mapped.
  * Anchor the patterns and let the rightmost money column win the amount role.
  */
-export function guessColumnMapStrict(headers: string[] = []): ColumnMap {
+function columnHasFigures(rows: string[][], index: number): boolean {
+  return rows.some((row) => {
+    const raw = row ? row[index] : '';
+    if (isBlank(raw)) return false;
+    return money(raw) > 0;
+  });
+}
+
+export function guessColumnMapStrict(
+  headers: string[] = [],
+  dataRows: string[][] = [],
+): ColumnMap {
   const map: ColumnMap = {};
   const moneyish: number[] = [];
+  const actuals = new Set<number>();
   headers.forEach((raw, index) => {
     const value = norm(raw).toLowerCase();
     map[index] = 'ignore';
@@ -96,11 +117,34 @@ export function guessColumnMapStrict(headers: string[] = []): ColumnMap {
       (key) => HEADER_WORDS[key].test(value),
     );
     if (role) map[index] = role;
-    if (/price|total|amount|rate|cost/.test(value)) moneyish.push(index);
+    if (/price|total|amount|rate|cost/.test(value)) {
+      moneyish.push(index);
+      if (ACTUALS_HEADER.test(value)) actuals.add(index);
+    }
   });
-  if (moneyish.length > 1) {
-    const last = moneyish[moneyish.length - 1];
-    moneyish.forEach((index) => {
+
+  // The estimate's own actuals columns are not the estimate. Only fall back to
+  // them when the file has nothing else money-shaped.
+  let candidates = moneyish.filter((index) => !actuals.has(index));
+  if (candidates.length === 0) candidates = moneyish;
+
+  // With the sheet in hand, a column holding no figures at all cannot be the
+  // line total however far right it sits. This catches an actuals column whose
+  // header does not say "actual".
+  if (dataRows.length > 0 && candidates.length > 1) {
+    const populated = candidates.filter((index) => columnHasFigures(dataRows, index));
+    if (populated.length > 0) candidates = populated;
+  }
+
+  // Anything money-shaped that lost is tracking, not estimate. Reading it would
+  // double-count or zero the plan, so it is ignored rather than left mapped.
+  moneyish.forEach((index) => {
+    if (!candidates.includes(index)) map[index] = 'ignore';
+  });
+
+  if (candidates.length > 1) {
+    const last = candidates[candidates.length - 1];
+    candidates.forEach((index) => {
       map[index] = index === last ? 'amount' : 'unitPrice';
     });
   }
