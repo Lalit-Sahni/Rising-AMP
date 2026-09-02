@@ -120,6 +120,7 @@ export default function AddJobFilesSheet({
     const result = await uploadJobFile({
       jobId,
       file: item.file,
+      name: item.name,
       type: chosenType,
       uploadedBy,
       documentDate: dateRef.current,
@@ -294,22 +295,38 @@ export default function AddJobFilesSheet({
         </label>
 
         {queue.length > 0 && (
-          <ul className="space-y-2 mb-3 max-h-48 overflow-y-auto">
-            {queue.map((item) => (
-              <li key={item.localId} className="flex items-center gap-2.5">
+          <div className="mb-3">
+            <div className="text-[12.5px] font-medium text-slate-600 mb-1.5">Name</div>
+            <ul className="space-y-3 max-h-64 overflow-y-auto">
+            {queue.map((item) => {
+              const nameLocked = item.status === 'uploading' || item.status === 'done';
+              return (
+              <li key={item.localId} className="flex items-start gap-2.5">
                 <JobFileThumb
                   contentType={item.contentType}
                   type={type || suggestJobFileType(item.contentType)}
                   size={32}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="text-[12.5px] font-medium text-ink truncate">{item.name}</div>
+                  <label className="block">
+                    <span className="sr-only">File name</span>
+                    <input
+                      type="text"
+                      value={item.name}
+                      maxLength={200}
+                      disabled={uploading || nameLocked}
+                      onChange={(event) => updateItem(item.localId, { name: event.target.value })}
+                      onFocus={(event) => event.target.select()}
+                      placeholder="Name this file"
+                      className="w-full min-h-[44px] px-2.5 rounded-ot-sm border border-hairline text-[13px] font-medium text-ink disabled:bg-canvas disabled:text-slate-500"
+                    />
+                  </label>
                   {item.status === 'error' ? (
-                    <div className="text-[11.5px] text-neg">{item.error}</div>
+                    <div className="text-[11.5px] text-neg mt-1">{item.error}</div>
                   ) : item.status === 'done' ? (
-                    <div className="text-[11.5px] text-pos">On the job</div>
+                    <div className="text-[11.5px] text-pos mt-1">On the job</div>
                   ) : (
-                    <div className="h-1 mt-1 bg-hairline rounded-full overflow-hidden">
+                    <div className="h-1 mt-1.5 bg-hairline rounded-full overflow-hidden">
                       <div
                         className="h-full bg-accent"
                         style={{ width: `${item.status === 'queued' ? 0 : item.progress}%` }}
@@ -317,7 +334,7 @@ export default function AddJobFilesSheet({
                     </div>
                   )}
                 </div>
-                <span className="tabular text-[11.5px] text-slate-400 w-10 text-right">
+                <span className="tabular text-[11.5px] text-slate-400 w-10 text-right pt-3">
                   {item.status === 'uploading' || item.status === 'done' ? `${item.progress}%` : formatJobFileSize(item.file.size)}
                 </span>
                 {item.status === 'error' ? (
@@ -335,18 +352,20 @@ export default function AddJobFilesSheet({
                     onClick={() => setQueue((prev) => prev.filter((row) => row.localId !== item.localId))}
                     disabled={uploading}
                     className="text-slate-400 min-h-[44px] w-11"
-                    aria-label={`Remove ${item.name}`}
+                    aria-label={`Remove ${item.name || 'file'}`}
                   >
                     <X className="w-3.5 h-3.5 mx-auto" />
                   </button>
                 ) : null}
               </li>
-            ))}
+              );
+            })}
           </ul>
+          </div>
         )}
 
         <p className="text-[11.5px] text-slate-400 mb-3">
-          Photos are compressed. 25 MB each. No video.
+          Rename each file before you add it. Photos are compressed. 25 MB each. No video.
         </p>
         <button
           type="button"

@@ -6,6 +6,7 @@ import {
   jobFileStoragePath,
   jobFileThumbnailPath,
   safeJobFileName,
+  jobFileDisplayName,
   validateJobFileForUpload,
   type JobFileType,
 } from '../domain/jobFiles';
@@ -35,6 +36,7 @@ export type UploadJobFileInput = {
   uploadedBy?: string;
   documentDate?: string;
   note?: string;
+  name?: string;
   resume?: JobFileUploadResume;
   onProgress?: (percent: number) => void;
 };
@@ -108,7 +110,10 @@ export async function uploadJobFile(input: UploadJobFileInput): Promise<UploadJo
       uploadedBy,
       documentDate,
       note: input.note,
-      resume: input.resume,
+      resume: {
+        ...input.resume,
+        name: jobFileDisplayName(input.name, input.resume.name),
+      },
     });
     if (saved.success) reportProgress(onProgress, 100);
     return saved;
@@ -148,7 +153,7 @@ export async function uploadJobFile(input: UploadJobFileInput): Promise<UploadJo
 
   const orgId = getActiveOrgId();
   const fileId = newJobFileId(jobId);
-  const displayName = safeJobFileName(input.file.name).slice(0, 200) || 'File';
+  const displayName = jobFileDisplayName(input.name, input.file.name);
   const storageName = safeJobFileName(payload.name || input.file.name) || 'file';
   const storagePath = jobFileStoragePath(orgId, jobId, fileId, storageName);
 

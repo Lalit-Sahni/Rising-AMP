@@ -12,6 +12,7 @@ import {
   isVideoFile,
   resolveJobFileContentType,
   safeJobFileName,
+  jobFileDisplayName,
   suggestJobFileType,
   validateJobFileForUpload,
 } from './jobFiles';
@@ -63,6 +64,13 @@ describe('job file model', () => {
       'files/org-a/job-1/f1/thumb.jpg',
     );
     expect(safeJobFileName('a/b\\c.pdf')).toBe('a-b-c.pdf');
+  });
+
+  test('display name uses what you typed, or the original file name', () => {
+    expect(jobFileDisplayName('Slab engineer certificate', 'scan.pdf')).toBe('Slab engineer certificate');
+    expect(jobFileDisplayName('  ', 'scan.pdf')).toBe('scan.pdf');
+    expect(jobFileDisplayName('a/b cert', 'scan.pdf')).toBe('a-b cert');
+    expect(jobFileDisplayName(undefined, 'site photo.jpg')).toBe('site photo.jpg');
   });
 });
 

@@ -99,6 +99,15 @@ export function safeJobFileName(name: string): string {
   return (trimmed || 'file').slice(0, 180);
 }
 
+/** Display name on the job. Empty input keeps the original file name. */
+export function jobFileDisplayName(preferred: unknown, originalFileName: string): string {
+  const cleaned = typeof preferred === 'string'
+    ? preferred.replace(/[/\\]+/g, '-').replace(/\s+/g, ' ').trim()
+    : '';
+  if (cleaned) return cleaned.slice(0, 200);
+  return safeJobFileName(originalFileName).slice(0, 200) || 'File';
+}
+
 export function jobFileStoragePath(
   orgId: string,
   jobId: string,
