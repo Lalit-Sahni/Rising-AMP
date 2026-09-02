@@ -4,20 +4,24 @@ import type { CostPlan, CostPlanLine, CostPlanQuote, CostPlanSection, TradeListI
 import {
   APP_TRADES,
   COST_PLAN_DOC_ID,
+  INVESTOR_TRADE_ID,
   NOT_IN_ESTIMATE_TRADE_ID,
   UNCODED_TRADE_ID,
   canCodeExpenses,
   hasActiveCostPlan,
+  isInvestorExpense,
   planHasTrades,
 } from './costPlanCore';
 
 export {
   APP_TRADES,
   COST_PLAN_DOC_ID,
+  INVESTOR_TRADE_ID,
   NOT_IN_ESTIMATE_TRADE_ID,
   UNCODED_TRADE_ID,
   canCodeExpenses,
   hasActiveCostPlan,
+  isInvestorExpense,
   planHasTrades,
 };
 export type { AppTradeId } from './costPlanCore';
@@ -53,7 +57,12 @@ export function deriveCostPlanProgress(
     };
   }
 
-  const spent = addCents(...expenses.map((expense) => getExpenseTotalCents(expense)), 0);
+  const spent = addCents(
+    ...expenses
+      .filter((expense) => !isInvestorExpense(expense))
+      .map((expense) => getExpenseTotalCents(expense)),
+    0,
+  );
   const left = cents(target - spent);
   const percent = target > 0 ? (spent / target) * 100 : null;
 
@@ -79,6 +88,25 @@ export function convertGstCents(
     return cents(Math.round((amount * 11) / 10));
   }
   return cents(Math.round((amount * 10) / 11));
+}
+
+/** Add 10% GST onto imported trade amounts and their line items. */
+export function applyGstToPlanSections(
+  sections: CostPlanSection[],
+  addGst: boolean,
+): CostPlanSection[] {
+  if (!addGst) return sections;
+  return sections.map((section) => ({
+    ...section,
+    amountCents: convertGstCents(section.amountCents, 'exclusive', 'inclusive'),
+    lines: section.lines?.map((line) => ({
+      ...line,
+      totalCents: convertGstCents(line.totalCents, 'exclusive', 'inclusive'),
+      unitPriceCents: line.unitPriceCents == null
+        ? line.unitPriceCents
+        : convertGstCents(line.unitPriceCents, 'exclusive', 'inclusive'),
+    })),
+  }));
 }
 
 export function liveQuotes(quotes: CostPlanQuote[] = []): CostPlanQuote[] {
@@ -170,6 +198,7 @@ export function activeTrades(orgTrades: TradeListItem[] = []): TradeListItem[] {
 
 export function tradeNameById(orgTrades: TradeListItem[] = [], tradeId: string): string {
   if (tradeId === NOT_IN_ESTIMATE_TRADE_ID) return 'Not in the estimate';
+  if (tradeId === INVESTOR_TRADE_ID) return 'Investor';
   const match = mergeTradeList(orgTrades).find((trade) => trade.id === tradeId);
   return match?.name || tradeId;
 }
@@ -233,13 +262,13 @@ export function suggestTradeForExpense(
   trades: TradeListItem[] = [],
   codedExpenses: Array<Record<string, unknown>> = [],
 ): TradeListItem | null {
-  if (!expense) return null;
+  if (!expense || isInvestorExpense(expense)) return null;
   const active = (trades || []).filter((trade) => trade && trade.status !== 'archived');
   const supplier = String(expense.supplier || expense.tradeName || expense.provider || '').trim().toLowerCase();
   if (supplier) {
     const prior = (codedExpenses || []).find((row) => {
       const priorId = expenseTradeId(row);
-      if (!priorId || priorId === NOT_IN_ESTIMATE_TRADE_ID) return false;
+      if (!priorId || priorId === NOT_IN_ESTIMATE_TRADE_ID || priorId === INVESTOR_TRADE_ID) return false;
       const priorParty = String(row.supplier || row.tradeName || row.provider || '').trim().toLowerCase();
       return priorParty === supplier;
     });
@@ -258,16 +287,36 @@ export function suggestTradeForExpense(
 export function sectionsFromTradeAmounts(
   amounts: Array<{ tradeId: string; name: string; amountCents: number; code?: string }>,
 ): CostPlanSection[] {
+  return applyTradeAmountEdits([], amounts);
+}
+
+/** Keep imported line items when only the trade totals change. */
+export function applyTradeAmountEdits(
+  existing: CostPlanSection[],
+  amounts: Array<{ tradeId: string; name: string; amountCents: number; code?: string }>,
+): CostPlanSection[] {
+  const byId = new Map(existing.map((section) => [section.tradeId, section]));
   return amounts
     .filter((row) => Number.isInteger(row.amountCents) && row.amountCents > 0)
-    .map((row, index) => ({
-      id: row.tradeId,
-      tradeId: row.tradeId,
-      code: row.code,
-      name: row.name,
-      order: index,
-      amountCents: row.amountCents,
-    }));
+    .map((row, index) => {
+      const current = byId.get(row.tradeId);
+      if (!current) {
+        return {
+          id: row.tradeId,
+          tradeId: row.tradeId,
+          code: row.code,
+          name: row.name,
+          order: index,
+          amountCents: row.amountCents,
+        };
+      }
+      return {
+        ...current,
+        name: row.name,
+        order: index,
+        amountCents: row.amountCents,
+      };
+    });
 }
 
 export function sumSectionAmounts(sections: CostPlanSection[] = []): Cents {
@@ -313,6 +362,7 @@ export type CostPlanBoard = {
   trades: CostPlanTradeRow[];
   uncoded: { count: number; spentCents: Cents; expenses: Array<Record<string, unknown>> };
   extras: { count: number; spentCents: Cents; rows: CostPlanExtraRow[] };
+  investor: { count: number; spentCents: Cents; expenses: Array<Record<string, unknown>> };
 };
 
 function tradeStatus(row: {
@@ -356,11 +406,16 @@ export function deriveCostPlanBoard({
   const spentByTrade = new Map<string, { cents: Cents; count: number }>();
   const uncodedExpenses: Array<Record<string, unknown>> = [];
   const extraExpenses: Array<Record<string, unknown>> = [];
+  const investorExpenses: Array<Record<string, unknown>> = [];
   const sectionIds = new Set(sections.map((section) => section.tradeId));
 
   live.forEach((expense) => {
     const tradeId = expenseTradeId(expense);
     const amount = getExpenseTotalCents(expense);
+    if (isInvestorExpense(expense)) {
+      investorExpenses.push(expense);
+      return;
+    }
     if (!tradeId) {
       uncodedExpenses.push(expense);
       return;
@@ -423,7 +478,7 @@ export function deriveCostPlanBoard({
     const expected = quotedCents != null ? quotedCents : cents(section.amountCents);
     return {
       tradeId: section.tradeId,
-      name: section.name || tradeNameById(names, section.tradeId),
+      name: tradeNameById(names, section.tradeId) || section.name,
       code: section.code,
       order: section.order,
       estimatedCents: cents(section.amountCents),
@@ -465,10 +520,16 @@ export function deriveCostPlanBoard({
 
   const uncodedSpent = addCents(...uncodedExpenses.map((expense) => getExpenseTotalCents(expense)), 0);
   const extrasSpent = addCents(...extraExpenses.map((expense) => getExpenseTotalCents(expense)), 0);
+  const investorSpent = addCents(...investorExpenses.map((expense) => getExpenseTotalCents(expense)), 0);
   const estimated = sections.length > 0 ? sumSectionAmounts(sections) : cents(plan.targetCents);
   const quotedTotal = addCents(...tradeRows.map((row) => row.quotedCents || 0), 0);
   const tradesExpected = addCents(...tradeRows.map((row) => row.expectedCents), 0);
-  const spentTotal = addCents(...live.map((expense) => getExpenseTotalCents(expense)), 0);
+  const spentTotal = addCents(
+    ...live
+      .filter((expense) => !isInvestorExpense(expense))
+      .map((expense) => getExpenseTotalCents(expense)),
+    0,
+  );
   const quotedUnpaid = addCents(
     ...tradeRows.map((row) => (
       row.quotedCents == null ? 0 : Math.max(0, row.quotedCents - row.spentCents)
@@ -496,6 +557,7 @@ export function deriveCostPlanBoard({
       trades: tradeRows.map((row) => ({ ...row, spentCents: cents(0), expenseCount: 0, status: row.quotedCents == null ? 'not-started' : 'quoted' })),
       uncoded: { count: 0, spentCents: cents(0), expenses: [] },
       extras: { count: 0, spentCents: cents(0), rows: [] },
+      investor: { count: 0, spentCents: cents(0), expenses: [] },
     };
   }
 
@@ -519,6 +581,11 @@ export function deriveCostPlanBoard({
       count: extraExpenses.length,
       spentCents: extrasSpent,
       rows: Array.from(extraByTrade.values()),
+    },
+    investor: {
+      count: investorExpenses.length,
+      spentCents: investorSpent,
+      expenses: investorExpenses,
     },
   };
 }

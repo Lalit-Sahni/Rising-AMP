@@ -9,6 +9,7 @@ import { CATEGORY_STYLE } from '../../utils/categoryStyle';
 import { getExpenseFaceTotal, getExpenseTotal, isVoidExpense } from '../../utils/jobMetrics';
 import EmptyState from '../EmptyState';
 import ExpenseTradePicker from '../costPlan/ExpenseTradePicker';
+import ExpenseCategoryPicker from '../costPlan/ExpenseCategoryPicker';
 import { useCostPlan, useTradeList } from '../../hooks/useCostPlan';
 import { activeTrades, canCodeExpenses } from '../../domain/costPlan';
 
@@ -18,7 +19,8 @@ const categoryLabels = {
   equipment: 'Equipment',
   service: 'Service',
   purchase: 'Materials',
-  installation: 'Installation'
+  installation: 'Installation',
+  investor: 'Investor',
 };
 
 export default function HistoryPage() {
@@ -31,6 +33,7 @@ export default function HistoryPage() {
     orgId,
     jobId,
     codeExpenseTrade,
+    codeExpenseCategory,
   } = useApp();
   const planQuery = useCostPlan(orgId, jobId);
   const tradeQuery = useTradeList(orgId);
@@ -112,6 +115,8 @@ export default function HistoryPage() {
         return expense.serviceName || 'Service';
       case 'installation':
         return expense.item || 'Installation';
+      case 'investor':
+        return expense.itemName || expense.serviceName || 'Investor';
       default:
         return expense.category || 'Unknown';
     }
@@ -469,8 +474,16 @@ export default function HistoryPage() {
                         <td className="px-4 py-4 text-slate-600 font-mono text-xs">
                           {formatDate(getExpenseDate(expense))}
                         </td>
-                        <td className="px-4 py-4">
-                          <CategoryChip category={expense.category} />
+                        <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
+                          {showRecentlyDeleted ? (
+                            <CategoryChip category={expense.category} />
+                          ) : (
+                            <ExpenseCategoryPicker
+                              expense={expense}
+                              compact
+                              onChange={(category) => codeExpenseCategory(expense.id, category)}
+                            />
+                          )}
                         </td>
                         <td className="px-4 py-4 font-medium text-ink">
                           <div>
@@ -494,6 +507,7 @@ export default function HistoryPage() {
                               expenses={expenses}
                               trades={trades}
                               compact
+                              disabled={String(expense.category || '').toLowerCase() === 'investor'}
                               onCode={(tradeId) => codeExpenseTrade(expense.id, tradeId)}
                             />
                           </td>
@@ -693,6 +707,19 @@ export default function HistoryPage() {
                                         <div className="flex justify-between">
                                           <span className="text-slate-600">Cost:</span>
                                           <span className="text-ink">${expense.cost || 'N/A'}</span>
+                                        </div>
+                                      </>
+                                    )}
+
+                                    {expense.category === 'investor' && (
+                                      <>
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-600">What it is:</span>
+                                          <span className="text-ink">{expense.itemName || 'N/A'}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-600">Amount:</span>
+                                          <span className="text-ink">${expense.amount || expense.total || 'N/A'}</span>
                                         </div>
                                       </>
                                     )}

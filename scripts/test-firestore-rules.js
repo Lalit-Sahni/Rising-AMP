@@ -302,6 +302,19 @@ async function main() {
     };
     await assertSucceeds(owner.firestore().doc(quotePath).set(validQuote));
     await assertSucceeds(owner.firestore().doc(quotePath).update({
+      fileIds: ['fileAbc123', 'fileDef456'],
+      fileId: 'fileAbc123',
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(quotePath).update({
+      fileId: 'x'.repeat(81),
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(quotePath).update({
+      fileIds: Array.from({ length: 11 }, (_, index) => `file${index}`),
+      updatedAt: new Date(),
+    }));
+    await assertSucceeds(owner.firestore().doc(quotePath).update({
       status: 'chosen',
       updatedAt: new Date(),
     }));

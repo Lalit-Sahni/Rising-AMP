@@ -1,6 +1,7 @@
 /**
  * Production functions are sendJobInviteEmail, readReceiptImage and
- * allocateInvoiceNumber. Deploy by name:
+ * allocateInvoiceNumber. Deploy by name. checkEstimateImport is in this
+ * file but is not live until Lalit names that function:
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
  *   firebase deploy --project production --only functions:sendJobInviteEmail
@@ -8,6 +9,8 @@
  *   firebase deploy --project production --only functions:readReceiptImage
  *   firebase deploy --project rising-amp-staging --only functions:allocateInvoiceNumber
  *   firebase deploy --project production --only functions:allocateInvoiceNumber
+ *   firebase deploy --project rising-amp-staging --only functions:checkEstimateImport
+ *   firebase deploy --project production --only functions:checkEstimateImport
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):
  *   RESEND_API_KEY, OPENAI_API_KEY
@@ -26,6 +29,11 @@ const {
 const FAMILY_ORG_ID = 'opal-ss-constructions';
 const FROM = 'RisingAMP <invites@risingamp.com.au>';
 const { RECEIPT_PROMPT } = require('./lib/receiptPrompt');
+const {
+  ESTIMATE_CHECK_PROMPT,
+  parseEstimateCheckContent,
+  sanitizeEstimateCheckInput,
+} = require('./lib/estimateCheck');
 const resendApiKey = defineSecret('RESEND_API_KEY');
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
@@ -257,6 +265,86 @@ exports.readReceiptImage = onCall(
     }
 
     return { content };
+  }
+);
+
+exports.checkEstimateImport = onCall(
+  {
+    region: 'us-central1',
+    secrets: [openaiApiKey],
+    cors: true,
+    maxInstances: 10,
+    timeoutSeconds: 45,
+    memory: '256MiB',
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'Sign in to check an estimate.');
+    }
+    const callerEmail = normalizeEmail(request.auth.token && request.auth.token.email);
+    if (!callerEmail) {
+      throw new HttpsError('unauthenticated', 'Sign in to check an estimate.');
+    }
+
+    const db = admin.firestore();
+    const orgSnap = await db.collection('organizations').doc(FAMILY_ORG_ID).get();
+    if (!orgSnap.exists) {
+      throw new HttpsError('not-found', 'Organisation is not set up.');
+    }
+    const org = orgSnap.data() || {};
+    if (!isEmailOnList(org.invitedEmails || [], callerEmail)) {
+      throw new HttpsError('permission-denied', 'You are not on this organisation.');
+    }
+
+    const apiKey = openaiApiKey.value();
+    if (!apiKey) {
+      throw new HttpsError('failed-precondition', 'OpenAI is not configured.');
+    }
+
+    const payload = sanitizeEstimateCheckInput(request.data);
+    if (!payload.sections.length) {
+      throw new HttpsError('invalid-argument', 'Map the sections before asking AI to check.');
+    }
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: ESTIMATE_CHECK_PROMPT },
+          { role: 'user', content: JSON.stringify(payload) },
+        ],
+        max_tokens: 800,
+        temperature: 0,
+      }),
+    });
+
+    if (!response.ok) {
+      const details = await response.text();
+      console.error('OpenAI estimate check failed', response.status, details.slice(0, 500));
+      throw new HttpsError('internal', 'Could not run the AI check.');
+    }
+
+    const body = await response.json().catch(() => ({}));
+    const content =
+      body &&
+      body.choices &&
+      body.choices[0] &&
+      body.choices[0].message &&
+      body.choices[0].message.content;
+    if (!content) {
+      throw new HttpsError('internal', 'OpenAI returned an empty check.');
+    }
+
+    try {
+      return parseEstimateCheckContent(content);
+    } catch (error) {
+      throw new HttpsError('internal', 'The AI check did not return a usable result.');
+    }
   }
 );
 

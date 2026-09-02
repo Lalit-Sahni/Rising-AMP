@@ -1,10 +1,12 @@
 import {
+  bestFileTotalCheck,
   checkAgainstFileTotals,
   classifyBoqRow,
   findHeaderRowIndex,
   guessColumnMapStrict,
   matchTradeForSection,
   readBoqLayout,
+  suggestAddGst,
 } from './boqLayout';
 import {
   applyColumnMap,
@@ -225,10 +227,56 @@ describe('the file has to corroborate the total before anything is saved', () =>
     expect(check.matchedLabel).toBe('Construction cost');
   });
 
+  test('uses the file section total when the lines include that total again', () => {
+    const csv = [
+      '1.000,Site Works,,,,',
+      'Item Code,Description,Qty,Unit,Price,Total',
+      '1.001,Fence,1.00,LS,100.00,100.00',
+      '1.002,Total for site,1.00,LS,100.00,100.00',
+      ',,,,Total,100.00',
+      ',,,,Construction Cost,100.00',
+    ].join('\n');
+    const rows = parseDelimitedText(csv);
+    const headerRowIndex = findHeaderRowIndex(rows);
+    const layout = readBoqLayout(rows, guessColumnMapStrict(rows[headerRowIndex]), headerRowIndex);
+    expect(layout.sections).toHaveLength(1);
+    expect(layout.sections[0].amountCents).toBe(10000);
+    expect(layout.warnings.some((warning) => warning.includes("Using the file's total"))).toBe(true);
+  });
+
+  test('a Total in the description is a section total, not a line', () => {
+    const header = ['Item Code', 'Description', 'Qty', 'Unit', 'Price', 'Total'];
+    const map = guessColumnMapStrict(header);
+    expect(classifyBoqRow(['', 'Total Site Works', '', '', '', '100.00'], map, header)).toBe('sectionTotal');
+  });
+
+  test('an edited total that equals Sum including is corroborated even if the unread layout is not', () => {
+    const grandTotals = [
+      { label: 'Construction Cost', amountCents: 32_191_629 as never },
+      { label: 'Sum including', amountCents: 35_410_792 as never },
+    ];
+    const unread = 66_776_421;
+    expect(checkAgainstFileTotals(unread, grandTotals).corroborated).toBe(false);
+    const check = bestFileTotalCheck([unread, 35_410_792], grandTotals);
+    expect(check.corroborated).toBe(true);
+    expect(check.matchedLabel).toBe('Sum including');
+  });
+
   test('a file that states nothing is not blocked, there is just nothing to check', () => {
     const check = checkAgainstFileTotals(9520327, []);
     expect(check.statedCount).toBe(0);
     expect(check.corroborated).toBe(false);
+  });
+
+  test('suggests Add GST when the file states construction cost and that figure plus 10 percent', () => {
+    expect(suggestAddGst(32_191_629, [
+      { label: 'Construction Cost', amountCents: 32_191_629 as never },
+      { label: 'GST', amountCents: 3_219_163 as never },
+      { label: 'Sum including', amountCents: 35_410_792 as never },
+    ])).toBe(true);
+    expect(suggestAddGst(35_410_792, [
+      { label: 'Sum including', amountCents: 35_410_792 as never },
+    ])).toBe(false);
   });
 });
 

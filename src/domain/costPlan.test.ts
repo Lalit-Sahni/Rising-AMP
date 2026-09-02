@@ -1,15 +1,19 @@
 import {
   APP_TRADES,
+  INVESTOR_TRADE_ID,
   NOT_IN_ESTIMATE_TRADE_ID,
   allocationsCoverTotal,
   canCodeExpenses,
+  applyGstToPlanSections,
   convertGstCents,
   deriveCostPlanAttention,
   deriveCostPlanBoard,
   deriveCostPlanProgress,
   hasActiveCostPlan,
+  mergeTradeList,
   quoteForecastCents,
   quotesForTrade,
+  applyTradeAmountEdits,
   sectionsFromTradeAmounts,
   suggestTradeForExpense,
   sumSectionAmounts,
@@ -72,6 +76,24 @@ describe('cost plan model', () => {
     expect(sections).toHaveLength(1);
     expect(sumSectionAmounts(sections)).toBe(50000);
     expect(costPlanSchema.parse({ ...samplePlan, level: 'trades', sections }).sections[0].tradeId).toBe('plumbing');
+  });
+
+  test('editing trade amounts on an imported plan keeps the line items', () => {
+    const existing = [
+      {
+        id: 'concreting',
+        tradeId: 'concreting',
+        name: 'Concreting',
+        order: 0,
+        amountCents: 4_111_000,
+        lines: [{ description: 'Slab', totalCents: 4_111_000 }],
+      },
+    ];
+    const sections = applyTradeAmountEdits(existing, [
+      { tradeId: 'concreting', name: 'Concreting', amountCents: 4_000_000 },
+    ]);
+    expect(sections[0].amountCents).toBe(4_000_000);
+    expect(sections[0].lines).toEqual([{ description: 'Slab', totalCents: 4_111_000 }]);
   });
 });
 
@@ -193,6 +215,22 @@ describe('quotes and coding', () => {
     expect(convertGstCents(4345000, 'inclusive', 'exclusive')).toBe(3950000);
   });
 
+  test('adding GST lifts trade amounts and line items by 10 percent', () => {
+    const sections = applyGstToPlanSections([
+      {
+        id: 'concreting',
+        tradeId: 'concreting',
+        name: 'Concreting',
+        order: 0,
+        amountCents: 32191629,
+        lines: [{ description: 'Slab', totalCents: 2432291, unitPriceCents: 14545 }],
+      },
+    ], true);
+    expect(sections[0].amountCents).toBe(35410792);
+    expect(sections[0].lines?.[0].totalCents).toBe(2675520);
+    expect(applyGstToPlanSections(sections, false)[0].amountCents).toBe(35410792);
+  });
+
   test('suggestions come from a prior supplier or a matching trade name, never silently', () => {
     const trades = APP_TRADES.map((trade, index) => ({
       id: trade.id,
@@ -242,6 +280,33 @@ describe('quotes and coding', () => {
     expect(board.uncoded.spentCents).toBe(25000);
     expect(board.extras.count).toBe(1);
     expect(board.expectedCents).toBe(3_000_000 + 2_181_300 + 1_142_500 + 25000 + 8000);
+  });
+
+  test('investor costs stay out of uncoded, spent and the forecast', () => {
+    const board = deriveCostPlanBoard({
+      plan: tradesPlan,
+      expenses: [
+        { id: 'e1', tradeId: 'concreting', total: 1000 },
+        { id: 'land', category: 'investor', itemName: 'Land deposit', total: 50000 },
+        { id: 'legal', tradeId: INVESTOR_TRADE_ID, itemName: 'Solicitor identity', total: 2200 },
+      ],
+    });
+    expect(board.uncoded.count).toBe(0);
+    expect(board.investor.count).toBe(2);
+    expect(board.investor.spentCents).toBe(5_220_000);
+    expect(board.spentCents).toBe(100_000);
+    expect(board.expectedCents).toBe(4_111_000 + 2_181_300 + 1_142_500);
+    expect(deriveCostPlanProgress(34_000_000, [
+      { total: 1000, tradeId: 'concreting' },
+      { total: 50000, category: 'investor' },
+    ]).spentCents).toBe(100_000);
+  });
+
+  test('an org rename of Other is the name Cost Plan shows', () => {
+    const names = mergeTradeList([
+      { id: 'other', name: 'Internal works and materials', order: 19, isAppDefault: true, status: 'active' },
+    ]);
+    expect(names.find((trade) => trade.id === 'other')?.name).toBe('Internal works and materials');
   });
 
   test('kitchen quoted well over plan is Over even with no spend', () => {

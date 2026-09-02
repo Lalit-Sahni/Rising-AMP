@@ -31,6 +31,11 @@ export const CATEGORY_COLORS = {
     primary: '#EF4444',      // Red
     light: '#FEE2E2',        // Light red
     dark: '#DC2626'          // Dark red
+  },
+  investor: {
+    primary: '#6B5B95',
+    light: '#F3F0F8',
+    dark: '#4F4370'
   }
 };
 

@@ -1,26 +1,35 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { formatCents } from '../../money';
+import { formatCents, fromCents } from '../../money';
 import { todayYmd } from '../../dates';
 import {
   IMPORT_COLUMNS,
+  applySectionAmountEdits,
   buildImportedSections,
   guessTradeIdForSection,
   isEstimateSpreadsheetFile,
   parseSpreadsheetFile,
   reconcileImportedPlan,
+  sectionAmountsWereEdited,
   type ColumnMap,
   type ImportColumn,
 } from '../../domain/costPlanImport';
 import {
-  checkAgainstFileTotals,
+  bestFileTotalCheck,
   findHeaderRowIndex,
   guessColumnMapStrict,
   matchTradeForSection,
   readBoqLayout,
+  suggestAddGst,
 } from '../../domain/boqLayout';
-import { activeTrades } from '../../domain/costPlan';
+import {
+  activeTrades,
+  applyGstToPlanSections,
+  sumSectionAmounts,
+} from '../../domain/costPlan';
+import { buildEstimateCheckPayload } from '../../domain/estimateCheck';
+import type { EstimateCheckResult } from '../../domain/estimateCheck';
 import { queryKeys } from '../../query/client';
 import type { CostPlan, TradeListItem } from '../../domain/schemas';
 
@@ -67,6 +76,14 @@ export default function ImportEstimateSheet({
   const [headerRowIndex, setHeaderRowIndex] = useState(0);
   const [columnMap, setColumnMap] = useState<ColumnMap>({});
   const [tradeBySection, setTradeBySection] = useState<Record<string, string>>({});
+  const [amountBySection, setAmountBySection] = useState<Record<string, string>>({});
+  const [addGst, setAddGst] = useState(false);
+  const [addGstTouched, setAddGstTouched] = useState(false);
+  const [saveAnyway, setSaveAnyway] = useState(false);
+  const [aiCheck, setAiCheck] = useState<EstimateCheckResult | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiNote, setAiNote] = useState('');
+  const [aiUnavailable, setAiUnavailable] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [updateTarget, setUpdateTarget] = useState(!plan);
@@ -79,6 +96,14 @@ export default function ImportEstimateSheet({
     setHeaderRowIndex(0);
     setColumnMap({});
     setTradeBySection({});
+    setAmountBySection({});
+    setAddGst(false);
+    setAddGstTouched(false);
+    setSaveAnyway(false);
+    setAiCheck(null);
+    setAiBusy(false);
+    setAiNote('');
+    setAiUnavailable(false);
     setError('');
     setUpdateTarget(!plan);
   }, [open, plan]);
@@ -90,6 +115,15 @@ export default function ImportEstimateSheet({
     [rows, columnMap, headerRowIndex],
   );
   const sections = layout.sections;
+  const editedSections = useMemo(
+    () => applySectionAmountEdits(sections, amountBySection),
+    [sections, amountBySection],
+  );
+  const amountsEdited = sectionAmountsWereEdited(sections, amountBySection);
+  const layoutTotalCents = useMemo(
+    () => sections.reduce((sum, section) => sum + section.amountCents, 0),
+    [sections],
+  );
   const warnings = layout.warnings;
   const grandTotals = layout.grandTotals;
   const names = useMemo(() => {
@@ -99,20 +133,34 @@ export default function ImportEstimateSheet({
     });
     return out;
   }, [list]);
+  const importedExGst = useMemo(
+    () => buildImportedSections(editedSections, tradeBySection, names),
+    [editedSections, tradeBySection, names],
+  );
   const imported = useMemo(
-    () => buildImportedSections(sections, tradeBySection, names),
-    [sections, tradeBySection, names],
+    () => applyGstToPlanSections(importedExGst, addGst),
+    [importedExGst, addGst],
   );
   const targetCents = plan && !updateTarget ? plan.targetCents : null;
   const reconcile = reconcileImportedPlan(imported, targetCents);
+  const exTotalCents = sumSectionAmounts(importedExGst);
+  const gstCents = addGst ? Math.max(0, reconcile.totalCents - exTotalCents) : 0;
+  const savedTotalCents = addGst ? reconcile.totalCents : exTotalCents;
   const fileCheck = useMemo(
-    () => checkAgainstFileTotals(reconcile.totalCents, grandTotals),
-    [reconcile.totalCents, grandTotals],
+    () => bestFileTotalCheck(
+      [layoutTotalCents, exTotalCents, reconcile.totalCents],
+      grandTotals,
+    ),
+    [layoutTotalCents, exTotalCents, reconcile.totalCents, grandTotals],
   );
-  const blockedByFile = sections.length > 0
+  const fileMismatch = sections.length > 0
     && fileCheck.statedCount > 0
     && !fileCheck.corroborated;
+  const blockedByFile = fileMismatch && !amountsEdited && !saveAnyway;
   const matchedCount = sections.filter((section) => tradeBySection[section.key]).length;
+  const fileMismatchMessage = fileCheck.nearest
+    ? `These sections add to ${formatCents(savedTotalCents)}, which is not a figure this file states. The closest is ${fileCheck.nearest.label} at ${formatCents(fileCheck.nearest.amountCents)}. Check the header row before saving.`
+    : `These sections add to ${formatCents(savedTotalCents)}, which is not a figure this file states.`;
 
   useEffect(() => {
     if (!open) return undefined;
@@ -125,6 +173,21 @@ export default function ImportEstimateSheet({
 
   useEffect(() => {
     if (sections.length === 0) return;
+    setAmountBySection((current) => {
+      const next: Record<string, string> = {};
+      sections.forEach((section) => {
+        next[section.key] = current[section.key] ?? fromCents(section.amountCents).toFixed(2);
+      });
+      const currentKeys = Object.keys(current);
+      const nextKeys = Object.keys(next);
+      if (
+        currentKeys.length === nextKeys.length
+        && nextKeys.every((key) => current[key] === next[key])
+      ) {
+        return current;
+      }
+      return next;
+    });
     setTradeBySection((current) => {
       const next: Record<string, string> = {};
       sections.forEach((section) => {
@@ -148,6 +211,95 @@ export default function ImportEstimateSheet({
     });
   }, [sections, allowedTradeIds]);
 
+  useEffect(() => {
+    if (addGstTouched || sections.length === 0) return;
+    setAddGst(suggestAddGst(layoutTotalCents, grandTotals));
+  }, [addGstTouched, sections.length, layoutTotalCents, grandTotals]);
+
+  const runAiCheck = useCallback(async () => {
+    if (imported.length === 0 || matchedCount !== sections.length || blockedByFile) return;
+    setAiBusy(true);
+    setAiNote('');
+    try {
+      const {
+        checkEstimateImport,
+        friendlyEstimateCheckError,
+        isEstimateCheckUnavailable,
+      } = await import('../../firebase/checkEstimate');
+      const payload = buildEstimateCheckPayload({
+        fileName: file?.name || 'Spreadsheet',
+        headerRow: headers,
+        rows,
+        headerRowIndex,
+        grandTotals,
+        layoutTotalCents,
+        addGst,
+        planTotalCents: reconcile.totalCents,
+        sections: imported.map((section) => ({
+          name: section.name,
+          code: section.code,
+          amountCents: section.amountCents,
+          tradeName: names[section.tradeId] || section.name,
+          lines: section.lines,
+        })),
+      });
+      const result = await checkEstimateImport(payload);
+      setAiCheck(result);
+      setAiNote('');
+    } catch (err) {
+      const {
+        friendlyEstimateCheckError,
+        isEstimateCheckUnavailable,
+      } = await import('../../firebase/checkEstimate');
+      if (isEstimateCheckUnavailable(err)) {
+        setAiUnavailable(true);
+        setAiCheck(null);
+      } else {
+        setAiCheck(null);
+      }
+      setAiNote(friendlyEstimateCheckError(err));
+    } finally {
+      setAiBusy(false);
+    }
+  }, [
+    addGst,
+    blockedByFile,
+    file,
+    grandTotals,
+    headerRowIndex,
+    headers,
+    imported,
+    layoutTotalCents,
+    matchedCount,
+    names,
+    reconcile.totalCents,
+    rows,
+    sections.length,
+  ]);
+
+  const checkKey = `${file?.name || ''}|${sheetIndex}|${headerRowIndex}|${addGst}|${reconcile.totalCents}|${matchedCount}`;
+  const lastCheckKey = useRef('');
+  useEffect(() => {
+    if (!open || aiUnavailable || busy) return undefined;
+    if (imported.length === 0 || matchedCount !== sections.length || blockedByFile) return undefined;
+    if (lastCheckKey.current === checkKey) return undefined;
+    const handle = window.setTimeout(() => {
+      lastCheckKey.current = checkKey;
+      void runAiCheck();
+    }, 1000);
+    return () => window.clearTimeout(handle);
+  }, [
+    aiUnavailable,
+    blockedByFile,
+    busy,
+    checkKey,
+    imported.length,
+    matchedCount,
+    open,
+    runAiCheck,
+    sections.length,
+  ]);
+
   if (!open) return null;
 
   const applyHeaderRow = (nextSheets: Array<{ sheetName: string; rows: string[][] }>, nextSheetIndex: number) => {
@@ -156,6 +308,10 @@ export default function ImportEstimateSheet({
     setHeaderRowIndex(nextHeaderRow);
     setColumnMap(guessColumnMapStrict(sheetRows[nextHeaderRow] || []));
     setTradeBySection({});
+    setAmountBySection({});
+    setAddGstTouched(false);
+    setSaveAnyway(false);
+    setAiCheck(null);
   };
 
   const handleFile = async (next: File | null) => {
@@ -165,6 +321,10 @@ export default function ImportEstimateSheet({
     setHeaderRowIndex(0);
     setColumnMap({});
     setTradeBySection({});
+    setAmountBySection({});
+    setAddGstTouched(false);
+    setSaveAnyway(false);
+    setAiCheck(null);
     setError('');
     if (!next) return;
 
@@ -199,11 +359,7 @@ export default function ImportEstimateSheet({
       return;
     }
     if (blockedByFile) {
-      setError(
-        `These sections add to ${formatCents(reconcile.totalCents)}, which is not a figure this file states. `
-        + `The closest is ${fileCheck.nearest?.label} at ${formatCents(fileCheck.nearest?.amountCents || 0)}. `
-        + 'Check the header row and the column mapping, or break the plan into trades by hand instead.',
-      );
+      setError(`${fileMismatchMessage} Tick Save these figures anyway if this is the plan you want.`);
       return;
     }
     if (!reconcile.ok) {
@@ -231,11 +387,13 @@ export default function ImportEstimateSheet({
         throw new Error(uploaded.error || 'Could not keep the file in Files.');
       }
       const nextTarget = targetCents == null ? reconcile.totalCents : plan?.targetCents || reconcile.totalCents;
+      const gstMode = addGst || !suggestAddGst(layoutTotalCents, grandTotals) ? 'inclusive' : 'exclusive';
       if (!plan) {
         await saveCostPlanTarget(jobId, {
           targetCents: nextTarget,
           baselineDate: todayYmd(),
           createdBy: userId,
+          gstMode,
         });
       }
       const saved = await saveCostPlanTrades(jobId, {
@@ -243,6 +401,7 @@ export default function ImportEstimateSheet({
         targetCents: nextTarget,
         sourceFileId: uploaded.file.id,
         level: 'imported',
+        gstMode,
       });
       queryClient.setQueryData(queryKeys.costPlan(orgId, jobId), saved);
       showToast('Estimate imported.', 'success');
@@ -261,7 +420,7 @@ export default function ImportEstimateSheet({
           <div>
             <h2 className="text-[16px] font-extrabold">Import a bill of quantities</h2>
             <p className="text-[12.5px] text-slate-600 mt-0.5">
-              Excel or CSV is mapped for you. Nothing is saved until the sections add up to a figure the file itself states.
+              Excel or CSV is mapped for you. Change a figure if a row is wrong. You can save the figures you type.
             </p>
           </div>
           <button type="button" onClick={onClose} className="w-11 h-11 grid place-items-center rounded-ot-sm text-slate-500 hover:bg-canvas" aria-label="Close">
@@ -308,6 +467,7 @@ export default function ImportEstimateSheet({
                     setHeaderRowIndex(nextIndex);
                     setColumnMap(guessColumnMapStrict(rows[nextIndex] || []));
                     setTradeBySection({});
+                    setAmountBySection({});
                   }}
                   className="mt-1 w-full px-2 py-2 rounded-ot-sm border border-hairline text-[13px]"
                 >
@@ -337,7 +497,10 @@ export default function ImportEstimateSheet({
                     <span className="block truncate mb-1">{header || `Column ${index + 1}`}</span>
                     <select
                       value={columnMap[index] || 'ignore'}
-                      onChange={(event) => setColumnMap((current) => ({ ...current, [index]: event.target.value as ImportColumn }))}
+                      onChange={(event) => {
+                        setColumnMap((current) => ({ ...current, [index]: event.target.value as ImportColumn }));
+                        setAmountBySection({});
+                      }}
                       className="w-full px-2 py-1.5 rounded-ot-sm border border-hairline text-[12.5px]"
                     >
                       {IMPORT_COLUMNS.map((column) => (
@@ -354,15 +517,23 @@ export default function ImportEstimateSheet({
               <div className="text-[12.5px] font-semibold mb-2">Map sections to trades</div>
               <div className="space-y-2">
                 {sections.map((section) => (
-                  <div key={section.key} className="flex items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-medium truncate">{section.name}</div>
-                      <div className="text-[11px] text-slate-500 tabular">{formatCents(section.amountCents)}</div>
-                    </div>
+                  <div key={section.key} className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                    <div className="flex-1 min-w-[8rem] text-[13px] font-medium truncate">{section.name}</div>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      aria-label={`${section.name} amount`}
+                      value={amountBySection[section.key] ?? fromCents(section.amountCents).toFixed(2)}
+                      onChange={(event) => setAmountBySection((current) => ({
+                        ...current,
+                        [section.key]: event.target.value,
+                      }))}
+                      className="w-[7.5rem] px-2 py-1.5 rounded-ot-sm border border-hairline text-right tabular text-[13px]"
+                    />
                     <select
                       value={tradeBySection[section.key] || ''}
                       onChange={(event) => setTradeBySection((current) => ({ ...current, [section.key]: event.target.value }))}
-                      className="w-[180px] px-2 py-1.5 rounded-ot-sm border border-hairline text-[12.5px]"
+                      className="w-full sm:w-[11rem] px-2 py-1.5 rounded-ot-sm border border-hairline text-[12.5px]"
                     >
                       <option value="">Choose a trade</option>
                       {list.map((trade) => (
@@ -377,18 +548,58 @@ export default function ImportEstimateSheet({
           {rows.length > 0 ? warnings.map((warning) => (
             <p key={warning} className="text-[12px] text-warn">{warning}</p>
           )) : null}
-          {blockedByFile ? (
-            <p className="text-[12.5px] text-neg" role="alert">
-              These sections add to {formatCents(reconcile.totalCents)}, which is not a figure this file states.
-              The closest is {fileCheck.nearest?.label} at {formatCents(fileCheck.nearest?.amountCents || 0)}.
-              Check the header row before saving.
-            </p>
+          {fileMismatch ? (
+            <div className="space-y-2">
+              <p className="text-[12.5px] text-neg" role="alert">
+                {fileMismatchMessage}
+              </p>
+              {!amountsEdited ? (
+                <label className="flex items-start gap-2 text-[12.5px] text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={saveAnyway}
+                    onChange={(event) => setSaveAnyway(event.target.checked)}
+                    className="mt-0.5"
+                  />
+                  Save these figures anyway
+                </label>
+              ) : null}
+            </div>
           ) : null}
           {imported.length > 0 ? (
-            <div className="text-[13px] flex items-center justify-between">
-              <span className="text-slate-600">Imported total</span>
-              <span className="tabular font-bold">{formatCents(reconcile.totalCents)}</span>
+            <div className="space-y-2">
+              <div className="text-[13px] flex items-center justify-between">
+                <span className="text-slate-600">{amountsEdited ? 'Your total' : 'Imported total'}</span>
+                <span className="tabular font-bold">{formatCents(exTotalCents)}</span>
+              </div>
+              <label className="flex items-start gap-2 text-[12.5px] text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={addGst}
+                  onChange={(event) => {
+                    setAddGstTouched(true);
+                    setAddGst(event.target.checked);
+                  }}
+                  className="mt-0.5"
+                />
+                <span>
+                  Add GST (10%)
+                  {addGst ? ` · ${formatCents(gstCents)}` : '. Tick this when the spreadsheet is ex GST.'}
+                </span>
+              </label>
+              {addGst ? (
+                <div className="text-[13px] flex items-center justify-between">
+                  <span className="text-slate-600">With GST</span>
+                  <span className="tabular font-bold">{formatCents(reconcile.totalCents)}</span>
+                </div>
+              ) : null}
             </div>
+          ) : null}
+          {amountsEdited && layoutTotalCents > 0 ? (
+            <p className="text-[12.5px] text-slate-600">
+              You changed the figures. The plan will save {formatCents(reconcile.totalCents)} instead of the file&rsquo;s {formatCents(layoutTotalCents)}
+              {addGst ? ' plus GST' : ''}.
+            </p>
           ) : null}
           {imported.length > 0 && plan && reconcile.totalCents !== plan.targetCents ? (
             <label className="flex items-start gap-2 text-[12.5px] text-slate-600">
@@ -396,9 +607,34 @@ export default function ImportEstimateSheet({
               Use the imported total as the new target. It currently does not match {formatCents(plan.targetCents)}.
             </label>
           ) : null}
+          {aiBusy ? (
+            <p className="text-[12.5px] text-slate-600">AI is checking the mapping…</p>
+          ) : null}
+          {aiCheck ? (
+            <div className={`rounded-ot-sm border px-3 py-2 text-[12.5px] ${aiCheck.ok ? 'border-hairline bg-canvas text-slate-600' : 'border-[#D8A15A] bg-[#FBF6EE] text-slate-700'}`}>
+              <p className="font-semibold text-ink">{aiCheck.ok ? 'AI check' : 'AI wants a look'}</p>
+              <p className="mt-0.5">{aiCheck.summary}</p>
+              {aiCheck.warnings.length > 0 ? (
+                <ul className="mt-1 list-disc pl-4 space-y-0.5">
+                  {aiCheck.warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+          {aiNote ? <p className="text-[12.5px] text-slate-600">{aiNote}</p> : null}
           {error ? <p className="text-[12.5px] text-neg">{error}</p> : null}
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="px-3 py-2 text-[13px] text-slate-600">Cancel</button>
+            <button
+              type="button"
+              onClick={() => void runAiCheck()}
+              disabled={busy || aiBusy || blockedByFile || imported.length === 0 || matchedCount !== sections.length || aiUnavailable}
+              className="px-3 py-2 text-[13px] font-bold text-accent disabled:opacity-50"
+            >
+              {aiBusy ? 'Checking…' : 'Check this'}
+            </button>
             <button
               type="submit"
               disabled={busy || blockedByFile || sections.length === 0}

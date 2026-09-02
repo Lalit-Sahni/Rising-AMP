@@ -10,6 +10,13 @@ import {
   type UpdateData,
 } from 'firebase/firestore';
 import { allocationsCoverTotal } from '../domain/costPlan';
+import {
+  addQuoteFileIds,
+  liveQuoteFileTargets,
+  quoteFileIds,
+  quoteFilePayload,
+  removeQuoteFileId,
+} from '../domain/quoteFiles';
 import { costPlanQuoteSchema, parseAtBoundary, type CostPlanQuote } from '../domain/schemas';
 import { db } from './config';
 import { getActiveOrgId } from './tenancy';
@@ -24,6 +31,7 @@ type QuoteWrite = {
   gstMode: 'inclusive' | 'exclusive';
   note?: string;
   fileId?: string | null;
+  fileIds?: string[];
   allocations: Array<{ tradeId: string; amountCents: number }>;
   createdBy: string;
 };
@@ -88,6 +96,7 @@ async function demoteOverlappingChosen(
 
 export async function saveQuote(jobId: string, input: QuoteWrite, quoteId?: string): Promise<CostPlanQuote> {
   const now = new Date();
+  const files = quoteFilePayload(input.fileIds || (input.fileId ? [input.fileId] : []));
   const candidate = {
     id: quoteId || 'new',
     jobId,
@@ -99,7 +108,8 @@ export async function saveQuote(jobId: string, input: QuoteWrite, quoteId?: stri
     amountHighCents: input.amountHighCents ?? null,
     gstMode: input.gstMode,
     note: input.note,
-    fileId: input.fileId ?? null,
+    fileId: files.fileId,
+    fileIds: files.fileIds,
     allocations: input.allocations,
     createdBy: input.createdBy,
     createdAt: now,
@@ -122,7 +132,8 @@ export async function saveQuote(jobId: string, input: QuoteWrite, quoteId?: stri
     amountHighCents: parsed.data.amountHighCents ?? null,
     gstMode: parsed.data.gstMode,
     note: parsed.data.note || null,
-    fileId: parsed.data.fileId ?? null,
+    fileId: files.fileId,
+    fileIds: files.fileIds,
     allocations: parsed.data.allocations,
     createdBy: parsed.data.createdBy,
     updatedAt: serverTimestamp(),
@@ -143,6 +154,9 @@ export async function saveQuote(jobId: string, input: QuoteWrite, quoteId?: stri
   if (parsed.data.status === 'chosen' && id) {
     await demoteOverlappingChosen(jobId, id, parsed.data.allocations);
   }
+  if (id && files.fileIds.length > 0) {
+    await exclusiveQuoteFiles(jobId, id, files.fileIds);
+  }
 
   return { ...parsed.data, id };
 }
@@ -153,4 +167,95 @@ export async function voidQuote(jobId: string, quoteId: string): Promise<void> {
     voidedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+}
+
+function applyFilePayload(
+  batch: ReturnType<typeof writeBatch>,
+  jobId: string,
+  quoteId: string,
+  ids: string[],
+) {
+  const payload = quoteFilePayload(ids);
+  batch.update(quoteRef(jobId, quoteId), {
+    fileId: payload.fileId,
+    fileIds: payload.fileIds,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+async function exclusiveQuoteFiles(jobId: string, ownerQuoteId: string, ids: string[]) {
+  const moving = new Set(ids);
+  if (moving.size === 0) return;
+  const quotes = await fetchQuotes(jobId);
+  const batch = writeBatch(db);
+  let writes = 0;
+  liveQuoteFileTargets(quotes).forEach((quote) => {
+    if (!quote.id || quote.id === ownerQuoteId) return;
+    const current = quoteFileIds(quote);
+    const next = current.filter((id) => !moving.has(id));
+    if (next.length === current.length) return;
+    applyFilePayload(batch, jobId, quote.id, next);
+    writes += 1;
+  });
+  if (writes > 0) await batch.commit();
+}
+
+/** Pointers only. Bytes stay in Files. A file sits on one live quote. */
+export async function assignFilesToQuote(
+  jobId: string,
+  quoteId: string,
+  fileIdsToAdd: string[],
+): Promise<void> {
+  if (!jobId) throw new Error('Missing job');
+  if (!quoteId) throw new Error('Missing quote');
+  const incoming = uniqueIncoming(fileIdsToAdd);
+  if (incoming.length === 0) return;
+  const quotes = await fetchQuotes(jobId);
+  const target = quotes.find((quote) => quote.id === quoteId);
+  if (!target || target.status === 'void') throw new Error('Choose a live quote.');
+  const added = addQuoteFileIds(quoteFileIds(target), incoming);
+  if (!added.ok) throw new Error(added.error);
+  const batch = writeBatch(db);
+  const moving = new Set(incoming);
+  liveQuoteFileTargets(quotes).forEach((quote) => {
+    if (!quote.id) return;
+    if (quote.id === quoteId) {
+      applyFilePayload(batch, jobId, quote.id, added.ids);
+      return;
+    }
+    const current = quoteFileIds(quote);
+    const next = current.filter((id) => !moving.has(id));
+    if (next.length === current.length) return;
+    applyFilePayload(batch, jobId, quote.id, next);
+  });
+  await batch.commit();
+}
+
+export async function unassignFileFromQuotes(jobId: string, fileId: string): Promise<void> {
+  if (!jobId) throw new Error('Missing job');
+  const drop = String(fileId || '').trim();
+  if (!drop) return;
+  const quotes = await fetchQuotes(jobId);
+  const batch = writeBatch(db);
+  let writes = 0;
+  liveQuoteFileTargets(quotes).forEach((quote) => {
+    if (!quote.id) return;
+    const current = quoteFileIds(quote);
+    if (!current.includes(drop)) return;
+    applyFilePayload(batch, jobId, quote.id, removeQuoteFileId(current, drop));
+    writes += 1;
+  });
+  if (writes > 0) await batch.commit();
+}
+
+function uniqueIncoming(ids: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  (ids || []).forEach((value) => {
+    const id = String(value || '').trim();
+    if (!id || id.length > 80 || seen.has(id)) return;
+    seen.add(id);
+    out.push(id);
+  });
+  return out;
 }

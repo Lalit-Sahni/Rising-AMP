@@ -88,3 +88,23 @@ export async function archiveOrgTrade(tradeId: string): Promise<void> {
     updatedAt: serverTimestamp(),
   });
 }
+
+export async function renameOrgTrade(tradeId: string, name: string): Promise<TradeListItem> {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) throw new Error('Enter a name.');
+  if (trimmed.length > 80) throw new Error('Keep the name under 80 characters.');
+  const existing = await ensureOrgTradeList();
+  const current = existing.find((trade) => trade.id === tradeId);
+  if (!current) throw new Error('That category is not on the list yet.');
+  const duplicate = existing.find((trade) => (
+    trade.id !== tradeId
+    && trade.status !== 'archived'
+    && trade.name.toLowerCase() === trimmed.toLowerCase()
+  ));
+  if (duplicate) throw new Error(`${trimmed} is already on the list.`);
+  await updateDoc(tradeRef(tradeId), {
+    name: trimmed,
+    updatedAt: serverTimestamp(),
+  });
+  return { ...current, name: trimmed };
+}

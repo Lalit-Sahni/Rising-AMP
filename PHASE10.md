@@ -40,7 +40,7 @@ All forecast, variance and progress figures are derived on read. Do not store a 
 - Stored money is integer cents on every new Cost Plan record.
 - The baseline is GST inclusive by default.
 - No hard delete. Cost plans are draft, locked or archived; Firestore delete is denied. Lock and archive are status-only writes. An archived plan can be replaced with a new draft on the same `current` document.
-- No new npm packages in this phase. BOQ import is Excel or CSV in the browser. Do not add an estimate Cloud Function.
+- No new npm packages in this phase. BOQ import is Excel or CSV in the browser. An AI check of the mapping is a named function (`checkEstimateImport`); do not deploy it unless Lalit names it.
 - No production data write or deploy without the existing backup, staging and explicit-approval process.
 
 ## Data model
@@ -82,10 +82,10 @@ Part A does not add trade rows, expense coding, quotes, imports, job kind, atten
 
 Shipped on the branch:
 
-- Organisation trade list at `organizations/{orgId}/tradeList/{tradeId}`, seeded from the twenty app defaults. Organisation additions are allowed. The job `trades` directory is still saved trade contacts.
+- Organisation trade list at `organizations/{orgId}/tradeList/{tradeId}`, seeded from the twenty app defaults. Organisation additions are allowed. Names can be renamed from Cost Plan **Edit categories**. The job `trades` directory is still saved trade contacts.
 - A draft Level 1 plan can be upgraded to `trades` with integer-cent amounts that add up to the target (or the target is updated in the same save).
-- Optional expense `tradeId`, including the explicit `not-in-estimate` bucket. Existing expenses stay valid and appear as Uncoded until touched.
-- History one-tap coding. Supplier suggestions are shown for confirmation and never saved silently.
+- Optional expense `tradeId`, including the explicit `not-in-estimate` bucket and **Investor**. Investor is land, legal and finance: it is not Uncoded, not construction spend, and not in Overview margin. Existing expenses stay valid and appear as Uncoded until touched.
+- History one-tap coding, and the category tag (labour, trade, materials, investor, …) can be changed on History or in Edit. Retagging to Investor codes it off construction; leaving Investor uncodes it. Supplier suggestions are shown for confirmation and never saved silently.
 - The expense form only asks for a cost-plan trade when the job already has a trades or imported plan.
 
 ## Part C — quotes
@@ -95,13 +95,13 @@ Shipped on the branch:
 - `quotes/{quoteId}` under the job. Received, chosen or passed; voided, never hard-deleted.
 - Allocations across one or more trades must sum to the quote total. A range uses the high figure in the forecast.
 - GST inclusive/exclusive is stored on the quote and converted into the plan’s GST mode on read.
-- Optional link to an existing Files quote. Chosen quotes on overlapping trades demote the previous chosen quote to received. Quotes on a trade are listed on the Cost Plan row; tap to edit or void. Void stays on file.
+- Optional `fileIds` (max 10) pointing at job files, with `fileId` kept as the first pointer for older rows. The quote sheet can attach several files at once. Files can also assign a document to a live quote. Upload uses Files (`type: quote`, 25 MB, membership Storage path `files/{orgId}/{jobId}/{fileId}/…`) and stores only those ids — not a second copy of the bytes. A file sits on one live quote. Unlinking does not delete the file. Chosen quotes on overlapping trades demote the previous chosen quote to received. Quotes on a trade are listed on the Cost Plan row; tap to edit or void. Void stays on file.
 
 ## Part D — spreadsheet import
 
 Shipped on the branch:
 
-- Column mapper for `.xlsx` / `.csv` using the existing `exceljs` package, loaded on click. A Bill of Quantities is read by row shape (`boqLayout.ts`), not as a flat table. Section vs line is the code shape `/^\d+(\.0+)?$/`. Excel formula cells go through `cellToText`. Save is blocked unless the mapped sections add up to a **positive** figure the file itself states. Trade names use `TRADE_SYNONYMS`, not a model. Photos and PDFs are not parsed; export to Excel first.
+- Column mapper for `.xlsx` / `.csv` using the existing `exceljs` package, loaded on click. A Bill of Quantities is read by row shape (`boqLayout.ts`), not as a flat table. Section vs line is the code shape `/^\d+(\.0+)?$/`. Excel formula cells go through `cellToText`. Save is allowed when the figures being saved match a **positive** figure the file itself states, when the heading amounts have been edited, or when **Save these figures anyway** is ticked. After that read is trusted, each heading amount is editable. **Add GST (10%)** is a checkbox; it is suggested when the file states both construction cost and that figure plus GST. Trade names use `TRADE_SYNONYMS`, not a model. Photos and PDFs are not parsed; export to Excel first. An AI **check** (`checkEstimateImport`) reviews the mapping only. It is not deployed until Lalit names that function.
 - Cost is not price. The imported total is construction cost. GST or a builder's margin on top is the final price and is not the thing being matched.
 - Source sections are mapped to stable trades before save. Duplicate source codes are warnings, not identifiers.
 - Totals must match the target, or the imported total becomes the new target in the same save.

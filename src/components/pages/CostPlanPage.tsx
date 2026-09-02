@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { ChevronDown, Pencil, Plus } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Paperclip, Pencil, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useCostPlan, useCostPlanQuotes, useTradeList } from '../../hooks/useCostPlan';
 import {
@@ -21,7 +21,11 @@ import BreakIntoTradesSheet from '../costPlan/BreakIntoTradesSheet';
 import QuoteSheet from '../costPlan/QuoteSheet';
 import ImportEstimateSheet from '../costPlan/ImportEstimateSheet';
 import ExpenseTradePicker from '../costPlan/ExpenseTradePicker';
+import EditCategoriesSheet from '../costPlan/EditCategoriesSheet';
 import type { CostPlanQuote, JobFile } from '../../domain/schemas';
+import { expenseDisplayName, formatExpenseDay } from '../../domain/expenseDisplay';
+import { quoteFileIds } from '../../domain/quoteFiles';
+import { getExpenseTotalCents } from '../../utils/jobMetrics';
 
 function formatBaselineDate(value: string) {
   const date = ymdToLocalDate(value);
@@ -73,11 +77,16 @@ export default function CostPlanPage() {
   const [targetSheetOpen, setTargetSheetOpen] = useState(false);
   const [tradesSheetOpen, setTradesSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [quoteTradeId, setQuoteTradeId] = useState<string | null>(null);
   const [editingQuote, setEditingQuote] = useState<CostPlanQuote | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [jobFiles, setJobFiles] = useState<JobFile[]>([]);
+
+  useEffect(() => {
+    setJobFiles([]);
+  }, [jobId]);
 
   const plan = planQuery.data;
   const trades = useMemo(() => activeTrades(tradeQuery.data || []), [tradeQuery.data]);
@@ -207,7 +216,7 @@ export default function CostPlanPage() {
             <p className="text-[13.5px] text-slate-600 mt-0.5">
               {planHasTrades(plan)
                 ? 'Estimated, quoted and spent. Forecast uses the chosen quote, or the estimate when there is none.'
-                : 'Target cost measured against every active expense on this job.'}
+                : 'Target cost measured against construction spend. Investor costs stay off this number.'}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -225,6 +234,12 @@ export default function CostPlanPage() {
             {plan.status === 'draft' && plan.level !== 'imported' ? (
               <button type="button" onClick={() => setImportOpen(true)} className="inline-flex min-h-[44px] items-center justify-center px-3.5 py-2 rounded-ot-sm bg-surface border border-hairline text-[13px] font-bold">
                 Import a bill of quantities
+              </button>
+            ) : null}
+            {hasActiveCostPlan(plan) ? (
+              <button type="button" onClick={() => setCategoriesOpen(true)} className="inline-flex min-h-[44px] items-center justify-center gap-2 px-3.5 py-2 rounded-ot-sm bg-surface border border-hairline text-[13px] font-bold">
+                <Pencil className="w-4 h-4" strokeWidth={1.7} />
+                Edit categories
               </button>
             ) : null}
             {plan.status === 'draft' && planHasTrades(plan) ? (
@@ -268,7 +283,9 @@ export default function CostPlanPage() {
             <div className={`tabular font-extrabold text-[23px] tracking-tight my-2 ${progress?.overTarget ? 'text-neg' : ''}`}>
               {formatCents(planHasTrades(plan) ? expected : leftAmount, { whole: true })}
             </div>
-            <div className="text-xs text-slate-600">GST inclusive</div>
+            <div className="text-xs text-slate-600">
+              {plan.gstMode === 'exclusive' ? 'GST exclusive' : 'GST inclusive'}
+            </div>
           </div>
         </div>
 
@@ -350,7 +367,9 @@ export default function CostPlanPage() {
                   </button>
                   {open ? (
                     <div className="mt-3 pt-3 border-t border-hairline">
-                      {quotesForTrade(quotes, row.tradeId).map((quote) => (
+                      {quotesForTrade(quotes, row.tradeId).map((quote) => {
+                        const attachedCount = quoteFileIds(quote).length;
+                        return (
                         <button
                           key={quote.id}
                           type="button"
@@ -364,12 +383,17 @@ export default function CostPlanPage() {
                             <span className="block text-[13px] font-bold text-ink truncate">{quote.party}</span>
                             <span className="block text-[11.5px] text-slate-500">
                               {quoteStatusLabel(quote.status)}
+                              {attachedCount ? ` · ${attachedCount} file${attachedCount === 1 ? '' : 's'} attached` : ''}
                               {quote.note ? ` · ${quote.note}` : ''}
                             </span>
                           </span>
-                          <span className="tabular text-[13px] font-bold shrink-0">{quoteAmountLabel(quote)}</span>
+                          <span className="flex items-center gap-2 shrink-0">
+                            {attachedCount ? <Paperclip className="w-3.5 h-3.5 text-slate-400" aria-hidden /> : null}
+                            <span className="tabular text-[13px] font-bold">{quoteAmountLabel(quote)}</span>
+                          </span>
                         </button>
-                      ))}
+                        );
+                      })}
                       <button type="button" onClick={() => openQuoteSheet(row.tradeId)} className="text-[12.5px] font-bold text-accent mt-1">
                         Add a quote on {row.name}
                       </button>
@@ -396,14 +420,18 @@ export default function CostPlanPage() {
                 <div className="text-[12px] text-slate-600 mt-0.5">
                   {board.uncoded.count} expense{board.uncoded.count === 1 ? '' : 's'} · {formatCents(board.uncoded.spentCents, { whole: true })}
                 </div>
-                {canCodeExpenses(plan) && codeExpenseTrade ? (
-                  <div className="mt-3 space-y-2">
-                    {board.uncoded.expenses.slice(0, 8).map((expense) => (
-                      <div key={String(expense.id)} className="flex items-center gap-3">
-                        <span className="flex-1 min-w-0 truncate text-[13px]">
-                          {String(expense.itemName || expense.tradeName || expense.supplier || expense.workerName || 'Expense')}
-                        </span>
-                        <div className="w-[180px]">
+                <div className="mt-3 space-y-2">
+                  {board.uncoded.expenses.map((expense) => (
+                    <div key={String(expense.id)} className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-ink truncate">{expenseDisplayName(expense)}</div>
+                        <div className="text-[12px] text-slate-500 tabular">
+                          {formatCents(getExpenseTotalCents(expense))}
+                          {formatExpenseDay(expense) ? ` · ${formatExpenseDay(expense)}` : ''}
+                        </div>
+                      </div>
+                      {canCodeExpenses(plan) && codeExpenseTrade ? (
+                        <div className="w-[180px] shrink-0">
                           <ExpenseTradePicker
                             expense={expense}
                             expenses={expenses || []}
@@ -412,10 +440,45 @@ export default function CostPlanPage() {
                             onCode={(tradeId) => codeExpenseTrade(String(expense.id), tradeId)}
                           />
                         </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {board.investor.count > 0 ? (
+              <div className="border border-dashed border-hairline rounded-ot px-4 py-3 bg-canvas">
+                <div className="font-extrabold text-[14px]">Investor</div>
+                <div className="text-[12px] text-slate-600 mt-0.5">
+                  Land, legal and finance. Not construction, so it is not in spent, margin or the estimate.
+                  {' '}{board.investor.count} expense{board.investor.count === 1 ? '' : 's'} · {formatCents(board.investor.spentCents, { whole: true })}
+                </div>
+                <div className="mt-3 space-y-2">
+                  {board.investor.expenses.map((expense) => (
+                    <div key={String(expense.id)} className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-ink truncate">{expenseDisplayName(expense)}</div>
+                        <div className="text-[12px] text-slate-500 tabular">
+                          {formatCents(getExpenseTotalCents(expense))}
+                          {formatExpenseDay(expense) ? ` · ${formatExpenseDay(expense)}` : ''}
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                ) : null}
+                      {canCodeExpenses(plan) && codeExpenseTrade ? (
+                        <div className="w-[180px] shrink-0">
+                          <ExpenseTradePicker
+                            expense={expense}
+                            expenses={expenses || []}
+                            trades={trades}
+                            compact
+                            disabled={String(expense.category || '').toLowerCase() === 'investor'}
+                            onCode={(tradeId) => codeExpenseTrade(String(expense.id), tradeId)}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : null}
 
@@ -477,6 +540,7 @@ export default function CostPlanPage() {
         defaultTradeId={quoteTradeId}
         onClose={() => setQuoteOpen(false)}
         onSaved={() => setQuoteOpen(false)}
+        onFilesChange={setJobFiles}
         showToast={showToast}
       />
       <ImportEstimateSheet
@@ -488,6 +552,13 @@ export default function CostPlanPage() {
         trades={trades}
         onClose={() => setImportOpen(false)}
         onSaved={() => setImportOpen(false)}
+        showToast={showToast}
+      />
+      <EditCategoriesSheet
+        open={categoriesOpen}
+        orgId={orgId || ''}
+        trades={tradeQuery.data || []}
+        onClose={() => setCategoriesOpen(false)}
         showToast={showToast}
       />
     </div>

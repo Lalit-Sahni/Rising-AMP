@@ -2,7 +2,16 @@ import type { CostPlan } from './schemas';
 
 export const COST_PLAN_DOC_ID = 'current';
 export const NOT_IN_ESTIMATE_TRADE_ID = 'not-in-estimate';
+export const INVESTOR_TRADE_ID = 'investor';
 export const UNCODED_TRADE_ID = 'uncoded';
+
+/** Land, legal and finance. Not construction, so it stays off the cost plan and margin. */
+export function isInvestorExpense(expense: Record<string, unknown> | null | undefined): boolean {
+  if (!expense) return false;
+  const tradeId = String(expense.tradeId ?? '').trim();
+  if (tradeId === INVESTOR_TRADE_ID) return true;
+  return String(expense.category || '').toLowerCase().trim() === INVESTOR_TRADE_ID;
+}
 
 export const APP_TRADES = [
   { id: 'site-works', name: 'Site works' },

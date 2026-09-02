@@ -429,6 +429,26 @@ const AppDataProvider = ({
     }
   };
 
+  const codeExpenseCategory = async (expenseId, category) => {
+    try {
+      const { setExpenseCategory } = await import('../firebase/expenseTrade');
+      const { tradeIdAfterCategoryChange, normalizeExpenseCategory } = await import('../domain/expenseCategory');
+      const nextCategory = normalizeExpenseCategory(category);
+      if (!nextCategory) throw new Error('Choose a category.');
+      const current = (expenses || []).find((exp) => exp.id === expenseId);
+      const tradeId = tradeIdAfterCategoryChange(nextCategory, current?.tradeId);
+      await setExpenseCategory(jobListId, expenseId, nextCategory, tradeId);
+      setExpenses((prev) => prev.map((exp) => (
+        exp.id === expenseId ? { ...exp, category: nextCategory, tradeId } : exp
+      )));
+      return { success: true };
+    } catch (error) {
+      console.error('Error changing expense category:', error);
+      showToast(error.message || 'Could not change that category', 'error');
+      return { success: false, error: error.message };
+    }
+  };
+
   const deleteExpenseFromFirebase = async (expenseId) => {
     try {
       const result = await deleteExpenseFromFirestore(jobListId, expenseId);
@@ -1062,6 +1082,7 @@ const AppDataProvider = ({
     addExpenseToFirebase,
     updateExpenseInFirebase,
     codeExpenseTrade,
+    codeExpenseCategory,
     deleteExpenseFromFirebase,
     restoreExpenseFromFirebase,
     purgeExpenseFromFirebase,

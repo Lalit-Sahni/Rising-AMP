@@ -316,6 +316,22 @@ service cloud.firestore {
               && request.resource.data.createdAt is timestamp
               && request.resource.data.updatedAt is timestamp
               && (
+                !request.resource.data.keys().hasAny(['fileId'])
+                || request.resource.data.fileId == null
+                || (
+                  request.resource.data.fileId is string
+                  && request.resource.data.fileId.size() > 0
+                  && request.resource.data.fileId.size() <= 80
+                )
+              )
+              && (
+                !request.resource.data.keys().hasAny(['fileIds'])
+                || (
+                  request.resource.data.fileIds is list
+                  && request.resource.data.fileIds.size() <= 10
+                )
+              )
+              && (
                 request.resource.data.status != 'void'
                 || request.resource.data.voidedAt is timestamp
               );

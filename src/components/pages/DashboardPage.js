@@ -380,7 +380,7 @@ export default function DashboardPage() {
             <div className="flex-1 min-w-0 pr-7 sm:pr-0">
               <b className="block text-[14px] font-extrabold text-ink">Know roughly what this job should cost?</b>
               <p className="text-[12.5px] text-slate-600 mt-0.5">
-                Put in one number, or import your bill of quantities. Excel, CSV, or a photo. You check it before it saves.
+                Put in one number, or import your bill of quantities. Excel or CSV. You check it before it saves.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 shrink-0">

@@ -93,6 +93,19 @@ describe('margin and verdict', () => {
     expect(deriveVerdict(margin)).toBe(VERDICT.ON_TRACK);
   });
 
+  test('investor costs are not construction and do not reduce margin', () => {
+    const cash = deriveCash(
+      [{ total: 1000, status: 'paid' }],
+      [
+        { total: 200, category: 'purchase' },
+        { total: 500, category: 'investor', itemName: 'Land deposit' },
+        { total: 50, tradeId: 'investor', itemName: 'Mortgage payment' },
+      ],
+    );
+    expect(cash.cost).toBe(200);
+    expect(deriveMargin(cash.paid, cash.cost).margin).toBe(800);
+  });
+
   test(`margin below ${MARGIN_AT_RISK_PCT}% is at risk, including losses`, () => {
     expect(deriveVerdict(deriveMargin(1000, 960))).toBe(VERDICT.MARGIN_AT_RISK);
     expect(deriveVerdict(deriveMargin(1000, 1100))).toBe(VERDICT.MARGIN_AT_RISK);

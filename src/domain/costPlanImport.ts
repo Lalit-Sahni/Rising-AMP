@@ -266,6 +266,33 @@ export function isEstimateSpreadsheetFile(file: File | null | undefined): boolea
     || file.type === 'application/vnd.ms-excel';
 }
 
+/** Apply typed amounts onto source sections. Invalid text keeps the file figure. */
+export function applySectionAmountEdits<T extends { key: string; amountCents: number }>(
+  sections: T[],
+  amountTextByKey: Record<string, string | undefined>,
+): T[] {
+  return sections.map((section) => {
+    const text = amountTextByKey[section.key];
+    if (text == null) return section;
+    try {
+      const parsed = parseToCents(text);
+      const amountCents = parsed < 0 ? 0 : parsed;
+      if (amountCents === section.amountCents) return section;
+      return { ...section, amountCents };
+    } catch {
+      return section;
+    }
+  });
+}
+
+export function sectionAmountsWereEdited(
+  sections: Array<{ key: string; amountCents: number }>,
+  amountTextByKey: Record<string, string | undefined>,
+): boolean {
+  return applySectionAmountEdits(sections, amountTextByKey)
+    .some((section, index) => section.amountCents !== sections[index].amountCents);
+}
+
 export function buildImportedSections(
   sections: SourceSection[],
   tradeBySection: Record<string, string>,

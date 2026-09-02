@@ -14,6 +14,7 @@ import {
   type JobFileLinkKind,
   type JobFileLinkedTo,
 } from './jobFiles';
+import { quoteForFileId, type QuoteFileFields } from './quoteFiles';
 
 export type FileBrowserKind = 'file' | 'receipt';
 
@@ -326,6 +327,25 @@ export function fileLinkColumnLabel(
 ): string {
   const label = fileLinkLabel(linkedTo, lookup);
   return label.replace(/^linked to /, '');
+}
+
+export type FileLinkLookup = {
+  expenses?: unknown[];
+  invoices?: unknown[];
+  quotes?: QuoteFileFields[];
+};
+
+export function fileRegisterLinkLabel(
+  item: Pick<FileBrowserItem, 'fileId' | 'linkedTo'>,
+  lookup: FileLinkLookup = {},
+): string {
+  const parts: string[] = [];
+  const linked = fileLinkColumnLabel(item.linkedTo, lookup);
+  if (linked) parts.push(linked);
+  const quote = quoteForFileId(lookup.quotes, item.fileId);
+  if (quote?.party) parts.push(`Quote · ${quote.party}`);
+  else if (quote) parts.push('Quote');
+  return parts.join(' · ');
 }
 
 export function fileAddedByColumnLabel(

@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { todayYmd } from '../../dates';
-import { parseToCents, fromCents } from '../../money';
+import { parseToCents, fromCents, formatCents } from '../../money';
+import { convertGstCents } from '../../domain/costPlan';
 import { saveCostPlanTarget } from '../../firebase/costPlan';
 import { queryKeys } from '../../query/client';
 import type { CostPlan } from '../../domain/schemas';
@@ -33,6 +34,7 @@ export default function SetTargetCostSheet({
   const queryClient = useQueryClient();
   const amountRef = useRef<HTMLInputElement>(null);
   const [amount, setAmount] = useState('');
+  const [addGst, setAddGst] = useState(false);
   const [baselineDate, setBaselineDate] = useState(todayYmd());
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -40,6 +42,7 @@ export default function SetTargetCostSheet({
   useEffect(() => {
     if (!open) return;
     setAmount(plan ? fromCents(plan.targetCents).toFixed(2) : '');
+    setAddGst(false);
     setBaselineDate(plan?.baselineDate || todayYmd());
     setError('');
     window.setTimeout(() => amountRef.current?.focus(), 0);
@@ -56,6 +59,16 @@ export default function SetTargetCostSheet({
 
   if (!open) return null;
 
+  let withGstLabel = '';
+  if (addGst) {
+    try {
+      const parsed = parseToCents(amount);
+      if (parsed > 0) withGstLabel = formatCents(convertGstCents(parsed, 'exclusive', 'inclusive'));
+    } catch {
+      withGstLabel = '';
+    }
+  }
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
@@ -66,6 +79,9 @@ export default function SetTargetCostSheet({
     } catch {
       setError('Enter a valid target cost.');
       return;
+    }
+    if (addGst) {
+      targetCents = convertGstCents(targetCents, 'exclusive', 'inclusive');
     }
     if (targetCents <= 0) {
       setError('Target cost must be more than zero.');
@@ -137,7 +153,7 @@ export default function SetTargetCostSheet({
         </p>
 
         <label className="block text-[12.5px] font-semibold text-slate-600 mt-4">
-          Target cost, including GST
+          Target cost{addGst ? ', before GST' : ', including GST'}
           <span className="relative block mt-1">
             <span className="absolute inset-y-0 left-3 flex items-center text-slate-400">$</span>
             <input
@@ -153,6 +169,20 @@ export default function SetTargetCostSheet({
             />
           </span>
         </label>
+
+        <label className="flex items-start gap-2 text-[12.5px] font-medium text-slate-600 mt-3">
+          <input
+            type="checkbox"
+            checked={addGst}
+            onChange={(event) => setAddGst(event.target.checked)}
+            disabled={busy}
+            className="mt-0.5"
+          />
+          Add GST (10%). Tick this when the number you typed is ex GST.
+        </label>
+        {withGstLabel ? (
+          <p className="text-[12.5px] text-slate-600 mt-1">This will save {withGstLabel} including GST.</p>
+        ) : null}
 
         <label className="block text-[12.5px] font-semibold text-slate-600 mt-3">
           Baseline date

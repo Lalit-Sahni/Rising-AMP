@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { User, Wrench, HardHat, FileText, Package, Camera, Download, Zap } from 'lucide-react';
+import { User, Wrench, HardHat, FileText, Package, Camera, Download, Zap, Landmark } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { categoryIconWell, getCategoryStyle } from '../utils/categoryStyle';
 
@@ -9,6 +9,7 @@ const categories = [
   { key: 'equipment', label: 'Equipment', icon: HardHat, description: 'Tools & machinery rental' },
   { key: 'service', label: 'Service', icon: FileText, description: 'Professional services' },
   { key: 'purchase', label: 'Materials', icon: Package, description: 'Supplies & raw materials' },
+  { key: 'investor', label: 'Investor', icon: Landmark, description: 'Land, legal and finance — not construction' },
 ];
 
 function isThisMonth(timestamp) {

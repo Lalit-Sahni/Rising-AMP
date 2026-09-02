@@ -6,6 +6,7 @@ export const CATEGORY_STYLE = {
   service: { label: 'Service', hex: '#4E8C82' },
   equipment: { label: 'Equipment', hex: '#7E9B63' },
   installation: { label: 'Installation', hex: '#B5654A' },
+  investor: { label: 'Investor', hex: '#6B5B95' },
 };
 
 const FALLBACK = { label: 'Uncategorized', hex: '#565B64' };

@@ -116,7 +116,7 @@ users/{accessCode}          # leftover copies, unused by the app
 
 Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `orgId`, optional `kind` (`client` | `own`).
 
-`costPlan/current` is optional. Level 1 stores one GST-inclusive target. Level 2 adds `sections` keyed by trade. Level 3 adds imported lines under those trades. `quotes/{quoteId}` are separate documents. Expenses may carry optional `tradeId`. A job with no document has no Cost Plan nav item. Plan, quotes and the org trade list are shared through TanStack Query; they are not added to AppContext.
+`costPlan/current` is optional. Level 1 stores one GST-inclusive target. Level 2 adds `sections` keyed by trade. Level 3 adds imported lines under those trades. `quotes/{quoteId}` are separate documents with optional `fileIds` (and leftover `fileId`) pointing at `files/{fileId}`. Expenses may carry optional `tradeId` and a retaggable `category`. A job with no document has no Cost Plan nav item. Plan, quotes and the org trade list are shared through TanStack Query; they are not added to AppContext.
 
 ---
 
@@ -230,8 +230,8 @@ Done on the Phase 10 branch:
 
 - Optional `costPlan/current` per job. Target money is integer cents; spend is derived from active expenses.
 - Lazy `/jobs/:jobId/cost-plan` route. No plan means no nav item and the direct route returns to Overview.
-- Trade amounts, History coding, Uncoded / Not in the estimate buckets.
-- Quotes with allocations, chosen forecast, GST conversion and optional Files link.
+- Trade amounts, History coding and History category retag (Investor codes off construction).
+- Quotes with allocations, chosen forecast, GST conversion and optional `fileIds` into existing Files (`type: quote`). Bytes stay in Storage; the quote document is a pointer list. Files can assign documents onto a live quote.
 - Spreadsheet column mapper; source file stored as Files type `estimate`.
 - `job.kind: client | own` and factual Cost Plan attention.
 - Cost Plan refuses to show spend when the 1,000-expense cap is reached.

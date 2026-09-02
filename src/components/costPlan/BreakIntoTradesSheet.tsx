@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { parseToCents, formatCents, fromCents } from '../../money';
 import {
   activeTrades,
+  applyTradeAmountEdits,
   sectionsFromTradeAmounts,
   sumSectionAmounts,
 } from '../../domain/costPlan';
@@ -109,9 +110,9 @@ export default function BreakIntoTradesSheet({
       const { saveCostPlanTrades } = await import('../../firebase/costPlan');
       await ensureOrgTradeList();
       const saved = await saveCostPlanTrades(jobId, {
-        sections: sectionsFromTradeAmounts(filled),
+        sections: applyTradeAmountEdits(plan.sections || [], filled),
         targetCents,
-        level: 'trades',
+        level: plan.level === 'imported' ? 'imported' : 'trades',
       });
       queryClient.setQueryData(queryKeys.costPlan(orgId, jobId), saved);
       showToast('Trades saved on the cost plan.', 'success');
@@ -130,7 +131,9 @@ export default function BreakIntoTradesSheet({
           <div>
             <h2 className="text-[16px] font-extrabold">Break it into trades</h2>
             <p className="text-[12.5px] text-slate-600 mt-0.5">
-              Type an amount against the trades you care about. Empty rows stay off the plan.
+              {plan.level === 'imported'
+                ? 'Change an amount if the import got a figure wrong. The estimate lines stay on file.'
+                : 'Type an amount against the trades you care about. Empty rows stay off the plan.'}
             </p>
           </div>
           <button type="button" onClick={onClose} className="w-11 h-11 grid place-items-center rounded-ot-sm text-slate-500 hover:bg-canvas" aria-label="Close">

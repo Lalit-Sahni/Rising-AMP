@@ -1,9 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Paperclip, X } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { todayYmd } from '../../dates';
 import { parseToCents } from '../../money';
 import { allocationsCoverTotal } from '../../domain/costPlan';
+import { JOB_FILE_ACCEPT, validateJobFileForUpload } from '../../domain/jobFiles';
+import {
+  QUOTE_FILE_MAX,
+  addQuoteFileIds,
+  quoteFileIds,
+  removeQuoteFileId,
+} from '../../domain/quoteFiles';
 import { queryKeys } from '../../query/client';
 import type { CostPlanQuote, JobFile, TradeListItem } from '../../domain/schemas';
 
@@ -18,10 +25,22 @@ type QuoteSheetProps = {
   defaultTradeId?: string | null;
   onClose: () => void;
   onSaved: () => void;
+  onFilesChange?: (files: JobFile[]) => void;
   showToast: (message: string, type?: string) => void;
 };
 
 type AllocationDraft = { tradeId: string; amount: string };
+
+function mergeJobFiles(incoming: JobFile[], current: JobFile[]): JobFile[] {
+  const byId = new Map<string, JobFile>();
+  incoming.forEach((row) => {
+    if (row.id) byId.set(row.id, row);
+  });
+  current.forEach((row) => {
+    if (row.id && !byId.has(row.id)) byId.set(row.id, row);
+  });
+  return [...byId.values()];
+}
 
 export default function QuoteSheet({
   open,
@@ -34,6 +53,7 @@ export default function QuoteSheet({
   defaultTradeId,
   onClose,
   onSaved,
+  onFilesChange,
   showToast,
 }: QuoteSheetProps) {
   const queryClient = useQueryClient();
@@ -44,16 +64,23 @@ export default function QuoteSheet({
   const [gstMode, setGstMode] = useState<'inclusive' | 'exclusive'>('inclusive');
   const [status, setStatus] = useState<'received' | 'chosen' | 'passed'>('received');
   const [note, setNote] = useState('');
-  const [fileId, setFileId] = useState('');
+  const [attachedIds, setAttachedIds] = useState<string[]>([]);
   const [allocations, setAllocations] = useState<AllocationDraft[]>([{ tradeId: '', amount: '' }]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-
   const [voiding, setVoiding] = useState(false);
+  const [localFiles, setLocalFiles] = useState<JobFile[]>(files);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [attaching, setAttaching] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const quoteFiles = useMemo(
-    () => (files || []).filter((file) => file.status !== 'archived' && file.type === 'quote'),
-    [files],
+  const attachableFiles = useMemo(
+    () => (localFiles || []).filter((file) => file.status !== 'archived' && Boolean(file.id)),
+    [localFiles],
+  );
+  const quoteTypeFiles = useMemo(
+    () => attachableFiles.filter((file) => file.type === 'quote' || attachedIds.includes(file.id || '')),
+    [attachableFiles, attachedIds],
   );
 
   useEffect(() => {
@@ -65,14 +92,39 @@ export default function QuoteSheet({
     setGstMode(quote?.gstMode || 'inclusive');
     setStatus(quote && quote.status !== 'void' ? quote.status : 'received');
     setNote(quote?.note || '');
-    setFileId(quote?.fileId || '');
+    setAttachedIds(quoteFileIds(quote));
     setAllocations(
       quote?.allocations?.length
         ? quote.allocations.map((row) => ({ tradeId: row.tradeId, amount: String(row.amountCents / 100) }))
         : [{ tradeId: defaultTradeId || (trades[0]?.id || ''), amount: '' }],
     );
     setError('');
+    setUploadProgress(null);
+    setAttaching(false);
   }, [open, quote, defaultTradeId, trades]);
+
+  useEffect(() => {
+    setLocalFiles([]);
+  }, [jobId]);
+
+  useEffect(() => {
+    if (!open) return;
+    setLocalFiles((current) => mergeJobFiles(files, current));
+  }, [open, files]);
+
+  useEffect(() => {
+    if (!open || !jobId) return undefined;
+    let cancelled = false;
+    (async () => {
+      const { fetchJobFiles } = await import('../../firebase/jobFiles');
+      const result = await fetchJobFiles(jobId);
+      if (cancelled || !result.success) return;
+      setLocalFiles((current) => mergeJobFiles(result.files || [], current));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, jobId]);
 
   if (!open) return null;
 
@@ -91,6 +143,75 @@ export default function QuoteSheet({
     } finally {
       setVoiding(false);
     }
+  };
+
+  const handleAttach = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (picked.length === 0 || attaching || busy || voiding) return;
+    const room = QUOTE_FILE_MAX - attachedIds.length;
+    if (room <= 0) {
+      setError(`A quote can hold ${QUOTE_FILE_MAX} files.`);
+      return;
+    }
+    const queued = picked.slice(0, room);
+    setError(queued.length < picked.length ? `Only ${room} more file${room === 1 ? '' : 's'} fit on this quote.` : '');
+    setAttaching(true);
+    const uploadedIds: string[] = [];
+    let nextFiles = localFiles;
+    try {
+      const { uploadJobFile } = await import('../../firebase/uploadJobFile');
+      for (let index = 0; index < queued.length; index += 1) {
+        const file = queued[index];
+        const checked = validateJobFileForUpload(file);
+        if (!checked.ok) {
+          throw new Error(checked.error);
+        }
+        setUploadProgress(0);
+        const result = await uploadJobFile({
+          jobId,
+          file,
+          type: 'quote',
+          uploadedBy: userId,
+          documentDate: receivedDate,
+          note: party.trim() ? `Quote from ${party.trim()}` : 'Cost plan quote',
+          onProgress: setUploadProgress,
+        });
+        if (!result.success || !result.file?.id) {
+          throw new Error(result.error || 'Could not store that file.');
+        }
+        uploadedIds.push(result.file.id);
+        nextFiles = mergeJobFiles([result.file], nextFiles);
+        setLocalFiles(nextFiles);
+      }
+      onFilesChange?.(nextFiles);
+      const added = addQuoteFileIds(attachedIds, uploadedIds);
+      if (!added.ok) throw new Error(added.error);
+      setAttachedIds(added.ids);
+    } catch (err) {
+      if (uploadedIds.length > 0) {
+        const added = addQuoteFileIds(attachedIds, uploadedIds);
+        if (added.ok) setAttachedIds(added.ids);
+      }
+      setError(err instanceof Error ? err.message : 'Could not attach that file.');
+    } finally {
+      setAttaching(false);
+      setUploadProgress(null);
+    }
+  };
+
+  const toggleExistingFile = (fileId: string, checked: boolean) => {
+    if (checked) {
+      const added = addQuoteFileIds(attachedIds, [fileId]);
+      if (!added.ok) {
+        setError(added.error);
+        return;
+      }
+      setError('');
+      setAttachedIds(added.ids);
+      return;
+    }
+    setAttachedIds(removeQuoteFileId(attachedIds, fileId));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -147,7 +268,7 @@ export default function QuoteSheet({
         amountHighCents,
         gstMode,
         note: note.trim() || undefined,
-        fileId: fileId || null,
+        fileIds: attachedIds,
         allocations: parsedAllocations,
         createdBy: userId,
       }, quote?.id);
@@ -246,19 +367,70 @@ export default function QuoteSheet({
               <option value="passed">Passed</option>
             </select>
           </label>
-          {quoteFiles.length > 0 ? (
-            <label className="block text-[12.5px] font-semibold">
-              Linked file
-              <select value={fileId} onChange={(event) => setFileId(event.target.value)} className="mt-1 w-full px-2 py-2 rounded-ot-sm border border-hairline text-[13px]">
-                <option value="">None</option>
-                {quoteFiles.map((file) => (
-                  <option key={file.id} value={file.id}>{file.name}</option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <p className="text-[12px] text-slate-500">Add the PDF in Files as a Quote if you want it on this record.</p>
-          )}
+          <div>
+            <div className="text-[12.5px] font-semibold mb-1.5">Attachments</div>
+            <p className="text-[12px] text-slate-500 mb-2">
+              Stored in Files as Quote files (25 MB each, no video). This record keeps pointers, not copies. You can also assign files from the Files tab. Unlinking does not delete the file.
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={JOB_FILE_ACCEPT}
+              multiple
+              className="sr-only"
+              onChange={handleAttach}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={busy || voiding || attaching || attachedIds.length >= QUOTE_FILE_MAX}
+              className="inline-flex min-h-[40px] items-center gap-1.5 px-3 py-2 rounded-ot-sm border border-hairline text-[13px] font-bold text-ink disabled:opacity-50"
+            >
+              <Paperclip className="w-4 h-4" />
+              {attaching
+                ? (uploadProgress != null ? `Uploading ${uploadProgress}%` : 'Uploading…')
+                : 'Attach files'}
+            </button>
+            {attachedIds.length > 0 ? (
+              <ul className="mt-3 space-y-1.5">
+                {attachedIds.map((id) => {
+                  const file = attachableFiles.find((row) => row.id === id);
+                  return (
+                    <li key={id} className="flex items-center justify-between gap-2 text-[13px]">
+                      <span className="truncate">{file?.name || 'File attached'}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAttachedIds(removeQuoteFileId(attachedIds, id))}
+                        className="text-[12.5px] font-bold text-slate-500 shrink-0"
+                      >
+                        Unlink
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+            {quoteTypeFiles.length > 0 ? (
+              <div className="mt-3 space-y-1.5">
+                <div className="text-[12.5px] font-semibold">On this job already</div>
+                {quoteTypeFiles.map((file) => {
+                  if (!file.id) return null;
+                  const checked = attachedIds.includes(file.id);
+                  return (
+                    <label key={file.id} className="flex items-center gap-2 text-[13px]">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(event) => toggleExistingFile(file.id as string, event.target.checked)}
+                        className="accent-[#E85D1A]"
+                      />
+                      <span className="truncate">{file.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
           <label className="block text-[12.5px] font-semibold">
             Note
             <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} className="mt-1 w-full px-2 py-2 rounded-ot-sm border border-hairline text-[13px]" />
@@ -269,7 +441,7 @@ export default function QuoteSheet({
               <button
                 type="button"
                 onClick={handleVoid}
-                disabled={busy || voiding}
+                disabled={busy || voiding || attaching}
                 className="px-3 py-2 text-[13px] font-bold text-neg disabled:opacity-50"
               >
                 {voiding ? 'Voiding…' : 'Void this quote'}
@@ -279,7 +451,7 @@ export default function QuoteSheet({
             )}
             <div className="flex gap-2">
               <button type="button" onClick={onClose} className="px-3 py-2 text-[13px] text-slate-600">Cancel</button>
-              <button type="submit" disabled={busy || voiding} className="px-3.5 py-2 rounded-ot-sm bg-accent text-white text-[13px] font-bold disabled:opacity-50">
+              <button type="submit" disabled={busy || voiding || attaching} className="px-3.5 py-2 rounded-ot-sm bg-accent text-white text-[13px] font-bold disabled:opacity-50">
                 {busy ? 'Saving…' : 'Save quote'}
               </button>
             </div>

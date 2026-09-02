@@ -55,8 +55,8 @@ organizations/{orgId}
     budget, expenses[]                         # leftover PIN copy fields; ignore
     files/{id}             job documents (Phase 9). type from a fixed list including estimate; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored.
     costPlan/current        optional Phase 10 plan. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections hold trade amounts and optional imported lines. sourceFileId optional. Members only; delete denied. Archiving is reversible: the same `current` document can be replaced with a new draft.
-    quotes/{id}            optional Phase 10 quotes. Allocations must sum to amountCents. status received | chosen | passed | void. Delete denied.
-    expenses/{id}          + jobId, optional tradeId (or not-in-estimate)
+    quotes/{id}            optional Phase 10 quotes. Allocations must sum to amountCents. status received | chosen | passed | void. Optional fileIds (max 10) point at files/{id}; fileId is the first pointer. The PDF is not stored on the quote. Delete denied.
+    expenses/{id}          + jobId, optional tradeId (or not-in-estimate | investor)
     invoices/{id}          + jobId, invoiceNumber, status including void
     clients/{id}           house owner you invoice (one per job, ideally)
     suppliers/{id}         materials (Bunnings, Rodgers, …) upsert by name
@@ -87,7 +87,7 @@ Staging may also have Part B test jobs. Localhost always talks to staging.
 
 **A job is an ID.** Expenses live under that ID. Renaming the job document changes the card and header. Invoices still also store a free-text `projectName` typed at save time (six spellings on Centenary). That string is a snapshot for PDFs, not the source of truth. Screens should show the job’s `name`.
 
-**A cost plan is optional and additive.** No `costPlan/current` document means the job behaves exactly as it did before Phase 10. Spend is always active expenses, never paid invoices. Expenses code to a trade id, never to an estimate section. Quotes are their own documents. Derived forecast, variance and progress are never stored. The job `trades` directory is still saved trade contacts; the org `tradeList` is the cost-plan category list.
+**A cost plan is optional and additive.** No `costPlan/current` document means the job behaves exactly as it did before Phase 10. Spend is always active expenses, never paid invoices. Investor expenses (`category: investor` or `tradeId: investor`) are not construction: they stay off Cost Plan spend, Uncoded and Overview margin. Other expenses code to a trade id, never to an estimate section. Quotes are their own documents. Derived forecast, variance and progress are never stored. The job `trades` directory is still saved trade contacts; the org `tradeList` is the cost-plan category list and its names can be renamed.
 
 **Directories (after the split):**
 

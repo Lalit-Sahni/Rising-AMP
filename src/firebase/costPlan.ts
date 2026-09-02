@@ -23,6 +23,7 @@ type SaveTradesInput = {
   targetCents?: number;
   sourceFileId?: string | null;
   level?: 'trades' | 'imported';
+  gstMode?: 'inclusive' | 'exclusive';
 };
 
 function planRef(jobId: string) {
@@ -250,6 +251,7 @@ export async function saveCostPlanTrades(
       level,
       targetCents,
       sections,
+      gstMode: input.gstMode || existing.data.gstMode,
       sourceFileId: input.sourceFileId === undefined
         ? existing.data.sourceFileId
         : input.sourceFileId,
@@ -263,6 +265,7 @@ export async function saveCostPlanTrades(
     const payload: Record<string, unknown> = {
       level: parsed.data.level,
       targetCents: parsed.data.targetCents,
+      gstMode: parsed.data.gstMode,
       sections: parsed.data.sections.map(sanitizeSection),
       updatedAt: serverTimestamp(),
     };

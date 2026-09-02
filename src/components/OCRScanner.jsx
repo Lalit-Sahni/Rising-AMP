@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Upload, X, AlertCircle, Loader2, User, Wrench, HardHat, FileText, DollarSign, Sparkles } from 'lucide-react';
+import { Camera, Upload, X, AlertCircle, Loader2, User, Wrench, HardHat, FileText, DollarSign, Sparkles, Landmark } from 'lucide-react';
 import EnhancedOCRService from '../utils/EnhancedOCRService';
 import { categoryIconWell, getCategoryStyle } from '../utils/categoryStyle';
 import { detectUncertainFields } from '../utils/ocrUncertainty';
@@ -10,6 +10,7 @@ const CATEGORIES = [
   { key: 'equipment',label: 'Equipment', icon: HardHat,   description: 'Tools & machinery rental' },
   { key: 'service',  label: 'Service',   icon: FileText,  description: 'Professional services' },
   { key: 'purchase', label: 'Materials', icon: DollarSign,description: 'Supplies & raw materials' },
+  { key: 'investor', label: 'Investor',  icon: Landmark,  description: 'Land, legal and finance' },
 ];
 
 const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
@@ -73,6 +74,8 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
       case 'equipment':
         return { ...base, equipmentName: editable.itemName || base.equipmentName, totalPrice: editable.amount || base.totalPrice };
       case 'purchase':
+      case 'investor':
+        return { ...base, supplier: editable.supplier || base.supplier, itemName: editable.itemName || base.itemName, amount: editable.amount || base.amount, unitCost: editable.amount || base.unitCost, quantity: base.quantity || '1' };
       default:
         return { ...base, supplier: editable.supplier || base.supplier, itemName: editable.itemName || base.itemName, unitCost: editable.amount || base.unitCost, quantity: base.quantity || '1' };
     }

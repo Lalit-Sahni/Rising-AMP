@@ -43,7 +43,7 @@
     "preview": "vite preview",
     "build:analyze": "vite build",
     "analyze": "node scripts/analyze-bundle.js",
-    "test": "vitest run && node --test functions/lib/emailMatch.test.js",
+    "test": "vitest run && node --test functions/lib/emailMatch.test.js functions/lib/estimateCheck.test.js",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "test:rules": "sh scripts/run-rules-tests.sh",

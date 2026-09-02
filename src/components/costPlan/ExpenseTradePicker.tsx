@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  INVESTOR_TRADE_ID,
   NOT_IN_ESTIMATE_TRADE_ID,
   activeTrades,
   expenseTradeId,
@@ -63,6 +64,7 @@ export default function ExpenseTradePicker({
           <option key={trade.id} value={trade.id}>{trade.name}</option>
         ))}
         <option value={NOT_IN_ESTIMATE_TRADE_ID}>Not in the estimate</option>
+        <option value={INVESTOR_TRADE_ID}>Investor</option>
       </select>
       {compact && current ? (
         <div className="sr-only">{tradeNameById(options, current)}</div>

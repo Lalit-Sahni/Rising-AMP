@@ -213,6 +213,7 @@ export function classifyBoqRow(
   const anyMoney = !isBlank(amount) || !isBlank(unitPrice);
   if (everything.some((value) => GRAND_LABEL.test(value))) return 'grandTotal';
   if (everything.some((value) => TOTAL_LABEL.test(value))) return 'sectionTotal';
+  if (/\btotal\b/i.test(description) && isBlank(qty) && isBlank(unit)) return 'sectionTotal';
 
   if (profile.usesSectionCodes && code) {
     // The code settles it. An unpriced line item is still a line.
@@ -316,17 +317,17 @@ export function readBoqLayout(
   const kept = sections
     .filter((section) => section.rows.length > 0 || section.amountCents > 0)
     .map((section) => {
-      if (section.statedTotalCents == null) return section;
+      if (section.statedTotalCents == null || section.statedTotalCents <= 0) return section;
       const drift = Math.abs(section.statedTotalCents - section.amountCents);
       if (drift === 0) return section;
       if (drift > SECTION_TOTAL_TOLERANCE_CENTS) {
         warnings.push(
-          `${section.name}: the lines add to $${(section.amountCents / 100).toFixed(2)} but the file's own total says $${(section.statedTotalCents / 100).toFixed(2)}. Check the file before saving.`,
+          `${section.name}: the lines add to $${(section.amountCents / 100).toFixed(2)} but the file's own total says $${(section.statedTotalCents / 100).toFixed(2)}. Using the file's total.`,
         );
-        return section;
       }
-      // Cent-level drift is Excel summing unrounded values. The estimator's own
-      // total row is the number they signed off, so use it.
+      // The estimator's own total row is the number they signed off. Prefer it
+      // even when the line sum is wildly different, which usually means the
+      // total row was also counted as a line.
       return { ...section, amountCents: section.statedTotalCents };
     });
 
@@ -411,6 +412,32 @@ export function matchTradeForSection(name: string, allowedIds: string[] = []): s
 /** How far a total may sit from the file's own figure and still be believed. */
 export const FILE_TOTAL_TOLERANCE_CENTS = 100;
 
+/**
+ * Tick Add GST when the file states both the construction cost and that same
+ * figure with 10% on top. The sections are cost; the plan stores GST inclusive.
+ */
+export function suggestAddGst(
+  layoutTotalCents: number,
+  grandTotals: BoqGrandTotal[] = [],
+): boolean {
+  if (layoutTotalCents <= 0) return false;
+  const withGst = Math.round((layoutTotalCents * 11) / 10);
+  if (withGst === layoutTotalCents) return false;
+  const gstOnly = withGst - layoutTotalCents;
+  const matchesInclusive = grandTotals.some(
+    (entry) => Math.abs(entry.amountCents - withGst) <= FILE_TOTAL_TOLERANCE_CENTS,
+  );
+  const matchesLayout = grandTotals.some(
+    (entry) => Math.abs(entry.amountCents - layoutTotalCents) <= FILE_TOTAL_TOLERANCE_CENTS,
+  );
+  if (matchesInclusive && matchesLayout) return true;
+  return grandTotals.some((entry) => {
+    const label = String(entry.label || '').toLowerCase();
+    return /gst|tax/.test(label)
+      && Math.abs(entry.amountCents - gstOnly) <= FILE_TOTAL_TOLERANCE_CENTS;
+  });
+}
+
 export type FileTotalCheck = {
   /** The file states a figure that the mapped sections add up to. */
   corroborated: boolean;
@@ -465,4 +492,30 @@ export function checkAgainstFileTotals(
     statedCount: stated.length,
     totalCents,
   };
+}
+
+/** True when any of the candidate totals is a figure the file itself states. */
+export function bestFileTotalCheck(
+  totals: number[],
+  grandTotals: BoqGrandTotal[],
+): FileTotalCheck {
+  const candidates = [...new Set(
+    totals
+      .filter((value) => Number.isFinite(value) && value > 0)
+      .map((value) => Math.round(value)),
+  )];
+  if (candidates.length === 0) return checkAgainstFileTotals(0, grandTotals);
+  let best = checkAgainstFileTotals(candidates[0], grandTotals);
+  candidates.slice(1).forEach((total) => {
+    const check = checkAgainstFileTotals(total, grandTotals);
+    if (!best.corroborated && check.corroborated) {
+      best = check;
+      return;
+    }
+    if (best.corroborated) return;
+    const bestGap = Math.abs((best.nearest?.amountCents || 0) - best.totalCents);
+    const gap = Math.abs((check.nearest?.amountCents || 0) - check.totalCents);
+    if (gap < bestGap) best = check;
+  });
+  return best;
 }

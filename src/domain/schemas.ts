@@ -196,6 +196,7 @@ export const costPlanQuoteSchema = z
     gstMode: costPlanGstModeSchema,
     note: z.string().max(2000).nullable().optional(),
     fileId: z.string().min(1).max(80).nullable().optional(),
+    fileIds: z.array(z.string().min(1).max(80)).max(10).optional(),
     allocations: z.array(quoteAllocationSchema).min(1).max(20),
     createdBy: z.string().min(1),
     createdAt: z.unknown().optional(),

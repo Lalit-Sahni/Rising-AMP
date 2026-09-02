@@ -71,6 +71,8 @@ export const getExpenseDisplayName = (expense) => {
       return expense.serviceName || 'Service';
     case 'installation':
       return expense.item || 'Installation';
+    case 'investor':
+      return expense.itemName || expense.serviceName || 'Investor';
     default:
       return expense.category || 'Unknown';
   }

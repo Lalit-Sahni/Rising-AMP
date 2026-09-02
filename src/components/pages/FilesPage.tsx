@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { LayoutGrid, List, Plus, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useApp } from '../../context/AppContext';
+import { useCostPlanQuotes } from '../../hooks/useCostPlan';
+import { queryKeys } from '../../query/client';
 import EmptyState from '../EmptyState';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
 import AddJobFilesSheet from '../files/AddJobFilesSheet';
@@ -30,11 +33,13 @@ import {
   type FileSortColumn,
   type FileTypeFilter,
 } from '../../domain/jobFileBrowser';
+import { liveQuoteFileTargets } from '../../domain/quoteFiles';
 
 export default function FilesPage() {
   const navigate = useNavigate();
   const {
     jobId,
+    orgId,
     projectName,
     authUser,
     profile,
@@ -45,6 +50,10 @@ export default function FilesPage() {
     showToast,
     expensesLoaded,
   } = useApp();
+  const queryClient = useQueryClient();
+  const quotesQuery = useCostPlanQuotes(orgId, jobId, Boolean(orgId && jobId));
+  const quotes = quotesQuery.data || [];
+  const assignableQuotes = liveQuoteFileTargets(quotes);
   const [files, setFiles] = useState<JobFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -100,8 +109,8 @@ export default function FilesPage() {
   );
   const summary = useMemo(() => formatFileRegisterSummary(fileRegisterSummary(searched)), [searched]);
   const lookup = useMemo(
-    () => ({ expenses: expenses || [], invoices: invoices || [] }),
-    [expenses, invoices],
+    () => ({ expenses: expenses || [], invoices: invoices || [], quotes }),
+    [expenses, invoices, quotes],
   );
   const selectableVisible = useMemo(() => visible.filter(isSelectableFileItem), [visible]);
   const selectedItems = useMemo(
@@ -138,18 +147,68 @@ export default function FilesPage() {
     documentDate: string;
     note: string;
     linkedTo: { kind: 'expense' | 'invoice' | 'hiaContract'; id: string } | null;
+    assignedQuoteId: string | null;
   }) => {
     if (!jobId || !openItem?.fileId) return;
     setViewerBusy(true);
-    const result = await updateJobFileRecord(jobId, openItem.fileId, patch);
-    setViewerBusy(false);
-    if (!result.success) {
-      showToast(result.error || 'Could not save that file', 'error');
-      return;
+    try {
+      const nextType = patch.assignedQuoteId ? 'quote' : patch.type;
+      const result = await updateJobFileRecord(jobId, openItem.fileId, {
+        name: patch.name,
+        type: nextType,
+        documentDate: patch.documentDate,
+        note: patch.note,
+        linkedTo: patch.linkedTo,
+      });
+      if (!result.success) {
+        showToast(result.error || 'Could not save that file', 'error');
+        return;
+      }
+      const { assignFilesToQuote, unassignFileFromQuotes } = await import('../../firebase/quotes');
+      if (patch.assignedQuoteId) {
+        await assignFilesToQuote(jobId, patch.assignedQuoteId, [openItem.fileId]);
+      } else {
+        await unassignFileFromQuotes(jobId, openItem.fileId);
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.costPlanQuotes(orgId || '', jobId) });
+      showToast('File updated.', 'success');
+      setOpenItem(null);
+      loadFiles();
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not assign that file', 'error');
+    } finally {
+      setViewerBusy(false);
     }
-    showToast('File updated.', 'success');
-    setOpenItem(null);
-    loadFiles();
+  };
+
+  const handleBulkAssignQuote = async (quoteId: string) => {
+    if (!jobId || !quoteId || selectedItems.length === 0) return;
+    const fileIds = selectedItems.map((item) => item.fileId).filter(Boolean) as string[];
+    if (fileIds.length === 0) return;
+    setBulkBusy(true);
+    try {
+      const { assignFilesToQuote } = await import('../../firebase/quotes');
+      await assignFilesToQuote(jobId, quoteId, fileIds);
+      let failed = 0;
+      for (const item of selectedItems) {
+        if (!item.fileId) continue;
+        const result = await updateJobFileRecord(jobId, item.fileId, { type: 'quote' });
+        if (!result.success) failed += 1;
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.costPlanQuotes(orgId || '', jobId) });
+      setSelectedKeys([]);
+      setConfirmArchive(false);
+      loadFiles();
+      if (failed > 0) {
+        showToast('Assigned, but some types could not be updated.', 'error');
+        return;
+      }
+      showToast(fileIds.length === 1 ? 'Assigned to quote.' : `${fileIds.length} files assigned to quote.`, 'success');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not assign those files', 'error');
+    } finally {
+      setBulkBusy(false);
+    }
   };
 
   const handleArchive = async () => {
@@ -368,6 +427,24 @@ export default function FilesPage() {
                     ))}
                   </select>
                 </label>
+                <label className="text-[12.5px] text-slate-600 inline-flex items-center gap-1.5">
+                  Assign to quote
+                  <select
+                    disabled={bulkBusy || assignableQuotes.length === 0}
+                    defaultValue=""
+                    onChange={(event) => {
+                      const next = event.target.value;
+                      if (next) handleBulkAssignQuote(next);
+                      event.target.value = '';
+                    }}
+                    className="min-h-[36px] border border-hairline rounded-ot-sm px-2 text-[13px] text-ink bg-surface"
+                  >
+                    <option value="">{assignableQuotes.length === 0 ? 'Add a quote first' : 'Choose…'}</option>
+                    {assignableQuotes.map((quote) => (
+                      <option key={quote.id} value={quote.id}>{quote.party || 'Quote'}</option>
+                    ))}
+                  </select>
+                </label>
                 {confirmArchive ? (
                   <>
                     <span className="text-[12.5px] text-slate-600">
@@ -422,7 +499,7 @@ export default function FilesPage() {
               </div>
             ) : (
               <p className="text-[12.5px] text-slate-400 py-2">
-                Select files to change type, archive, or add to the handover pack. Receipts stay with their expenses.
+                Select files to change type, assign to a quote, archive, or add to the handover pack. Receipts stay with their expenses.
               </p>
             )}
             </div>
@@ -526,6 +603,7 @@ export default function FilesPage() {
         expenses={expenses || []}
         invoices={invoices || []}
         hiaContracts={hiaContracts || []}
+        quotes={quotes}
         busy={viewerBusy}
         onClose={() => setOpenItem(null)}
         onSave={handleSave}

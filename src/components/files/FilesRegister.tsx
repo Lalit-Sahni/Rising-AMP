@@ -8,7 +8,8 @@ import {
   type FileTypeCount,
   type FileTypeFilter,
   fileAddedByColumnLabel,
-  fileLinkColumnLabel,
+  fileRegisterLinkLabel,
+  type FileLinkLookup,
 } from '../../domain/jobFileBrowser';
 import JobFileThumb from './JobFileThumb';
 
@@ -20,7 +21,7 @@ type FilesRegisterProps = {
   chips: FileTypeCount[];
   currentUid: string;
   currentName: string;
-  lookup: { expenses: unknown[]; invoices: unknown[] };
+  lookup: FileLinkLookup;
   onOpen: (item: FileBrowserItem) => void;
   onSort: (column: FileSortColumn) => void;
   onTypeFilter: (type: FileTypeFilter) => void;
@@ -250,7 +251,7 @@ export default function FilesRegister({
                     {item.documentDate ? formatJobFileDocumentDate(item.documentDate) : '—'}
                   </td>
                   <td className="px-3 text-[12.5px] text-slate-500 truncate max-w-[10rem]">
-                    {fileLinkColumnLabel(item.linkedTo, lookup) || '—'}
+                    {fileRegisterLinkLabel(item, lookup) || '—'}
                   </td>
                   <td className="px-3 tabular text-[12.5px] text-slate-500 whitespace-nowrap">
                     {item.sizeBytes != null ? formatJobFileSize(item.sizeBytes) : '—'}

@@ -11,7 +11,8 @@ import {
   type JobFileType,
 } from '../../domain/jobFiles';
 import type { FileBrowserItem } from '../../domain/jobFileBrowser';
-import { expenseDisplayName, fileAddedByLabel, fileLinkLabel } from '../../domain/jobFileBrowser';
+import { expenseDisplayName, fileAddedByLabel, fileLinkLabel, fileRegisterLinkLabel } from '../../domain/jobFileBrowser';
+import { liveQuoteFileTargets, quoteForFileId, type QuoteFileFields } from '../../domain/quoteFiles';
 import JobFilePreview from './JobFilePreview';
 
 type JobFileViewerProps = {
@@ -22,6 +23,7 @@ type JobFileViewerProps = {
   expenses: unknown[];
   invoices: unknown[];
   hiaContracts?: unknown[];
+  quotes?: QuoteFileFields[];
   busy?: boolean;
   onClose: () => void;
   onSave: (patch: {
@@ -30,6 +32,7 @@ type JobFileViewerProps = {
     documentDate: string;
     note: string;
     linkedTo: JobFileLinkedTo | null;
+    assignedQuoteId: string | null;
   }) => Promise<void> | void;
   onArchive: () => Promise<void> | void;
   onOpenExpense: (expenseId: string) => void;
@@ -43,6 +46,7 @@ export default function JobFileViewer({
   expenses,
   invoices,
   hiaContracts = [],
+  quotes = [],
   busy = false,
   onClose,
   onSave,
@@ -55,6 +59,7 @@ export default function JobFileViewer({
   const [note, setNote] = useState('');
   const [linkKind, setLinkKind] = useState<'none' | JobFileLinkKind>('none');
   const [linkId, setLinkId] = useState('');
+  const [assignedQuoteId, setAssignedQuoteId] = useState('');
   const [confirmArchive, setConfirmArchive] = useState(false);
 
   useEffect(() => {
@@ -65,19 +70,21 @@ export default function JobFileViewer({
     setNote(item.note);
     setLinkKind(item.linkedTo?.kind || 'none');
     setLinkId(item.linkedTo?.id || '');
+    setAssignedQuoteId(quoteForFileId(quotes, item.fileId)?.id || '');
     setConfirmArchive(false);
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !busy) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, item, busy, onClose]);
+  }, [open, item, busy, onClose, quotes]);
 
   if (!open || !item) return null;
 
   const meta = filesDrawerMeta(item.type);
   const added = fileAddedByLabel(item, currentUid, currentName);
-  const linked = fileLinkLabel(item.linkedTo, { expenses, invoices });
+  const liveQuotes = liveQuoteFileTargets(quotes);
+  const linked = fileRegisterLinkLabel(item, { expenses, invoices, quotes }) || fileLinkLabel(item.linkedTo, { expenses, invoices });
   const readOnly = item.readOnly;
 
   return (
@@ -159,6 +166,7 @@ export default function JobFileViewer({
                 linkedTo: linkKind === 'none' || !linkId
                   ? null
                   : { kind: linkKind, id: linkId },
+                assignedQuoteId: assignedQuoteId || null,
               });
             }}
           >
@@ -292,6 +300,32 @@ export default function JobFileViewer({
                   })}
                 </select>
               ) : null}
+            </div>
+            <div>
+              <div className="text-[12.5px] font-medium text-slate-600 mb-1.5">Cost plan quote</div>
+              {liveQuotes.length === 0 ? (
+                <p className="text-[12.5px] text-slate-500">
+                  Add a quote on Cost Plan first, then assign this file to it here. The PDF stays in Files; the quote only stores a pointer.
+                </p>
+              ) : (
+                <select
+                  value={assignedQuoteId}
+                  disabled={busy}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setAssignedQuoteId(next);
+                    if (next) setType('quote');
+                  }}
+                  className="w-full min-h-[44px] px-3 rounded-ot-sm border border-hairline text-[14px] text-ink"
+                >
+                  <option value="">Not assigned</option>
+                  {liveQuotes.map((quote) => (
+                    <option key={quote.id} value={quote.id}>
+                      {quote.party || 'Quote'}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <button
               type="submit"

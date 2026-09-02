@@ -14,7 +14,8 @@ import { doc, collection } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getActiveOrgId } from '../firebase/tenancy';
 import { useCostPlan, useTradeList } from '../hooks/useCostPlan';
-import { activeTrades, canCodeExpenses } from '../domain/costPlan';
+import { activeTrades, canCodeExpenses, INVESTOR_TRADE_ID } from '../domain/costPlan';
+import { EXPENSE_CATEGORIES, tradeIdAfterCategoryChange } from '../domain/expenseCategory';
 import ExpenseTradePicker from './costPlan/ExpenseTradePicker';
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -59,6 +60,12 @@ const categoryFields = {
     { name: 'date', label: 'Date', type: 'date', required: true },
     { name: 'notes', label: 'Notes', type: 'textarea', required: false },
   ],
+  investor: [
+    { name: 'itemName', label: 'What it is', type: 'text', required: true },
+    { name: 'amount', label: 'Amount', type: 'number', required: true, step: '0.01' },
+    { name: 'date', label: 'Date', type: 'date', required: true },
+    { name: 'notes', label: 'Notes', type: 'textarea', required: false },
+  ],
 };
 
 const categoryLabels = {
@@ -66,8 +73,53 @@ const categoryLabels = {
   trade: 'Trade',
   equipment: 'Equipment',
   service: 'Service',
-  purchase: 'Materials'
+  purchase: 'Materials',
+  investor: 'Investor',
+  installation: 'Installation',
 };
+
+function toSafeDate(val) {
+  if (!val) return null;
+  const fromYmd = parseCalendarDate(val);
+  if (fromYmd) return fromYmd;
+  if (typeof val?.toDate === 'function') return val.toDate();
+  const d = new Date(val);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function seedFormForCategory(nextCategory, source) {
+  const previousCategory = source.category === 'materials' ? 'purchase' : source.category;
+  const initialFormData = {};
+  categoryFields[nextCategory]?.forEach((field) => {
+    if (field.type === 'date') {
+      const converted = toSafeDate(source[field.name] || source.date || source.timestamp || source.startDate);
+      initialFormData[field.name] = converted || (field.required !== false ? new Date() : null);
+    } else {
+      initialFormData[field.name] = source[field.name] ?? '';
+    }
+  });
+  initialFormData.paidBy = source.paidBy ?? '';
+  if (nextCategory === 'investor') {
+    if (!initialFormData.itemName) {
+      initialFormData.itemName = source.itemName
+        || source.serviceName
+        || source.workerName
+        || source.tradeName
+        || source.equipmentName
+        || source.task
+        || '';
+    }
+    if (!initialFormData.amount) {
+      const rolled = calculateTotal(previousCategory, source);
+      const stored = dollarsFromUnknown(source.total)
+        || dollarsFromUnknown(source.cost)
+        || dollarsFromUnknown(source.amount)
+        || dollarsFromUnknown(source.totalPrice);
+      initialFormData.amount = rolled > 0 ? rolled : (stored || '');
+    }
+  }
+  return initialFormData;
+}
 
 function calculateTotal(category, data) {
   try {
@@ -82,6 +134,8 @@ function calculateTotal(category, data) {
         return fromCents(lineCents(data.quantity, data.unitCost));
       case 'service':
         return dollarsFromUnknown(data.cost);
+      case 'investor':
+        return dollarsFromUnknown(data.amount);
       default:
         return 0;
     }
@@ -119,7 +173,7 @@ function creatableSelectStyles(hasError) {
   };
 }
 
-const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null, uncertainFields }) => {
+const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, expenseId = null, uncertainFields }) => {
   const {
     addExpenseToFirebase,
     updateExpenseInFirebase,
@@ -144,6 +198,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
   const trades = activeTrades(tradeQuery.data || []);
 
   const [formData, setFormData] = useState({});
+  const [category, setCategory] = useState(categoryProp);
   const [validationErrors, setValidationErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [receiptFile, setReceiptFile] = useState(null);
@@ -213,28 +268,11 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
 
   // Initialize form data
   useEffect(() => {
-    if (isOpen && category) {
-      const toSafeDate = (val) => {
-        if (!val) return null;
-        const fromYmd = parseCalendarDate(val);
-        if (fromYmd) return fromYmd;
-        if (typeof val?.toDate === 'function') return val.toDate();
-        const d = new Date(val);
-        return Number.isNaN(d.getTime()) ? null : d;
-      };
-
+    if (isOpen && categoryProp) {
       const source = initialDataRef.current || {};
-      const initialFormData = {};
-      categoryFields[category]?.forEach(field => {
-        if (field.type === 'date') {
-          const converted = toSafeDate(source[field.name]);
-          initialFormData[field.name] = converted || (field.required !== false ? new Date() : null);
-        } else {
-          initialFormData[field.name] = source[field.name] ?? '';
-        }
-      });
-      initialFormData['paidBy'] = source['paidBy'] ?? '';
-      setFormData(initialFormData);
+      const nextCategory = categoryProp === 'materials' ? 'purchase' : categoryProp;
+      setCategory(nextCategory);
+      setFormData(seedFormForCategory(nextCategory, source));
       setTradeId(source.tradeId || null);
       setValidationErrors({});
       setCheckFields(uncertainFieldsRef.current || {});
@@ -248,7 +286,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
     }
     // Init when this expense opens, not when the parent re-renders.
     // A default uncertainFields={} (new object every render) used to wipe edits on each keystroke.
-  }, [isOpen, category, expenseId]);
+  }, [isOpen, categoryProp, expenseId]);
 
   // Worker management functions
   const getWorkerOptions = () => {
@@ -399,6 +437,48 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
     return Object.keys(errors).length === 0;
   };
 
+  const handleCategoryChange = (next) => {
+    if (!next || next === category) return;
+    const source = initialDataRef.current || {};
+    setFormData((prev) => {
+      const nextForm = { ...prev };
+      (categoryFields[next] || []).forEach((field) => {
+        if (nextForm[field.name] != null && nextForm[field.name] !== '') return;
+        if (field.type === 'date') {
+          const converted = toSafeDate(source[field.name] || prev.date || prev.startDate);
+          nextForm[field.name] = converted || (field.required !== false ? new Date() : null);
+        } else {
+          nextForm[field.name] = source[field.name] ?? '';
+        }
+      });
+      if (next === 'investor') {
+        if (!nextForm.itemName) {
+          nextForm.itemName = prev.itemName
+            || prev.workerName
+            || prev.tradeName
+            || prev.equipmentName
+            || prev.serviceName
+            || source.itemName
+            || source.serviceName
+            || '';
+        }
+        if (!nextForm.amount) {
+          const rolled = calculateTotal(category, prev);
+          const stored = dollarsFromUnknown(prev.total)
+            || dollarsFromUnknown(prev.cost)
+            || dollarsFromUnknown(source.total)
+            || dollarsFromUnknown(source.cost)
+            || dollarsFromUnknown(source.amount);
+          nextForm.amount = rolled > 0 ? rolled : (stored || '');
+        }
+      }
+      return nextForm;
+    });
+    setTradeId((current) => tradeIdAfterCategoryChange(next, current));
+    setCategory(next);
+    setValidationErrors({});
+  };
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (validationErrors[field]) {
@@ -469,7 +549,9 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
         paidBy: formData.paidBy || '',
         total: calculateTotal(category, formData),
       };
-      if (showTradeCoding) {
+      if (category === 'investor') {
+        expenseData.tradeId = INVESTOR_TRADE_ID;
+      } else if (showTradeCoding) {
         expenseData.tradeId = tradeId || null;
       }
 
@@ -574,7 +656,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
     }
   };
 
-  if (!isOpen || !category) return null;
+  if (!isOpen || !categoryProp) return null;
 
   const fields = categoryFields[category] || [];
 
@@ -591,11 +673,29 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
         <div className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-200">
           <div>
             <h2 id="expense-modal-title" className="text-xl font-bold text-zinc-900">
-              {expenseId ? 'Edit' : 'Add'} {categoryLabels[category]} Expense
+              {expenseId ? 'Edit' : 'Add'} {categoryLabels[category] || category} Expense
             </h2>
-            <p className="text-sm text-zinc-500">
-              Enter expense details
-            </p>
+            {expenseId ? (
+              <label className="mt-2 block text-sm font-medium text-zinc-700">
+                Category
+                <select
+                  value={category}
+                  onChange={(event) => handleCategoryChange(event.target.value)}
+                  className="mt-1 w-full max-w-xs px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg text-sm"
+                >
+                  {category && !EXPENSE_CATEGORIES.includes(category) ? (
+                    <option value={category}>{categoryLabels[category] || category}</option>
+                  ) : null}
+                  {EXPENSE_CATEGORIES.map((key) => (
+                    <option key={key} value={key}>{categoryLabels[key]}</option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <p className="text-sm text-zinc-500">
+                Enter expense details
+              </p>
+            )}
           </div>
           
           <button
@@ -733,7 +833,7 @@ const ExpenseModal = ({ isOpen, onClose, category, initialData, expenseId = null
               ))}
             </div>
 
-            {showTradeCoding ? (
+            {showTradeCoding && category !== 'investor' ? (
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
                   Cost plan trade <span className="text-zinc-400 font-normal">(optional)</span>

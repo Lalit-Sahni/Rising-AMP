@@ -1,6 +1,7 @@
 import { addCents, fromCents, labourCents, lineCents, parseToCents } from '../money';
 import { parseCalendarDate } from '../dates';
 import { normalizeJobKind } from '../domain/jobKind';
+import { isInvestorExpense } from '../domain/costPlanCore';
 
 /**
  * Read-only derived job metrics.
@@ -151,12 +152,13 @@ export function reviewedFieldInUse(expenses) {
 export function deriveCash(invoices = [], expenses = []) {
   const liveInvoices = (invoices || []).filter((invoice) => !isVoidInvoice(invoice));
   const liveExpenses = (expenses || []).filter((expense) => !isVoidExpense(expense));
+  const constructionExpenses = liveExpenses.filter((expense) => !isInvestorExpense(expense));
   const invoiced = fromCents(addCents(...liveInvoices.map((invoice) => getInvoiceTotalCents(invoice)), 0));
   const paid = fromCents(addCents(
     ...liveInvoices.filter(isPaidInvoice).map((invoice) => getInvoiceTotalCents(invoice)),
     0,
   ));
-  const cost = fromCents(addCents(...liveExpenses.map((expense) => getExpenseTotalCents(expense)), 0));
+  const cost = fromCents(addCents(...constructionExpenses.map((expense) => getExpenseTotalCents(expense)), 0));
   return {
     invoiced,
     paid,
