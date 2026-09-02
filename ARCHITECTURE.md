@@ -27,7 +27,7 @@ Entry: `index.html` → `src/index.js` → `src/App.js`.
 
 Localhost must load `.env.local` (staging). Production builds must load `.env.production.local`. Do not swap them.
 
-**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 10 production: **245.4 KB** initial gzip (Phase 9 production baseline: 241.5 KB). `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
+**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 10 production: **245.5 KB** initial gzip (file names + quote AI, 2 Sep 2026; earlier the same day 245.4 KB). `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
 
 ---
 

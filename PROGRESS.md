@@ -18,15 +18,15 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 History can change an expense’s category tag (labour, trade, materials, investor, …) without rewriting the rest of the row. Cost Plan quotes can attach several files: upload goes through the existing Files path (`type: quote`, 25 MB, membership Storage), and the quote stores `fileIds`. Files can assign documents onto a live quote. A file sits on one live quote.
 
-The rules validate membership, integer cents, quote allocations, the org trade list, job kind and estimate files. Delete of plans and quotes is denied. Archiving a cost plan can be followed by a new draft on the same `current` document. **Production hosting then Firestore rules were deployed 2 Sep 2026** after a read-only backup (`backups/production-2026-09-02T02-56-29-049Z`, 505 Firestore documents, 24 Storage files; restore dry-run parsed, not applied). Staging hosting and quote `fileIds` rules went out the same day. Storage rules were not redeployed: they did not change, and quote files already use the Phase 9 Files path. `checkEstimateImport` is live on staging and production (2 Sep 2026, deployed by name). Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`. Initial JS gzip is **245.4 KB** (budget 250).
+The rules validate membership, integer cents, quote allocations, the org trade list, job kind and estimate files. Delete of plans and quotes is denied. Archiving a cost plan can be followed by a new draft on the same `current` document. **Production hosting then Firestore rules were deployed 2 Sep 2026** after a read-only backup (`backups/production-2026-09-02T02-56-29-049Z`, 505 Firestore documents, 24 Storage files; restore dry-run parsed, not applied). Staging hosting and quote `fileIds` rules went out the same day. Storage rules were not redeployed: they did not change, and quote files already use the Phase 9 Files path. `checkEstimateImport` is live on staging and production (2 Sep 2026, deployed by name). Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`. Initial JS gzip is **245.5 KB** (budget 250).
 
 The expense read boundary now preserves labour `hours × rate` and `quantity × unitCost` totals instead of attaching a false zero `totalCents`. This keeps Cost Plan and the existing Overview cost honest.
 
 **History receipts (2 Sep 2026):** An expense with a stored photo now has View receipt on the History row (eye and the small image icon). Edit shows Receipt on file and View receipt in the header. The photo is the stored file, not only a newly picked upload. Verified on Kelly Street staging. **Production hosting deployed 2 Sep 2026** (`firebase deploy --project production --only hosting`). No functions, Firestore rules, or Storage. Live shopfront: https://risingamp.com.au.
 
-**File names on upload:** Add files has a Name field per queued file before **Add to job**. Firestore stores that name. The Storage path still uses the original filename so the extension stays.
+**File names on upload (2 Sep 2026):** Add files has a Name field per queued file before **Add to job**. Firestore stores that name. The Storage path still uses the original filename so the extension stays. **Production hosting deployed 2 Sep 2026.**
 
-**Quote AI fill:** Cost Plan quote sheet puts the file first. Take a photo or choose files, or tick a quote already on the job. `readQuoteFile` fills empty party/amount/date/GST/trade from a photo or PDF (same `OPENAI_API_KEY` as receipts). **Read with AI** overwrites. Uncertain fields get Check this. Word/Excel and large PDFs are not read. `readReceiptImage` stays receipt-only.
+**Quote AI fill (2 Sep 2026):** Cost Plan quote sheet puts the file first. Take a photo or choose files, or tick a quote already on the job. `readQuoteFile` fills empty party/amount/date/GST/trade from a photo or PDF (same `OPENAI_API_KEY` as receipts). **Read with AI** overwrites. Uncertain fields get Check this. Word/Excel and large PDFs are not read. `readReceiptImage` stays receipt-only. Staging function first, then production function by name, then production hosting. Live shopfront: https://risingamp.com.au. Initial JS gzip **245.5 KB** (budget 250).
 
 **Phase 9 is closed and live (31 Aug 2026).** Brief: `PHASE9.md` (closed record). Mockup: `design/risingamp-files-vision.html`.
 
@@ -107,8 +107,8 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan is live on
 - [x] Phase 10 live — production hosting and Firestore rules (2 Sep 2026)
 - [x] Phase 10 `checkEstimateImport` live on staging and production (2 Sep 2026)
 - [x] History receipts live on production hosting (2 Sep 2026)
-- [x] File names on Add files before upload
-- [x] Quote AI fill (`readQuoteFile`)
+- [x] File names on Add files before upload — production hosting 2 Sep 2026
+- [x] Quote AI fill (`readQuoteFile`) live on staging and production 2 Sep 2026
 
 ## What shipped (localhost / staging)
 

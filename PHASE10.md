@@ -16,7 +16,7 @@ Working branch: **`phase-10-cost-plan`**, created from the closed Phase 9 branch
 - [x] Production hosting — `firebase deploy --project production --only hosting` on 2 Sep 2026
 - [x] Production Firestore rules — `firebase deploy --project production --only firestore:rules` on 2 Sep 2026
 - [x] `checkEstimateImport` — `firebase deploy --project staging --only functions:checkEstimateImport` then `--project production` on 2 Sep 2026
-- [x] `readQuoteFile` — quote photo/PDF fill; deploy by name (staging then production)
+- [x] `readQuoteFile` — `firebase deploy --project staging --only functions:readQuoteFile` then `--project production` on 2 Sep 2026. Production hosting the same day.
 
 Cost Plan is live on production hosting and Firestore rules. Localhost remains on staging. Storage rules were not redeployed because they did not change: quote files use the Phase 9 Files path, already live since 31 Aug 2026. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`.
 
