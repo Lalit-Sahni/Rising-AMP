@@ -22,7 +22,7 @@ The rules validate membership, integer cents, quote allocations, the org trade l
 
 The expense read boundary now preserves labour `hours × rate` and `quantity × unitCost` totals instead of attaching a false zero `totalCents`. This keeps Cost Plan and the existing Overview cost honest.
 
-**History receipts (2 Sep 2026):** An expense with a stored photo now has View receipt on the History row (eye and the small image icon). Edit shows Receipt on file and View receipt in the header. The photo is the stored file, not only a newly picked upload. Verified on Kelly Street staging.
+**History receipts (2 Sep 2026):** An expense with a stored photo now has View receipt on the History row (eye and the small image icon). Edit shows Receipt on file and View receipt in the header. The photo is the stored file, not only a newly picked upload. Verified on Kelly Street staging. **Production hosting deployed 2 Sep 2026** (`firebase deploy --project production --only hosting`). No functions, Firestore rules, or Storage. Live shopfront: https://risingamp.com.au.
 
 **Phase 9 is closed and live (31 Aug 2026).** Brief: `PHASE9.md` (closed record). Mockup: `design/risingamp-files-vision.html`.
 
@@ -102,6 +102,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan is live on
 - [x] Phase 10 staging Firestore rules (2 Sep 2026) — localhost can save a plan
 - [x] Phase 10 live — production hosting and Firestore rules (2 Sep 2026)
 - [x] Phase 10 `checkEstimateImport` live on staging and production (2 Sep 2026)
+- [x] History receipts live on production hosting (2 Sep 2026)
 
 ## What shipped (localhost / staging)
 
