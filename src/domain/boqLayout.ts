@@ -37,6 +37,8 @@ const ACTUALS_HEADER = /actual|\bpaid\b|\bspent\b|variance|committed|forecast|in
  * have no price yet, which is normal in a working estimate.
  */
 const SECTION_CODE = /^\d+(\.0+)?$/;
+/** A line code has a real decimal part: 1.001, 4.0021, 12.004. */
+const LINE_CODE = /^\d+\.\d+$/;
 const GRAND_LABEL = /gst|sum including|unit rate|construction cost|grand total|project total/i;
 
 /** A stated section total wins over the sum of its lines within this much drift. */
@@ -253,6 +255,18 @@ export function classifyBoqRow(
   if (everything.length === 0) return 'noise';
 
   if (looksLikeHeaderRow(row, headerRow)) return 'header';
+
+  /**
+   * A row carrying a line-shaped code is a line item, whatever words sit in its
+   * comment cells. The label tests below read EVERY cell in the row, so a note
+   * against a real item ("$39,500 Plus GST", "sum including sink") matched
+   * GRAND_LABEL and turned that item into a phantom grand total. Its money then
+   * left the section silently. On the 167sqm estimate that cost the kitchen line
+   * $14,660, and it only survived because the section stated its own total.
+   */
+  if (profile.usesSectionCodes && code && !SECTION_CODE.test(code) && LINE_CODE.test(code)) {
+    return 'line';
+  }
 
   const anyMoney = !isBlank(amount) || !isBlank(unitPrice);
   if (everything.some((value) => GRAND_LABEL.test(value))) return 'grandTotal';

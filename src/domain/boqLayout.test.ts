@@ -358,3 +358,29 @@ describe('estimate columns beat the file\'s own actuals columns', () => {
     expect(layout.sections[0].amountCents).toBe(75000);
   });
 });
+
+/**
+ * The total-label tests read every cell in the row, so a comment against a real
+ * line item that happens to contain "GST" or "sum including" turned that item
+ * into a phantom grand total and its money left the section. A numbered line is
+ * a line, whatever an estimator wrote in the notes column beside it.
+ */
+describe('a note mentioning GST does not turn a line item into a total', () => {
+  const rows = [
+    ['12', 'Kitchen, Laundry, Vanities', '', '', '', '', '', '', ''],
+    ['Item Code', 'Description', 'Qty', 'Unit', 'Price', 'Total', 'Comments', '', ''],
+    ['12.001', 'Supply and install kitchen cabinetry', '1', 'LS', '14660', '14660', 'Allowances only', '$39,500 Plus GST', 'Mark gave prices'],
+    ['12.002', 'Supply and install Laundry cabinetry', '1', 'LS', '1000', '1000', '', '', ''],
+    ['', '', '', '', 'Total', '15660', '', '', ''],
+  ];
+
+  it('keeps the noted line inside its section', () => {
+    const index = findHeaderRowIndex(rows);
+    const layout = readBoqLayout(rows, guessColumnMapStrict(rows[index], rows), index);
+    expect(layout.sections).toHaveLength(1);
+    expect(layout.sections[0].rows).toHaveLength(2);
+    expect(layout.sections[0].amountCents).toBe(1566000);
+    expect(layout.grandTotals).toHaveLength(0);
+    expect(layout.warnings).toHaveLength(0);
+  });
+});
