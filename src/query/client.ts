@@ -10,6 +10,12 @@ export const queryClient = new QueryClient({
   },
 });
 
+export function invalidateKeys(...keys: Array<readonly unknown[]>) {
+  keys.forEach((queryKey) => {
+    queryClient.invalidateQueries({ queryKey });
+  });
+}
+
 export const queryKeys = {
   jobs: (orgId: string, email: string) => ['jobs', orgId, email] as const,
   expenses: (orgId: string, jobId: string) => ['expenses', orgId, jobId] as const,

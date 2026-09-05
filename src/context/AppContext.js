@@ -40,7 +40,7 @@ import { isPermissionDenied } from '../firebase/tenancy';
 import { AuthProvider, useAuth } from './AuthContext';
 import { OrgProvider, useOrg } from './OrgContext';
 import { UIProvider, useUI } from './UIContext';
-import { queryClient, queryKeys } from '../query/client';
+import { invalidateKeys, queryClient, queryKeys } from '../query/client';
 import { patchNamedList, setBankDetails, setList } from '../hooks/useJobDirectories';
 
 const AppDataContext = createContext();
@@ -196,8 +196,12 @@ const AppDataProvider = ({
     };
   }, [jobListId]);
 
-  const invalidateJobQueries = () => {
-    queryClient.invalidateQueries();
+  const invalidateExpenseQueries = () => {
+    invalidateKeys(queryKeys.expenses(orgId, jobListId || ''));
+  };
+
+  const invalidateInvoiceQueries = () => {
+    invalidateKeys(queryKeys.invoices(orgId, jobListId || ''));
   };
 
   // Toast notifications live in UIContext.
@@ -208,6 +212,7 @@ const AppDataProvider = ({
       const result = await addExpenseToFirestore(jobListId, expenseData);
       if (result.success) {
         setExpenses(prev => [...prev, result.expense]);
+        invalidateExpenseQueries();
         showToast('Expense added successfully', 'success');
         return { success: true, expense: result.expense };
       } else {
@@ -228,6 +233,7 @@ const AppDataProvider = ({
         setExpenses(prev => prev.map(exp => (
           exp.id === expenseId ? { ...exp, ...result.expense } : exp
         )));
+        invalidateExpenseQueries();
         showToast('Expense updated successfully', 'success');
         return { success: true, expense: result.expense };
       } else {
@@ -248,6 +254,7 @@ const AppDataProvider = ({
       setExpenses((prev) => prev.map((exp) => (
         exp.id === expenseId ? { ...exp, tradeId } : exp
       )));
+      invalidateExpenseQueries();
       return { success: true };
     } catch (error) {
       console.error('Error coding expense:', error);
@@ -268,6 +275,7 @@ const AppDataProvider = ({
       setExpenses((prev) => prev.map((exp) => (
         exp.id === expenseId ? { ...exp, category: nextCategory, tradeId } : exp
       )));
+      invalidateExpenseQueries();
       return { success: true };
     } catch (error) {
       console.error('Error changing expense category:', error);
@@ -284,6 +292,7 @@ const AppDataProvider = ({
         setExpenses((prev) => prev.map((exp) => (
           exp.id === expenseId ? { ...exp, status: 'void', voidedAt: new Date() } : exp
         )));
+        invalidateExpenseQueries();
         showToast('Moved to Recently deleted', 'success');
         return { success: true };
       } else {
@@ -307,6 +316,7 @@ const AppDataProvider = ({
             ? { ...exp, status: result.status || 'active', voidedAt: null }
             : exp
         )));
+        invalidateExpenseQueries();
         showToast('Expense restored', 'success');
         return { success: true };
       }
@@ -323,6 +333,7 @@ const AppDataProvider = ({
       const result = await purgeExpenseFromFirestore(jobListId, expenseId);
       if (result.success) {
         setExpenses((prev) => prev.filter((exp) => exp.id !== expenseId));
+        invalidateExpenseQueries();
         showToast('Expense removed for good', 'success');
         return { success: true };
       }
@@ -566,7 +577,7 @@ const AppDataProvider = ({
       if (result.success) {
         setInvoices(prev => prev.map(inv => inv.id === invoiceId ? { ...inv, status: 'void', voidedAt: new Date() } : inv));
         showToast('Moved to Recently deleted. The number is kept until you remove it for good.', 'success');
-        invalidateJobQueries();
+        invalidateInvoiceQueries();
         return { success: true };
       } else {
         showToast('Failed to void invoice', 'error');
@@ -589,7 +600,7 @@ const AppDataProvider = ({
             : inv
         )));
         showToast('Invoice restored', 'success');
-        invalidateJobQueries();
+        invalidateInvoiceQueries();
         return { success: true };
       }
       showToast('Failed to restore invoice', 'error');
@@ -606,7 +617,7 @@ const AppDataProvider = ({
       if (result.success) {
         setInvoices((prev) => prev.filter((inv) => inv.id !== invoiceId));
         showToast('Invoice removed for good', 'success');
-        invalidateJobQueries();
+        invalidateInvoiceQueries();
         return { success: true };
       }
       showToast('Failed to remove invoice', 'error');

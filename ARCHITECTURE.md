@@ -1,6 +1,6 @@
 # Rising AMP — Architecture (Phase 10 live, 2026-09-02; Phase 11 Parts A–C on branch)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A, B and C (app-shell service worker + Firestore disk cache + job directories on the screen that uses them) are on `phase-11-cold-start`, not deployed.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A–D (app-shell service worker + Firestore disk cache + directories on the screen that uses them + scoped invalidation) are on `phase-11-cold-start`, not deployed.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
@@ -306,4 +306,6 @@ Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache f
 
 **Part B (on the branch, 5 Sep 2026):** `initializeFirestore` with `persistentLocalCache` (IndexedDB; memory fallback if IndexedDB is missing). The job list, expenses and invoices use `onSnapshot`, so a repeat open paints from disk then revalidates. Empty disk snapshots are ignored so they cannot wipe a boot-cached list. Invoice numbers stay on `allocateInvoiceNumber`; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. The service worker still never caches Firestore.
 
-**Part C (on the branch, 5 Sep 2026):** Opening a job only attaches the expenses and invoices listeners. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load with `useQuery` on the screen that needs them. Clients are one query (`queryKeys.clients`), not the old pair of `loadCompanies` + `loadClientDetails`. Directory lists stay fresh for 30 minutes; invoice/contract extras use the default minute. Writes still go through `AppContext` mutations, which patch the same query cache. `invalidateQueries()` with no arguments is unchanged (Part D). Initial JS gzip **272.5 KB** (budget 275).
+**Part C (on the branch, 5 Sep 2026):** Opening a job only attaches the expenses and invoices listeners. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load with `useQuery` on the screen that needs them. Clients are one query (`queryKeys.clients`), not the old pair of `loadCompanies` + `loadClientDetails`. Directory lists stay fresh for 30 minutes; invoice/contract extras use the default minute. Writes still go through `AppContext` mutations, which patch the same query cache. Initial JS gzip **272.5 KB** (budget 275).
+
+**Part D (on the branch, 5 Sep 2026):** `invalidateKeys` in `src/query/client.ts` invalidates only the keys a write changes. An expense write touches `queryKeys.expenses`. An invoice void/restore/purge touches `queryKeys.invoices`. The old `invalidateQueries()` with no arguments is gone, so a save no longer refetches Cost Plan, quotes or directories. Initial JS gzip **272.6 KB** (budget 275).

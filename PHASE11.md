@@ -4,7 +4,7 @@ Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
 Branch: **`phase-11-cold-start`**. Restore tag: `pre-phase11-2026-09-05`. One part per session, one commit per part.
 
-**Part A, Part B and Part C are on the branch (5 Sep 2026), not deployed.** Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Firestore uses `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Opening a job no longer loads the ten directory collections; those wait for the screen that uses them. Escape hatch: `/clear-sw`. Next is Part D (scope cache invalidation). The owner overrode waiting on production-phone timing. Do not start Part E until C and D are committed.
+**Parts A–D are on the branch (5 Sep 2026), not deployed.** Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Firestore uses `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Opening a job no longer loads the ten directory collections; those wait for the screen that uses them. Writes invalidate only their own query keys. Escape hatch: `/clear-sw`. Part E (ledger rollups) is parked. Production phone timing is still pending a named hosting deploy.
 
 This phase changes **when and how often** data is fetched, and what is on screen while it is fetched. It does not change what is stored, what is displayed, or any security rule. If a task here seems to need a schema change, stop and ask.
 
@@ -108,9 +108,9 @@ Commit: `Load a job's reference data on the screen that uses it.`
 
 ## Part D — Scope the cache invalidation
 
-`AppContext` calls `queryClient.invalidateQueries()` with **no arguments**, which throws away the entire cache on any mutation. One saved expense makes every screen refetch, undoing much of Parts B and C.
+**On the branch 5 Sep 2026, not deployed.**
 
-Invalidate by key. Saving an expense touches `queryKeys.expenses` and the job's totals, nothing else.
+`AppContext` used to call `queryClient.invalidateQueries()` with **no arguments**, which threw away the entire cache. A write now invalidates only its own keys via `invalidateKeys` in `src/query/client.ts`. Saving an expense touches `queryKeys.expenses`. Voiding, restoring or removing an invoice touches `queryKeys.invoices`. Directories, Cost Plan and quotes stay in cache.
 
 Commit: `Invalidate only the keys a write actually changes.`
 
@@ -166,15 +166,15 @@ Take readings on **production with real data**, throttled to Fast 3G, on a phone
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
 
-Phase 11 is cold start. Parts A, B and C are on
+Phase 11 is cold start. Parts A–D are on
 phase-11-cold-start, not deployed. Restore tag pre-phase11-2026-09-05.
 Never commit to master or main. Localhost stays on staging
 (.env.local, rising-amp-staging). Deploy nothing unless he names it.
 
-Next is Part D: scope `invalidateQueries()` so a write only
-touches the keys it changes. Do not start E.
+Part E (ledger rollups) is parked. It needs a named Cloud Function
+and must not half-write money totals.
 
-Do not redo Part A, Part B, Part C, or the boot cache (86e2451, 57e12db).
+Do not redo Parts A–D or the boot cache (86e2451, 57e12db).
 Never cache Firestore, Cloud Function or Storage responses in the
 service worker. Never hard-delete user records. Never accept a
 pasted API key.

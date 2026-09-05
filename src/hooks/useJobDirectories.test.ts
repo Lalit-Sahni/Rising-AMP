@@ -10,7 +10,7 @@ function read(relative: string) {
 
 function jobOpenEffect(source: string) {
   const start = source.indexOf("logger.firebase('LOAD_DATA'");
-  const end = source.indexOf('invalidateJobQueries', start);
+  const end = source.indexOf('invalidateExpenseQueries', start);
   if (start < 0 || end < 0) return '';
   return source.slice(start, end);
 }
