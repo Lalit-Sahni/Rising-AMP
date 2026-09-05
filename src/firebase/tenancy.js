@@ -1,6 +1,6 @@
 import { collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from './config';
-import { canonicalEmail, isEmailOnList, normalizeEmail } from './email';
+import { canonicalEmail, isEmailOnList, normalizeEmail } from './emailAddress';
 
 // Opal's live org id. Kept as a fallback so the family app cannot lose its home.
 export const FAMILY_ORG_ID = 'opal-ss-constructions';

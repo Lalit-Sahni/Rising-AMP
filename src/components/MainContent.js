@@ -1,9 +1,10 @@
 import React, { Suspense, lazy } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import LoadingSkeleton from './ui/LoadingSkeleton';
 import RouteErrorBoundary from './ui/RouteErrorBoundary';
 import JobsHomePage from './pages/JobsHomePage';
 import NotFoundPage from './NotFoundPage';
+import { useApp } from '../context/AppContext';
 
 const AddExpensePage = lazy(() => import('./pages/AddExpensePage'));
 const InvoiceManagementPage = lazy(() => import('./pages/InvoiceManagementPage'));
@@ -14,7 +15,6 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const FilesPage = lazy(() => import('./pages/FilesPage'));
 const CostPlanPage = lazy(() => import('./pages/CostPlanPage'));
-const BudgetTrackingPage = lazy(() => import('./pages/BudgetTrackingPage'));
 
 function PageFallback() {
   return (
@@ -24,6 +24,18 @@ function PageFallback() {
       </div>
     </div>
   );
+}
+
+/** Budget tracking was retired in Phase 12. Cost plan is the budget. */
+function BudgetRedirect() {
+  const { jobId } = useParams();
+  return <Navigate to={`/jobs/${encodeURIComponent(jobId || '')}/cost-plan`} replace />;
+}
+
+/** Pre-Phase 12 links to /clients land on the open job's clients. */
+function LegacyClientsRedirect() {
+  const { jobId } = useApp();
+  return <Navigate to={jobId ? `/jobs/${encodeURIComponent(jobId)}/clients` : '/'} replace />;
 }
 
 export default function MainContent() {
@@ -39,9 +51,10 @@ export default function MainContent() {
             <Route path="/jobs/:jobId/files" element={<FilesPage />} />
             <Route path="/jobs/:jobId/cost-plan" element={<CostPlanPage />} />
             <Route path="/jobs/:jobId/history" element={<HistoryPage />} />
-            <Route path="/jobs/:jobId/budget" element={<BudgetTrackingPage />} />
+            <Route path="/jobs/:jobId/budget" element={<BudgetRedirect />} />
             <Route path="/jobs/:jobId/contracts" element={<HIAContractPage />} />
-            <Route path="/clients" element={<ClientManagerPage />} />
+            <Route path="/jobs/:jobId/clients" element={<ClientManagerPage />} />
+            <Route path="/clients" element={<LegacyClientsRedirect />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/privacy" element={<Navigate to="/privacy.html" replace />} />
             <Route path="/terms" element={<Navigate to="/terms.html" replace />} />
@@ -49,7 +62,6 @@ export default function MainContent() {
           </Routes>
         </Suspense>
       </RouteErrorBoundary>
-      <style>{`@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } } .animate-fadeIn { animation: fadeIn 0.3s; }`}</style>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { loadProfilesForEmails } from '../firebase/profiles';
-import { canonicalEmail } from '../firebase/email';
+import { canonicalEmail } from '../firebase/emailAddress';
 
 function uniqueEmails(emails) {
   const seen = new Set();

@@ -5,13 +5,13 @@ import { AppProvider } from './context/AppContext';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import MainContent from './components/MainContent';
-import CommandPalette from './components/CommandPalette';
+import PaletteHost from './components/PaletteHost';
+import BottomNav from './components/BottomNav';
 import LoginScreen from './components/LoginScreen';
 import ProfileSetupScreen from './components/ProfileSetupScreen';
 import BootScreen from './components/BootScreen';
 import AskForAccessScreen from './components/AskForAccessScreen';
 import { listenInvitedProjects, invitedJobsFingerprint } from './firebase/projectCatalog';
-import { sendNewSignInNotice } from './firebase/email';
 import { loadProfile, profileIsComplete, profileNeedsSetup, readProfileCache, recordSignIn } from './firebase/profiles';
 import { clearBootCache, clearSession, readBootCache, readSession, resolveInvitation, setActiveOrgId, writeBootCache, writeSession } from './firebase/tenancy';
 import { jobIdFromPath } from './navigation';
@@ -220,10 +220,10 @@ function AppShell() {
     if (sessionStorage.getItem(key)) return undefined;
     sessionStorage.setItem(key, '1');
     recordSignIn(authUser.uid).catch(() => {});
-    sendNewSignInNotice({
-      profile,
-      to: authUser.email,
-    }).catch(() => {});
+    // Mail templates load only here, after first paint.
+    import('./firebase/email')
+      .then(({ sendNewSignInNotice }) => sendNewSignInNotice({ profile, to: authUser.email }))
+      .catch(() => {});
     return undefined;
   }, [authUser, profile, profileLoading]);
 
@@ -285,24 +285,6 @@ function AppShell() {
     setJobInvitedEmails([]);
     setProjectStatus('active');
     setProjectKind('client');
-  };
-
-  const handleSwitchProject = () => {
-    writeSession({
-      projectId: null,
-      workspaceId: null,
-      projectName: null,
-      orgId: membership ? membership.orgId : null,
-      invitedEmails: [],
-      projectStatus: null,
-    });
-    setProjectId(null);
-    setWorkspaceId(null);
-    setProjectName(null);
-    setJobInvitedEmails([]);
-    setProjectStatus('active');
-    setProjectKind('client');
-    navigate('/');
   };
 
   useEffect(() => {
@@ -383,6 +365,7 @@ function AppShell() {
       authUser={authUser}
       profile={shownProfile}
       setProfile={setProfile}
+      onSignOut={handleLogout}
       jobInvitedEmails={jobInvitedEmails}
       jobKind={projectKind}
       onJobKindChange={handleJobKindChange}
@@ -391,17 +374,14 @@ function AppShell() {
         <Sidebar
           user={authUser}
           projectName={projectName}
-          onSwitchProject={handleSwitchProject}
+          onLogout={handleLogout}
         />
         <div className="app-main flex-1 flex flex-col min-w-0 w-full overflow-hidden">
-          <Header
-            onLogout={handleLogout}
-            onSwitchProject={handleSwitchProject}
-            projectName={projectName}
-          />
+          <Header projectName={projectName} />
           <MainContent />
         </div>
-        <CommandPalette />
+        <PaletteHost />
+        <BottomNav />
       </div>
     </AppProvider>
   );

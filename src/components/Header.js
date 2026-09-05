@@ -1,6 +1,6 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Menu, Search, LogOut, X } from 'lucide-react';
+import { Menu, Search, X } from 'lucide-react';
 
 const PAGE_TITLES = {
   jobs: 'Jobs',
@@ -11,12 +11,11 @@ const PAGE_TITLES = {
   'new-invoice': 'Invoices',
   files: 'Files',
   'cost-plan': 'Cost plan',
-  'budget-tracking': 'Budget tracking',
   'hia-contract': 'HIA contracts',
   'client-manager': 'Clients',
 };
 
-const Header = ({ onLogout, projectName }) => {
+const Header = ({ projectName }) => {
   const {
     currentPage,
     setCurrentPage,
@@ -73,18 +72,10 @@ const Header = ({ onLogout, projectName }) => {
           <button
             onClick={() => setCommandPaletteOpen(true)}
             className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm bg-surface text-slate-600 hover:text-ink"
-            title="Search (Ctrl+K)"
+            title="Search"
             aria-label="Search"
           >
             <Search className="w-4 h-4" strokeWidth={1.6} />
-          </button>
-          <button
-            onClick={onLogout}
-            className="pressable w-8 h-8 grid place-items-center border border-hairline rounded-ot-sm bg-surface text-slate-600 hover:text-neg"
-            title="Log out"
-            aria-label="Log out"
-          >
-            <LogOut className="w-4 h-4" strokeWidth={1.6} />
           </button>
         </div>
       </div>

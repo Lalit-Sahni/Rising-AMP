@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import ProfileSetupScreen from '../ProfileSetupScreen';
 
 export default function ProfilePage() {
-  const { authUser, profile, setProfile, showToast } = useApp();
+  const { authUser, profile, setProfile, showToast, onSignOut } = useApp();
 
   if (!authUser) return null;
 
@@ -12,6 +12,7 @@ export default function ProfilePage() {
       user={authUser}
       initialProfile={profile}
       editing
+      onSignOut={onSignOut}
       onComplete={(saved) => {
         setProfile(saved);
         showToast('Profile saved.', 'success');

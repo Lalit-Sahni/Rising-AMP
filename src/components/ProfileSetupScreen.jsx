@@ -286,7 +286,13 @@ export default function ProfileSetupScreen({ user, initialProfile, onComplete, o
 
           <div className="flex items-center justify-between gap-3 mt-2">
             {onSignOut ? (
-              <button type="button" onClick={onSignOut} className="text-xs text-slate-400">
+              <button
+                type="button"
+                onClick={onSignOut}
+                className={editing
+                  ? 'inline-flex items-center px-3.5 py-2 rounded-[10px] border border-hairline bg-surface text-[13px] font-semibold text-slate-600 hover:text-neg hover:border-[#D6D9DD]'
+                  : 'text-xs text-slate-400'}
+              >
                 Sign out
               </button>
             ) : (

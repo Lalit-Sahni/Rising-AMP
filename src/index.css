@@ -92,9 +92,12 @@ select,
   .content {
     padding-left: var(--safe-left);
   }
-  /* When the phone tab bar is showing, the scroll column ends above it. */
-  .content.has-tabbar {
+  /* When the phone tab bar is showing, the scroll column and toasts end above it. */
+  html.has-tabbar .content {
     padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom));
+  }
+  html.has-tabbar {
+    --toaster-offset: var(--tabbar-height);
   }
 }
 

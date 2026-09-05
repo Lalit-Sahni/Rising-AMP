@@ -4,10 +4,10 @@ import {
   LayoutDashboard,
   Clock,
   X,
+  LogOut,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Target,
   FileText,
   Files,
   Users,
@@ -29,9 +29,8 @@ const navMain = [
 ];
 
 const navMore = [
-  { key: 'budget-tracking', label: 'Budget tracking', icon: Target },
-  { key: 'hia-contract', label: 'HIA contracts', icon: FileCheck },
   { key: 'client-manager', label: 'Clients', icon: Users },
+  { key: 'hia-contract', label: 'HIA contracts', icon: FileCheck },
 ];
 
 function initials(name, email) {
@@ -41,7 +40,7 @@ function initials(name, email) {
   return source.slice(0, 1).toUpperCase();
 }
 
-export default function Sidebar({ user, projectName, onSwitchProject }) {
+export default function Sidebar({ user, projectName, onLogout }) {
   const {
     currentPage,
     setCurrentPage,
@@ -190,11 +189,11 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
           })}
         </nav>
 
-        <div className={`mt-auto mx-3 mb-3 pt-3 border-t border-steel-700 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>
+        <div className={`mt-auto mx-3 mb-3 pt-3 border-t border-steel-700 flex items-center gap-1 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>
           <button
             type="button"
             onClick={() => handleNavClick('profile', false)}
-            className="flex items-center gap-2 w-full px-2 py-1.5 rounded-ot-sm hover:bg-steel-800 text-left transition-transform active:scale-[0.98]"
+            className="flex items-center gap-2 flex-1 min-w-0 px-2 py-1.5 rounded-ot-sm hover:bg-steel-800 text-left transition-transform active:scale-[0.98]"
             title="Profile"
           >
             {profile && profile.photoUrl ? (
@@ -208,7 +207,15 @@ export default function Sidebar({ user, projectName, onSwitchProject }) {
               <b className="block text-xs font-medium text-[#E5E7EA] truncate">{displayName}</b>
               <small className="block text-[10.5px] text-[#767B84] truncate">{company || email}</small>
             </span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#767B84] shrink-0" strokeWidth={1.7} />
+          </button>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="shrink-0 w-8 h-8 grid place-items-center rounded-ot-sm text-[#767B84] hover:bg-steel-800 hover:text-white"
+            title="Sign out"
+            aria-label="Sign out"
+          >
+            <LogOut className="w-4 h-4" strokeWidth={1.7} />
           </button>
         </div>
         </div>

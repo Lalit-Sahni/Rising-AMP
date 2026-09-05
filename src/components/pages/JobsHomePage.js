@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Archive, ArchiveRestore, Check, ChevronRight, Pencil, Plus, Search, UserPlus, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { canonicalEmail, emailInviteVariants, sendJobInvite } from '../../firebase/email';
+import { canonicalEmail, emailInviteVariants } from '../../firebase/emailAddress';
 import {
   createOrgProject,
   inviteEmailToProject,
@@ -191,6 +191,7 @@ export default function JobsHomePage() {
       );
       cancelPanels();
       try {
+        const { sendJobInvite } = await import('../../firebase/email');
         await sendJobInvite({ to: saved, projectId: project.projectId, projectName: project.name });
       } catch (mailErr) {
         console.error('Invite email failed:', mailErr);

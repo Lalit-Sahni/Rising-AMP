@@ -11,40 +11,12 @@ import {
   inferLocationLabel,
 } from '../emails/risingAmpMail';
 
+import { normalizeEmail } from './emailAddress';
+
 const GMAIL_TOKEN_KEY = 'risingAmp.gmailAccessToken';
 
-export function normalizeEmail(email) {
-  return String(email || '').trim().toLowerCase();
-}
-
-export function canonicalEmail(email) {
-  const lowered = normalizeEmail(email);
-  const at = lowered.lastIndexOf('@');
-  if (at < 1) return lowered;
-  let local = lowered.slice(0, at);
-  let domain = lowered.slice(at + 1);
-  if (domain === 'googlemail.com') domain = 'gmail.com';
-  if (domain === 'gmail.com') {
-    local = local.replace(/\./g, '').replace(/\+.*$/, '');
-  }
-  return `${local}@${domain}`;
-}
-
-export function emailInviteVariants(email) {
-  const lowered = normalizeEmail(email);
-  const canonical = canonicalEmail(lowered);
-  if (!lowered.includes('@')) return [];
-  return Array.from(new Set([lowered, canonical].filter(Boolean)));
-}
-
-export function emailsMatch(a, b) {
-  return canonicalEmail(a) === canonicalEmail(b);
-}
-
-export function isEmailOnList(invitedEmails, email) {
-  const wanted = new Set(emailInviteVariants(email));
-  return (invitedEmails || []).some((item) => wanted.has(normalizeEmail(item)) || wanted.has(canonicalEmail(item)));
-}
+// Address helpers live in emailAddress.ts so boot does not load the mail templates.
+export { normalizeEmail, canonicalEmail, emailInviteVariants, emailsMatch, isEmailOnList } from './emailAddress';
 
 function rememberGmailAccessToken(accessToken) {
   if (accessToken) {

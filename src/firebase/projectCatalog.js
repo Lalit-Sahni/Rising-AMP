@@ -14,7 +14,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { auth, db } from './config';
-import { canonicalEmail, emailInviteVariants, normalizeEmail } from './email';
+import { canonicalEmail, emailInviteVariants, normalizeEmail } from './emailAddress';
 import { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJobArchived, newJobId } from './jobIdentity';
 import { FAMILY_ORG_ID, getActiveOrgId } from './tenancy';
 import { LEDGER_ROLLUP_COLLECTION, LEDGER_ROLLUP_DOC_ID } from '../domain/ledgerRollupMeta';
