@@ -67,9 +67,9 @@ function decodeValue(value) {
   if (value.booleanValue !== undefined) return value.booleanValue;
   if (value.nullValue !== undefined) return null;
   if (value.timestampValue !== undefined) return new Date(value.timestampValue);
-  if (value.mapValue && value.mapValue.fields) {
+  if (value.mapValue) {
     const out = {};
-    Object.entries(value.mapValue.fields).forEach(([key, nested]) => {
+    Object.entries(value.mapValue.fields || {}).forEach(([key, nested]) => {
       out[key] = decodeValue(nested);
     });
     return out;
@@ -80,11 +80,16 @@ function decodeValue(value) {
   return null;
 }
 
-function decodeDoc(doc) {
+function decodeFields(doc) {
   const data = {};
   Object.entries(doc.fields || {}).forEach(([key, value]) => {
     data[key] = decodeValue(value);
   });
+  return data;
+}
+
+function decodeExpense(doc) {
+  const data = decodeFields(doc);
   const parts = relativeDocPath(doc.name).split('/');
   data.id = parts[parts.length - 1];
   return data;
@@ -164,11 +169,12 @@ async function main() {
       const jobId = relativeDocPath(job.name).split('/')[3];
       if (args.jobId && args.jobId !== jobId) continue;
       const name = decodeValue(job.fields && job.fields.name) || jobId;
-      const expenses = (await listOrEmpty(accessToken, job.name, 'expenses')).map(decodeDoc);
+      const expenses = (await listOrEmpty(accessToken, job.name, 'expenses')).map(decodeExpense);
       const computed = computeLedgerRollup(expenses, 0);
       const existingDocs = await listOrEmpty(accessToken, job.name, LEDGER_ROLLUP_COLLECTION);
       const existingDoc = existingDocs.find((doc) => relativeDocPath(doc.name).endsWith(`/${LEDGER_ROLLUP_DOC_ID}`));
-      const existing = existingDoc ? parseCompleteRollup(decodeDoc(existingDoc)) : null;
+      // Do not attach `id` — parseCompleteRollup rejects extra keys.
+      const existing = existingDoc ? parseCompleteRollup(decodeFields(existingDoc)) : null;
       const path = `organizations/${orgId}/projects/${jobId}/${LEDGER_ROLLUP_COLLECTION}/${LEDGER_ROLLUP_DOC_ID}`;
       const agrees = existing ? rollupsAgree(existing, computed) : false;
       planned.push({
@@ -181,7 +187,8 @@ async function main() {
         costCents: computed.costCents,
         investorCents: computed.investorCents,
         agrees,
-        hasExisting: Boolean(existing),
+        hasExisting: Boolean(existingDoc),
+        parseFailed: Boolean(existingDoc) && !existing,
         nextRevision: (existing && existing.revision ? existing.revision : 0) + 1,
         computed,
       });
@@ -191,7 +198,7 @@ async function main() {
   planned.forEach((row) => {
     const flag = args.clear
       ? (row.hasExisting ? 'delete' : 'skip')
-      : (row.agrees ? 'ok' : (row.hasExisting ? 'update' : 'create'));
+      : (row.agrees ? 'ok' : (row.parseFailed ? 'repair' : (row.hasExisting ? 'update' : 'create')));
     console.log(
       `${flag.padEnd(6)} ${row.jobId}  ${row.name}  docs=${row.expenseRows} live=${row.liveCount} costCents=${row.costCents} investorCents=${row.investorCents}`,
     );

@@ -1,6 +1,6 @@
-# Rising AMP — Architecture (Phase 10 live, 2026-09-02; Phase 11 Parts A–C on branch)
+# Rising AMP — Architecture (Phase 10 live, 2026-09-02; Phase 11 Parts A–E on branch)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A–E (app-shell service worker + Firestore disk cache + directories on the screen that uses them + scoped invalidation + ledger rollups) are on `phase-11-cold-start`, not deployed to production.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A–E are on `phase-11-cold-start`. Staging has `maintainLedgerRollup` and rollup docs; production hosting, function and rules are not deployed unless named.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
@@ -141,8 +141,8 @@ Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvo
 ```
 firebase deploy --project rising-amp-staging --only functions:readQuoteFile
 firebase deploy --project production --only functions:readQuoteFile
-firebase deploy --project staging --only functions:maintainLedgerRollup
-firebase deploy --project production --only functions:maintainLedgerRollup
+firebase deploy --project staging --only functions:maintainLedgerRollup --force
+firebase deploy --project production --only functions:maintainLedgerRollup --force
 ```
 
 Deploying by name is the habit for this live app. Do not run a bare `firebase deploy --only functions` unless you intend to publish every exported function in `functions/index.js`.
@@ -244,7 +244,7 @@ Done on the Phase 10 branch:
 Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.
-- Ledger rollups: `maintainLedgerRollup` writes `ledgerRollup/current`. Overview, Jobs home counts, Cost Plan headline spend and Budget read it. History and “what needs you” still read expense rows. On the branch, not production.
+- Ledger rollups: `maintainLedgerRollup` writes `ledgerRollup/current`. Overview, Jobs home counts, Cost Plan headline spend and Budget read it. History and “what needs you” still read expense rows. Staging function, rules and recompute applied 5 Sep 2026. Production is not deployed unless named.
 - TanStack Query is mounted. Cost Plan, quotes, the org trade list, and job directories load on the screen that uses them. Expenses and invoices still sit in `AppContext`.
 - App Check enforcement is off until a site key exists and traffic is clean.
 - Gmail invite fallback remains until the owner asks to remove it.
@@ -312,4 +312,4 @@ Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache f
 
 **Part D (on the branch, 5 Sep 2026):** `invalidateKeys` in `src/query/client.ts` invalidates only the keys a write changes. An expense write touches `queryKeys.expenses`. An invoice void/restore/purge touches `queryKeys.invoices`. The old `invalidateQueries()` with no arguments is gone, so a save no longer refetches Cost Plan, quotes or directories. Initial JS gzip **272.6 KB** (budget 275).
 
-**Part E (on the branch, 5 Sep 2026):** `maintainLedgerRollup` recomputes `ledgerRollup/current` from every expense on that job, then writes the complete document in one `set()` if the revision is unchanged. Members read; clients cannot write. Overview cost, period, categories, Jobs home expense counts, Cost Plan headline spend and Budget use the rollup. If an uncapped ledger disagrees, the ledger wins. Recompute: `node scripts/recompute-ledger-rollups.js --dry-run --staging`. Production function and rules are not deployed unless named. Initial JS gzip **272.7 KB** (budget 275).
+**Part E (on the branch, 5 Sep 2026):** `maintainLedgerRollup` recomputes `ledgerRollup/current` from every expense on that job, then writes the complete document in one `set()` if the revision is unchanged. Members read; clients cannot write. Overview cost, period, categories, Jobs home expense counts, Cost Plan headline spend and Budget use the rollup. If an uncapped ledger disagrees, the ledger wins. Staging: function, Firestore rules and `node scripts/recompute-ledger-rollups.js --apply --staging` (Kelly Street `costCents=465633`, 5 live). Production function, rules and hosting are not deployed unless named. Initial JS gzip **272.7 KB** (budget 275).

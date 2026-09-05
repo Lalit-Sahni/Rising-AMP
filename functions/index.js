@@ -13,8 +13,8 @@
  *   firebase deploy --project production --only functions:checkEstimateImport
  *   firebase deploy --project rising-amp-staging --only functions:readQuoteFile
  *   firebase deploy --project production --only functions:readQuoteFile
- *   firebase deploy --project staging --only functions:maintainLedgerRollup
- *   firebase deploy --project production --only functions:maintainLedgerRollup
+ *   firebase deploy --project staging --only functions:maintainLedgerRollup --force
+ *   firebase deploy --project production --only functions:maintainLedgerRollup --force
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):
  *   RESEND_API_KEY, OPENAI_API_KEY

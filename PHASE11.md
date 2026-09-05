@@ -4,7 +4,7 @@ Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
 Branch: **`phase-11-cold-start`**. Restore tag: `pre-phase11-2026-09-05`. One part per session, one commit per part.
 
-**Parts A–E are on the branch (5 Sep 2026), not deployed to production.** Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Firestore uses `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Opening a job no longer loads the ten directory collections; those wait for the screen that uses them. Writes invalidate only their own query keys. Overview and Jobs home read `ledgerRollup/current` for expense totals. Function `maintainLedgerRollup` is the named Cloud Function. Escape hatch: `/clear-sw`. Production phone timing is still pending a named hosting deploy.
+**Parts A–E are on the branch (5 Sep 2026).** Staging has `maintainLedgerRollup`, Part E Firestore rules and rollup docs. Production hosting, function and rules are not deployed. Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Firestore uses `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Opening a job no longer loads the ten directory collections; those wait for the screen that uses them. Writes invalidate only their own query keys. Overview and Jobs home read `ledgerRollup/current` for expense totals. Function `maintainLedgerRollup` is the named Cloud Function. Escape hatch: `/clear-sw`. Production phone timing is still pending a named hosting deploy.
 
 This phase changes **when and how often** data is fetched, and what is on screen while it is fetched. It does not change what is stored, what is displayed, or any security rule. If a task here seems to need a schema change, stop and ask.
 
@@ -118,7 +118,7 @@ Commit: `Invalidate only the keys a write actually changes.`
 
 ## Part E — Rollups instead of reading the ledger
 
-**On the branch 5 Sep 2026, not deployed to production.** Named function: `maintainLedgerRollup` (Firestore `onDocumentWritten` on expenses, `us-central1`).
+**On the branch 5 Sep 2026. Staging function, rules and recompute applied; not deployed to production.** Named function: `maintainLedgerRollup` (Firestore `onDocumentWritten` on expenses, `us-central1`). First staging create needed `--force` because `retry: true` (the function is a full recompute, so retries are safe).
 
 `fetchExpensesFromFirestore` pulled up to 1,000 expense documents so Overview could add them up. That is still how History and “what needs you” read rows. Totals now come from `organizations/{orgId}/projects/{jobId}/ledgerRollup/current`:
 
@@ -128,7 +128,7 @@ Commit: `Invalidate only the keys a write actually changes.`
 
 The function **recomputes from the whole expense collection**, then writes that complete document in one `set()` inside a revision compare-and-set. If the write fails, the previous document stays. A payload missing any money field is refused.
 
-`scripts/recompute-ledger-rollups.js` rebuilds the same document from the ledger. Dry-run is the default. `--apply --staging` writes. `--clear --apply --staging` deletes only the rollup docs (expenses are untouched). Production apply needs `--apply --production` and an owner yes.
+`scripts/recompute-ledger-rollups.js` rebuilds the same document from the ledger. Dry-run is the default. `--apply --staging` writes. `--clear --apply --staging` deletes only the rollup docs (expenses are untouched). Production apply needs `--apply --production` and an owner yes. Staging apply on 5 Sep 2026 wrote three jobs (72 Centenary Dr, Kelly Street, Test 1). A second dry-run must report `ok`, not `create`.
 
 If a rollup and an uncapped ledger disagree, **the ledger wins** and Overview says the totals were rebuilt from the expense list. Past 1,000 expenses the list is still capped; the rollup can still show a complete cost.
 
@@ -173,7 +173,8 @@ Take readings on **production with real data**, throttled to Fast 3G, on a phone
 Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
 
 Phase 11 is cold start. Parts A–E are on
-phase-11-cold-start, not deployed to production. Restore tag pre-phase11-2026-09-05.
+phase-11-cold-start. Staging has maintainLedgerRollup and rollup docs.
+Production is not deployed. Restore tag pre-phase11-2026-09-05.
 Never commit to master or main. Localhost stays on staging
 (.env.local, rising-amp-staging). Deploy nothing unless he names it.
 

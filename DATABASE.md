@@ -24,7 +24,7 @@ then computed margin, “needs you,” and the subtitle **in the browser**. Two 
 
 The cheap UX fix (now in the app, no schema change): show job **names** as soon as the invited-jobs query has an answer (boot cache, then IndexedDB, then the server), then hydrate **counts** from `ledgerRollup/current` when it exists, else `getCountFromServer`. Drawing the Jobs list does **not** download the ledger. Opening a job still listens to expenses and invoices for History and “what needs you,” but Overview cost comes from the rollup.
 
-The **real** scale fix is the Phase 11 Part E rollup document (`ledgerRollup/current`), written by `maintainLedgerRollup`. Recompute with `scripts/recompute-ledger-rollups.js`. If rollup and ledger disagree, the ledger wins.
+The **real** scale fix is the Phase 11 Part E rollup document (`ledgerRollup/current`), written by `maintainLedgerRollup`. Staging function, rules and recompute applied 5 Sep 2026. Recompute with `scripts/recompute-ledger-rollups.js`. If rollup and ledger disagree, the ledger wins. Production is not deployed unless named.
 
 ### Is the model right for a family construction tracker?
 
@@ -55,7 +55,7 @@ organizations/{orgId}
     budget, expenses[]                         # leftover PIN copy fields; ignore
     files/{id}             job documents (Phase 9). type from a fixed list including estimate; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored.
     costPlan/current        optional Phase 10 plan. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections hold trade amounts and optional imported lines. sourceFileId optional. Members only; delete denied. Archiving is reversible: the same `current` document can be replaced with a new draft.
-    ledgerRollup/current    Phase 11 Part E. Server-owned expense totals (costCents, counts, byCategory, byMonth, byDay). Members read; client write denied. Recomputed from the expense collection; a failed write leaves the previous document.
+    ledgerRollup/current    Phase 11 Part E. Server-owned expense totals (costCents, counts, byCategory, byMonth, byDay). Members read; client write denied. Recomputed from the expense collection; a failed write leaves the previous document. Staging has the docs; production does not unless named.
     quotes/{id}            optional Phase 10 quotes. Allocations must sum to amountCents. status received | chosen | passed | void. Optional fileIds (max 10) point at files/{id}; fileId is the first pointer. The PDF is not stored on the quote. Delete denied.
     expenses/{id}          + jobId, optional tradeId (or not-in-estimate | investor)
     invoices/{id}          + jobId, invoiceNumber, status including void

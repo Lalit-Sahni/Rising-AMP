@@ -64,3 +64,8 @@ test('stale revision does not clobber a newer complete document', () => {
 test('two rollups of the same ledger agree', () => {
   assert.equal(rollupsAgree(computeLedgerRollup(FIXTURES, 1), computeLedgerRollup(FIXTURES, 9)), true);
 });
+
+test('an extra id field is not a complete stored rollup', () => {
+  const rollup = computeLedgerRollup(FIXTURES, 1);
+  assert.equal(parseCompleteRollup({ ...rollup, id: 'current' }), null);
+});

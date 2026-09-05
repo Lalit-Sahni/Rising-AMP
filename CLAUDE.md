@@ -6,18 +6,18 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-11-cold-start`**. Phase 10 Cost Plan is live. Phase 11 Parts A–E (app-shell worker, Firestore disk cache, directories on the screen that uses them, scoped invalidation, ledger rollups) are on the branch, **not deployed to production**. Restore tag: `pre-phase11-2026-09-05`. Never commit to `master` or `main`. Older restore tags: `pre-phase10-2026-09-02`, `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+1. Confirm git branch. Latest work is **`phase-11-cold-start`**. Phase 10 Cost Plan is live. Phase 11 Parts A–E are on the branch. Staging has `maintainLedgerRollup`, Part E Firestore rules and rollup docs. **Not deployed to production.** Restore tag: `pre-phase11-2026-09-05`. Never commit to `master` or `main`. Older restore tags: `pre-phase10-2026-09-02`, `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
 2. Read `PROGRESS.md` (next concrete step), then `PHASE11.md`. Open `design/risingamp-vision.html` before changing the shell. `PHASE10.md` is the closed Cost Plan record. `PHASE9.md` through `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
 3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`. `npm start` does not register a service worker; `npm run build` then `npm run preview` does.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Production phone timing is still pending a named hosting deploy. Part E (`maintainLedgerRollup`) is on the branch; production function and rules are not deployed unless named. Do not deploy unless he names the project and surface.
+5. **Next:** Production phone timing is still pending a named hosting deploy. Staging has `maintainLedgerRollup`, Part E Firestore rules, and rollup docs. Production function, rules and hosting are not deployed unless named. Do not deploy unless he names the project and surface.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. **All new files are TypeScript.** Existing JS converts only when a brief says so, or when the file is being substantially rewritten anyway.
 8. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Parts A–E are on `phase-11-cold-start`, not deployed to production. Function `maintainLedgerRollup`. Localhost stays on staging. Restore tag: pre-phase11-2026-09-05. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Parts A–E are on `phase-11-cold-start`. Staging has `maintainLedgerRollup` and rollup docs; production is not deployed. Localhost stays on staging. Restore tag: pre-phase11-2026-09-05. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 

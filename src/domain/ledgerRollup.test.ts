@@ -159,6 +159,11 @@ describe('resolveExpenseTotals', () => {
     expect(overlay.source).toBe('hidden');
   });
 
+  test('an extra id field is not a complete stored rollup', () => {
+    const rollup = computeLedgerRollup(FIXTURES, 1);
+    expect(parseCompleteRollup({ ...rollup, id: 'current' })).toBeNull();
+  });
+
   test('a capped job with a rollup still shows the complete total', () => {
     const rollup = computeLedgerRollup(FIXTURES, 1);
     const overlay = resolveExpenseTotals({
