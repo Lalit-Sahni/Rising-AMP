@@ -36,6 +36,7 @@ If you are unsure whether a command writes to production, do not run it.
 ## How to preview work
 
 - Day-to-day: `npm start` → http://localhost:3000 (Vite, staging). After Google or email login, complete profile if asked, then **Jobs**.
+- Saved-app copy (service worker) on the same port against staging: `npm run preview:staging`. This is a production-style build pointed at staging, not `npm start`. It takes port 3000.
 - Live shopfront: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)
 - Design mockup (Phase 3): `design/risingamp-vision.html`
 - Job Files vision (Phase 9): `design/risingamp-files-vision.html`

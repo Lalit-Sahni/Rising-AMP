@@ -82,7 +82,10 @@
           })
           .then(function () {
             status.textContent =
-              'Cleared. The next time you open RisingAMP it will download a fresh copy.';
+              'Cleared. Opening a fresh copy…';
+            // Unregister does not finish while this page is still controlled.
+            // Leave it so the next load can install a new worker.
+            window.location.replace('/');
           })
           .catch(fail);
       })();

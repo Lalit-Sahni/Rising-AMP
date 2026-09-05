@@ -297,7 +297,8 @@ The owner’s number is **time from tapping the home-screen icon to the Jobs lis
 | Initial JS gzip | 245.5 KB on production | 245.9 KB (budget 250). Register script is inline in `index.html`, not in the React bundle. |
 | Money data in the worker | n/a | Firestore, `*.cloudfunctions.net`, Storage, Auth and App Check are NetworkOnly. |
 | Upgrade | n/a | Changed a hashed entry (`index-DzWVcopq.js` → `index-C-aVLcaD.js`), reopened: new build ran, worker activated, nothing left waiting. `skipWaiting` + `clientsClaim`. |
-| Escape hatch | n/a | `/clear-sw` unregistered the worker and emptied Cache Storage. If that page itself is trapped: Safari → Settings → Advanced → Website Data. Kill-switch in code: `VitePWA({ selfDestroying: true })` then hosting. |
+| Staging localhost (5 Sep 2026) | n/a | `vite build --mode staging` then preview on **:3000**. Signed-in Jobs, Kelly Street overview / Cost Plan / Files / History against `rising-amp-staging`. Worker controlled the page. `/clear-sw` unregisters and returns to Jobs. `npm start` has no worker. |
+| Escape hatch | n/a | `/clear-sw` unregisters the worker and empties Cache Storage, then opens `/`. If that page itself is trapped: Safari → Settings → Advanced → Website Data. Kill-switch in code: `VitePWA({ selfDestroying: true })` then hosting. |
 | Hosting cache | Firebase default 1 hour | `**` `Cache-Control: no-cache`; `/assets/**` immutable. So `sw.js` and `index.html` are not pinned. |
 
 Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache from `86e2451` still paints Jobs after JS parses. Part B is Firestore’s disk cache plus listeners.

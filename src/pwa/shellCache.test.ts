@@ -78,7 +78,16 @@ describe('app-shell service worker', () => {
     const html = read('public/clear-sw.html');
     expect(html).toContain('serviceWorker.getRegistrations');
     expect(html).toContain('caches.delete');
+    expect(html).toContain('location.replace');
     const rewrite = firebase.hosting.rewrites.find((row) => row.source === '/clear-sw');
     expect(rewrite?.destination).toBe('/clear-sw.html');
+  });
+
+  test('localhost preview of the shell uses staging, not production', () => {
+    const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> };
+    expect(pkg.scripts['build:staging']).toContain('--mode staging');
+    expect(pkg.scripts['preview:staging']).toContain('--mode staging');
+    expect(pkg.scripts['preview:staging']).toContain('--port 3000');
+    expect(pkg.scripts['preview:staging']).not.toContain('production');
   });
 });

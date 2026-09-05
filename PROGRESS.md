@@ -12,7 +12,11 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 ## Where we are (2026-09-05)
 
-**Phase 11 Part A is on the branch, not deployed.** Brief: `PHASE11.md`. Service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Hosting headers: `sw.js` / HTML `no-cache`, `/assets/**` immutable. Upgrade path proven on `vite preview` (new hashed entry took over on reopen). Initial JS gzip **245.9 KB** (budget 250). `npm start` still has no worker.
+**Phase 11 Part A is on the branch, not deployed.** Brief: `PHASE11.md`. Service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Hosting headers: `sw.js` / HTML `no-cache`, `/assets/**` immutable.
+
+**Tested 5 Sep 2026 on localhost:3000 against staging** (`npm run preview:staging`, signed in as the owner): Jobs list (72 Centenary Dr, Kelly Street), Kelly Street overview, Cost Plan ($348,608 estimated / $4,656 spent), Files and History. Worker took control and filled its caches. `/clear-sw` unregistered it and sent the browser back to Jobs; jobs and sign-in were untouched. `npm start` is still the day-to-day server and does **not** install a worker (Vite HMR). To test the saved-app copy on the same port: stop `npm start`, then `npm run preview:staging`.
+
+Initial JS gzip **245.9 KB** (budget 250).
 
 **Next is Part B:** Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Do not start C, D or E until A and B are done and measured. Production phone timing for icon-to-Jobs is still pending a hosting deploy the owner names.
 

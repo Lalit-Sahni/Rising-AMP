@@ -72,7 +72,7 @@ Phase 7 already made this a home-screen app with correct safe areas. This is the
 
 Commit: `Cache the app shell so a repeat open starts from disk.`
 
-**Done on the branch, 5 Sep 2026. Not deployed.** `vite-plugin-pwa`, auto-update (`skipWaiting` + `clientsClaim`), inline register (out of the 250 KB budget), NetworkFirst HTML, NetworkOnly for Firebase data, Hosting `no-cache` on `sw.js`/`index.html`, `/clear-sw`. Upgrade path proven on `vite preview`.
+`npm start` still has no worker. That is the day-to-day Vite server. To test the saved-app copy on localhost:3000 against staging: `npm run preview:staging`.
 
 ---
 
