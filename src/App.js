@@ -15,7 +15,6 @@ import { sendNewSignInNotice } from './firebase/email';
 import { loadProfile, profileIsComplete, profileNeedsSetup, readProfileCache, recordSignIn } from './firebase/profiles';
 import { clearBootCache, clearSession, readBootCache, readSession, resolveInvitation, setActiveOrgId, writeBootCache, writeSession } from './firebase/tenancy';
 import { jobIdFromPath } from './navigation';
-import './styles/premium-animations.css';
 
 function legalHtmlPath() {
   if (typeof window === 'undefined') return null;

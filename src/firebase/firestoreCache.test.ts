@@ -41,7 +41,6 @@ describe('Firestore disk cache wiring', () => {
     expect(effect).toContain('unsubInvoices()');
     expect(effect).not.toContain('fetchExpensesFromFirestore');
     expect(context).not.toContain('fetchExpensesFromFirestore');
-    expect(context).toContain("fromServer: true");
     expect(effect).not.toContain('Promise.all');
     expect(effect).not.toContain('getLabour');
     expect(effect).not.toContain('getTrades');

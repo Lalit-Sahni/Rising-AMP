@@ -2,7 +2,6 @@ import {
   collection,
   doc,
   getCountFromServer,
-  getDoc,
   limit,
   onSnapshot,
   orderBy,
@@ -27,7 +26,6 @@ export type ExpenseListenResult = {
   success: true;
   expenses: Array<Record<string, unknown>>;
   expensesCapped: boolean;
-  budget: number;
   fromCache: boolean;
 };
 
@@ -62,7 +60,6 @@ export function listenJobExpenses(
     limit(1000),
   );
 
-  let budget = 0;
   let lastExpenses: Array<Record<string, unknown>> = [];
   let lastCapped = false;
   let lastFromCache = true;
@@ -74,7 +71,6 @@ export function listenJobExpenses(
       success: true,
       expenses: lastExpenses,
       expensesCapped: lastCapped,
-      budget,
       fromCache: lastFromCache,
     });
   };
@@ -105,13 +101,6 @@ export function listenJobExpenses(
     },
     onError,
   );
-
-  getDoc(projectRef)
-    .then((snap) => {
-      budget = (snap.data()?.budget as number | undefined) || 0;
-      emit();
-    })
-    .catch(() => {});
 
   return unsub;
 }

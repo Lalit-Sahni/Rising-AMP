@@ -252,34 +252,3 @@ export async function deleteClient(jobId, clientId) {
   return voidDirectoryRow(jobId, DIRECTORY.CLIENTS, clientId);
 }
 
-export async function updateLabour(jobId, labourId, labourData) {
-  try {
-    await updateDoc(rowRef(jobId, DIRECTORY.LABOUR, labourId), definedFields({
-      ...labourData,
-      updatedAt: serverTimestamp(),
-    }));
-    return { success: true, labour: { id: labourId, ...labourData } };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-export async function deleteLabour(jobId, labourId) {
-  return voidDirectoryRow(jobId, DIRECTORY.LABOUR, labourId);
-}
-
-export async function updateTrade(jobId, tradeId, tradeData) {
-  try {
-    await updateDoc(rowRef(jobId, DIRECTORY.TRADES, tradeId), definedFields({
-      ...tradeData,
-      updatedAt: serverTimestamp(),
-    }));
-    return { success: true, trade: { id: tradeId, ...tradeData } };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-
-export async function deleteTrade(jobId, tradeId) {
-  return voidDirectoryRow(jobId, DIRECTORY.TRADES, tradeId);
-}

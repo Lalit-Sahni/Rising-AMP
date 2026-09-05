@@ -124,7 +124,7 @@ These are product-grade decisions. Scaling does not mean throwing them away.
 
 ### 3.1 Jobs home used to download the ledger to draw a list
 
-`src/firebase/jobSummaries.js` still exists as the old per-job expense/invoice/client download. Jobs home no longer calls it. Counts come from `ledgerRollup/current` when present, else `getCountFromServer`.
+The old per-job expense/invoice/client download (`jobSummaries.js`) was removed in Phase 12; nothing had called it since Phase 8. Counts come from `ledgerRollup/current` when present, else `getCountFromServer`.
 
 ### 3.2 Expense fetch cap
 
@@ -305,7 +305,6 @@ Firestore is a good database for this product **if** list screens read small doc
 | `firestore.rules` | Who can read/write |
 | `storage.rules` | Who can read/write files (deploy separately) |
 | `src/firebase/projectCatalog.js` | Job list, create, archive, invite, remove |
-| `src/firebase/jobSummaries.js` | Why Jobs home is heavy |
 | `src/firebase/directories.js` | Client / supplier / labour upsert |
 | `src/firebase/partyName.js` | Canonical names |
 | `scripts/backup-production.js` | Backup before writes |

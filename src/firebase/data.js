@@ -4,7 +4,6 @@ import {
   setDoc,
   getDoc,
   getDocs,
-  getDocsFromServer,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -14,12 +13,9 @@ import {
   where,
   serverTimestamp,
   limit,
-  writeBatch,
-  getCountFromServer,
 } from 'firebase/firestore';
 import { db } from './config';
 import { getActiveOrgId } from './tenancy';
-import { mapExpenseSnapshot, mapInvoiceSnapshot } from './ledgerMap';
 
 function definedFields(data) {
   const out = {};
@@ -41,102 +37,24 @@ const projectRootRef = async (projectId) => {
   return projectRef;
 };
 
-// Sync local expenses to Firestore (migrate from array to subcollection)
-export const syncExpensesToFirestore = async (jobId, expenses) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    
-    // Add each expense as a separate document using expense ID as document ID
-    for (const expense of expenses) {
-      // Ensure expense has an ID, generate one if missing
-      const expenseId = expense.id || `expense_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const expenseWithId = { ...expense, id: expenseId };
-      
-      const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
-      await setDoc(expenseDocRef, {
-        ...expenseWithId,
-        timestamp: serverTimestamp()
-      });
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Sync to Firestore error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Fetch expenses from Firestore (using subcollections)
-export const fetchExpensesFromFirestore = async (jobId) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const expensesCollectionRef = collection(userDocRef, 'expenses');
-    
-    // Query expenses ordered by timestamp with a page-size cap.
-    // Compare to the server count so a job with exactly 1,000 is not
-    // treated as truncated, and a job past 1,000 is.
-    const expensesQuery = query(
-      expensesCollectionRef,
-      orderBy('timestamp', 'desc'),
-      limit(1000)
-    );
-    const [expensesSnapshot, countSnap] = await Promise.all([
-      getDocs(expensesQuery),
-      getCountFromServer(expensesCollectionRef),
-    ]);
-    const totalOnServer = countSnap.data().count || 0;
-    const expenses = mapExpenseSnapshot(expensesSnapshot);
-    
-    const userDoc = await getDoc(userDocRef);
-    const userData = userDoc.data();
-    
-    return { 
-      success: true, 
-      expenses,
-      expensesCapped: totalOnServer > expenses.length,
-      budget: userData?.budget || 0
-    };
-  } catch (error) {
-    console.error('Fetch from Firestore error:', error);
-    return { success: false, error: error.message, code: error.code };
-  }
-};
-
-// Update budget in Firestore
-export const updateBudgetInFirestore = async (jobId, budget) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    await updateDoc(userDocRef, {
-      budget: budget,
-      updatedAt: serverTimestamp()
-    });
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Update budget error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
 // Add single expense to Firestore (using subcollection)
 export const addExpenseToFirestore = async (jobId, expense) => {
   try {
-    
     const userDocRef = await projectRootRef(jobId);
     const expenseDocRef = doc(userDocRef, 'expenses', expense.id);
-    
+
     // Use setDoc with the expense's ID as the document ID
     await setDoc(expenseDocRef, definedFields({
       ...expense,
       jobId: jobId,
       timestamp: serverTimestamp()
     }));
-    
+
     const newExpense = {
       ...expense,
       timestamp: new Date()
     };
-    
+
     return { success: true, expense: newExpense };
   } catch (error) {
     console.error('Add expense error:', error);
@@ -149,18 +67,18 @@ export const updateExpenseInFirestore = async (jobId, expenseId, updatedExpense)
   try {
     const userDocRef = await projectRootRef(jobId);
     const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
-    
+
     await updateDoc(expenseDocRef, definedFields({
       ...updatedExpense,
       updatedAt: serverTimestamp()
     }));
-    
+
     const updatedExpenseWithId = {
       id: expenseId,
       ...updatedExpense,
       updatedAt: new Date()
     };
-    
+
     return { success: true, expense: updatedExpenseWithId };
   } catch (error) {
     console.error('Update expense error:', error);
@@ -203,13 +121,9 @@ async function voidSubdoc(jobId, collectionName, id, label, fallbackStatus = 'ac
   }
 }
 
+/** First step is void (Recently deleted), never a hard delete. */
 export const voidExpenseInFirestore = async (jobId, expenseId) => {
   return voidSubdoc(jobId, 'expenses', expenseId, 'Expense', 'active');
-};
-
-/** @deprecated Use voidExpenseInFirestore. First step is void, not a hard delete. */
-export const deleteExpenseFromFirestore = async (jobId, expenseId) => {
-  return voidExpenseInFirestore(jobId, expenseId);
 };
 
 async function restoreSubdoc(jobId, collectionName, id, label, fallbackStatus) {
@@ -272,283 +186,23 @@ export const purgeExpenseFromFirestore = async (jobId, expenseId) => {
   return purgeVoidedSubdoc(jobId, 'expenses', expenseId, 'Expense');
 };
 
-export const batchDeleteExpenses = async (jobId, expenseIds) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const batch = writeBatch(db);
-    for (const expenseId of expenseIds) {
-      const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
-      batch.update(expenseDocRef, {
-        status: 'void',
-        voidedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    }
-    await batch.commit();
-    return { success: true };
-  } catch (error) {
-    console.error('Batch void expenses error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Save labour information (updated to use unified structure)
-export const saveLabourInfo = async (jobId, labourData) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const labourCollectionRef = collection(userDocRef, 'labour');
-    
-    // Check if labour with same name and role already exists
-    if (labourData.name && labourData.role) {
-      const existingQuery = query(
-        labourCollectionRef,
-        where('name', '==', labourData.name),
-        where('role', '==', labourData.role)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        // Update existing record
-        const existingDoc = existingSnapshot.docs[0];
-        await updateDoc(existingDoc.ref, {
-          ...labourData,
-          updatedAt: serverTimestamp()
-        });
-        
-        const updatedLabour = {
-          id: existingDoc.id,
-          ...labourData,
-          updatedAt: new Date()
-        };
-        
-        return { success: true, labour: updatedLabour };
-      }
-    }
-    
-    // Add new record
-    const docRef = await addDoc(labourCollectionRef, {
-      ...labourData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    const newLabour = {
-      id: docRef.id,
-      ...labourData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    return { success: true, labour: newLabour };
-  } catch (error) {
-    console.error('Save labour error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Save trade information (updated to use unified structure)
-export const saveTradeInfo = async (jobId, tradeData) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const tradeCollectionRef = collection(userDocRef, 'trades');
-    
-    // Check if trade with same name and category already exists
-    if (tradeData.tradeName && tradeData.tradeCategory) {
-      const existingQuery = query(
-        tradeCollectionRef,
-        where('tradeName', '==', tradeData.tradeName),
-        where('tradeCategory', '==', tradeData.tradeCategory)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        // Update existing record
-        const existingDoc = existingSnapshot.docs[0];
-        await updateDoc(existingDoc.ref, {
-          ...tradeData,
-          updatedAt: serverTimestamp()
-        });
-        
-        const updatedTrade = {
-          id: existingDoc.id,
-          ...tradeData,
-          updatedAt: new Date()
-        };
-        
-        return { success: true, trade: updatedTrade };
-      }
-    }
-    
-    // Add new record
-    const docRef = await addDoc(tradeCollectionRef, {
-      ...tradeData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    const newTrade = {
-      id: docRef.id,
-      ...tradeData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    return { success: true, trade: newTrade };
-  } catch (error) {
-    console.error('Save trade error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Fetch labour (updated to use unified structure)
-export const fetchLabour = async (jobId) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const labourCollectionRef = collection(userDocRef, 'labour');
-    const labourQuery = query(labourCollectionRef, orderBy('createdAt', 'desc'));
-    const labourSnapshot = await getDocs(labourQuery);
-    
-    const labour = [];
-    labourSnapshot.forEach((doc) => {
-      labour.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-    
-    return { success: true, labour };
-  } catch (error) {
-    console.error('Fetch labour error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Legacy function for backward compatibility
-export const fetchSavedLabour = async (jobId) => {
-  return await fetchLabour(jobId);
-};
-
-// Fetch trades (updated to use unified structure)
-export const fetchTrades = async (jobId) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const tradeCollectionRef = collection(userDocRef, 'trades');
-    const tradeQuery = query(tradeCollectionRef, orderBy('createdAt', 'desc'));
-    const tradeSnapshot = await getDocs(tradeQuery);
-    
-    const trades = [];
-    tradeSnapshot.forEach((doc) => {
-      trades.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-    
-    return { success: true, trades };
-  } catch (error) {
-    console.error('Fetch trades error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Legacy function for backward compatibility
-export const fetchSavedTrades = async (jobId) => {
-  return await fetchTrades(jobId);
-};
-
-// Save client information (replaces saveCompanyInfo)
-export const saveClientInfo = async (jobId, clientData) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const clientCollectionRef = collection(userDocRef, 'clients');
-    
-    // Check if client with same email already exists (if email provided)
-    if (clientData.email) {
-      const existingQuery = query(
-        clientCollectionRef,
-        where('email', '==', clientData.email)
-      );
-      const existingSnapshot = await getDocs(existingQuery);
-      
-      if (!existingSnapshot.empty) {
-        // Update existing record
-        const existingDoc = existingSnapshot.docs[0];
-        await updateDoc(existingDoc.ref, {
-          ...clientData,
-          updatedAt: serverTimestamp()
-        });
-        
-        const updatedClient = {
-          id: existingDoc.id,
-          ...clientData,
-          updatedAt: new Date()
-        };
-        
-        return { success: true, client: updatedClient };
-      }
-    }
-    
-    // Add new record
-    const docRef = await addDoc(clientCollectionRef, {
-      ...clientData,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-    
-    const newClient = {
-      id: docRef.id,
-      ...clientData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    
-    return { success: true, client: newClient };
-  } catch (error) {
-    console.error('Save client error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Fetch clients (replaces fetchSavedCompanies)
-export const fetchClients = async (jobId) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const clientCollectionRef = collection(userDocRef, 'clients');
-    const clientQuery = query(clientCollectionRef, orderBy('createdAt', 'desc'));
-    const clientSnapshot = await getDocs(clientQuery);
-    
-    const clients = [];
-    clientSnapshot.forEach((doc) => {
-      clients.push({
-        id: doc.id,
-        ...doc.data()
-      });
-    });
-    
-    return { success: true, clients };
-  } catch (error) {
-    console.error('Fetch clients error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
 // Progress payment functions
 export const addProgressPayment = async (jobId, paymentData) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const paymentsCollectionRef = collection(userDocRef, 'progressPayments');
-    
-    const docRef = await addDoc(paymentsCollectionRef, {
+
+    const docRef = await addDoc(paymentsCollectionRef, definedFields({
       ...paymentData,
       timestamp: serverTimestamp()
-    });
-    
+    }));
+
     const newPayment = {
       id: docRef.id,
       ...paymentData,
       timestamp: new Date()
     };
-    
+
     return { success: true, progressPayment: newPayment };
   } catch (error) {
     console.error('Add progress payment error:', error);
@@ -562,7 +216,7 @@ export const fetchProgressPayments = async (jobId) => {
     const paymentsCollectionRef = collection(userDocRef, 'progressPayments');
     const paymentsQuery = query(paymentsCollectionRef, orderBy('timestamp', 'desc'));
     const paymentsSnapshot = await getDocs(paymentsQuery);
-    
+
     const progressPayments = [];
     paymentsSnapshot.forEach((doc) => {
       progressPayments.push({
@@ -570,7 +224,7 @@ export const fetchProgressPayments = async (jobId) => {
         ...doc.data()
       });
     });
-    
+
     return { success: true, progressPayments };
   } catch (error) {
     console.error('Fetch progress payments error:', error);
@@ -578,56 +232,24 @@ export const fetchProgressPayments = async (jobId) => {
   }
 };
 
-export const updateProgressPayment = async (jobId, paymentId, updatedPayment) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const paymentDocRef = doc(userDocRef, 'progressPayments', paymentId);
-    
-    await updateDoc(paymentDocRef, {
-      ...updatedPayment,
-      updatedAt: serverTimestamp()
-    });
-    
-    const updatedPaymentWithId = {
-      id: paymentId,
-      ...updatedPayment,
-      updatedAt: new Date()
-    };
-    
-    return { success: true, progressPayment: updatedPaymentWithId };
-  } catch (error) {
-    console.error('Update progress payment error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const voidProgressPayment = async (jobId, paymentId) => {
-  return voidSubdoc(jobId, 'progressPayments', paymentId, 'Progress payment');
-};
-
-/** @deprecated Use voidProgressPayment. Progress payments cannot be hard-deleted. */
-export const deleteProgressPayment = async (jobId, paymentId) => {
-  return voidProgressPayment(jobId, paymentId);
-};
-
 // Invoice functions
 export const addInvoiceToFirestore = async (jobId, invoice) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const invoicesCollectionRef = collection(userDocRef, 'invoices');
-    
-    const docRef = await addDoc(invoicesCollectionRef, {
+
+    const docRef = await addDoc(invoicesCollectionRef, definedFields({
       ...invoice,
       jobId: jobId,
       timestamp: serverTimestamp()
-    });
-    
+    }));
+
     const newInvoice = {
       id: docRef.id,
       ...invoice,
       timestamp: new Date()
     };
-    
+
     return { success: true, invoice: newInvoice };
   } catch (error) {
     console.error('Add invoice error:', error);
@@ -635,38 +257,22 @@ export const addInvoiceToFirestore = async (jobId, invoice) => {
   }
 };
 
-export const fetchInvoicesFromFirestore = async (jobId, options = {}) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const invoicesCollectionRef = collection(userDocRef, 'invoices');
-    const invoicesQuery = query(invoicesCollectionRef, orderBy('timestamp', 'desc'));
-    const invoicesSnapshot = options.fromServer
-      ? await getDocsFromServer(invoicesQuery)
-      : await getDocs(invoicesQuery);
-
-    return { success: true, invoices: mapInvoiceSnapshot(invoicesSnapshot) };
-  } catch (error) {
-    console.error('Fetch invoices error:', error);
-    return { success: false, error: error.message, code: error.code };
-  }
-};
-
 export const updateInvoiceInFirestore = async (jobId, invoiceId, updatedInvoice) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const invoiceDocRef = doc(userDocRef, 'invoices', invoiceId);
-    
-    await updateDoc(invoiceDocRef, {
+
+    await updateDoc(invoiceDocRef, definedFields({
       ...updatedInvoice,
       updatedAt: serverTimestamp()
-    });
-    
+    }));
+
     const updatedInvoiceWithId = {
       id: invoiceId,
       ...updatedInvoice,
       updatedAt: new Date()
     };
-    
+
     return { success: true, invoice: updatedInvoiceWithId };
   } catch (error) {
     console.error('Update invoice error:', error);
@@ -676,11 +282,6 @@ export const updateInvoiceInFirestore = async (jobId, invoiceId, updatedInvoice)
 
 export const voidInvoiceInFirestore = async (jobId, invoiceId) => {
   return voidSubdoc(jobId, 'invoices', invoiceId, 'Invoice', 'draft');
-};
-
-/** @deprecated Use voidInvoiceInFirestore. First step is void, not a hard delete. */
-export const deleteInvoiceFromFirestore = async (jobId, invoiceId) => {
-  return voidInvoiceInFirestore(jobId, invoiceId);
 };
 
 export const restoreInvoiceInFirestore = async (jobId, invoiceId) => {
@@ -696,19 +297,19 @@ export const saveHIAContractToFirestore = async (jobId, contractData) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const contractsCollectionRef = collection(userDocRef, 'hiaContracts');
-    
-    const docRef = await addDoc(contractsCollectionRef, {
+
+    const docRef = await addDoc(contractsCollectionRef, definedFields({
       ...contractData,
       jobId: jobId,
       timestamp: serverTimestamp()
-    });
-    
+    }));
+
     const newContract = {
       id: docRef.id,
       ...contractData,
       timestamp: new Date()
     };
-    
+
     return { success: true, hiaContract: newContract };
   } catch (error) {
     console.error('Save HIA contract error:', error);
@@ -722,7 +323,7 @@ export const fetchHIAContractsFromFirestore = async (jobId) => {
     const contractsCollectionRef = collection(userDocRef, 'hiaContracts');
     const contractsQuery = query(contractsCollectionRef, orderBy('timestamp', 'desc'));
     const contractsSnapshot = await getDocs(contractsQuery);
-    
+
     const hiaContracts = [];
     contractsSnapshot.forEach((doc) => {
       hiaContracts.push({
@@ -730,84 +331,10 @@ export const fetchHIAContractsFromFirestore = async (jobId) => {
         ...doc.data()
       });
     });
-    
+
     return { success: true, hiaContracts };
   } catch (error) {
     console.error('Fetch HIA contracts error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const updateHIAContractInFirestore = async (jobId, contractId, updates) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const contractDocRef = doc(userDocRef, 'hiaContracts', contractId);
-    
-    await updateDoc(contractDocRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
-    
-    const updatedContract = {
-      id: contractId,
-      ...updates,
-      updatedAt: new Date()
-    };
-    
-    return { success: true, hiaContract: updatedContract };
-  } catch (error) {
-    console.error('Update HIA contract error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const voidHIAContractInFirestore = async (jobId, contractId) => {
-  return voidSubdoc(jobId, 'hiaContracts', contractId, 'HIA contract');
-};
-
-/** @deprecated Use voidHIAContractInFirestore. HIA contracts cannot be hard-deleted. */
-export const deleteHIAContractFromFirestore = async (jobId, contractId) => {
-  return voidHIAContractInFirestore(jobId, contractId);
-};
-
-// Update client information
-export const updateClientInfo = async (jobId, clientId, clientData) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const clientDocRef = doc(userDocRef, 'clients', clientId);
-    
-    await updateDoc(clientDocRef, {
-      ...clientData,
-      updatedAt: serverTimestamp()
-    });
-    
-    const updatedClient = {
-      id: clientId,
-      ...clientData,
-      updatedAt: new Date()
-    };
-    
-    return { success: true, client: updatedClient };
-  } catch (error) {
-    console.error('Update client error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const deleteClientInfo = async (jobId, clientId) => {
-  try {
-    const userDocRef = await projectRootRef(jobId);
-    const clientDocRef = doc(userDocRef, 'clients', clientId);
-    
-    await updateDoc(clientDocRef, {
-      status: 'void',
-      voidedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Delete client error:', error);
     return { success: false, error: error.message };
   }
 };
@@ -817,41 +344,41 @@ export const saveUserBankDetailsToFirestore = async (jobId, bankData) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const bankDetailsCollectionRef = collection(userDocRef, 'bankDetails');
-    
+
     // Check if bank details already exist
     const existingQuery = query(bankDetailsCollectionRef, limit(1));
     const existingSnapshot = await getDocs(existingQuery);
-    
+
     if (!existingSnapshot.empty) {
       // Update existing record
       const existingDoc = existingSnapshot.docs[0];
-      await updateDoc(existingDoc.ref, {
+      await updateDoc(existingDoc.ref, definedFields({
         ...bankData,
         updatedAt: serverTimestamp()
-      });
-      
+      }));
+
       const updatedBankDetails = {
         id: existingDoc.id,
         ...bankData,
         updatedAt: new Date()
       };
-      
+
       return { success: true, userBankDetails: updatedBankDetails };
     } else {
       // Add new record
-      const docRef = await addDoc(bankDetailsCollectionRef, {
+      const docRef = await addDoc(bankDetailsCollectionRef, definedFields({
         ...bankData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
-      
+      }));
+
       const newBankDetails = {
         id: docRef.id,
         ...bankData,
         createdAt: new Date(),
         updatedAt: new Date()
       };
-      
+
       return { success: true, userBankDetails: newBankDetails };
     }
   } catch (error) {
@@ -866,14 +393,14 @@ export const fetchUserBankDetailsFromFirestore = async (jobId) => {
     const bankDetailsCollectionRef = collection(userDocRef, 'bankDetails');
     const bankDetailsQuery = query(bankDetailsCollectionRef, limit(1));
     const bankDetailsSnapshot = await getDocs(bankDetailsQuery);
-    
+
     if (!bankDetailsSnapshot.empty) {
       const doc = bankDetailsSnapshot.docs[0];
       const userBankDetails = {
         id: doc.id,
         ...doc.data()
       };
-      
+
       return { success: true, userBankDetails };
     } else {
       return { success: true, userBankDetails: null };
@@ -926,4 +453,4 @@ export const fetchPayersFromFirestore = async (jobId) => {
     console.error('Fetch payers error:', error);
     return { success: false, error: error.message };
   }
-}; 
+};

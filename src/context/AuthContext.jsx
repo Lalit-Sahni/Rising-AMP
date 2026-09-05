@@ -2,9 +2,9 @@ import React, { createContext, useContext } from 'react';
 
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children, authUser, profile, setProfile }) {
+export function AuthProvider({ children, authUser, profile, setProfile, onSignOut }) {
   return (
-    <AuthContext.Provider value={{ authUser, profile, setProfile }}>
+    <AuthContext.Provider value={{ authUser, profile, setProfile, onSignOut }}>
       {children}
     </AuthContext.Provider>
   );
