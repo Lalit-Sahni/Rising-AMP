@@ -1,558 +1,507 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, Download, FileCheck, Plus, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useJobBankDetails, useJobClients, useJobHiaContracts } from '../../hooks/useJobDirectories';
-import { Upload, Download, Save } from 'lucide-react';
+import { uniqueByName } from '../../firebase/partyName';
+import { businessFromProfile } from '../invoices/InvoiceDocument';
+import EmptyState from '../EmptyState';
+import { addCents, dollarsFromUnknown, formatCents, fromCents, safeParseToCents } from '../../money';
+import { addDaysYmd, todayYmd } from '../../dates';
+import { formatMoney } from '../../utils/jobMetrics';
+
+const STANDARD_STAGE_NAMES = [
+  'Deposit',
+  'Base stage',
+  'Frame stage',
+  'Lock-up stage',
+  'Fixing stage',
+  'Practical completion',
+];
+
+const fieldClass = 'w-full px-3.5 py-[10px] bg-surface border border-hairline rounded-ot-sm text-[13.5px] text-ink placeholder:text-slate-400 focus:outline-none focus:border-accent';
+const labelClass = 'block text-[12.5px] font-semibold text-ink mb-1.5';
+
+let stageKey = 1;
+function blankStage(description = '') {
+  return { key: stageKey++, description, percent: '', amount: '' };
+}
+
+function pct(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function round2(n) {
+  return Math.round(n * 100) / 100;
+}
+
+function stageAmountCents(stage) {
+  return safeParseToCents(stage.amount);
+}
+
+/** Saved contracts list a stage as { stage, description, percent, amount }. */
+function claimInvoice(contract, stage, index, stagesCount) {
+  const today = todayYmd();
+  const client = contract.clientDetails || {};
+  const bank = contract.bankDetails || {};
+  const amount = dollarsFromUnknown(stage.amount);
+  return {
+    invoiceNumber: `Stage ${stage.stage || index + 1} of ${stagesCount}`,
+    invoiceDate: today,
+    dueDate: addDaysYmd(today, 14),
+    clientName: client.clientName || '',
+    clientEmail: client.clientEmail || '',
+    clientPhone: client.clientPhone || '',
+    clientAddress: client.clientAddress || '',
+    projectName: contract.projectName || '',
+    lineItems: [{
+      id: 1,
+      description: `Stage ${stage.stage || index + 1}: ${stage.description || 'Progress claim'}`,
+      quantity: 1,
+      unitCost: amount,
+      total: amount,
+    }],
+    includeGST: false,
+    bsb: bank.bsb || '',
+    accountName: bank.accountName || '',
+    accountNumber: bank.accountNumber || '',
+    notes: `${pct(stage.percent)}% of the contract sum of ${formatMoney(dollarsFromUnknown(contract.totalAmount))}.`,
+  };
+}
 
 const HIAContractPage = () => {
   const {
     addHIAContractToFirebase,
-    saveClientDetailsToFirebase,
+    saveClientToFirebase,
     saveUserBankDetailsToFirebase,
     showToast,
     jobId,
     orgId,
+    projectName,
+    profile,
+    authUser,
   } = useApp();
 
   const hiaQuery = useJobHiaContracts(orgId, jobId);
-  useJobClients(orgId, jobId);
-  useJobBankDetails(orgId, jobId);
+  const clientsQuery = useJobClients(orgId, jobId);
+  const bankQuery = useJobBankDetails(orgId, jobId);
+  const business = businessFromProfile(profile, authUser && authUser.email);
 
-  const liveHiaContracts = (hiaQuery.data || []).filter(
-    (contract) => String(contract.status || '').toLowerCase() !== 'void'
+  const contracts = useMemo(
+    () => (hiaQuery.data || []).filter((row) => String(row.status || '').toLowerCase() !== 'void'),
+    [hiaQuery.data],
   );
+  const clients = useMemo(() => uniqueByName(clientsQuery.data || [], (row) => row.name), [clientsQuery.data]);
 
-  const [currentStep, setCurrentStep] = useState(1);
-  const [uploadedImage, setUploadedImage] = useState(null);
-  const [extractedStages, setExtractedStages] = useState([]);
-  const [isProcessing, setIsProcessing] = useState(false);
-  
-  // Form states
-  const [clientForm, setClientForm] = useState({
-    projectName: '',
-    clientName: '',
-    clientEmail: '',
-    clientPhone: '',
-    clientAddress: ''
-  });
-  
-  const [bankForm, setBankForm] = useState({
-    bsb: '',
-    accountName: '',
-    accountNumber: ''
-  });
+  const [adding, setAdding] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [claimBusy, setClaimBusy] = useState(null);
+  const [contractSum, setContractSum] = useState('');
+  const [stages, setStages] = useState(() => [blankStage()]);
+  const [clientId, setClientId] = useState('');
+  const [client, setClient] = useState({ clientName: '', clientEmail: '', clientPhone: '', clientAddress: '' });
+  const [bank, setBank] = useState({ bsb: '', accountName: '', accountNumber: '' });
+  const [error, setError] = useState('');
 
-  const fileInputRef = useRef(null);
+  useEffect(() => {
+    if (!hiaQuery.isLoading && contracts.length === 0) setAdding(true);
+  }, [hiaQuery.isLoading, contracts.length]);
 
-  // Mock OCR processing function (in a real app, you'd use a service like Google Vision API)
-  const processImageOCR = async (imageFile) => {
-    setIsProcessing(true);
-    
-    // Simulate OCR processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock extracted data based on the HIA contract image
-    const mockExtractedData = [
-      {
-        stage: 1,
-        description: "Deposit and establishment of site.",
-        percent: 5.00,
-        amount: 62500.00
-      },
-      {
-        stage: 2,
-        description: "Survey pegouts, excavation, piers, termite caps and concrete slabs.",
-        percent: 15.00,
-        amount: 187500.00
-      },
-      {
-        stage: 3,
-        description: "Pest control, ground floor timber walls, stormwater plumbing, 1.5m brickwork",
-        percent: 15.00,
-        amount: 187500.00
-      },
-      {
-        stage: 4,
-        description: "Joists, first floor yellow tongue board, scaffolding, roof frame complete.",
-        percent: 15.00,
-        amount: 187500.00
-      },
-      {
-        stage: 5,
-        description: "Gutter fascia, roof (top roof only), scaffolding, brickwork complete.",
-        percent: 15.00,
-        amount: 187500.00
-      },
-      {
-        stage: 6,
-        description: "Lower roof complete, plumbing & electrical roughings, aircorn ducts only and gyprock.",
-        percent: 15.00,
-        amount: 187500.00
-      },
-      {
-        stage: 7,
-        description: "Internal doors, architraves, skirting, cornice, tiling, bath, vanity, shower screen.",
-        percent: 10.00,
-        amount: 125000.00
-      },
-      {
-        stage: 8,
-        description: "Kitchen, laundry, ensuite, main bathroom, electrical fit off, painting complete.",
-        percent: 10.00,
-        amount: 125000.00
+  const savedBank = bankQuery.data || null;
+  useEffect(() => {
+    if (!savedBank) return;
+    setBank((prev) => (
+      prev.bsb || prev.accountName || prev.accountNumber
+        ? prev
+        : { bsb: savedBank.bsb || '', accountName: savedBank.accountName || '', accountNumber: savedBank.accountNumber || '' }
+    ));
+  }, [savedBank]);
+
+  const sumCents = safeParseToCents(contractSum);
+  const stagedCents = addCents(...stages.map(stageAmountCents), 0);
+  const stagedPct = round2(stages.reduce((sum, stage) => sum + pct(stage.percent), 0));
+  const remainingCents = sumCents - stagedCents;
+
+  const pickClient = (id) => {
+    setClientId(id);
+    const row = clients.find((c) => c.id === id);
+    if (!row) return;
+    setClient({
+      clientName: row.name || '',
+      clientEmail: row.email || '',
+      clientPhone: row.phone || '',
+      clientAddress: row.address || '',
+    });
+  };
+
+  const setStage = (key, patch) => {
+    setStages((prev) => prev.map((stage) => {
+      if (stage.key !== key) return stage;
+      const next = { ...stage, ...patch };
+      if ('percent' in patch && sumCents > 0) {
+        next.amount = round2(fromCents(sumCents) * (pct(patch.percent) / 100)).toFixed(2);
+      } else if ('amount' in patch && sumCents > 0) {
+        next.percent = String(round2((safeParseToCents(patch.amount) / sumCents) * 100));
       }
-    ];
-    
-    setExtractedStages(mockExtractedData);
-    setIsProcessing(false);
-    setCurrentStep(2);
-    showToast('HIA Contract processed successfully!', 'success');
+      return next;
+    }));
   };
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setUploadedImage(file);
-      processImageOCR(file);
+  const applySum = (value) => {
+    setContractSum(value);
+    const cents = safeParseToCents(value);
+    if (cents > 0) {
+      setStages((prev) => prev.map((stage) => (
+        stage.percent !== '' ? { ...stage, amount: round2(fromCents(cents) * (pct(stage.percent) / 100)).toFixed(2) } : stage
+      )));
     }
   };
 
-  const handleClientSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await saveClientDetailsToFirebase(clientForm.projectName, clientForm);
-      showToast('Client details saved successfully!', 'success');
-      setCurrentStep(3);
-    } catch (error) {
-      showToast('Error saving client details', 'error');
-    }
+  const useStandardNames = () => {
+    setStages((prev) => {
+      const filled = prev.filter((stage) => stage.description || stage.percent || stage.amount);
+      if (filled.length > 0 && !window.confirm('Replace the stages you have typed with the six standard HIA stage names?')) return prev;
+      return STANDARD_STAGE_NAMES.map((name) => blankStage(name));
+    });
   };
 
-  const handleBankSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await saveUserBankDetailsToFirebase(bankForm);
-      showToast('Bank details saved successfully!', 'success');
-      setCurrentStep(4);
-    } catch (error) {
-      showToast('Error saving bank details', 'error');
-    }
+  const resetForm = () => {
+    setContractSum('');
+    setStages([blankStage()]);
+    setClientId('');
+    setClient({ clientName: '', clientEmail: '', clientPhone: '', clientAddress: '' });
+    setError('');
   };
 
-  const generateProgressPaymentPDF = async (stage) => {
-    try {
-      const [{ default: jsPDF }, html2canvasModule] = await Promise.all([
-        import('jspdf'),
-        import('html2canvas'),
-      ]);
-      const html2canvas = html2canvasModule.default;
-      const pdf = new jsPDF();
-      
-      // Create HTML content for the PDF
-      const pdfContent = document.createElement('div');
-      pdfContent.innerHTML = `
-        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px;">
-          <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #1f2937; margin: 0; font-size: 24px;">PROGRESS PAYMENT INVOICE</h1>
-            <p style="color: #6b7280; margin: 5px 0;">Construction Company</p>
-            <p style="color: #6b7280; margin: 5px 0;">123 Construction St, Building City, BC 1234</p>
-            <p style="color: #6b7280; margin: 5px 0;">Phone: (02) 1234 5678 | Email: info@construction.com</p>
-          </div>
-          
-          <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-            <div>
-              <h3 style="color: #1f2937; margin: 0 0 10px 0;">Bill To:</h3>
-              <p style="margin: 5px 0; color: #374151;">${clientForm.clientName}</p>
-              <p style="margin: 5px 0; color: #374151;">${clientForm.clientAddress}</p>
-              <p style="margin: 5px 0; color: #374151;">Email: ${clientForm.clientEmail}</p>
-              <p style="margin: 5px 0; color: #374151;">Phone: ${clientForm.clientPhone}</p>
-            </div>
-            <div style="text-align: right;">
-              <h3 style="color: #1f2937; margin: 0 0 10px 0;">Invoice Details:</h3>
-              <p style="margin: 5px 0; color: #374151;"><strong>Project:</strong> ${clientForm.projectName}</p>
-              <p style="margin: 5px 0; color: #374151;"><strong>Stage:</strong> ${stage.stage}</p>
-              <p style="margin: 5px 0; color: #374151;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-            </div>
-          </div>
-          
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-            <thead>
-              <tr style="background-color: #f3f4f6;">
-                <th style="border: 1px solid #d1d5db; padding: 12px; text-align: left; color: #1f2937;">Description</th>
-                <th style="border: 1px solid #d1d5db; padding: 12px; text-align: right; color: #1f2937;">Percentage</th>
-                <th style="border: 1px solid #d1d5db; padding: 12px; text-align: right; color: #1f2937;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style="border: 1px solid #d1d5db; padding: 12px; color: #374151;">${stage.description}</td>
-                <td style="border: 1px solid #d1d5db; padding: 12px; text-align: right; color: #374151;">${stage.percent}%</td>
-                <td style="border: 1px solid #d1d5db; padding: 12px; text-align: right; color: #374151;">$${stage.amount.toLocaleString()}</td>
-              </tr>
-            </tbody>
-          </table>
-          
-          <div style="text-align: right; margin-bottom: 30px;">
-            <h2 style="color: #1f2937; margin: 0;">Total: $${stage.amount.toLocaleString()}</h2>
-          </div>
-          
-          <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-            <h3 style="color: #1f2937; margin: 0 0 15px 0;">Payment Details:</h3>
-            <p style="margin: 5px 0; color: #374151;"><strong>BSB:</strong> ${bankForm.bsb}</p>
-            <p style="margin: 5px 0; color: #374151;"><strong>Account Name:</strong> ${bankForm.accountName}</p>
-            <p style="margin: 5px 0; color: #374151;"><strong>Account Number:</strong> ${bankForm.accountNumber}</p>
-          </div>
-          
-          <div style="text-align: center; color: #6b7280; font-size: 14px;">
-            <p>Thank you for your business!</p>
-            <p>Please make payment within 14 days of invoice date.</p>
-          </div>
-        </div>
-      `;
-      
-      // Convert HTML to canvas and then to PDF
-      const canvas = await html2canvas(pdfContent, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true
-      });
-      
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      
-      let position = 0;
-      
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      // Download the PDF
-      pdf.save(`Progress_Payment_Stage_${stage.stage}_${clientForm.projectName}.pdf`);
-      showToast(`Progress Payment PDF for Stage ${stage.stage} downloaded!`, 'success');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      showToast('Error generating PDF', 'error');
+  const save = async (event) => {
+    event.preventDefault();
+    setError('');
+    if (!(sumCents > 0)) {
+      setError('Enter the contract sum first.');
+      return;
     }
-  };
-
-  const saveContractToFirebase = async () => {
+    const live = stages.filter((stage) => stage.description.trim() || stageAmountCents(stage) > 0);
+    if (live.length === 0) {
+      setError('Add at least one stage.');
+      return;
+    }
+    if (live.some((stage) => !stage.description.trim())) {
+      setError('Every stage needs a name.');
+      return;
+    }
+    if (remainingCents !== 0) {
+      setError(`The stages add up to ${formatCents(stagedCents)}, not the contract sum of ${formatCents(sumCents)}.`);
+      return;
+    }
+    if (!client.clientName.trim()) {
+      setError('Who is the contract with? Pick a client or type a name.');
+      return;
+    }
+    setSaving(true);
     try {
-      const contractData = {
-        projectName: clientForm.projectName,
-        totalAmount: extractedStages.reduce((sum, stage) => sum + stage.amount, 0),
-        stages: extractedStages,
-        clientDetails: clientForm,
-        bankDetails: bankForm,
-        imageUrl: uploadedImage ? URL.createObjectURL(uploadedImage) : null,
-        createdAt: new Date()
+      const payload = {
+        projectName: projectName || '',
+        totalAmount: fromCents(sumCents),
+        stages: live.map((stage, index) => ({
+          stage: index + 1,
+          description: stage.description.trim(),
+          percent: round2(pct(stage.percent)),
+          amount: fromCents(stageAmountCents(stage)),
+        })),
+        clientDetails: { ...client, projectName: projectName || '' },
+        bankDetails: { ...bank },
+        createdAt: new Date(),
       };
-      
-      await addHIAContractToFirebase(contractData);
-      showToast('HIA Contract saved successfully!', 'success');
-      setCurrentStep(1);
-      setUploadedImage(null);
-      setExtractedStages([]);
-      setClientForm({
-        projectName: '',
-        clientName: '',
-        clientEmail: '',
-        clientPhone: '',
-        clientAddress: ''
-      });
-      setBankForm({
-        bsb: '',
-        accountName: '',
-        accountNumber: ''
-      });
-    } catch (error) {
-      showToast('Error saving HIA contract', 'error');
+      const result = await addHIAContractToFirebase(payload);
+      if (!result || !result.success) return;
+      if (!clientId && client.clientName.trim() && saveClientToFirebase) {
+        saveClientToFirebase({
+          name: client.clientName.trim(),
+          email: client.clientEmail || '',
+          phone: client.clientPhone || '',
+          address: client.clientAddress || '',
+        }, { quiet: true }).catch(() => {});
+      }
+      const bankChanged = ['bsb', 'accountName', 'accountNumber'].some(
+        (key) => String(bank[key] || '').trim() !== String((savedBank && savedBank[key]) || '').trim(),
+      );
+      if (bankChanged && (bank.bsb || bank.accountName || bank.accountNumber) && saveUserBankDetailsToFirebase) {
+        saveUserBankDetailsToFirebase({ ...bank }, { quiet: true }).catch(() => {});
+      }
+      resetForm();
+      setAdding(false);
+      if (result.hiaContract && result.hiaContract.id) setExpandedId(result.hiaContract.id);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+  const downloadClaim = async (contract, stage, index) => {
+    const id = `${contract.id}:${index}`;
+    setClaimBusy(id);
+    try {
+      const { downloadInvoicePdf } = await import('../../pdf/invoicePdf');
+      const stagesCount = (contract.stages || []).length;
+      await downloadInvoicePdf(
+        {
+          invoice: claimInvoice(contract, stage, index, stagesCount),
+          business,
+          jobName: projectName || contract.projectName,
+          title: 'Progress claim',
+          gstNote: 'GST is included in the contract sum',
+        },
+        `Progress_claim_stage_${stage.stage || index + 1}_${String(contract.projectName || projectName || 'job').replace(/[^\w.-]+/g, '_')}.pdf`,
+      );
+      showToast(`Stage ${stage.stage || index + 1} claim downloaded`, 'success');
+    } catch (err) {
+      console.error('Progress claim PDF failed:', err);
+      showToast('Could not make that PDF', 'error');
+    } finally {
+      setClaimBusy(null);
     }
   };
+
+  if (!jobId) {
+    return (
+      <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
+        <EmptyState title="Open a job" body="HIA contracts are saved on a job." actionLabel="Jobs" to="/" />
+      </div>
+    );
+  }
 
   return (
     <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-surface rounded-ot p-6 border border-hairline shadow-whisper mb-4">
-          <div className="eyebrow mb-1">Progress payments</div>
-          <h1 className="text-[26px] font-semibold tracking-tight mb-6">HIA contracts</h1>
-          
-          {/* Step Navigation */}
-          <div className="flex items-center justify-center mb-8">
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="flex items-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                  currentStep >= step ? 'bg-accent text-white' : 'bg-canvas text-slate-400 border border-hairline'
-                }`}>
-                  {step}
-                </div>
-                {step < 4 && (
-                  <div className={`w-16 h-1 mx-2 ${
-                    currentStep > step ? 'bg-accent' : 'bg-hairline'
-                  }`} />
-                )}
-              </div>
-            ))}
+      <div className="max-w-4xl mx-auto space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="eyebrow">Progress payments</div>
+            <h1 className="text-[25px] font-extrabold tracking-tight mt-1">HIA contracts</h1>
+            <p className="text-[13.5px] text-slate-600 mt-0.5">
+              The contract sum split into the stages you claim. Each stage prints as a progress claim with your details on it.
+            </p>
           </div>
+          {!adding && (
+            <button
+              type="button"
+              onClick={() => setAdding(true)}
+              className="inline-flex items-center gap-1.5 shrink-0 bg-accent hover:bg-accent-600 text-white px-[15px] py-[9px] rounded-[9px] text-[13px] font-bold"
+            >
+              <Plus className="w-4 h-4" strokeWidth={2} />
+              Add contract
+            </button>
+          )}
+        </div>
 
-          {/* Step 1: Upload HIA Contract */}
-          {currentStep === 1 && (
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold mb-4">Upload HIA Contract</h2>
-              <p className="text-slate-400 mb-6">Upload an image of your HIA contract to extract progress payment stages</p>
-              
-              <div className="border-2 border-dashed border-hairline rounded-lg p-8 mb-6">
-                <Upload className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-400 mb-4">Click to upload or drag and drop</p>
+        {adding ? (
+          <form onSubmit={save} className="bg-surface border border-hairline rounded-ot p-4 md:p-6 shadow-whisper space-y-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-[16px] font-extrabold">New contract</h2>
+                <p className="text-[12.5px] text-slate-400 mt-0.5">Type the stages from the signed contract. Nothing is guessed.</p>
+              </div>
+              {contracts.length > 0 ? (
+                <button type="button" onClick={() => { setAdding(false); resetForm(); }} className="text-[12.5px] font-semibold text-slate-600 hover:text-ink">
+                  Cancel
+                </button>
+              ) : null}
+            </div>
+
+            {error ? <p className="text-neg text-sm bg-[#F9E9E7] border border-hairline rounded-ot-sm px-3 py-2">{error}</p> : null}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Contract sum (GST inclusive) *</label>
                 <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  accept="image/*"
-                  className="hidden"
+                  type="text"
+                  inputMode="decimal"
+                  value={contractSum}
+                  onChange={(e) => applySum(e.target.value)}
+                  placeholder="1,250,000"
+                  className={`${fieldClass} tabular`}
                 />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
-                >
-                  Choose File
+              </div>
+              <div>
+                <label className={labelClass}>Client *</label>
+                {clients.length > 0 ? (
+                  <select value={clientId} onChange={(e) => pickClient(e.target.value)} className={`${fieldClass} mb-2`}>
+                    <option value="">Type a new client below</option>
+                    {clients.map((row) => (
+                      <option key={row.id} value={row.id}>{row.name}{row.company ? ` (${row.company})` : ''}</option>
+                    ))}
+                  </select>
+                ) : null}
+                <input
+                  type="text"
+                  value={client.clientName}
+                  onChange={(e) => { setClientId(''); setClient({ ...client, clientName: e.target.value }); }}
+                  placeholder="Client name"
+                  className={fieldClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Client email</label>
+                <input type="email" value={client.clientEmail} onChange={(e) => setClient({ ...client, clientEmail: e.target.value })} className={fieldClass} placeholder="client@example.com" />
+              </div>
+              <div>
+                <label className={labelClass}>Client phone</label>
+                <input type="tel" value={client.clientPhone} onChange={(e) => setClient({ ...client, clientPhone: e.target.value })} className={fieldClass} placeholder="04XX XXX XXX" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Client address</label>
+                <input type="text" value={client.clientAddress} onChange={(e) => setClient({ ...client, clientAddress: e.target.value })} className={fieldClass} placeholder="Street, suburb, state" />
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <label className={`${labelClass} mb-0`}>Stages *</label>
+                <button type="button" onClick={useStandardNames} className="text-[12.5px] font-semibold text-accent hover:text-accent-600">
+                  Use the six standard HIA stage names
                 </button>
               </div>
-              
-              {isProcessing && (
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent mx-auto mb-2"></div>
-                  <p className="text-slate-400">Processing HIA contract...</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Step 2: Client Details */}
-          {currentStep === 2 && (
-            <div>
-              <h2 className="text-2xl font-semibold mb-4">Client Details</h2>
-              <form onSubmit={handleClientSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Project Name</label>
+              <div className="space-y-2">
+                {stages.map((stage, index) => (
+                  <div key={stage.key} className="grid grid-cols-[28px_minmax(0,1fr)_78px_120px_36px] gap-2 items-center">
+                    <span className="text-[12px] font-bold text-slate-400 tabular text-center">{index + 1}</span>
                     <input
                       type="text"
-                      value={clientForm.projectName}
-                      onChange={(e) => setClientForm({...clientForm, projectName: e.target.value})}
-                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
-                      required
+                      value={stage.description}
+                      onChange={(e) => setStage(stage.key, { description: e.target.value })}
+                      placeholder="Stage name"
+                      className={fieldClass}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Client Name</label>
                     <input
                       type="text"
-                      value={clientForm.clientName}
-                      onChange={(e) => setClientForm({...clientForm, clientName: e.target.value})}
-                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
-                      required
+                      inputMode="decimal"
+                      value={stage.percent}
+                      onChange={(e) => setStage(stage.key, { percent: e.target.value })}
+                      placeholder="%"
+                      className={`${fieldClass} tabular text-right`}
+                      aria-label="Percent"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Client Email</label>
-                    <input
-                      type="email"
-                      value={clientForm.clientEmail}
-                      onChange={(e) => setClientForm({...clientForm, clientEmail: e.target.value})}
-                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Client Phone</label>
-                    <input
-                      type="tel"
-                      value={clientForm.clientPhone}
-                      onChange={(e) => setClientForm({...clientForm, clientPhone: e.target.value})}
-                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-2">Client Address</label>
-                  <textarea
-                    value={clientForm.clientAddress}
-                    onChange={(e) => setClientForm({...clientForm, clientAddress: e.target.value})}
-                    className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
-                    rows="3"
-                    required
-                  />
-                </div>
-                <div className="flex justify-between">
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="bg-surface border border-hairline hover:border-[#D6D9DD] text-ink px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
-                  >
-                    Save & Continue
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* Step 3: Bank Details */}
-          {currentStep === 3 && (
-            <div>
-              <h2 className="text-2xl font-semibold mb-4">Bank Details</h2>
-              <form onSubmit={handleBankSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">BSB</label>
                     <input
                       type="text"
-                      value={bankForm.bsb}
-                      onChange={(e) => setBankForm({...bankForm, bsb: e.target.value})}
-                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
-                      placeholder="000-000"
-                      required
+                      inputMode="decimal"
+                      value={stage.amount}
+                      onChange={(e) => setStage(stage.key, { amount: e.target.value })}
+                      placeholder="$"
+                      className={`${fieldClass} tabular text-right`}
+                      aria-label="Amount"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Account Name</label>
-                    <input
-                      type="text"
-                      value={bankForm.accountName}
-                      onChange={(e) => setBankForm({...bankForm, accountName: e.target.value})}
-                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-600 mb-2">Account Number</label>
-                    <input
-                      type="text"
-                      value={bankForm.accountNumber}
-                      onChange={(e) => setBankForm({...bankForm, accountNumber: e.target.value})}
-                      className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="flex justify-between">
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="bg-surface border border-hairline hover:border-[#D6D9DD] text-ink px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
-                  >
-                    Save & Continue
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* Step 4: Review and Generate PDFs */}
-          {currentStep === 4 && (
-            <div>
-              <h2 className="text-2xl font-semibold mb-4">Review & Generate Progress Payments</h2>
-              
-              <div className="bg-canvas rounded-lg p-4 mb-6">
-                <h3 className="text-lg font-medium mb-2">Project Summary</h3>
-                <p><strong>Project:</strong> {clientForm.projectName}</p>
-                <p><strong>Client:</strong> {clientForm.clientName}</p>
-                <p><strong>Total Contract Value:</strong> ${extractedStages.reduce((sum, stage) => sum + stage.amount, 0).toLocaleString()}</p>
-              </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Progress Payment Stages</h3>
-                {extractedStages.map((stage, index) => (
-                  <div key={index} className="bg-canvas rounded-lg p-4 border border-hairline">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-medium">Stage {stage.stage}</h4>
-                        <p className="text-slate-400 text-sm">{stage.description}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">${stage.amount.toLocaleString()}</p>
-                        <p className="text-slate-400 text-sm">{stage.percent}%</p>
-                      </div>
-                    </div>
                     <button
-                      onClick={() => generateProgressPaymentPDF(stage)}
-                      className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3 py-1.5 rounded-ot-sm text-sm"
+                      type="button"
+                      onClick={() => setStages((prev) => (prev.length > 1 ? prev.filter((s) => s.key !== stage.key) : prev))}
+                      className="w-9 h-9 grid place-items-center rounded-ot-sm border border-hairline text-slate-400 hover:text-neg"
+                      aria-label="Remove stage"
                     >
-                      <Download className="w-4 h-4" />
-                      Generate PDF
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
               </div>
-              
-              <div className="flex justify-between mt-6">
-                <button
-                  onClick={prevStep}
-                  className="bg-surface border border-hairline hover:border-[#D6D9DD] text-ink px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
-                >
-                  Previous
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+                <button type="button" onClick={() => setStages((prev) => [...prev, blankStage()])} className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-ink border border-hairline rounded-ot-sm px-3 py-2 hover:bg-canvas">
+                  <Plus className="w-4 h-4" />
+                  Add a stage
                 </button>
-                <button
-                  onClick={saveContractToFirebase}
-                  className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
-                >
-                  <Save className="w-4 h-4" />
-                  Save Contract
-                </button>
+                <p className={`text-[12.5px] tabular ${remainingCents === 0 && sumCents > 0 ? 'text-pos font-semibold' : 'text-slate-600'}`}>
+                  {sumCents > 0
+                    ? (remainingCents === 0
+                      ? `All ${formatCents(sumCents)} allocated (${stagedPct}%)`
+                      : `${formatCents(Math.abs(remainingCents))} ${remainingCents > 0 ? 'still to allocate' : 'over the contract sum'} · ${stagedPct}% so far`)
+                    : 'Enter the contract sum to work out amounts from percentages.'}
+                </p>
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Saved Contracts Section */}
-        {liveHiaContracts.length > 0 && (
-          <div className="bg-surface rounded-ot p-6 border border-hairline shadow-whisper">
-            <h2 className="text-lg font-semibold text-ink mb-6">Saved HIA contracts</h2>
-            <div className="space-y-4">
-              {liveHiaContracts.map((contract, index) => (
-                <div key={index} className="bg-canvas rounded-lg p-4 border border-hairline">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{contract.projectName}</h3>
-                      <p className="text-slate-400 text-sm">Total: ${contract.totalAmount?.toLocaleString()}</p>
-                      <p className="text-slate-400 text-sm">{contract.stages?.length || 0} stages</p>
-                    </div>
-
-                  </div>
-                </div>
-              ))}
+            <div>
+              <label className={labelClass}>Bank details on each claim</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <input type="text" value={bank.accountName} onChange={(e) => setBank({ ...bank, accountName: e.target.value })} placeholder="Account name" className={fieldClass} />
+                <input type="text" inputMode="numeric" value={bank.bsb} onChange={(e) => setBank({ ...bank, bsb: e.target.value })} placeholder="BSB" className={`${fieldClass} tabular`} />
+                <input type="text" inputMode="numeric" value={bank.accountNumber} onChange={(e) => setBank({ ...bank, accountNumber: e.target.value })} placeholder="Account number" className={`${fieldClass} tabular`} />
+              </div>
             </div>
-          </div>
+
+            <div className="flex items-center justify-end gap-2 pt-4 border-t border-hairline">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 px-4 py-[9px] rounded-ot-sm bg-accent hover:bg-accent-600 disabled:opacity-50 text-white text-[13px] font-bold"
+              >
+                {saving ? 'Saving…' : 'Save contract'}
+              </button>
+            </div>
+          </form>
+        ) : null}
+
+        {hiaQuery.isLoading ? (
+          <p className="text-[13px] text-slate-400">Loading contracts…</p>
+        ) : contracts.length === 0 && !adding ? (
+          <EmptyState title="No contracts yet" body="Add the signed HIA contract's stages once, then print a claim for each stage when it falls due." actionLabel="Add contract" onAction={() => setAdding(true)} />
+        ) : (
+          contracts.map((contract) => {
+            const open = expandedId === contract.id;
+            const contractStages = Array.isArray(contract.stages) ? contract.stages : [];
+            const clientName = contract.clientDetails && contract.clientDetails.clientName;
+            return (
+              <div key={contract.id} className="bg-surface border border-hairline rounded-ot shadow-whisper overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(open ? null : contract.id)}
+                  className="w-full flex items-center gap-3.5 px-4 md:px-5 py-4 text-left"
+                >
+                  <span className="w-[38px] h-[38px] rounded-[9px] bg-canvas border border-hairline grid place-items-center text-slate-600 shrink-0">
+                    <FileCheck className="w-[18px] h-[18px]" strokeWidth={1.7} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <b className="block text-[14.5px] font-extrabold truncate">{contract.projectName || projectName || 'HIA contract'}</b>
+                    <small className="block text-[12.5px] text-slate-400 truncate">
+                      {[clientName, `${contractStages.length} ${contractStages.length === 1 ? 'stage' : 'stages'}`].filter(Boolean).join(' · ')}
+                    </small>
+                  </span>
+                  <span className="tabular text-[15px] font-extrabold shrink-0">{formatMoney(dollarsFromUnknown(contract.totalAmount))}</span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+                </button>
+                {open ? (
+                  <div className="border-t border-hairline">
+                    {contractStages.length === 0 ? (
+                      <p className="px-5 py-4 text-[13px] text-slate-400">This contract was saved without stages.</p>
+                    ) : contractStages.map((stage, index) => {
+                      const busyId = `${contract.id}:${index}`;
+                      return (
+                        <div key={index} className="flex items-center gap-3 px-4 md:px-5 py-3 border-b border-hairline last:border-0">
+                          <span className="w-7 h-7 rounded-full bg-canvas border border-hairline grid place-items-center text-[11px] font-bold text-slate-600 shrink-0 tabular">
+                            {stage.stage || index + 1}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <b className="block text-[13.5px] font-bold truncate">{stage.description || `Stage ${index + 1}`}</b>
+                            <small className="block text-[12px] text-slate-400 tabular">{pct(stage.percent)}% of the contract sum</small>
+                          </span>
+                          <span className="tabular text-[13.5px] font-bold shrink-0">{formatMoney(dollarsFromUnknown(stage.amount))}</span>
+                          <button
+                            type="button"
+                            onClick={() => downloadClaim(contract, stage, index)}
+                            disabled={claimBusy === busyId}
+                            className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-ot-sm border border-hairline text-[12px] font-semibold text-ink hover:bg-canvas disabled:opacity-50"
+                            title="Download this stage as a progress claim PDF"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">{claimBusy === busyId ? 'Making…' : 'Claim PDF'}</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })
         )}
       </div>
     </div>
   );
 };
 
-export default HIAContractPage; 
+export default HIAContractPage;

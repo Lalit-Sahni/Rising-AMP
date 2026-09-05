@@ -6,6 +6,8 @@ type Options = {
   invoice: Record<string, any>;
   business: InvoiceBusiness;
   jobName?: string;
+  title?: string;
+  gstNote?: string;
 };
 
 function nextFrame(): Promise<void> {
@@ -16,7 +18,7 @@ function nextFrame(): Promise<void> {
  * Renders the same InvoiceDocument the preview shows into an off-screen A4
  * frame and prints it to a PDF. jspdf and html2canvas load only here.
  */
-export async function renderInvoicePdf({ invoice, business, jobName }: Options) {
+export async function renderInvoicePdf({ invoice, business, jobName, title, gstNote }: Options) {
   const [{ jsPDF }, html2canvasModule] = await Promise.all([
     import('jspdf'),
     import('html2canvas'),
@@ -33,7 +35,7 @@ export async function renderInvoicePdf({ invoice, business, jobName }: Options) 
   const root = createRoot(host);
 
   try {
-    root.render(<InvoiceDocument invoice={invoice} business={business} jobName={jobName} fixedWidth />);
+    root.render(<InvoiceDocument invoice={invoice} business={business} jobName={jobName} title={title} gstNote={gstNote} fixedWidth />);
     await nextFrame();
     await nextFrame();
     if (typeof document !== 'undefined' && 'fonts' in document) {

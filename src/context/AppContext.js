@@ -544,13 +544,6 @@ const AppDataProvider = ({
     }
   };
 
-  // HIA contracts save the client onto the job's clients directory.
-  const saveClientDetailsToFirebase = async (projectId, clientData) => {
-    const result = await saveClientToFirebase({ ...clientData, projectId }, { quiet: true });
-    if (result.success) return { success: true, clientDetails: result.client };
-    return result;
-  };
-
   // HIA Contract functions
   const addHIAContractToFirebase = async (contractData) => {
     try {
@@ -637,7 +630,6 @@ const AppDataProvider = ({
     saveServiceProviderToFirebase,
     saveClientToFirebase,
     addHIAContractToFirebase,
-    saveClientDetailsToFirebase,
     saveUserBankDetailsToFirebase,
     savePayerToFirebase
   };

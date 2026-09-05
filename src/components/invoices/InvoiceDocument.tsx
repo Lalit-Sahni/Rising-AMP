@@ -58,16 +58,20 @@ type Props = {
   jobName?: string;
   /** Fixed A4 width for the PDF renderer; fluid on screen. */
   fixedWidth?: boolean;
+  /** Overrides 'Tax invoice' / 'Invoice', e.g. 'Progress claim'. */
+  title?: string;
+  /** Replaces the 'No GST charged' footnote when no GST line is shown. */
+  gstNote?: string;
 };
 
 /**
  * The one invoice layout. The preview shows it, the PDF renders it, and the
  * top block is the builder's own details, not the app's name.
  */
-export default function InvoiceDocument({ invoice, business, jobName, fixedWidth = false }: Props) {
+export default function InvoiceDocument({ invoice, business, jobName, fixedWidth = false, title: titleProp, gstNote }: Props) {
   const totals = invoiceTotals(invoice);
   const lines: AnyRecord[] = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
-  const title = totals.hasGst ? 'Tax invoice' : 'Invoice';
+  const title = titleProp || (totals.hasGst ? 'Tax invoice' : 'Invoice');
   const status = String(invoice.status || '').toLowerCase();
   const bank = [invoice.bsb, invoice.accountName, invoice.accountNumber].some((v) => String(v || '').trim());
   const project = String(invoice.projectName || '').trim();
@@ -173,7 +177,7 @@ export default function InvoiceDocument({ invoice, business, jobName, fixedWidth
               <span className="font-extrabold">Total {status === 'paid' ? 'paid' : 'due'}</span>
               <span className="tabular text-[18px] font-extrabold">{formatCents(totals.total)}</span>
             </div>
-            {!totals.hasGst ? <div className="text-[11px] text-slate-400 text-right">No GST charged</div> : null}
+            {!totals.hasGst ? <div className="text-[11px] text-slate-400 text-right">{gstNote || 'No GST charged'}</div> : null}
           </div>
         </div>
 
