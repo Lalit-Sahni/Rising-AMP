@@ -4,6 +4,7 @@ import {
   setDoc,
   getDoc,
   getDocs,
+  getDocsFromServer,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -18,8 +19,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 import { getActiveOrgId } from './tenancy';
-import { parseAtBoundary, expenseSchema, invoiceSchema } from '../domain/schemas';
-import { getExpenseFaceTotalCents } from '../utils/jobMetrics';
+import { mapExpenseSnapshot, mapInvoiceSnapshot } from './ledgerMap';
 
 function definedFields(data) {
   const out = {};
@@ -85,21 +85,7 @@ export const fetchExpensesFromFirestore = async (jobId) => {
       getCountFromServer(expensesCollectionRef),
     ]);
     const totalOnServer = countSnap.data().count || 0;
-    
-    const expenses = [];
-    expensesSnapshot.forEach((row) => {
-      const data = row.data();
-      const parsed = parseAtBoundary(expenseSchema, { id: row.id, ...data });
-      const body = parsed.ok ? parsed.data : parsed.data;
-      const totalCents = getExpenseFaceTotalCents(body);
-      expenses.push({
-        ...body,
-        id: row.id,
-        totalCents,
-        _invalid: parsed.ok ? false : true,
-        timestamp: data.timestamp?.toDate?.() || data.timestamp || new Date()
-      });
-    });
+    const expenses = mapExpenseSnapshot(expensesSnapshot);
     
     const userDoc = await getDoc(userDocRef);
     const userData = userDoc.data();
@@ -649,26 +635,16 @@ export const addInvoiceToFirestore = async (jobId, invoice) => {
   }
 };
 
-export const fetchInvoicesFromFirestore = async (jobId) => {
+export const fetchInvoicesFromFirestore = async (jobId, options = {}) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const invoicesCollectionRef = collection(userDocRef, 'invoices');
     const invoicesQuery = query(invoicesCollectionRef, orderBy('timestamp', 'desc'));
-    const invoicesSnapshot = await getDocs(invoicesQuery);
-    
-    const invoices = [];
-    invoicesSnapshot.forEach((row) => {
-      const data = row.data();
-      const parsed = parseAtBoundary(invoiceSchema, { id: row.id, ...data });
-      const body = parsed.ok ? parsed.data : parsed.data;
-      invoices.push({
-        ...body,
-        id: row.id,
-        _invalid: parsed.ok ? false : true,
-      });
-    });
-    
-    return { success: true, invoices };
+    const invoicesSnapshot = options.fromServer
+      ? await getDocsFromServer(invoicesQuery)
+      : await getDocs(invoicesQuery);
+
+    return { success: true, invoices: mapInvoiceSnapshot(invoicesSnapshot) };
   } catch (error) {
     console.error('Fetch invoices error:', error);
     return { success: false, error: error.message, code: error.code };

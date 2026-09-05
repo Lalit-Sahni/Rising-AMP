@@ -1,6 +1,6 @@
 # Rising AMP — Architecture (Phase 10 live, 2026-09-02; Phase 11 Part A on branch)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Part A (app-shell service worker) is on `phase-11-cold-start`, not deployed.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A and B (app-shell service worker + Firestore disk cache) are on `phase-11-cold-start`, not deployed.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
@@ -27,7 +27,7 @@ Entry: `index.html` → `src/index.js` → `src/App.js`.
 
 Localhost must load `.env.local` (staging). Production builds must load `.env.production.local`. Do not swap them.
 
-**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 11 Part A build: **245.9 KB** initial gzip. Phase 10 production: **245.5 KB** (file names + quote AI, 2 Sep 2026). The worker registers from an inline script in `index.html`, not from the React bundle. `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
+**Initial JS budget:** 275 KB gzipped, enforced in `vite.config.js`. Raised from 250 in Phase 11 Part B because Firestore’s IndexedDB persistence lives in the same `firebase/firestore` module as `getDocs` and cannot be split out (~24 KB gzip). Phase 11 Part B build: **270.0 KB**. Phase 11 Part A: **245.9 KB**. Phase 10 production: **245.5 KB**. The worker registers from an inline script in `index.html`, not from the React bundle. `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
 
 ---
 
@@ -295,10 +295,13 @@ The owner’s number is **time from tapping the home-screen icon to the Jobs lis
 |--|--|--|
 | Service worker | None. Every open re-downloaded the JS. | `sw.js` cache-firsts hashed assets (57 precache entries). HTML is NetworkFirst (`risingamp-html`). |
 | Initial JS gzip | 245.5 KB on production | 245.9 KB (budget 250). Register script is inline in `index.html`, not in the React bundle. |
+| Part B initial JS | n/a | **270.0 KB** (budget 275). The extra ~24 KB is Firestore IndexedDB persistence, same module as `getDocs`. |
 | Money data in the worker | n/a | Firestore, `*.cloudfunctions.net`, Storage, Auth and App Check are NetworkOnly. |
 | Upgrade | n/a | Changed a hashed entry (`index-DzWVcopq.js` → `index-C-aVLcaD.js`), reopened: new build ran, worker activated, nothing left waiting. `skipWaiting` + `clientsClaim`. |
 | Staging localhost (5 Sep 2026) | n/a | `vite build --mode staging` then preview on **:3000**. Signed-in Jobs, Kelly Street overview / Cost Plan / Files / History against `rising-amp-staging`. Worker controlled the page. `/clear-sw` unregisters and returns to Jobs. `npm start` has no worker. |
 | Escape hatch | n/a | `/clear-sw` unregisters the worker and empties Cache Storage, then opens `/`. If that page itself is trapped: Safari → Settings → Advanced → Website Data. Kill-switch in code: `VitePWA({ selfDestroying: true })` then hosting. |
 | Hosting cache | Firebase default 1 hour | `**` `Cache-Control: no-cache`; `/assets/**` immutable. So `sw.js` and `index.html` are not pinned. |
 
-Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache from `86e2451` still paints Jobs after JS parses. Part B is Firestore’s disk cache plus listeners.
+Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache from `86e2451` still paints Jobs after JS parses.
+
+**Part B (on the branch, 5 Sep 2026):** `initializeFirestore` with `persistentLocalCache` (IndexedDB; memory fallback if IndexedDB is missing). The job list, expenses and invoices use `onSnapshot`, so a repeat open paints from disk then revalidates. `getDocs()` is unchanged for the other ten job collections. Empty disk snapshots are ignored so they cannot wipe a boot-cached list. Invoice numbers stay on `allocateInvoiceNumber`; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. The service worker still never caches Firestore.

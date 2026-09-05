@@ -9,7 +9,10 @@ import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const INITIAL_GZIP_BUDGET = 250 * 1024;
+// 250 was Phase 8–10. Part B’s IndexedDB persistence lives in the same
+// firebase/firestore module as getDocs, so it cannot be code-split. 275
+// covers that ~24 KB and still fails the build on accidental growth.
+const INITIAL_GZIP_BUDGET = 275 * 1024;
 
 function jsxInJs() {
   return {
@@ -112,7 +115,7 @@ export default defineConfig({
     react({ include: /\.(js|jsx|ts|tsx)$/ }),
     legalPages(),
     // Shell-only service worker. Do not import virtual:pwa-register in src/
-    // (that would spend the 250 KB gzip budget). Inline register stays in
+    // (that would spend the 275 KB gzip budget). Inline register stays in
     // index.html. skipWaiting must be set here: the plugin only auto-sets it
     // when injectRegister is "auto".
     VitePWA({

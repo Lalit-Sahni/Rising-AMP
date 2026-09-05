@@ -1,4 +1,4 @@
-import { canRemoveEmailFromJob, emailRemainsOnJobs, isJobArchived, newJobId } from './jobIdentity';
+import { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJobArchived, newJobId } from './jobIdentity';
 
 test('treats missing status as active', () => {
   expect(isJobArchived({})).toBe(false);
@@ -29,4 +29,15 @@ test('detects whether a removed email is still on another readable job', () => {
   expect(emailRemainsOnJobs(jobs, 'bookkeeper@opal.test')).toBe(true);
   expect(emailRemainsOnJobs(jobs, 'gone@opal.test')).toBe(false);
   expect(emailRemainsOnJobs([{ invitedEmails: ['Owner.Name@gmail.com'] }], 'ownername@gmail.com')).toBe(true);
+});
+
+test('job list fingerprint ignores order and notices a rename', () => {
+  const a = [
+    { projectId: 'job-b', name: 'Kelly', status: 'active', kind: 'client', invitedEmails: ['a@x'] },
+    { projectId: 'job-a', name: 'Centenary', status: 'active', kind: 'own', invitedEmails: ['a@x'] },
+  ];
+  expect(invitedJobsFingerprint(a)).toBe(invitedJobsFingerprint([...a].reverse()));
+  expect(invitedJobsFingerprint(a)).not.toBe(
+    invitedJobsFingerprint([{ ...a[0], name: 'Kelly Street' }, a[1]]),
+  );
 });

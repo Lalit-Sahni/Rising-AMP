@@ -6,18 +6,18 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-11-cold-start`**. Phase 10 Cost Plan is live. Phase 11 Part A (app-shell service worker) is on the branch, **not deployed**. Restore tag: `pre-phase11-2026-09-05`. Never commit to `master` or `main`. Older restore tags: `pre-phase10-2026-09-02`, `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+1. Confirm git branch. Latest work is **`phase-11-cold-start`**. Phase 10 Cost Plan is live. Phase 11 Parts A and B (app-shell service worker + Firestore disk cache) are on the branch, **not deployed**. Restore tag: `pre-phase11-2026-09-05`. Never commit to `master` or `main`. Older restore tags: `pre-phase10-2026-09-02`, `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
 2. Read `PROGRESS.md` (next concrete step), then `PHASE11.md`. Open `design/risingamp-vision.html` before changing the shell. `PHASE10.md` is the closed Cost Plan record. `PHASE9.md` through `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
 3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`. `npm start` does not register a service worker; `npm run build` then `npm run preview` does.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phase 11 Part B — Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Do not start C, D or E. Do not deploy unless he names the project and surface.
+5. **Next:** Measure icon-to-Jobs on production after a hosting deploy he names. Do not start Phase 11 C, D or E until that reading exists. Do not deploy unless he names the project and surface.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. **All new files are TypeScript.** Existing JS converts only when a brief says so, or when the file is being substantially rewritten anyway.
 8. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Part A (app-shell service worker) is on `phase-11-cold-start`, not deployed. Next is Part B: Firestore disk cache and listeners. Localhost stays on staging. Restore tag: pre-phase11-2026-09-05. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Parts A and B are on `phase-11-cold-start`, not deployed. Next is measuring icon-to-Jobs after a named hosting deploy. Do not start C, D or E. Localhost stays on staging. Restore tag: pre-phase11-2026-09-05. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 

@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import {
   addExpenseToFirestore,
-  fetchExpensesFromFirestore,
   updateExpenseInFirestore,
   deleteExpenseFromFirestore,
   restoreExpenseInFirestore,
@@ -25,6 +24,7 @@ import {
   savePayerToFirestore,
   fetchPayersFromFirestore
 } from '../data';
+import { listenJobExpenses, listenJobInvoices } from '../firebase/ledgerListen';
 import { 
   getLabour, 
   getTrades, 
@@ -145,40 +145,50 @@ const AppDataProvider = ({
 
   // Load all data from Firestore when the selected job list changes
   useEffect(() => {
-    if (jobListId) {
-      logger.firebase('LOAD_DATA', 'Loading job data');
-      setExpensesLoaded(false);
-      setExpenses([]);
-      setExpensesCapped(false);
-      
-      // Add a loading state to prevent multiple simultaneous loads
-      let isMounted = true;
-      
-      // Load expenses and budget
-      const loadExpensesAndBudget = async () => {
-        try {
-          const result = await fetchExpensesFromFirestore(jobListId);
-          if (result.success && isMounted) {
-            setExpenses(result.expenses);
-            setExpensesCapped(Boolean(result.expensesCapped));
-            setBudget(result.budget || 0);
-          } else if (!isMounted) {
-            logger.debug('Component unmounted, skipping expense load');
-          } else if (isPermissionDenied({ code: result.code, message: result.error }) && onJobAccessLost) {
-            onJobAccessLost();
-          } else {
-            logger.error('Failed to load expenses and budget:', result.error);
-          }
-        } catch (error) {
-          if (isMounted && isPermissionDenied(error) && onJobAccessLost) {
-            onJobAccessLost();
-          } else if (isMounted) {
-            logger.error('Error loading expenses and budget:', error);
-          }
-        } finally {
-          if (isMounted) setExpensesLoaded(true);
+    if (!jobListId) return undefined;
+    logger.firebase('LOAD_DATA', 'Loading job data');
+    setExpensesLoaded(false);
+    setExpenses([]);
+    setExpensesCapped(false);
+    setInvoices([]);
+
+    let isMounted = true;
+
+    const unsubExpenses = listenJobExpenses(
+      jobListId,
+      (result) => {
+        if (!isMounted) return;
+        setExpenses(result.expenses);
+        setExpensesCapped(Boolean(result.expensesCapped));
+        setBudget(result.budget || 0);
+        setExpensesLoaded(true);
+      },
+      (error) => {
+        if (!isMounted) return;
+        if (isPermissionDenied(error) && onJobAccessLost) {
+          onJobAccessLost();
+        } else {
+          logger.error('Error loading expenses and budget:', error);
         }
-      };
+        setExpensesLoaded(true);
+      },
+    );
+
+    const unsubInvoices = listenJobInvoices(
+      jobListId,
+      (result) => {
+        if (!isMounted) return;
+        setInvoices(result.invoices);
+      },
+      (error) => {
+        if (!isMounted) return;
+        if (isPermissionDenied(error) && onJobAccessLost) {
+          onJobAccessLost();
+        } else {
+          logger.error('Error loading invoices:', error);
+        }
+      },
+    );
 
       // Load saved labour
       const loadLabour = async () => {
@@ -273,20 +283,6 @@ const AppDataProvider = ({
         }
       };
 
-      // Load invoices
-      const loadInvoices = async () => {
-        try {
-          const result = await fetchInvoicesFromFirestore(jobListId);
-          if (result.success) {
-            setInvoices(result.invoices);
-          } else {
-            console.error('Failed to load invoices:', result.error);
-          }
-        } catch (error) {
-          console.error('Error loading invoices:', error);
-        }
-      };
-
       // Load HIA contracts
       const loadHIAContracts = async () => {
         try {
@@ -344,16 +340,15 @@ const AppDataProvider = ({
         }
       };
 
-      // Load all data in parallel
+      // Load all data in parallel. Expenses and invoices come from listeners
+      // so they can paint from IndexedDB before Iowa answers.
       Promise.all([
-        loadExpensesAndBudget(),
         loadLabour(),
         loadTrades(),
         loadCompanies(),
         loadSuppliers(),
         loadServiceProviders(),
         loadPayments(),
-        loadInvoices(),
         loadHIAContracts(),
         loadClientDetails(),
         loadUserBankDetails(),
@@ -364,11 +359,11 @@ const AppDataProvider = ({
         }
       });
 
-      // Cleanup function to prevent state updates on unmounted component
       return () => {
         isMounted = false;
+        unsubExpenses();
+        unsubInvoices();
       };
-    }
   }, [jobListId]);
 
   const invalidateJobQueries = () => {
@@ -786,7 +781,7 @@ const AppDataProvider = ({
 
   const loadInvoices = async () => {
     try {
-      const result = await fetchInvoicesFromFirestore(jobListId);
+      const result = await fetchInvoicesFromFirestore(jobListId, { fromServer: true });
       if (result.success) {
         setInvoices(result.invoices);
         return { success: true, invoices: result.invoices };

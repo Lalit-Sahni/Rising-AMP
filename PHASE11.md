@@ -4,7 +4,7 @@ Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
 Branch: **`phase-11-cold-start`**. Restore tag: `pre-phase11-2026-09-05`. One part per session, one commit per part.
 
-**Part A is on the branch (5 Sep 2026), not deployed.** Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Escape hatch: `/clear-sw`. Next is Part B.
+**Part A and Part B are on the branch (5 Sep 2026), not deployed.** Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Firestore uses `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Escape hatch: `/clear-sw`. Next is measuring icon-to-Jobs after a named hosting deploy. Do not start C, D or E until that reading exists.
 
 This phase changes **when and how often** data is fetched, and what is on screen while it is fetched. It does not change what is stored, what is displayed, or any security rule. If a task here seems to need a schema change, stop and ask.
 
@@ -16,7 +16,7 @@ This phase changes **when and how often** data is fetched, and what is on screen
 
 ## Why cold start is slow
 
-It is not the bundle. Initial JS is 245.4 KB gzipped against a 250 KB budget, which is fine.
+It is not the bundle. Initial JS is ~270 KB gzipped against a 275 KB budget (raised from 250 for Firestore’s disk cache). That parse is still cheap next to Iowa.
 
 **It is distance multiplied by the number of things that must happen in order.**
 
@@ -78,19 +78,17 @@ Commit: `Cache the app shell so a repeat open starts from disk.`
 
 ## Part B — Firestore's own disk cache, and listeners on the hot paths
 
-`src/firebase/config.js` line 39 is `getFirestore(app)`. Plain. **That is a memory-only cache, wiped on every reload.** So data read ten seconds ago comes back from Iowa on the next open.
+**On the branch 5 Sep 2026, not deployed.**
 
-1. Switch to `initializeFirestore` with `persistentLocalCache({ tabManager: persistentMultipleTabManager() })`, which backs the cache with IndexedDB so it survives a reload.
+`src/firebase/config.js` used `getFirestore(app)` (memory-only, wiped on reload). It now uses `initializeFirestore` with `persistentLocalCache({ tabManager: persistentMultipleTabManager() })`, and falls back to `memoryLocalCache` when IndexedDB is missing (private mode, tests).
 
-2. **Understand what that does and does not do, because the config alone changes almost nothing.** `getDocs()` still goes to the server; it only falls back to cache when offline. The payoff comes from `onSnapshot`, which fires **immediately from disk** and then again from the server.
+`getDocs()` still goes to the server. The payoff is `onSnapshot`, which fires from disk then the server:
 
-   So the work is converting the hot read paths from one-shot `getDocs` to listeners: the job list, and a job's expenses and invoices. Reopen the app and those are on screen before a packet leaves Australia.
+- Job list: `listenInvitedProjects` in `App.js` (one-shot `listInvitedProjects` stays for invite/remove)
+- Expenses and invoices: `listenJobExpenses` / `listenJobInvoices` in `AppContext` (the other ten collections stay one-shot until Part C)
+- Raising an invoice still allocates the number on the server; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves already use `runTransaction`.
 
-3. **Attach and detach listeners properly.** A listener left running after unmount costs money and memory, and Firestore bills per document delivered. Every `onSnapshot` returns an unsubscribe; return it from the effect.
-
-4. **This replaces the TanStack localStorage persister** that an earlier draft of this brief proposed. Firestore's own persistence is the better fit for Firestore data: one cache instead of two, and Firestore handles staleness itself rather than you guessing a `staleTime`. Keep TanStack Query for the Cost Plan and derived values, where it already works well.
-
-5. **Care with money.** A cached total that is thirty seconds stale is fine. A cached total presented as current when a write failed is not. Where a figure is about to be acted on (raising an invoice, saving a plan), read fresh.
+Empty disk snapshots are ignored so they cannot wipe a boot-cached job list while Iowa answers.
 
 Commit: `Serve the ledger from Firestore's disk cache and update it live.`
 
@@ -172,19 +170,16 @@ Take readings on **production with real data**, throttled to Fast 3G, on a phone
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
 
-Phase 11 is cold start. Part A (app-shell service worker) is on
+Phase 11 is cold start. Parts A and B are on
 phase-11-cold-start, not deployed. Restore tag pre-phase11-2026-09-05.
 Never commit to master or main. Localhost stays on staging
 (.env.local, rising-amp-staging). Deploy nothing unless he names it.
 
-Next is Part B: Firestore persistentLocalCache plus onSnapshot on the
-job list, expenses and invoices. A and B are the phase. C, D and E
-are follow-up.
+Next is measuring icon-to-Jobs on production after a named hosting
+deploy. Do not start Parts C, D or E until that reading exists.
 
-Do not redo Part A or the boot cache (86e2451, 57e12db). Never cache
-Firestore, Cloud Function or Storage responses in the service worker.
-Never hard-delete user records. Never accept a pasted API key.
-
-Start by reading src/firebase/config.js (still getFirestore), then
-propose Part B and wait for a yes.
+Do not redo Part A, Part B, or the boot cache (86e2451, 57e12db).
+Never cache Firestore, Cloud Function or Storage responses in the
+service worker. Never hard-delete user records. Never accept a
+pasted API key.
 ```

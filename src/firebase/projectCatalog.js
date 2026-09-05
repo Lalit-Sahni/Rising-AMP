@@ -6,6 +6,7 @@ import {
   getCountFromServer,
   getDoc,
   getDocs,
+  onSnapshot,
   query,
   serverTimestamp,
   setDoc,
@@ -14,10 +15,10 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from './config';
 import { canonicalEmail, emailInviteVariants, normalizeEmail } from './email';
-import { canRemoveEmailFromJob, emailRemainsOnJobs, isJobArchived, newJobId } from './jobIdentity';
+import { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJobArchived, newJobId } from './jobIdentity';
 import { FAMILY_ORG_ID, getActiveOrgId } from './tenancy';
 
-export { canRemoveEmailFromJob, emailRemainsOnJobs, isJobArchived, newJobId };
+export { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJobArchived, newJobId };
 
 function mapProjectDoc(projectDoc) {
   const data = projectDoc.data() || {};
@@ -47,13 +48,15 @@ function orgId() {
   return getActiveOrgId() || FAMILY_ORG_ID;
 }
 
-async function queryProjectsForEmail(email) {
-  const snap = await getDocs(
-    query(
-      collection(db, 'organizations', orgId(), 'projects'),
-      where('invitedEmails', 'array-contains', email)
-    )
+function invitedProjectsQuery(email) {
+  return query(
+    collection(db, 'organizations', orgId(), 'projects'),
+    where('invitedEmails', 'array-contains', email)
   );
+}
+
+async function queryProjectsForEmail(email) {
+  const snap = await getDocs(invitedProjectsQuery(email));
   return snap.docs;
 }
 
@@ -71,6 +74,28 @@ export async function listInvitedProjects(email) {
 
   const docs = await queryProjectsForEmail(queryEmail);
   return docs.map(mapProjectDoc);
+}
+
+/**
+ * Same query as listInvitedProjects, but from disk first then the server.
+ * Keep the one-shot for invite/remove; this is the boot and Jobs-list path.
+ */
+export function listenInvitedProjects(email, onNext, onError) {
+  const tokenEmail = normalizeEmail(auth.currentUser && auth.currentUser.email);
+  const queryEmail = tokenEmail || normalizeEmail(email);
+  if (!queryEmail.includes('@')) {
+    onNext([], { fromCache: false });
+    return () => {};
+  }
+
+  const next = (snap) => {
+    onNext(snap.docs.map(mapProjectDoc), { fromCache: snap.metadata.fromCache });
+  };
+
+  if (onError) {
+    return onSnapshot(invitedProjectsQuery(queryEmail), next, onError);
+  }
+  return onSnapshot(invitedProjectsQuery(queryEmail), next);
 }
 
 /**

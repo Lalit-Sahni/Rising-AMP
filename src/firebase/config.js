@@ -1,6 +1,12 @@
 import { initializeApp } from "firebase/app";
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from "firebase/app-check";
-import { getFirestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  memoryLocalCache,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { firebaseEnv, missingFirebaseEnv } from "../env";
 import logger from "../utils/logger";
@@ -36,7 +42,32 @@ if (appCheckSiteKey) {
   });
 }
 
-const db = getFirestore(app);
+function createFirestore() {
+  const canUseDisk =
+    typeof window !== 'undefined' && typeof indexedDB !== 'undefined';
+
+  if (canUseDisk) {
+    try {
+      return initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      });
+    } catch (error) {
+      logger.warn('Firestore disk cache unavailable, using memory', error);
+    }
+  }
+
+  try {
+    return initializeFirestore(app, {
+      localCache: memoryLocalCache(),
+    });
+  } catch (error) {
+    return getFirestore(app);
+  }
+}
+
+const db = createFirestore();
 const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence).catch(() => {});
 

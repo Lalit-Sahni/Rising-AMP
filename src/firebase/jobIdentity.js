@@ -37,6 +37,19 @@ export function emailRemainsOnJobs(jobs, email) {
   );
 }
 
+export function invitedJobsFingerprint(jobs) {
+  return (jobs || [])
+    .map((job) => [
+      job.projectId || job.id || '',
+      job.name || '',
+      job.status || 'active',
+      job.kind === 'own' ? 'own' : 'client',
+      (job.invitedEmails || []).join(','),
+    ].join(':'))
+    .sort()
+    .join('|');
+}
+
 export function newJobId() {
   const bytes = new Uint8Array(8);
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {

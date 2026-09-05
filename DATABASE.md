@@ -22,7 +22,7 @@ Until this session, opening Jobs home called `loadInvitedJobSummaries`, which fo
 
 then computed margin, “needs you,” and the subtitle **in the browser**. Two live jobs and ~130 expenses is about **~200 document reads** and a large JSON payload before the first card appears. Opening a job then downloads those collections **again** for the dashboard.
 
-The cheap UX fix (now in the app, no schema change): show job **names** as soon as `listInvitedProjects` returns (one query), then hydrate **counts** with `getCountFromServer` (one read per thousand documents). Drawing the Jobs list does **not** download the ledger. Opening a job still downloads expenses and invoices for the dashboard.
+The cheap UX fix (now in the app, no schema change): show job **names** as soon as the invited-jobs query has an answer (boot cache, then IndexedDB, then the server), then hydrate **counts** with `getCountFromServer` (one read per thousand documents). Drawing the Jobs list does **not** download the ledger. Opening a job still downloads expenses and invoices for the dashboard, but those listeners paint from Firestore’s disk cache on a repeat open.
 
 The **real** scale fix is denormalised summary fields on the job document (section 7). Do not do that until you approve a write plan. Phase 8 skipped rollups on purpose so the ledger stays the only source of truth.
 
