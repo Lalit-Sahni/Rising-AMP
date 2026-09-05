@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
 import * as esbuild from 'esbuild';
 import fs from 'node:fs';
@@ -38,6 +39,12 @@ function legalPages() {
     if (url === '/terms' || url === '/terms/') {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(send('terms.html'));
+      return;
+    }
+    if (url === '/clear-sw' || url === '/clear-sw/' || url === '/clear-sw.html') {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.end(send('clear-sw.html'));
       return;
     }
     next();
@@ -104,6 +111,97 @@ export default defineConfig({
     jsxInJs(),
     react({ include: /\.(js|jsx|ts|tsx)$/ }),
     legalPages(),
+    // Shell-only service worker. Do not import virtual:pwa-register in src/
+    // (that would spend the 250 KB gzip budget). Inline register stays in
+    // index.html. skipWaiting must be set here: the plugin only auto-sets it
+    // when injectRegister is "auto".
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'inline',
+      includeAssets: [],
+      manifest: {
+        name: 'RisingAMP',
+        short_name: 'RisingAMP',
+        description: 'RisingAMP — construction tracking for Opal SS Constructions',
+        theme_color: '#F5F6F8',
+        background_color: '#F5F6F8',
+        display: 'standalone',
+        start_url: '/',
+        lang: 'en-AU',
+        // Phase 7 skipped new PNG icons on purpose. Do not invent any here.
+      },
+      devOptions: {
+        enabled: false,
+      },
+      workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        inlineWorkboxRuntime: true,
+        // Hashed JS/CSS only. HTML is network-first below, never precached.
+        globPatterns: ['**/*.{js,css,ico,webmanifest}'],
+        globIgnores: [
+          '**/clear-sw.html',
+          '**/privacy.html',
+          '**/terms.html',
+          '**/stats.html',
+        ],
+        // Empty: a cached index.html is how a family phone keeps a stale app.
+        navigateFallback: null,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request, url }) => {
+              if (request.mode !== 'navigate') return false;
+              const pathName = url.pathname;
+              if (pathName.startsWith('/clear-sw')) return false;
+              if (pathName.startsWith('/privacy')) return false;
+              if (pathName.startsWith('/terms')) return false;
+              return true;
+            },
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'risingamp-html',
+              networkTimeoutSeconds: 3,
+            },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'risingamp-font-css' },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'risingamp-font-files',
+              expiration: {
+                maxEntries: 16,
+                maxAgeSeconds: 60 * 60 * 24 * 365,
+              },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Money, auth, files. Never a service-worker cache.
+            urlPattern: ({ url }) => {
+              const host = url.hostname;
+              return (
+                host === 'firestore.googleapis.com'
+                || host === 'firebasestorage.googleapis.com'
+                || host === 'identitytoolkit.googleapis.com'
+                || host === 'securetoken.googleapis.com'
+                || host === 'firebaseinstallations.googleapis.com'
+                || host.endsWith('cloudfunctions.net')
+                || host.endsWith('firebasestorage.app')
+                || host.endsWith('firebaseio.com')
+                || host.includes('firebaseappcheck')
+              );
+            },
+            handler: 'NetworkOnly',
+          },
+        ],
+      },
+    }),
     visualizer({
       filename: path.join(root, 'build', 'stats.html'),
       gzipSize: true,

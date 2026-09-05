@@ -2,19 +2,21 @@
 
 ## Current branch
 
-`phase-10-cost-plan` — **Phase 10 live on production hosting and Firestore rules (2 Sep 2026).** Staging hosting and rules are live. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-11-cold-start` — Phase 11 Part A (app-shell service worker) is on this branch, **not deployed**. Phase 10 remains live on production hosting and Firestore rules (2 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
-Restore tags: `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31` (this phase), `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
+Restore tags: `pre-phase11-2026-09-05` (this phase), `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local`  
 `.firebaserc` default is **staging**. Git push does not deploy.
 
-## Where we are (2026-09-02)
+## Where we are (2026-09-05)
 
-**Cold start work has started (2 Sep 2026), on the Phase 10 branch, not yet deployed.** Brief: `PHASE11.md`. The owner's complaint is specific: opening the app is too slow, navigation once inside is fine.
+**Phase 11 Part A is on the branch, not deployed.** Brief: `PHASE11.md`. Service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Hosting headers: `sw.js` / HTML `no-cache`, `/assets/**` immutable. Upgrade path proven on `vite preview` (new hashed entry took over on reopen). Initial JS gzip **245.9 KB** (budget 250). `npm start` still has no worker.
 
-Three fixes are committed:
+**Next is Part B:** Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Do not start C, D or E until A and B are done and measured. Production phone timing for icon-to-Jobs is still pending a hosting deploy the owner names.
+
+Boot-cache and Jobs-list work from 2 Sep 2026 stays:
 
 - `86e2451` — boot paints from a localStorage cache. `readBootCache` / `writeBootCache` / `clearBootCache` in `tenancy.js`, same pattern the profile already used. `App.js` now paints membership, the job list and the last open job before the first request leaves the device, then revalidates behind. Keyed by uid, cleared on sign out and on a revoked invite. Previously `<BootScreen />` was held until `listInvitedProjects` returned, which is three network waves to a US database.
 - `57e12db` — `listOrgProjects` ran two counts per job sequentially inside a `for...of`; they now go out together. It also accepts an already-fetched list, killing a duplicate `listInvitedProjects` that ran every page load. `allowedJobs` flows through `OrgContext` so Jobs home paints at once and counts fill in after.
@@ -22,7 +24,7 @@ Three fixes are committed:
 
 Serial round trips from sign-in to a painted Jobs list: nine down to three on two jobs.
 
-**Not done, and next:** `PHASE11.md` Part A is a service worker for the app shell, Part B is Firestore `persistentLocalCache` plus `onSnapshot` on the hot paths. Those two are the phase. Parts C, D and E (twelve collections on job open, unscoped `invalidateQueries`, ledger rollups) are follow-up.
+**Not done, and next:** `PHASE11.md` Part B — Firestore disk cache and listeners. Parts C, D and E remain follow-up.
 
 **Geography, for context:** Firestore and all five Cloud Functions are `us-central1`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
 
@@ -88,7 +90,18 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan is live on production hosting and Firestore rules. `checkEstimateImport` and `readQuoteFile` are live. Branch `phase-10-cost-plan`. Localhost stays on staging. Restore tags: pre-phase10-2026-09-02, pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
+
+Phase 11 is cold start. Part A (app-shell service worker) is on
+phase-11-cold-start, not deployed. Restore tag pre-phase11-2026-09-05.
+Localhost stays on staging. Deploy nothing unless he names it.
+
+Next is Part B: Firestore persistentLocalCache plus onSnapshot on the
+job list, expenses and invoices. Do not start C, D or E. Do not redo
+the boot cache (86e2451) or the service worker.
+
+Start by reading src/firebase/config.js line 39 (still getFirestore),
+then propose Part B and wait for a yes.
 ```
 
 ## Remaining work
@@ -96,7 +109,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan is live on
 1. Click through Cost Plan on the live shopfront (sidebar **Cost plan**, then a target, trades or an import). Localhost stays on staging.
 2. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
 3. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
-4. Offline / service worker — still its own phase.
+4. Offline queue / queued writes — still its own phase. The Part A worker caches the shell only.
 
 ## Next
 
@@ -127,6 +140,7 @@ Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan is live on
 - [x] History receipts live on production hosting (2 Sep 2026)
 - [x] File names on Add files before upload — production hosting 2 Sep 2026
 - [x] Quote AI fill (`readQuoteFile`) live on staging and production 2 Sep 2026
+- [x] Phase 11 Part A — app-shell service worker (branch only, 5 Sep 2026)
 
 ## What shipped (localhost / staging)
 

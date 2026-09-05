@@ -6,18 +6,18 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-10-cost-plan`**. **Phase 10 Cost Plan is live.** Parts A–E are on production hosting and Firestore rules (2 Sep 2026). Staging hosting and rules are live too. Localhost still uses **staging**. Storage rules were not redeployed because they did not change: quote files use the Phase 9 Files path (`files/{orgId}/{jobId}/{fileId}/…`), already live since 31 Aug 2026. Never commit to `master` or `main`. Restore tags: `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31` (this phase), `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
-2. Read `PROGRESS.md` (next concrete step), then `PHASE10.md`. Open `design/risingamp-costplan-vision.html` before changing Cost Plan. `PHASE9.md` is the closed Job Files record. `PHASE8.md` through `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
-3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`.
+1. Confirm git branch. Latest work is **`phase-11-cold-start`**. Phase 10 Cost Plan is live. Phase 11 Part A (app-shell service worker) is on the branch, **not deployed**. Restore tag: `pre-phase11-2026-09-05`. Never commit to `master` or `main`. Older restore tags: `pre-phase10-2026-09-02`, `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next concrete step), then `PHASE11.md`. Open `design/risingamp-vision.html` before changing the shell. `PHASE10.md` is the closed Cost Plan record. `PHASE9.md` through `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
+3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`. `npm start` does not register a service worker; `npm run build` then `npm run preview` does.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Cost Plan is live on https://risingamp.com.au. Localhost stays on staging. `checkEstimateImport` is live. `readQuoteFile` fills Cost Plan quotes from a photo or PDF. File names can be set on Add files before upload. Do not deploy unless he names the project and surface.
+5. **Next:** Phase 11 Part B — Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Do not start C, D or E. Do not deploy unless he names the project and surface.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. **All new files are TypeScript.** Existing JS converts only when a brief says so, or when the file is being substantially rewritten anyway.
 8. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE10.md. Phase 10 Cost Plan is live on production hosting and Firestore rules. `checkEstimateImport` and `readQuoteFile` are live. Branch `phase-10-cost-plan`. Localhost stays on staging. Restore tags: pre-phase10-2026-09-02, pre-phase10-2026-08-31. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Part A (app-shell service worker) is on `phase-11-cold-start`, not deployed. Next is Part B: Firestore disk cache and listeners. Localhost stays on staging. Restore tag: pre-phase11-2026-09-05. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -99,12 +99,13 @@ Brief: `PHASE10.md`. Mockup: `design/risingamp-costplan-vision.html`. Branch: `p
 
 ## Out of scope until asked
 
-- Billing, Stripe, a second product, deleting leftover PIN folders unless the owner asks, deploying functions beyond what the current phase names, new npm packages except the list already in `PHASE8.md`, Phase 4 Gmail-fallback removal, a service worker / offline queue, App Check **enforcement** until staging traffic is clean, normalising stored money fields, ledger rollup documents, dismantling the remaining AppContext ledger blob
+- Billing, Stripe, a second product, deleting leftover PIN folders unless the owner asks, deploying functions beyond what the current phase names, new npm packages except the list already in `PHASE8.md` and `vite-plugin-pwa` for Phase 11 Part A, Phase 4 Gmail-fallback removal, a service worker **offline queue**, App Check **enforcement** until staging traffic is clean, normalising stored money fields, ledger rollup documents, dismantling the remaining AppContext ledger blob
 
 ## Continuity
 
 - `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
-- `PHASE10.md` — Cost Plan — active brief.
+- `PHASE11.md` — Cold start — active brief.
+- `PHASE10.md` — Cost Plan — closed record.
 - `PHASE9.md` — Job Files — closed record.
 - `PHASE8.md` — foundations / technical revamp — closed record.
 - `PHASE7.md` — app feel on a phone — closed record.

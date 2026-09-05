@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#F5F6F8" />
+    <title>Clear saved app — RisingAMP</title>
+    <meta
+      name="description"
+      content="Unregister the RisingAMP service worker and clear its caches."
+    />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/legal.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="top-inner">
+        <a class="brand" href="/">
+          <span class="mark" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8">
+              <path d="M4 15.5V13a8 8 0 0 1 16 0v2.5" />
+              <path d="M9 6.5V4h6v2.5" />
+              <path d="M3 15.5h18v2H3z" />
+            </svg>
+          </span>
+          RisingAMP
+        </a>
+        <nav class="nav">
+          <a href="/">Open the app</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <p class="kicker">Saved copy</p>
+      <h1>Clear the saved app</h1>
+      <p class="updated">Use this if RisingAMP is stuck on an old version.</p>
+
+      <article class="paper">
+        <p id="status">Clearing the saved copy…</p>
+        <p>
+          This does not delete jobs, expenses, or files. Those live in the
+          database. It only throws away the copy of the app this phone stored
+          for a faster open.
+        </p>
+        <p>
+          If this page itself will not load, open Safari (not the home-screen
+          icon), then Settings → Safari → Advanced → Website Data, and remove
+          RisingAMP.
+        </p>
+        <p><a href="/">Back to RisingAMP</a></p>
+      </article>
+    </main>
+
+    <script>
+      (function () {
+        var status = document.getElementById('status');
+        function fail() {
+          status.textContent =
+            'Could not clear automatically. On iPhone: Settings → Safari → Advanced → Website Data → RisingAMP.';
+        }
+        if (!('serviceWorker' in navigator)) {
+          status.textContent = 'This browser has no saved app copy to clear.';
+          return;
+        }
+        Promise.resolve()
+          .then(function () {
+            return navigator.serviceWorker.getRegistrations();
+          })
+          .then(function (regs) {
+            return Promise.all(regs.map(function (reg) { return reg.unregister(); }));
+          })
+          .then(function () {
+            if (!window.caches) return [];
+            return caches.keys();
+          })
+          .then(function (keys) {
+            return Promise.all(keys.map(function (key) { return caches.delete(key); }));
+          })
+          .then(function () {
+            status.textContent =
+              'Cleared. The next time you open RisingAMP it will download a fresh copy.';
+          })
+          .catch(fail);
+      })();
+    </script>
+  </body>
+</html>

@@ -1,11 +1,11 @@
-# Rising AMP — Architecture (Phase 10 live, 2026-09-02)
+# Rising AMP — Architecture (Phase 10 live, 2026-09-02; Phase 11 Part A on branch)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE10.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026).
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Part A (app-shell service worker) is on `phase-11-cold-start`, not deployed.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging (localhost): `rising-amp-staging`  
-Working branch: `phase-10-cost-plan`. Never commit to `master` / `main`.
+Working branch: `phase-11-cold-start`. Never commit to `master` / `main`.
 App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category colour as data ink only.
 
 ---
@@ -21,13 +21,13 @@ App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category col
 | Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions. Analytics removed. App Check client is wired but **not enforced**. |
 | Functions | Node 22. Live: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile`. Deploy functions **by name**. |
 | OCR | OpenAI Vision via Cloud Function `readReceiptImage` (receipts) and `readQuoteFile` (quote photo or PDF). If that fails, show an error. |
-| PWA | Standalone meta tags + safe-area CSS. No `manifest.json`. No service worker. |
+| PWA | Standalone meta tags + safe-area CSS. `vite-plugin-pwa` generates `sw.js` and a minimal webmanifest (existing favicon only; no new PNG icons). Hashed assets are cache-first. HTML is network-first. Firestore, Cloud Functions and Storage are NetworkOnly. `npm start` does not register a worker. |
 
 Entry: `index.html` → `src/index.js` → `src/App.js`.
 
 Localhost must load `.env.local` (staging). Production builds must load `.env.production.local`. Do not swap them.
 
-**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 10 production: **245.5 KB** initial gzip (file names + quote AI, 2 Sep 2026; earlier the same day 245.4 KB). `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
+**Initial JS budget:** 250 KB gzipped, enforced in `vite.config.js`. Phase 11 Part A build: **245.9 KB** initial gzip. Phase 10 production: **245.5 KB** (file names + quote AI, 2 Sep 2026). The worker registers from an inline script in `index.html`, not from the React bundle. `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
 
 ---
 
@@ -49,6 +49,7 @@ Wired in `src/components/MainContent.js`. Map: `src/navigation.ts`.
 | `/clients` | `ClientManagerPage.jsx` |
 | `/profile` | `ProfilePage.js` |
 | `/privacy` `/terms` | static HTML via `firebase.json` rewrites |
+| `/clear-sw` | static HTML that unregisters the service worker and clears its caches |
 | anything else | `NotFoundPage.jsx` |
 
 The URL is the source of truth for the open job. `localStorage` is a cold-start fallback only.
@@ -282,4 +283,21 @@ Status bar: `apple-mobile-web-app-status-bar-style` is `default` (dark clock tex
 
 Do not treat that top `0` as “iOS reserved the strip”. The header was going under the clock. The 59px floor is the workaround until env() reports the real island height.
 
-Part B (manifest + PNG icons) was skipped — owner did not want a new home-screen icon. Orientation was not locked. No service worker.
+Part B (new PNG icons) was skipped — owner did not want a new home-screen icon. Orientation was not locked. Phase 11 Part A added a shell-only service worker; it does not change that icon.
+
+---
+
+## 15. Cold start (Phase 11)
+
+The owner’s number is **time from tapping the home-screen icon to the Jobs list being readable**, on production, on a phone, throttled, force-close then reopen. That production-phone reading is still pending a hosting deploy.
+
+| | Before Part A | After Part A (localhost `vite preview`, 5 Sep 2026) |
+|--|--|--|
+| Service worker | None. Every open re-downloaded the JS. | `sw.js` cache-firsts hashed assets (57 precache entries). HTML is NetworkFirst (`risingamp-html`). |
+| Initial JS gzip | 245.5 KB on production | 245.9 KB (budget 250). Register script is inline in `index.html`, not in the React bundle. |
+| Money data in the worker | n/a | Firestore, `*.cloudfunctions.net`, Storage, Auth and App Check are NetworkOnly. |
+| Upgrade | n/a | Changed a hashed entry (`index-DzWVcopq.js` → `index-C-aVLcaD.js`), reopened: new build ran, worker activated, nothing left waiting. `skipWaiting` + `clientsClaim`. |
+| Escape hatch | n/a | `/clear-sw` unregistered the worker and emptied Cache Storage. If that page itself is trapped: Safari → Settings → Advanced → Website Data. Kill-switch in code: `VitePWA({ selfDestroying: true })` then hosting. |
+| Hosting cache | Firebase default 1 hour | `**` `Cache-Control: no-cache`; `/assets/**` immutable. So `sw.js` and `index.html` are not pinned. |
+
+Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache from `86e2451` still paints Jobs after JS parses. Part B is Firestore’s disk cache plus listeners.

@@ -2,7 +2,9 @@
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
-Branch: **`phase-11-cold-start`** from the merged Phase 10 branch. Tag `pre-phase11-2026-09-XX` first. One part per session, one commit per part.
+Branch: **`phase-11-cold-start`**. Restore tag: `pre-phase11-2026-09-05`. One part per session, one commit per part.
+
+**Part A is on the branch (5 Sep 2026), not deployed.** Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Escape hatch: `/clear-sw`. Next is Part B.
 
 This phase changes **when and how often** data is fetched, and what is on screen while it is fetched. It does not change what is stored, what is displayed, or any security rule. If a task here seems to need a schema change, stop and ask.
 
@@ -69,6 +71,8 @@ There is still no service worker, so every single open re-downloads and re-parse
 Phase 7 already made this a home-screen app with correct safe areas. This is the piece that makes it feel like one.
 
 Commit: `Cache the app shell so a repeat open starts from disk.`
+
+**Done on the branch, 5 Sep 2026. Not deployed.** `vite-plugin-pwa`, auto-update (`skipWaiting` + `clientsClaim`), inline register (out of the 250 KB budget), NetworkFirst HTML, NetworkOnly for Firebase data, Hosting `no-cache` on `sw.js`/`index.html`, `/clear-sw`. Upgrade path proven on `vite preview`.
 
 ---
 
@@ -166,44 +170,21 @@ Take readings on **production with real data**, throttled to Fast 3G, on a phone
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Open
-design/risingamp-vision.html in a browser.
+Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
 
-Phase 11 is cold start. The owner's complaint is specific: opening the app is
-too slow, navigation once inside is fine. Work only on that.
+Phase 11 is cold start. Part A (app-shell service worker) is on
+phase-11-cold-start, not deployed. Restore tag pre-phase11-2026-09-05.
+Never commit to master or main. Localhost stays on staging
+(.env.local, rising-amp-staging). Deploy nothing unless he names it.
 
-Branch: create phase-11-cold-start from the merged Phase 10 branch, and tag a
-restore point before the first change. Never commit to master or main.
-Localhost stays on staging (.env.local, rising-amp-staging). Deploy nothing
-unless he names it.
+Next is Part B: Firestore persistentLocalCache plus onSnapshot on the
+job list, expenses and invoices. A and B are the phase. C, D and E
+are follow-up.
 
-Context you need before you start:
-- Firestore and all five Cloud Functions are in us-central1. Sydney to Iowa is
-  ~200ms per round trip. Firestore's location is permanent and moving it is out
-  of scope. The only lever is fewer round trips and better caching.
-- Three cold-start fixes already shipped on the Phase 10 branch (86e2451,
-  57e12db). Boot now paints membership, the job list and the last open job from
-  a localStorage cache before the first request. Do not redo those.
-- Part A is a service worker for the app shell (vite-plugin-pwa). Part B is
-  Firestore persistentLocalCache plus onSnapshot on the hot paths. A and B are
-  the phase. C, D and E are follow-up and should not be started until A and B
-  are done and measured.
+Do not redo Part A or the boot cache (86e2451, 57e12db). Never cache
+Firestore, Cloud Function or Storage responses in the service worker.
+Never hard-delete user records. Never accept a pasted API key.
 
-Rules that matter here:
-- One part per session, one commit per part. A previous phase shipped seven
-  parts in one 86-file commit and pushed a broken import to production.
-- Never cache Firestore, Cloud Function or Storage responses in the service
-  worker. Shell only. A service worker caching money data is how someone sees a
-  stale total.
-- A bad service worker serves a stale app forever. Prove the upgrade path
-  before committing: install it, deploy a change, reopen, confirm the new build
-  is running.
-- Measure on production, on a phone, throttled, by force-closing and reopening.
-  Not by refreshing a tab on office wifi.
-- Never hard-delete user records. Never accept a pasted API key. Deploy
-  functions by name only.
-
-Start by reading src/App.js (the boot chain and the render gate around line
-305), src/firebase/tenancy.js (the boot cache that already exists), and
-src/firebase/config.js line 39. Then propose Part A and wait for a yes.
+Start by reading src/firebase/config.js (still getFirestore), then
+propose Part B and wait for a yes.
 ```
