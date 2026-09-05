@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   User, 
@@ -21,13 +21,25 @@ import { uniqueByName } from '../../firebase/partyName';
 import { allocateInvoiceNumber } from '../../firebase/invoiceNumbers';
 import { defaultDueYmd, toYmd, ymdToLocalDate } from '../../dates';
 import { addCents, dollarsFromUnknown, formatCents, fromCents, lineCents, parseQuantity, percentOf, safeParseToCents } from '../../money';
-import { useJobBankDetails, useJobClients, useJobProgressPayments } from '../../hooks/useJobDirectories';
+import { useJobBankDetails, useJobClients } from '../../hooks/useJobDirectories';
+import { businessFromProfile } from '../invoices/InvoiceDocument';
 
 const NewInvoicePage = ({ onComplete }) => {
-  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, jobId, orgId, projectName: jobName, saveClientToFirebase, membership } = useApp();
+  const {
+    addInvoiceToFirebase,
+    showToast,
+    jobId,
+    orgId,
+    projectName: jobName,
+    saveClientToFirebase,
+    saveUserBankDetailsToFirebase,
+    membership,
+    profile,
+    authUser,
+  } = useApp();
   const clientsQuery = useJobClients(orgId, jobId);
-  useJobProgressPayments(orgId, jobId);
-  useJobBankDetails(orgId, jobId);
+  const bankQuery = useJobBankDetails(orgId, jobId);
+  const business = businessFromProfile(profile, authUser && authUser.email);
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -64,8 +76,6 @@ const NewInvoicePage = ({ onComplete }) => {
     ]
   });
 
-  const pdfRef = useRef();
-
   const takeInvoiceNumber = async () => {
     setNumberError('');
     try {
@@ -88,6 +98,20 @@ const NewInvoicePage = ({ onComplete }) => {
     // Allocate once when the page opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [membership && membership.orgId]);
+
+  const savedBank = bankQuery.data || null;
+  useEffect(() => {
+    if (!savedBank) return;
+    setFormData((prev) => {
+      if (prev.bsb || prev.accountName || prev.accountNumber) return prev;
+      return {
+        ...prev,
+        bsb: savedBank.bsb || '',
+        accountName: savedBank.accountName || '',
+        accountNumber: savedBank.accountNumber || '',
+      };
+    });
+  }, [savedBank]);
 
   const clients = uniqueByName(clientsQuery.data || [], (row) => row.name);
 
@@ -223,45 +247,22 @@ const NewInvoicePage = ({ onComplete }) => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
-  const generatePDF = async () => {
-    try {
-      const { jsPDF } = await import('jspdf');
-      const html2canvas = await import('html2canvas');
-      
-      const canvas = await html2canvas.default(pdfRef.current);
-      const imgData = canvas.toDataURL('image/png');
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 295;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      
-      let position = 0;
-      
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-      
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-      
-      return pdf;
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      showToast('Error generating PDF', 'error');
-      return null;
-    }
-  };
+  const previewInvoiceData = () => ({
+    ...formData,
+    invoiceNumber,
+    subtotal: calculateSubtotal(),
+    gst: calculateGST(),
+    total: calculateTotal(),
+  });
 
   const downloadPDF = async () => {
-    const pdf = await generatePDF();
-    if (pdf) {
-      pdf.save(`Invoice-${invoiceNumber}.pdf`);
-      showToast('Invoice downloaded successfully', 'success');
+    try {
+      const { downloadInvoicePdf } = await import('../../pdf/invoicePdf');
+      await downloadInvoicePdf({ invoice: previewInvoiceData(), business, jobName }, `Invoice-${invoiceNumber || 'draft'}.pdf`);
+      showToast('Invoice PDF downloaded', 'success');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      showToast('Could not make that PDF', 'error');
     }
   };
 
@@ -285,6 +286,9 @@ const NewInvoicePage = ({ onComplete }) => {
       };
 
       const savedInvoice = await addInvoiceToFirebase(invoiceData);
+      if (!savedInvoice || !savedInvoice.success) {
+        return;
+      }
       try {
         if (formData.clientName && formData.clientName.trim() && saveClientToFirebase) {
           await saveClientToFirebase({
@@ -299,28 +303,29 @@ const NewInvoicePage = ({ onComplete }) => {
       } catch (error) {
         console.error('Error saving invoice client:', error);
       }
-      showToast('Invoice saved successfully', 'success');
-      
-      const progressPaymentData = {
-        date: formData.invoiceDate,
-        amount: calculateTotal(),
-        description: `Invoice ${invoiceNumber} - ${formData.projectName}`,
-        type: 'invoice',
-        invoiceId: savedInvoice.invoiceId
-      };
-      
-      try {
-        await addProgressPaymentToFirebase(progressPaymentData);
-        showToast('Invoice added to budget tracking', 'success');
-      } catch (error) {
-        console.error('Error adding to budget:', error);
-        showToast('Invoice saved but budget update failed', 'warning');
+      const bankChanged = ['bsb', 'accountName', 'accountNumber'].some(
+        (key) => String(formData[key] || '').trim() !== String((savedBank && savedBank[key]) || '').trim(),
+      );
+      if (bankChanged && (formData.bsb || formData.accountName || formData.accountNumber) && saveUserBankDetailsToFirebase) {
+        try {
+          await saveUserBankDetailsToFirebase({
+            bsb: formData.bsb || '',
+            accountName: formData.accountName || '',
+            accountNumber: formData.accountNumber || '',
+          }, { quiet: true });
+        } catch (error) {
+          console.error('Error remembering bank details:', error);
+        }
       }
-      
+      showToast(`Invoice ${invoiceNumber} saved as a draft`, 'success');
+
       setFormData({
         clientName: '',
         clientEmail: '',
         clientPhone: '',
+        clientAddress: '',
+        clientCompany: '',
+        clientABN: '',
         projectName: jobName || '',
         projectReference: '',
         invoiceDate: new Date(),
@@ -333,8 +338,8 @@ const NewInvoicePage = ({ onComplete }) => {
         accountNumber: '',
         lineItems: [{ id: 1, description: '', quantity: 1, unitCost: 0, total: 0 }]
       });
+      setSelectedClient(null);
       setInvoiceNumber('');
-      takeInvoiceNumber().catch(() => {});
       setCurrentStep(1);
       
       if (onComplete) {
@@ -379,8 +384,10 @@ const NewInvoicePage = ({ onComplete }) => {
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="eyebrow">Billing</div>
-            <h1 className="text-[26px] font-semibold tracking-tight mt-1">New invoice</h1>
-            <p className="text-[13.5px] text-slate-600 mt-0.5">Create an invoice for this job.</p>
+            <h1 className="text-[25px] font-extrabold tracking-tight mt-1">New invoice</h1>
+            <p className="text-[13.5px] text-slate-600 mt-0.5">
+              {invoiceNumber ? `Number ${invoiceNumber} is reserved for this invoice.` : (numberError || 'Getting an invoice number…')}
+            </p>
           </div>
           
           <div className="flex items-center gap-2">
@@ -425,13 +432,13 @@ const NewInvoicePage = ({ onComplete }) => {
         {/* Step Labels */}
         <div className="flex justify-center space-x-8 mb-8">
           <span className={`text-sm ${currentStep === 1 ? 'text-accent font-medium' : 'text-slate-400'}`}>
-            Client & Project Details
+            Client and job
           </span>
           <span className={`text-sm ${currentStep === 2 ? 'text-accent font-medium' : 'text-slate-400'}`}>
-            Line Items
+            Line items
           </span>
           <span className={`text-sm ${currentStep === 3 ? 'text-accent font-medium' : 'text-slate-400'}`}>
-            Review & Generate
+            Review and save
           </span>
         </div>
 
@@ -441,7 +448,7 @@ const NewInvoicePage = ({ onComplete }) => {
           {/* Step 1: Client & Project Details */}
           {currentStep === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-ink mb-6">Client & Project Information</h2>
+              <h2 className="text-[17px] font-extrabold text-ink mb-5">Who is this for?</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Client Information */}
@@ -449,7 +456,7 @@ const NewInvoicePage = ({ onComplete }) => {
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium text-ink flex items-center gap-2">
                       <User className="w-5 h-5" />
-                      Client Information
+                      Client
                     </h3>
                     <div className="flex items-center gap-2">
                       <button
@@ -458,7 +465,7 @@ const NewInvoicePage = ({ onComplete }) => {
                         className="px-3 py-1.5 bg-accent hover:bg-accent-600 text-white text-[12px] font-bold rounded-ot-sm transition-colors flex items-center gap-1"
                       >
                         <User className="w-3 h-3" />
-                        Manage Clients
+                        Saved clients
                       </button>
                     </div>
                   </div>
@@ -466,7 +473,7 @@ const NewInvoicePage = ({ onComplete }) => {
                   {/* Client Selection */}
                   <div>
                     <label className="block text-sm font-medium text-ink mb-2">
-                      Select Client
+                      Pick a saved client
                     </label>
                     <div className="relative">
                       <select
@@ -481,7 +488,7 @@ const NewInvoicePage = ({ onComplete }) => {
                         }}
                         className="w-full px-4 py-3 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent appearance-none"
                       >
-                        <option value="">Select a client or enter manually</option>
+                        <option value="">Type the details below, or pick one</option>
                         {(clients || []).map(client => (
                           <option key={client.id} value={client.id}>
                             {client.name} {client.company ? `(${client.company})` : ''}
@@ -496,7 +503,7 @@ const NewInvoicePage = ({ onComplete }) => {
                     <div className="p-3 bg-accent-tint border border-hairline rounded-ot-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-ink text-sm font-medium">
-                          ✓ Using saved client: {selectedClient.name}
+                          Using saved client {selectedClient.name}
                         </span>
                         <button
                           type="button"
@@ -510,8 +517,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   )}
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Client Name *
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Client name *
                     </label>
                     <input
                       type="text"
@@ -523,8 +530,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Company Name
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Company
                     </label>
                     <input
                       type="text"
@@ -536,8 +543,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Email Address
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Email
                     </label>
                     <input
                       type="email"
@@ -549,8 +556,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Phone Number
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Phone
                     </label>
                     <input
                       type="tel"
@@ -562,7 +569,7 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
                       Address
                     </label>
                     <textarea
@@ -575,7 +582,7 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
                       ABN
                     </label>
                     <input
@@ -592,12 +599,12 @@ const NewInvoicePage = ({ onComplete }) => {
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium text-ink flex items-center gap-2">
                     <FileText className="w-5 h-5" />
-                    Project Information
+                    Job
                   </h3>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Project Name *
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Job name on the invoice *
                     </label>
                     <input
                       type="text"
@@ -609,8 +616,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Project Reference
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Reference
                     </label>
                     <input
                       type="text"
@@ -623,8 +630,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Invoice Date
+                      <label className="block text-sm font-medium text-slate-600 mb-2">
+                        Invoice date
                       </label>
                       <DatePicker
                         selected={formData.invoiceDate}
@@ -642,8 +649,8 @@ const NewInvoicePage = ({ onComplete }) => {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-slate-300 mb-2">
-                        Due Date
+                      <label className="block text-sm font-medium text-slate-600 mb-2">
+                        Due date
                       </label>
                       <DatePicker
                         selected={formData.dueDate}
@@ -662,13 +669,13 @@ const NewInvoicePage = ({ onComplete }) => {
           {currentStep === 2 && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-ink">Invoice Line Items</h2>
+                <h2 className="text-[17px] font-extrabold text-ink">What are you charging for?</h2>
                 <button
                   onClick={addLineItem}
                   className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                 >
                   <Plus className="w-4 h-4" />
-                  Add Item
+                  Add a line
                 </button>
               </div>
               
@@ -677,7 +684,7 @@ const NewInvoicePage = ({ onComplete }) => {
                   <div key={item.id} className="bg-canvas rounded-ot p-4 border border-hairline">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                       <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                        <label className="block text-sm font-medium text-slate-600 mb-2">
                           Description
                         </label>
                         <input
@@ -690,7 +697,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
+                        <label className="block text-sm font-medium text-slate-600 mb-2">
                           Quantity
                         </label>
                         <input
@@ -704,8 +711,8 @@ const NewInvoicePage = ({ onComplete }) => {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-2">
-                          Unit Cost ($)
+                        <label className="block text-sm font-medium text-slate-600 mb-2">
+                          Unit cost ($)
                         </label>
                         <input
                           type="number"
@@ -726,7 +733,7 @@ const NewInvoicePage = ({ onComplete }) => {
                       {formData.lineItems.length > 1 && (
                         <button
                           onClick={() => removeLineItem(item.id)}
-                          className="text-red-400 hover:text-red-300 transition-colors"
+                          className="w-9 h-9 grid place-items-center rounded-ot-sm border border-hairline text-neg hover:bg-canvas transition-colors"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -745,7 +752,7 @@ const NewInvoicePage = ({ onComplete }) => {
                   onChange={(e) => setFormData(prev => ({ ...prev, includeGST: e.target.checked }))}
                   className="w-4 h-4 text-accent bg-canvas border-hairline rounded focus:ring-accent"
                 />
-                <label htmlFor="includeGST" className="text-sm font-medium text-slate-300">
+                <label htmlFor="includeGST" className="text-sm font-medium text-slate-600">
                   Include 10% GST
                 </label>
               </div>
@@ -755,36 +762,36 @@ const NewInvoicePage = ({ onComplete }) => {
           {/* Step 3: Review & Generate */}
           {currentStep === 3 && (
             <div className="space-y-6">
-              <h2 className="text-xl font-semibold text-ink">Review & Generate Invoice</h2>
+              <h2 className="text-[17px] font-extrabold text-ink">Check it, then save</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Invoice Summary */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-ink">Invoice Summary</h3>
+                  <h3 className="text-[15px] font-bold text-ink">Summary</h3>
                   
                   <div className="bg-canvas rounded-ot p-4 space-y-3">
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Invoice Number:</span>
+                      <span className="text-slate-600">Invoice number</span>
                       <span className="font-medium text-ink">{invoiceNumber}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Client:</span>
+                      <span className="text-slate-600">Client</span>
                       <span className="font-medium text-ink">{formData.clientName}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Project:</span>
+                      <span className="text-slate-600">Job</span>
                       <span className="font-medium text-ink">{formData.projectName}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Invoice Date:</span>
+                      <span className="text-slate-600">Invoice date</span>
                       <span className="font-medium text-ink">
-                        {formData.invoiceDate.toLocaleDateString()}
+                        {formData.invoiceDate.toLocaleDateString('en-AU')}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Due Date:</span>
+                      <span className="text-slate-600">Due date</span>
                       <span className="font-medium text-ink">
-                        {formData.dueDate.toLocaleDateString()}
+                        {formData.dueDate.toLocaleDateString('en-AU')}
                       </span>
                     </div>
                   </div>
@@ -792,28 +799,28 @@ const NewInvoicePage = ({ onComplete }) => {
                   {/* Totals */}
                   <div className="bg-canvas rounded-ot p-4 space-y-2">
                     <div className="flex justify-between">
-                      <span className="text-slate-300">Subtotal:</span>
-                      <span className="font-medium text-ink">${calculateSubtotal().toFixed(2)}</span>
+                      <span className="text-slate-600">Subtotal</span>
+                      <span className="tabular font-medium text-ink">{formatCents(safeParseToCents(calculateSubtotal()))}</span>
                     </div>
                     {formData.includeGST && (
                       <div className="flex justify-between">
-                        <span className="text-slate-300">GST (10%):</span>
-                        <span className="font-medium text-ink">${calculateGST().toFixed(2)}</span>
+                        <span className="text-slate-600">GST 10%</span>
+                        <span className="tabular font-medium text-ink">{formatCents(safeParseToCents(calculateGST()))}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-lg font-semibold border-t border-slate-600 pt-2">
-                      <span className="text-ink">Total:</span>
-                      <span className="tabular text-ink font-semibold">${calculateTotal().toFixed(2)}</span>
+                    <div className="flex justify-between text-lg font-semibold border-t border-hairline pt-2">
+                      <span className="text-ink">Total</span>
+                      <span className="tabular text-ink font-extrabold">{formatCents(safeParseToCents(calculateTotal()))}</span>
                     </div>
                   </div>
                 </div>
                 
                 {/* Additional Information */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-medium text-ink">Additional Information</h3>
+                  <h3 className="text-[15px] font-bold text-ink">Anything else</h3>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
                       Notes
                     </label>
                     <textarea
@@ -826,8 +833,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Payment Instructions
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Payment instructions
                     </label>
                     <textarea
                       value={formData.paymentInstructions}
@@ -842,10 +849,11 @@ const NewInvoicePage = ({ onComplete }) => {
               
               {/* Bank Account Details */}
               <div className="space-y-4">
-                <h3 className="text-lg font-medium text-ink">Bank Account Details</h3>
+                <h3 className="text-[15px] font-bold text-ink">Bank details</h3>
+                <p className="text-[12.5px] text-slate-400 -mt-2">Printed under "How to pay". Remembered for the next invoice on this job.</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
                       BSB
                     </label>
                     <input
@@ -858,8 +866,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Account Name
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Account name
                     </label>
                     <input
                       type="text"
@@ -871,8 +879,8 @@ const NewInvoicePage = ({ onComplete }) => {
                   </div>
                   
                   <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2">
-                      Account Number
+                    <label className="block text-sm font-medium text-slate-600 mb-2">
+                      Account number
                     </label>
                     <input
                       type="text"
@@ -924,147 +932,24 @@ const NewInvoicePage = ({ onComplete }) => {
                   className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 disabled:opacity-50 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
                 >
                   <Save className="w-4 h-4" />
-                  {isSubmitting ? 'Saving...' : 'Save Invoice'}
+                  {isSubmitting ? 'Saving...' : 'Save invoice'}
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* PDF Preview Modal */}
-        {showPreview && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-              <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="text-lg font-semibold text-gray-900">Invoice Preview</h3>
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={downloadPDF}
-                    className="inline-flex items-center gap-2 bg-accent hover:bg-accent-600 text-white px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
-                  >
-                    <Download className="w-4 h-4" />
-                    Download
-                  </button>
-                  <button
-                    onClick={() => setShowPreview(false)}
-                    className="inline-flex items-center gap-2 border border-hairline hover:border-[#D6D9DD] text-ink px-3.5 py-2 rounded-ot-sm text-[13px] font-medium"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-              
-              <div className="p-4 overflow-auto max-h-[calc(90vh-80px)]">
-                <div ref={pdfRef} className="bg-white text-black p-8 max-w-4xl mx-auto">
-                  {/* Invoice Header */}
-                  <div className="flex justify-between items-start mb-8">
-                    <div>
-                      <h1 className="text-3xl font-bold text-gray-900 mb-2">INVOICE</h1>
-                      <p className="text-gray-600">Invoice #: {invoiceNumber}</p>
-                      <p className="text-gray-600">Date: {formData.invoiceDate.toLocaleDateString()}</p>
-                      <p className="text-gray-600">Due: {formData.dueDate.toLocaleDateString()}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-extrabold text-ink">RisingAMP</p>
-                    </div>
-                  </div>
-                  
-                  {/* Client & Project Info */}
-                  <div className="grid grid-cols-2 gap-8 mb-8">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Bill To:</h3>
-                      <p className="font-medium">{formData.clientName}</p>
-                      {formData.clientEmail && <p className="text-gray-600">{formData.clientEmail}</p>}
-                      {formData.clientPhone && <p className="text-gray-600">{formData.clientPhone}</p>}
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 mb-2">Project:</h3>
-                      <p className="font-medium">{formData.projectName}</p>
-                      {formData.projectReference && <p className="text-gray-600">Ref: {formData.projectReference}</p>}
-                    </div>
-                  </div>
-                  
-                  {/* Line Items Table */}
-                  <div className="mb-8">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Description</th>
-                          <th className="border border-gray-300 px-4 py-2 text-right font-semibold">Quantity</th>
-                          <th className="border border-gray-300 px-4 py-2 text-right font-semibold">Unit Cost</th>
-                          <th className="border border-gray-300 px-4 py-2 text-right font-semibold">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {formData.lineItems.map((item, index) => (
-                          <tr key={item.id}>
-                            <td className="border border-gray-300 px-4 py-2">{item.description}</td>
-                            <td className="border border-gray-300 px-4 py-2 text-right">{item.quantity}</td>
-                            <td className="border border-gray-300 px-4 py-2 text-right">{formatCents(safeParseToCents(item.unitCost))}</td>
-                            <td className="border border-gray-300 px-4 py-2 text-right">{formatCents(safeParseToCents(item.total))}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  
-                  {/* Totals */}
-                  <div className="flex justify-end mb-8">
-                    <div className="w-64">
-                      <div className="flex justify-between py-2">
-                        <span>Subtotal:</span>
-                        <span>${calculateSubtotal().toFixed(2)}</span>
-                      </div>
-                      {formData.includeGST && (
-                        <div className="flex justify-between py-2">
-                          <span>GST (10%):</span>
-                          <span>${calculateGST().toFixed(2)}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between py-2 border-t border-gray-300 font-semibold text-lg">
-                        <span>Total:</span>
-                        <span>${calculateTotal().toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Notes & Payment Instructions */}
-                  {(formData.notes || formData.paymentInstructions) && (
-                    <div className="grid grid-cols-2 gap-8 mb-8">
-                      {formData.notes && (
-                        <div>
-                          <h3 className="font-semibold text-gray-900 mb-2">Notes:</h3>
-                          <p className="text-gray-600">{formData.notes}</p>
-                        </div>
-                      )}
-                      {formData.paymentInstructions && (
-                        <div>
-                          <h3 className="font-semibold text-gray-900 mb-2">Payment Instructions:</h3>
-                          <p className="text-gray-600">{formData.paymentInstructions}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Footer */}
-                  <div className="text-center text-gray-600 text-sm border-t border-gray-300 pt-4">
-                    <p>Thank you for your business.</p>
-                    <p>RisingAMP</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Invoice Preview Modal */}
         <InvoicePreview
-          invoice={formData}
+          invoice={previewInvoiceData()}
+          business={business}
+          jobName={jobName}
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
           onSave={saveInvoice}
           isNewInvoice={true}
           showSaveButton={true}
+          showToast={showToast}
         />
 
                           {/* Client Manager Modal */}
