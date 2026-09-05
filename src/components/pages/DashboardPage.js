@@ -260,7 +260,7 @@ export default function DashboardPage() {
             <button
               type="button"
               onClick={() => handleNavigate('add-expense')}
-              className="inline-flex items-center gap-1.5 bg-accent hover:bg-accent-600 text-white text-[13px] font-bold px-[15px] py-[9px] rounded-[9px]"
+              className="hidden md:inline-flex items-center gap-1.5 bg-accent hover:bg-accent-600 text-white text-[13px] font-bold px-[15px] py-[9px] rounded-[9px]"
             >
               <PlusCircle className="w-4 h-4" strokeWidth={2} />
               Add expense

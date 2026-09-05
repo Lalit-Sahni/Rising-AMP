@@ -105,8 +105,10 @@ const HIAContractPage = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!hiaQuery.isLoading && contracts.length === 0) setAdding(true);
-  }, [hiaQuery.isLoading, contracts.length]);
+    // Open the form only once we know the job has no contracts; a query that
+    // has not run yet must not pop the form over a list that is about to load.
+    if (hiaQuery.isSuccess && contracts.length === 0) setAdding(true);
+  }, [hiaQuery.isSuccess, contracts.length]);
 
   const savedBank = bankQuery.data || null;
   useEffect(() => {

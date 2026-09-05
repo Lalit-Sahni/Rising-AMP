@@ -329,12 +329,12 @@ export default function JobsHomePage() {
             <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Jobs</h1>
             <p className="text-[13.5px] text-slate-600 mt-0.5">Every job, and how each one is tracking.</p>
           </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {archivedJobs.length > 0 && (
               <button
                 type="button"
                 onClick={() => setShowArchived((value) => !value)}
-                className="px-3 py-2 text-[13px] font-semibold text-slate-600 border border-hairline rounded-[10px] bg-surface"
+                className="px-3 py-2 text-[13px] font-semibold text-slate-600 border border-hairline rounded-[10px] bg-surface whitespace-nowrap"
               >
                 {showArchived ? 'Show active' : `Archived (${archivedJobs.length})`}
               </button>
@@ -343,13 +343,13 @@ export default function JobsHomePage() {
               <button
                 type="button"
                 onClick={startCreate}
-                className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 px-4 py-2 min-w-[7.5rem] text-[13px] font-bold text-white bg-accent hover:bg-accent-600 rounded-[10px]"
+                className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 px-4 py-2 text-[13px] font-bold text-white bg-accent hover:bg-accent-600 rounded-[10px]"
               >
                 <Plus className="w-4 h-4" strokeWidth={2} />
                 New job
               </button>
             )}
-            <label className="flex items-center gap-2.5 border border-hairline rounded-[10px] px-3.5 py-2 bg-surface max-w-xs w-full">
+            <label className="flex items-center gap-2.5 border border-hairline rounded-[10px] px-3.5 py-2 bg-surface w-full sm:w-auto sm:max-w-xs sm:flex-1 order-last sm:order-none">
             <Search className="w-4 h-4 text-slate-400 shrink-0" strokeWidth={1.7} />
             <input
               type="search"
