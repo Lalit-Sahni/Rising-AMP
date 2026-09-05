@@ -27,7 +27,7 @@ Entry: `index.html` → `src/index.js` → `src/App.js`.
 
 Localhost must load `.env.local` (staging). Production builds must load `.env.production.local`. Do not swap them.
 
-**Initial JS budget:** 275 KB gzipped, enforced in `vite.config.js`. Raised from 250 in Phase 11 Part B because Firestore’s IndexedDB persistence lives in the same `firebase/firestore` module as `getDocs` and cannot be split out (~24 KB gzip). Phase 11 Part B build: **270.0 KB**. Phase 11 Part A: **245.9 KB**. Phase 10 production: **245.5 KB**. The worker registers from an inline script in `index.html`, not from the React bundle. `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
+**Initial JS budget:** 275 KB gzipped, enforced in `vite.config.js`. **That is the held ceiling.** It moved from 250 in Phase 11 Part B because Firestore’s IndexedDB persistence lives in the same `firebase/firestore` module as `getDocs` and cannot be split out (~24 KB gzip). **Do not raise 275 because a build exceeds it.** Current (Part E): **272.7 KB**. Phase 11 Part B build: **270.0 KB**. Phase 11 Part A: **245.9 KB**. Phase 10 production: **245.5 KB**. The worker registers from an inline script in `index.html`, not from the React bundle. `exceljs`, `jspdf`/`html2canvas` and `pdf-lib` load on click. Job-file helpers are imported from `src/firebase/jobFiles.ts`, not the `src/data` barrel, so they stay off the first load. Cost Plan loads its Firestore module dynamically. See `build/stats.html` after `npm run build`.
 
 ---
 
@@ -136,13 +136,13 @@ Staging has a Storage bucket so localhost can upload receipts. Production Storag
 
 ## 8. Cloud Functions
 
-Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile` (us-central1, callable). Phase 11 Part E adds `maintainLedgerRollup` (Firestore trigger on expenses). Deploy **by name**:
+Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile` (us-central1, callable). Phase 11 Part E adds `maintainLedgerRollup` (Firestore trigger on expenses). Deploy **by name**. **No `--force`.** `--force` suppresses the confirmation before deleting functions. This repo never lets a functions deploy delete something. Production order for Part E is the list in `PHASE11.md` (backup first; function; rules; dry-run; apply; dry-run must be zero; then hosting).
 
 ```
 firebase deploy --project rising-amp-staging --only functions:readQuoteFile
 firebase deploy --project production --only functions:readQuoteFile
-firebase deploy --project staging --only functions:maintainLedgerRollup --force
-firebase deploy --project production --only functions:maintainLedgerRollup --force
+firebase deploy --project staging --only functions:maintainLedgerRollup
+firebase deploy --project production --only functions:maintainLedgerRollup
 ```
 
 Deploying by name is the habit for this live app. Do not run a bare `firebase deploy --only functions` unless you intend to publish every exported function in `functions/index.js`.
@@ -159,7 +159,7 @@ Removed from the UI. Cold export under gitignored `backups/cold-export-site-log-
 
 ## 11. Backups
 
-Usable production backups: gitignored `backups/production-*` (Firestore + Storage), taken with `scripts/backup-production.js`. Keep them. Do not commit them.
+Usable production backups: gitignored `backups/production-*` (Firestore + Storage), taken with `scripts/backup-production.js`. Keep them. Do not commit them. Last production backup was 2 Sep 2026. Part E production starts with `npm run backup:production` (see `PHASE11.md`). Do not invent a backup record.
 
 The old Oct 2025 `latest-backup.json` is not a usable restore.
 
@@ -244,7 +244,7 @@ Done on the Phase 10 branch:
 Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.
-- Ledger rollups: `maintainLedgerRollup` writes `ledgerRollup/current`. Overview, Jobs home counts, Cost Plan headline spend and Budget read it. History and “what needs you” still read expense rows. Staging function, rules and recompute applied 5 Sep 2026. Production is not deployed unless named.
+- Ledger rollups: `maintainLedgerRollup` writes `ledgerRollup/current`. Overview, Jobs home counts, Cost Plan headline spend and Budget read it. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview. Staging function, rules and recompute applied 5 Sep 2026. Production is not deployed. Runbook: `PHASE11.md` Part E production list.
 - TanStack Query is mounted. Cost Plan, quotes, the org trade list, and job directories load on the screen that uses them. Expenses and invoices still sit in `AppContext`.
 - App Check enforcement is off until a site key exists and traffic is clean.
 - Gmail invite fallback remains until the owner asks to remove it.
@@ -291,13 +291,13 @@ Part B (new PNG icons) was skipped — owner did not want a new home-screen icon
 
 ## 15. Cold start (Phase 11)
 
-The owner’s number is **time from tapping the home-screen icon to the Jobs list being readable**, on production, on a phone, throttled, force-close then reopen. That production-phone reading is still pending a hosting deploy.
+The owner’s number is **time from tapping the home-screen icon to the Jobs list being readable**, on production, on a phone, throttled, force-close then reopen. That production-phone reading is still pending the Part E production list in `PHASE11.md` (not a hosting-only deploy).
 
 | | Before Part A | After Part A (localhost `vite preview`, 5 Sep 2026) |
 |--|--|--|
 | Service worker | None. Every open re-downloaded the JS. | `sw.js` cache-firsts hashed assets (57 precache entries). HTML is NetworkFirst (`risingamp-html`). |
 | Initial JS gzip | 245.5 KB on production | 245.9 KB (budget 250). Register script is inline in `index.html`, not in the React bundle. |
-| Part B initial JS | n/a | **270.0 KB** (budget 275). The extra ~24 KB is Firestore IndexedDB persistence, same module as `getDocs`. |
+| Part B initial JS | n/a | **270.0 KB** (275 KB held ceiling). The extra ~24 KB is Firestore IndexedDB persistence, same module as `getDocs`. |
 | Money data in the worker | n/a | Firestore, `*.cloudfunctions.net`, Storage, Auth and App Check are NetworkOnly. |
 | Upgrade | n/a | Changed a hashed entry (`index-DzWVcopq.js` → `index-C-aVLcaD.js`), reopened: new build ran, worker activated, nothing left waiting. `skipWaiting` + `clientsClaim`. |
 | Staging localhost (5 Sep 2026) | n/a | `vite build --mode staging` then preview on **:3000**. Signed-in Jobs, Kelly Street overview / Cost Plan / Files / History against `rising-amp-staging`. Worker controlled the page. `/clear-sw` unregisters and returns to Jobs. `npm start` has no worker. |
@@ -308,8 +308,8 @@ Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache f
 
 **Part B (on the branch, 5 Sep 2026):** `initializeFirestore` with `persistentLocalCache` (IndexedDB; memory fallback if IndexedDB is missing). The job list, expenses and invoices use `onSnapshot`, so a repeat open paints from disk then revalidates. Empty disk snapshots are ignored so they cannot wipe a boot-cached list. Invoice numbers stay on `allocateInvoiceNumber`; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. The service worker still never caches Firestore.
 
-**Part C (on the branch, 5 Sep 2026):** Opening a job only attaches the expenses and invoices listeners. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load with `useQuery` on the screen that needs them. Clients are one query (`queryKeys.clients`), not the old pair of `loadCompanies` + `loadClientDetails`. Directory lists stay fresh for 30 minutes; invoice/contract extras use the default minute. Writes still go through `AppContext` mutations, which patch the same query cache. Initial JS gzip **272.5 KB** (budget 275).
+**Part C (on the branch, 5 Sep 2026):** Opening a job only attaches the expenses and invoices listeners. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load with `useQuery` on the screen that needs them. Clients are one query (`queryKeys.clients`), not the old pair of `loadCompanies` + `loadClientDetails`. Directory lists stay fresh for 30 minutes; invoice/contract extras use the default minute. Writes still go through `AppContext` mutations, which patch the same query cache. Initial JS gzip **272.5 KB** (275 KB held ceiling).
 
-**Part D (on the branch, 5 Sep 2026):** `invalidateKeys` in `src/query/client.ts` invalidates only the keys a write changes. An expense write touches `queryKeys.expenses`. An invoice void/restore/purge touches `queryKeys.invoices`. The old `invalidateQueries()` with no arguments is gone, so a save no longer refetches Cost Plan, quotes or directories. Initial JS gzip **272.6 KB** (budget 275).
+**Part D (on the branch, 5 Sep 2026):** `invalidateKeys` in `src/query/client.ts` invalidates only the keys a write changes. An expense write touches `queryKeys.expenses`. An invoice void/restore/purge touches `queryKeys.invoices`. The old `invalidateQueries()` with no arguments is gone, so a save no longer refetches Cost Plan, quotes or directories. Initial JS gzip **272.6 KB** (275 KB held ceiling).
 
-**Part E (on the branch, 5 Sep 2026):** `maintainLedgerRollup` recomputes `ledgerRollup/current` from every expense on that job, then writes the complete document in one `set()` if the revision is unchanged. Members read; clients cannot write. Overview cost, period, categories, Jobs home expense counts, Cost Plan headline spend and Budget use the rollup. If an uncapped ledger disagrees, the ledger wins. Staging: function, Firestore rules and `node scripts/recompute-ledger-rollups.js --apply --staging` (Kelly Street `costCents=465633`, 5 live). Production function, rules and hosting are not deployed unless named. Initial JS gzip **272.7 KB** (budget 275).
+**Part E (on the branch, 5 Sep 2026):** `maintainLedgerRollup` recomputes `ledgerRollup/current` from every expense on that job, then writes the complete document in one `set()` if the revision is unchanged. Members read; clients cannot write. Overview cost, period, categories, Jobs home expense counts, Cost Plan headline spend and Budget use the rollup. History, “what needs you,” and the Cost Plan trade board still read the ledger. If an uncapped ledger disagrees, the ledger wins on Overview. Staging: function, Firestore rules and `node scripts/recompute-ledger-rollups.js --apply --staging` (Kelly Street `costCents=465633`, 5 live). Production is not deployed. The owner runs the Part E production list in `PHASE11.md` (backup first; no `--force`; second dry-run must be zero before hosting). Initial JS gzip **272.7 KB**. **275 KB is the held ceiling — do not raise it because a build exceeds it.**

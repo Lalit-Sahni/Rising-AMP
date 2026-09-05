@@ -10,8 +10,9 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 // 250 was Phase 8–10. Part B’s IndexedDB persistence lives in the same
-// firebase/firestore module as getDocs, so it cannot be code-split. 275
-// covers that ~24 KB and still fails the build on accidental growth.
+// firebase/firestore module as getDocs, so it cannot be code-split.
+// 275 KB gzip is the held ceiling (owner, 5 Sep 2026). Hold it. Do not
+// raise it because a build exceeds it. Current bundle ~272.7 KB.
 const INITIAL_GZIP_BUDGET = 275 * 1024;
 
 function jsxInJs() {

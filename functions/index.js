@@ -13,8 +13,13 @@
  *   firebase deploy --project production --only functions:checkEstimateImport
  *   firebase deploy --project rising-amp-staging --only functions:readQuoteFile
  *   firebase deploy --project production --only functions:readQuoteFile
- *   firebase deploy --project staging --only functions:maintainLedgerRollup --force
- *   firebase deploy --project production --only functions:maintainLedgerRollup --force
+ *   firebase deploy --project staging --only functions:maintainLedgerRollup
+ *   firebase deploy --project production --only functions:maintainLedgerRollup
+ *
+ * No --force. --force suppresses the confirmation before deleting functions.
+ * This repo never lets a functions deploy delete something. First staging
+ * create needed --force because retry: true; that create already happened.
+ * Production order is the Part E list in PHASE11.md (backup first).
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):
  *   RESEND_API_KEY, OPENAI_API_KEY

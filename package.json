@@ -53,6 +53,7 @@
     "backfill:public-profiles": "node scripts/backfill-public-profiles.js",
     "backup": "node scripts/backup-firebase-data.js",
     "backup:production": "node scripts/backup-production.js",
+    "deploy:parte:production": "sh scripts/deploy-part-e-production.sh",
     "restore": "node scripts/restore-firebase-data.js",
     "restore:staging": "node scripts/restore-to-staging.js",
     "security:audit": "npm audit",
