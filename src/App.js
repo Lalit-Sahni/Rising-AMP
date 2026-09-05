@@ -13,7 +13,7 @@ import AskForAccessScreen from './components/AskForAccessScreen';
 import { listInvitedProjects } from './firebase/projectCatalog';
 import { sendNewSignInNotice } from './firebase/email';
 import { loadProfile, profileIsComplete, profileNeedsSetup, readProfileCache, recordSignIn } from './firebase/profiles';
-import { clearSession, readSession, resolveInvitation, setActiveOrgId, writeSession } from './firebase/tenancy';
+import { clearBootCache, clearSession, readBootCache, readSession, resolveInvitation, setActiveOrgId, writeBootCache, writeSession } from './firebase/tenancy';
 import { jobIdFromPath } from './navigation';
 import './styles/premium-animations.css';
 
@@ -89,7 +89,29 @@ function AppShell() {
     if (profileIsComplete(cachedProfile)) {
       setProfile(cachedProfile);
     }
-    setMembershipLoading(true);
+
+    // Paint the real app from last time's answer instead of holding the boot
+    // logo through two round trips to a database that is not in this country.
+    // The network chain below still runs and overwrites all of it.
+    const cachedBoot = readBootCache(authUid);
+    if (cachedBoot) {
+      setMembership(cachedBoot.membership);
+      setAllowedJobs(cachedBoot.jobs);
+      if (cachedBoot.membership.orgId) setActiveOrgId(cachedBoot.membership.orgId);
+      const session = readSession();
+      const current = cachedBoot.jobs.find((row) => row.projectId === session.projectId);
+      if (current) {
+        setProjectId(current.projectId);
+        setWorkspaceId(current.workspaceId);
+        setProjectName(current.name);
+        setJobInvitedEmails(current.invitedEmails || []);
+        setProjectStatus(current.status || 'active');
+        setProjectKind(current.kind === 'own' ? 'own' : 'client');
+      }
+      setMembershipLoading(false);
+    } else {
+      setMembershipLoading(true);
+    }
     setProfileLoading(true);
 
     Promise.all([
@@ -110,6 +132,7 @@ function AppShell() {
         setProfileLoading(false);
 
         if (!invite.invited) {
+          clearBootCache(authUid);
           clearSession();
           setAllowedJobs([]);
           setProjectId(null);
@@ -125,6 +148,7 @@ function AppShell() {
         const allowed = await listInvitedProjects(invite.email);
         if (cancelled) return;
         setAllowedJobs(allowed);
+        writeBootCache(authUid, invite, allowed);
         const session = readSession();
         const current = allowed.find((row) => row.projectId === session.projectId);
         if (current) {
@@ -185,6 +209,7 @@ function AppShell() {
   }, [authUser, profile, profileLoading]);
 
   const handleLogout = async () => {
+    clearBootCache(authUid);
     await signOut();
     setMembership(null);
     setProfile(null);

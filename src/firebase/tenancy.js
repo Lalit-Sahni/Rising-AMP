@@ -66,6 +66,60 @@ export function writeSession({ projectId, workspaceId, projectName, orgId, invit
   localStorage.removeItem('accessCode');
 }
 
+/**
+ * Cold start used to hold the boot logo through the JS parse, the auth restore,
+ * resolveInvitation AND listInvitedProjects before rendering anything. Firestore
+ * is not in Australia, so each of those waves costs roughly 200 ms of pure
+ * distance and the user watched a logo for seconds.
+ *
+ * The profile already paints optimistically from localStorage (readProfileCache).
+ * This is the same trick for the two other things the shell waits on: who you
+ * are in the org, and which jobs you can open. Both are revalidated over the
+ * network immediately; this only decides what is on screen while that happens.
+ *
+ * Keyed by uid and cleared on sign out, so a shared machine cannot show one
+ * person another's jobs.
+ */
+function bootCacheKey(uid) {
+  return `risingAmp.boot.${uid}`;
+}
+
+export function readBootCache(uid) {
+  if (!uid || typeof localStorage === 'undefined') return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(bootCacheKey(uid)) || 'null');
+    if (!parsed || parsed.uid !== uid) return null;
+    if (!parsed.membership || !Array.isArray(parsed.jobs)) return null;
+    return { membership: parsed.membership, jobs: parsed.jobs };
+  } catch (error) {
+    return null;
+  }
+}
+
+export function writeBootCache(uid, membership, jobs) {
+  if (!uid || typeof localStorage === 'undefined') return;
+  if (!membership || !Array.isArray(jobs)) return;
+  try {
+    localStorage.setItem(bootCacheKey(uid), JSON.stringify({ uid, membership, jobs }));
+  } catch (error) {
+    // Private mode can block localStorage.
+  }
+}
+
+export function clearBootCache(uid) {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    if (uid) localStorage.removeItem(bootCacheKey(uid));
+    else {
+      Object.keys(localStorage)
+        .filter((key) => key.startsWith('risingAmp.boot.'))
+        .forEach((key) => localStorage.removeItem(key));
+    }
+  } catch (error) {
+    // Private mode can block localStorage.
+  }
+}
+
 export function clearSession() {
   writeSession({ projectId: null, workspaceId: null, projectName: null, orgId: null, projectStatus: null });
 }
