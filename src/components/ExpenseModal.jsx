@@ -24,7 +24,7 @@ import {
 import { activeTrades, canCodeExpenses, INVESTOR_TRADE_ID } from '../domain/costPlan';
 import { EXPENSE_CATEGORIES, tradeIdAfterCategoryChange } from '../domain/expenseCategory';
 import ExpenseTradePicker from './costPlan/ExpenseTradePicker';
-import { expenseHasReceipt } from '../utils/jobMetrics';
+import { expenseHasReceipt, formatMoney } from '../utils/jobMetrics';
 import "react-datepicker/dist/react-datepicker.css";
 
 const categoryFields = {
@@ -718,27 +718,27 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-steel-900/50">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="expense-modal-title"
-        className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-zinc-200 flex flex-col"
+        className="bg-surface w-full max-w-4xl h-[100dvh] max-h-[100dvh] md:h-auto md:max-h-[90vh] overflow-hidden border border-hairline rounded-none md:rounded-ot shadow-[0_24px_64px_rgba(23,24,28,0.28)] flex flex-col"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 md:p-6 border-b border-zinc-200">
-          <div>
-            <h2 id="expense-modal-title" className="text-xl font-bold text-zinc-900">
-              {expenseId ? 'Edit' : 'Add'} {categoryLabels[category] || category} Expense
+        <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3.5 md:py-5 border-b border-hairline" style={{ paddingTop: 'max(14px, var(--safe-top))' }}>
+          <div className="min-w-0">
+            <h2 id="expense-modal-title" className="text-[17px] md:text-[19px] font-extrabold tracking-tight text-ink truncate">
+              {expenseId ? 'Edit' : 'Add'} {(categoryLabels[category] || category || '').toLowerCase()} expense
             </h2>
             {expenseId ? (
-              <label className="mt-2 block text-sm font-medium text-zinc-700">
+              <label className="mt-1.5 block text-[12.5px] font-medium text-slate-600">
                 Category
                 <select
                   value={category}
                   onChange={(event) => handleCategoryChange(event.target.value)}
-                  className="mt-1 w-full max-w-xs px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg text-sm"
+                  className="mt-1 w-full max-w-xs px-3 py-2 bg-surface border border-hairline text-ink rounded-ot-sm text-sm focus:outline-none focus:border-accent"
                 >
                   {category && !EXPENSE_CATEGORIES.includes(category) ? (
                     <option value={category}>{categoryLabels[category] || category}</option>
@@ -749,8 +749,8 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                 </select>
               </label>
             ) : (
-              <p className="text-sm text-zinc-500">
-                Enter expense details
+              <p className="text-[12.5px] text-slate-400">
+                Fields marked * are required.
               </p>
             )}
           </div>
@@ -760,7 +760,7 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
               <button
                 type="button"
                 onClick={openReceiptViewer}
-                className="inline-flex items-center gap-1.5 min-h-[40px] px-3 rounded-lg border border-zinc-300 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
+                className="inline-flex items-center gap-1.5 min-h-[40px] px-3 rounded-ot-sm border border-hairline text-sm font-semibold text-ink hover:bg-canvas"
               >
                 <Eye className="w-4 h-4" />
                 View receipt
@@ -772,16 +772,16 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                 setFormData({});
                 setValidationErrors({});
               }}
-              className="p-2 hover:bg-zinc-100 rounded-lg transition-colors"
+              className="w-9 h-9 grid place-items-center hover:bg-canvas rounded-ot-sm transition-colors border border-hairline"
               aria-label="Close"
             >
-              <X className="w-5 h-5 text-zinc-500" />
+              <X className="w-4 h-4 text-slate-600" />
             </button>
           </div>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="flex-1 p-4 md:p-6 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 px-4 md:px-6 pt-4 md:pt-6 overflow-y-auto">
           <div className="space-y-6">
             {/* Form Fields */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -790,9 +790,9 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                   key={field.name}
                   className={`relative ${checkFields[field.name] ? 'rounded-[9px] border border-warn bg-warn-tint p-3' : ''}`}
                 >
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  <label className="block text-[13px] font-semibold text-ink mb-1.5">
                     {field.label}
-                    {field.required && <span className="text-red-400 ml-1">*</span>}
+                    {field.required && <span className="text-neg ml-1">*</span>}
                     {checkFields[field.name] && (
                       <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-bold text-warn">
                         <AlertTriangle className="w-3 h-3" strokeWidth={2} />
@@ -850,8 +850,8 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                     <select
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
-                      className={`w-full px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
-                        validationErrors[field.name] ? 'border-red-500' : 'border-zinc-300'
+                      className={`w-full px-3 py-2.5 bg-surface border text-ink rounded-ot-sm focus:outline-none focus:border-accent ${
+                        validationErrors[field.name] ? 'border-neg' : 'border-hairline'
                       }`}
                       required={field.required}
                     >
@@ -862,21 +862,21 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                     </select>
                   ) : field.type === 'date' ? (
                     <DatePicker
-                      selected={formData[field.name] ? new Date(formData[field.name]) : new Date()}
+                      selected={formData[field.name] ? new Date(formData[field.name]) : null}
                       onChange={(date) => handleInputChange(field.name, date)}
-                      className={`w-full px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent ${
-                        validationErrors[field.name] ? 'border-red-500' : 'border-zinc-300'
+                      className={`w-full px-3 py-2.5 bg-surface border text-ink rounded-ot-sm focus:outline-none focus:border-accent ${
+                        validationErrors[field.name] ? 'border-neg' : 'border-hairline'
                       }`}
-                      placeholderText="Select date"
-                      dateFormat="yyyy-MM-dd"
+                      placeholderText="Pick a date"
+                      dateFormat="dd/MM/yyyy"
                     />
                   ) : field.type === 'textarea' ? (
                     <textarea
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
                       rows={3}
-                      className={`w-full px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent placeholder-zinc-500 ${
-                        validationErrors[field.name] ? 'border-red-500' : 'border-zinc-300'
+                      className={`w-full px-3 py-2.5 bg-surface border text-ink rounded-ot-sm focus:outline-none focus:border-accent placeholder:text-slate-400 ${
+                        validationErrors[field.name] ? 'border-neg' : 'border-hairline'
                       }`}
                       placeholder={`Enter ${field.label.toLowerCase()}`}
                       required={field.required}
@@ -884,11 +884,12 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                   ) : (
                     <input
                       type={field.type}
+                      inputMode={field.type === 'number' ? 'decimal' : undefined}
                       value={formData[field.name] || ''}
                       onChange={(e) => handleInputChange(field.name, e.target.value)}
                       step={field.step}
-                      className={`w-full px-3 py-2 bg-white border border-zinc-300 text-zinc-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent placeholder-zinc-500 ${
-                        validationErrors[field.name] ? 'border-red-500' : 'border-zinc-300'
+                      className={`w-full px-3 py-2.5 bg-surface border text-ink rounded-ot-sm focus:outline-none focus:border-accent placeholder:text-slate-400 ${
+                        validationErrors[field.name] ? 'border-neg' : 'border-hairline'
                       }`}
                       placeholder={`Enter ${field.label.toLowerCase()}`}
                       required={field.required}
@@ -896,7 +897,7 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                   )}
                   
                   {validationErrors[field.name] && (
-                    <p className="text-red-400 text-xs mt-1">{validationErrors[field.name]}</p>
+                    <p className="text-neg text-xs mt-1">{validationErrors[field.name]}</p>
                   )}
                 </div>
               ))}
@@ -904,8 +905,8 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
 
             {showTradeCoding && category !== 'investor' ? (
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Cost plan trade <span className="text-zinc-400 font-normal">(optional)</span>
+                <label className="block text-[13px] font-semibold text-ink mb-1.5">
+                  Cost plan trade <span className="text-slate-400 font-normal">(optional)</span>
                 </label>
                 <ExpenseTradePicker
                   expense={{ ...formData, category, tradeId }}
@@ -918,8 +919,8 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
 
             {/* Paid By */}
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-2">
-                Paid by <span className="text-zinc-400 font-normal">(optional)</span>
+              <label className="block text-[13px] font-semibold text-ink mb-1.5">
+                Paid by <span className="text-slate-400 font-normal">(optional)</span>
               </label>
               <CreatableSelect
                 value={formData.paidBy ? { value: formData.paidBy, label: formData.paidBy } : null}
@@ -934,19 +935,19 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
             </div>
 
             {/* Receipt Upload Section */}
-            <div className="bg-zinc-50 rounded-lg p-4 border border-zinc-200">
-              <h3 className="text-sm font-medium text-zinc-700 mb-3 flex items-center gap-2">
+            <div className="bg-canvas rounded-ot p-4 border border-hairline">
+              <h3 className="text-[13px] font-semibold text-ink mb-3 flex items-center gap-2">
                 <Image className="w-4 h-4 text-accent" />
-                Receipt Attachment
+                Receipt
               </h3>
               
               {receiptOnFile ? (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-zinc-200">
+                  <div className="flex items-center gap-3 p-3 bg-surface rounded-ot-sm border border-hairline">
                     <button
                       type="button"
                       onClick={openReceiptViewer}
-                      className="w-12 h-12 bg-zinc-100 rounded-lg flex items-center justify-center overflow-hidden shrink-0"
+                      className="w-12 h-12 bg-canvas rounded-ot-sm flex items-center justify-center overflow-hidden shrink-0 border border-hairline"
                       title="View receipt"
                     >
                       {receiptPreview ? (
@@ -956,14 +957,14 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <Image className="w-6 h-6 text-zinc-400" />
+                        <Image className="w-6 h-6 text-slate-400" />
                       )}
                     </button>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-ink truncate">
                         {receiptFile?.name || 'Receipt on file'}
                       </p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-slate-400">
                         {receiptFile
                           ? `${(receiptFile.size / 1024 / 1024).toFixed(2)} MB`
                           : 'Tap to view'}
@@ -973,7 +974,7 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                       <button
                         type="button"
                         onClick={openReceiptViewer}
-                        className="p-2 hover:bg-zinc-200 rounded-lg text-zinc-600 hover:text-zinc-900 transition-colors"
+                        className="p-2 hover:bg-canvas rounded-ot-sm text-slate-600 hover:text-ink transition-colors border border-hairline"
                         title="View receipt"
                       >
                         <Eye className="w-4 h-4" />
@@ -982,8 +983,8 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                         <button
                           type="button"
                           onClick={removeReceipt}
-                          className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 hover:text-red-300 transition-colors"
-                          title="Remove Receipt"
+                          className="p-2 hover:bg-canvas rounded-ot-sm text-neg transition-colors border border-hairline"
+                          title="Remove receipt"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -993,14 +994,14 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                   {!receiptFile ? (
                     <div
                       {...getRootProps()}
-                      className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                      className={`border-2 border-dashed rounded-ot-sm p-4 text-center cursor-pointer transition-colors ${
                         isDragActive
                           ? 'border-accent bg-accent-tint'
-                          : 'border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50'
+                          : 'border-hairline hover:border-[#D6D9DD] hover:bg-surface'
                       }`}
                     >
                       <input {...getInputProps()} />
-                      <p className="text-xs text-zinc-600">
+                      <p className="text-xs text-slate-600">
                         {isDragActive ? 'Drop to replace this receipt' : 'Replace with another photo'}
                       </p>
                     </div>
@@ -1008,11 +1009,11 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
                   
                   {uploadProgress > 0 && uploadProgress < 100 && (
                     <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-zinc-500">
-                        <span>Uploading receipt...</span>
+                      <div className="flex justify-between text-xs text-slate-400">
+                        <span>Uploading receipt…</span>
                         <span>{uploadProgress}%</span>
                       </div>
-                      <div className="w-full bg-zinc-200 rounded-full h-2">
+                      <div className="w-full bg-hairline rounded-full h-2">
                         <div 
                           className="bg-accent h-2 rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
@@ -1024,19 +1025,19 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
               ) : (
                 <div
                   {...getRootProps()}
-                  className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                    isDragActive 
-                      ? 'border-accent bg-accent-tint' 
-                      : 'border-zinc-300 hover:border-zinc-400 hover:bg-zinc-50'
+                  className={`border-2 border-dashed rounded-ot-sm p-6 text-center cursor-pointer transition-colors ${
+                    isDragActive
+                      ? 'border-accent bg-accent-tint'
+                      : 'border-hairline hover:border-[#D6D9DD] hover:bg-surface'
                   }`}
                 >
                   <input {...getInputProps()} />
-                  <Upload className="w-8 h-8 text-zinc-400 mx-auto mb-3" />
-                  <p className="text-sm text-zinc-600 mb-1">
-                    {isDragActive ? 'Drop receipt here' : 'Upload receipt image'}
+                  <Upload className="w-8 h-8 text-slate-400 mx-auto mb-3" />
+                  <p className="text-sm font-semibold text-ink mb-1">
+                    {isDragActive ? 'Drop the photo here' : 'Add a photo of the receipt'}
                   </p>
-                  <p className="text-xs text-zinc-500">
-                    Drag & drop or click to select (JPG, PNG, GIF, WebP - Max 5MB)
+                  <p className="text-xs text-slate-400">
+                    Tap to choose, or drag one in. JPG, PNG, GIF or WebP, up to 5 MB.
                   </p>
                 </div>
               )}
@@ -1051,26 +1052,38 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
               />
             ) : null}
 
-            {/* Total Calculation */}
-            <div className="bg-zinc-50 rounded-lg p-4 border border-zinc-200">
-              <div className="flex justify-between items-center">
-                <span className="text-lg font-medium text-zinc-700">Total:</span>
-                <span className="text-2xl font-bold text-green-400">
-                  ${calculateTotal(category, formData).toFixed(2)}
-                </span>
+          </div>
+
+          <div
+            className="sticky bottom-0 -mx-4 md:-mx-6 mt-6 border-t border-hairline bg-surface px-4 md:px-6 pt-3 flex items-center justify-between gap-3"
+            style={{ paddingBottom: 'calc(12px + var(--safe-bottom))' }}
+          >
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-slate-400">Total</div>
+              <div className="tabular text-[20px] font-extrabold text-ink leading-tight">
+                {formatMoney(calculateTotal(category, formData), { cents: true })}
               </div>
             </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end">
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  setFormData({});
+                  setValidationErrors({});
+                }}
+                className="px-3.5 py-2.5 rounded-ot-sm border border-hairline text-[13px] font-semibold text-slate-600 hover:text-ink hover:bg-canvas"
+              >
+                Cancel
+              </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-accent hover:bg-accent-600 disabled:bg-slate-400 text-white font-medium rounded-ot-sm transition-colors"
+                className="px-4 py-2.5 bg-accent hover:bg-accent-600 disabled:opacity-50 text-white text-[13px] font-bold rounded-ot-sm transition-colors"
               >
                 {isSubmitting
-                  ? (expenseId ? 'Saving...' : 'Adding...')
-                  : (expenseId ? 'Save changes' : 'Add Expense')}
+                  ? (expenseId ? 'Saving…' : 'Adding…')
+                  : (expenseId ? 'Save changes' : 'Add expense')}
               </button>
             </div>
           </div>

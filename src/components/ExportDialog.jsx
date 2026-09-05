@@ -67,7 +67,7 @@ const ExportDialog = ({ isOpen, onClose, onExport, expenseCount }) => {
               type="text"
               value={filename}
               onChange={(e) => setFilename(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder="Enter filename..."
               className="w-full px-3 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
               autoFocus

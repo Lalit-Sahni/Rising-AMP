@@ -216,22 +216,22 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
       : '—';
 
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-zinc-200">
+      <div className="fixed inset-0 bg-steel-900/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+        <div className="bg-surface rounded-t-ot md:rounded-ot shadow-[0_24px_64px_rgba(23,24,28,0.28)] w-full max-w-md border border-hairline max-h-[100dvh] md:max-h-[90vh] flex flex-col">
 
-          <div className="flex items-center justify-between p-5 border-b border-zinc-200">
-            <div>
-              <h2 className="text-lg font-bold text-zinc-900">Receipt read</h2>
-              <p className="text-sm text-zinc-500 mt-0.5">
+          <div className="flex items-center justify-between p-4 md:p-5 border-b border-hairline">
+            <div className="min-w-0">
+              <h2 className="text-[17px] font-extrabold tracking-tight text-ink">Receipt read</h2>
+              <p className="text-[12.5px] text-slate-400 mt-0.5 truncate">
                 {pendingData.editable.supplier || 'Confirm the details before saving'}
               </p>
             </div>
-            <button onClick={handleClose} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
-              <X className="w-5 h-5 text-zinc-400" />
+            <button onClick={handleClose} className="w-9 h-9 grid place-items-center border border-hairline hover:bg-canvas rounded-ot-sm transition-colors" aria-label="Close">
+              <X className="w-4 h-4 text-slate-600" />
             </button>
           </div>
 
-          <div className="p-5 space-y-3">
+          <div className="p-4 md:p-5 space-y-3 overflow-y-auto" style={{ paddingBottom: 'calc(16px + var(--safe-bottom))' }}>
             <div className={`flex items-center justify-between rounded-[9px] border px-3.5 py-2.5 ${uncertain.amount ? 'border-warn bg-warn-tint' : 'border-hairline bg-surface'}`}>
               <span>
                 <span className="block text-[11px] text-slate-400 font-semibold">Amount</span>
@@ -258,9 +258,9 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
             </div>
 
             {aiCategory && (
-              <div className="flex items-center gap-2 text-xs text-zinc-500 mb-1">
+              <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
                 <Sparkles className="w-3.5 h-3.5 text-accent" />
-                <span>AI detected: <span className="font-semibold text-accent capitalize">{CATEGORIES.find(c => c.key === aiCategory)?.label || aiCategory}</span></span>
+                <span>Looks like <span className="font-semibold text-accent">{CATEGORIES.find(c => c.key === aiCategory)?.label || aiCategory}</span>. Change it if that is wrong.</span>
               </div>
             )}
 
@@ -274,7 +274,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                   <button
                     key={key}
                     onClick={() => setSelectedCategory(key)}
-                    className={`pressable w-full flex items-center gap-4 p-3.5 rounded-xl border text-left bg-surface
+                    className={`pressable w-full flex items-center gap-3.5 p-3 rounded-ot border text-left bg-surface
                       ${isSelected
                         ? 'border-accent'
                         : 'border-hairline'
@@ -288,14 +288,14 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={`font-semibold text-sm ${isSelected ? 'text-accent' : 'text-zinc-900'}`}>{label}</span>
+                        <span className={`font-bold text-sm ${isSelected ? 'text-accent' : 'text-ink'}`}>{label}</span>
                         {isAiPick && (
                           <span className="text-xs bg-accent-tint text-accent px-1.5 py-0.5 rounded-full font-medium">AI pick</span>
                         )}
                       </div>
-                      <p className="text-xs text-zinc-500 truncate">{description}</p>
+                      <p className="text-xs text-slate-400 truncate">{description}</p>
                     </div>
-                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${isSelected ? 'border-accent bg-accent' : 'border-zinc-300'}`} />
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${isSelected ? 'border-accent bg-accent' : 'border-hairline'}`} />
                   </button>
                 );
               })}
@@ -303,9 +303,9 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
             <button
               onClick={confirmCategory}
-              className="w-full mt-2 bg-accent hover:bg-accent-600 text-white font-semibold py-3 rounded-xl transition-colors"
+              className="w-full mt-2 bg-accent hover:bg-accent-600 text-white font-bold py-3 rounded-ot-sm transition-colors"
             >
-              Open Expense Form
+              Continue to the form
             </button>
           </div>
         </div>
@@ -315,30 +315,30 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
 
   // ── Scanner screen ────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg border border-zinc-200">
+    <div className="fixed inset-0 bg-steel-900/50 z-50 flex items-end md:items-center justify-center p-0 md:p-4">
+      <div className="bg-surface rounded-t-ot md:rounded-ot shadow-[0_24px_64px_rgba(23,24,28,0.28)] w-full max-w-lg border border-hairline">
 
-        <div className="flex items-center justify-between p-5 border-b border-zinc-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center">
+        <div className="flex items-center justify-between p-4 md:p-5 border-b border-hairline">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-[10px] bg-accent flex items-center justify-center shrink-0">
               <Camera className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-zinc-900">Scan Invoice</h2>
-              <p className="text-sm text-zinc-500">Photo or file — we'll extract the details</p>
+            <div className="min-w-0">
+              <h2 className="text-[17px] font-extrabold tracking-tight text-ink">Scan a receipt</h2>
+              <p className="text-[12.5px] text-slate-400">Take a photo or pick one. We read it, you check it.</p>
             </div>
           </div>
-          <button onClick={handleClose} className="p-2 hover:bg-zinc-100 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-zinc-400" />
+          <button onClick={handleClose} className="w-9 h-9 grid place-items-center border border-hairline hover:bg-canvas rounded-ot-sm transition-colors" aria-label="Close">
+            <X className="w-4 h-4 text-slate-600" />
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-4 md:p-5 space-y-4" style={{ paddingBottom: 'calc(16px + var(--safe-bottom))' }}>
 
           {error && (
-            <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
-              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <p className="text-red-600 text-sm">{error}</p>
+            <div className="flex items-start gap-3 p-3 bg-[#F9E9E7] border border-hairline rounded-ot-sm">
+              <AlertCircle className="w-5 h-5 text-neg flex-shrink-0 mt-0.5" />
+              <p className="text-neg text-sm">{error}</p>
             </div>
           )}
 
@@ -346,12 +346,12 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
             <div className="space-y-3 py-4">
               <div className="flex items-center gap-3">
                 <Loader2 className="w-5 h-5 text-accent animate-spin" />
-                <span className="text-zinc-700 font-medium text-sm">Scanning invoice...</span>
+                <span className="text-ink font-semibold text-sm">Reading the receipt…</span>
               </div>
-              <div className="w-full bg-zinc-200 rounded-full h-2">
+              <div className="w-full bg-hairline rounded-full h-2">
                 <div className="bg-accent h-2 rounded-full transition-all duration-300" style={{ width: `${scanProgress}%` }} />
               </div>
-              <p className="text-xs text-zinc-400">Extracting text and identifying expense details</p>
+              <p className="text-xs text-slate-400">Finding the supplier, the amount and the date.</p>
             </div>
           )}
 
@@ -359,13 +359,13 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
             <div className="space-y-3">
               {useCamera ? (
                 <div className="space-y-3">
-                  <div className="relative rounded-xl overflow-hidden bg-zinc-100">
+                  <div className="relative rounded-ot overflow-hidden bg-canvas">
                     <video ref={videoRef} autoPlay playsInline muted className="w-full h-48 object-cover" />
                     {!cameraReady && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-zinc-100">
+                      <div className="absolute inset-0 flex items-center justify-center bg-canvas">
                         <div className="text-center">
                           <Loader2 className="w-7 h-7 text-accent animate-spin mx-auto mb-2" />
-                          <p className="text-zinc-500 text-sm">Starting camera...</p>
+                          <p className="text-slate-400 text-sm">Starting camera…</p>
                         </div>
                       </div>
                     )}
@@ -375,12 +375,12 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                     <button
                       onClick={handleCameraCapture}
                       disabled={!cameraReady}
-                      className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent-600 disabled:opacity-50 text-white px-4 py-3 rounded-xl font-semibold transition-colors"
+                      className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent-600 disabled:opacity-50 text-white px-4 py-3 rounded-ot-sm font-bold transition-colors"
                     >
                       <Camera className="w-4 h-4" />
-                      Capture Photo
+                      Capture
                     </button>
-                    <button onClick={stopCamera} className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 rounded-xl font-medium transition-colors">
+                    <button onClick={stopCamera} className="flex items-center justify-center gap-2 px-4 py-3 bg-surface border border-hairline hover:bg-canvas text-ink rounded-ot-sm font-semibold transition-colors">
                       <X className="w-4 h-4" />
                       Cancel
                     </button>
@@ -390,16 +390,16 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                 <>
                   <button
                     onClick={() => cameraInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-zinc-300 rounded-xl hover:border-accent hover:bg-accent-tint transition-all duration-200"
+                    className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-hairline rounded-ot hover:border-accent hover:bg-accent-tint transition-all duration-200"
                   >
-                    <Camera className="w-6 h-6 text-zinc-400" />
-                    <span className="text-zinc-600 font-medium">Take photo</span>
+                    <Camera className="w-6 h-6 text-slate-400" />
+                    <span className="text-ink font-bold">Take a photo</span>
                   </button>
                   <button
                     onClick={startCamera}
-                    className="w-full flex items-center justify-center gap-3 p-4 border border-zinc-200 rounded-xl hover:border-accent hover:bg-accent-tint transition-all duration-200"
+                    className="w-full flex items-center justify-center gap-3 p-3.5 border border-hairline rounded-ot hover:border-accent hover:bg-accent-tint transition-all duration-200"
                   >
-                    <span className="text-zinc-600 font-medium text-sm">Live camera preview</span>
+                    <span className="text-slate-600 font-semibold text-sm">Use the live camera instead</span>
                   </button>
                 </>
               )}
@@ -407,16 +407,16 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
               {!useCamera && (
                 <>
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 h-px bg-zinc-200" />
-                    <span className="text-xs text-zinc-400 font-medium">or</span>
-                    <div className="flex-1 h-px bg-zinc-200" />
+                    <div className="flex-1 h-px bg-hairline" />
+                    <span className="text-xs text-slate-400 font-medium">or</span>
+                    <div className="flex-1 h-px bg-hairline" />
                   </div>
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-zinc-300 rounded-xl hover:border-accent hover:bg-accent-tint transition-all duration-200"
+                    className="w-full flex items-center justify-center gap-3 p-5 border-2 border-dashed border-hairline rounded-ot hover:border-accent hover:bg-accent-tint transition-all duration-200"
                   >
-                    <Upload className="w-6 h-6 text-zinc-400" />
-                    <span className="text-zinc-600 font-medium">Upload Image</span>
+                    <Upload className="w-6 h-6 text-slate-400" />
+                    <span className="text-ink font-bold">Choose a photo</span>
                   </button>
                   <input
                     ref={cameraInputRef}
@@ -427,7 +427,7 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
                     className="hidden"
                   />
                   <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileSelect} className="hidden" />
-                  <p className="text-xs text-zinc-400 text-center">Supports JPG, PNG, GIF, BMP</p>
+                  <p className="text-xs text-slate-400 text-center">JPG, PNG, GIF or BMP.</p>
                 </>
               )}
             </div>

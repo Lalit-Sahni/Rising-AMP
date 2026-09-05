@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Zap } from 'lucide-react';
+import { Camera, ChevronRight } from 'lucide-react';
 import ExpenseCategoryGrid from '../ExpenseCategoryGrid';
 import ExpenseModal from '../ExpenseModal';
 import OCRScanner from '../OCRScanner';
 import ErrorBoundary from '../ui/ErrorBoundary';
+import EmptyState from '../EmptyState';
 
 export default function AddExpensePage() {
-  const { showToast, jobId, setCurrentPage } = useApp();
+  const { showToast, jobId, projectName } = useApp();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState({});
@@ -17,16 +18,12 @@ export default function AddExpensePage() {
   if (!jobId) {
     return (
       <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
-        <div className="eyebrow">Record spend</div>
-        <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Add expense</h1>
-        <p className="text-[13.5px] text-slate-600 mt-2">Open a job first so the expense is saved on the right list.</p>
-        <button
-          type="button"
-          onClick={() => setCurrentPage('jobs')}
-          className="mt-4 inline-flex items-center bg-accent hover:bg-accent-600 text-white text-[13px] font-bold px-[15px] py-[9px] rounded-[9px]"
-        >
-          Jobs
-        </button>
+        <EmptyState
+          title="Open a job first"
+          body="An expense is saved on one job. Pick the job, then add the expense."
+          actionLabel="Jobs"
+          to="/"
+        />
       </div>
     );
   }
@@ -36,22 +33,6 @@ export default function AddExpensePage() {
     setModalData({});
     setUncertainFields({});
     setModalOpen(true);
-  };
-
-  const handleQuickAction = (action) => {
-    switch (action) {
-      case 'scan':
-        setOcrScannerOpen(true);
-        break;
-      case 'import':
-        showToast('📥 CSV Import feature coming soon!', 'info');
-        break;
-      case 'quick':
-        showToast('⚡ Quick Entry mode activated!', 'info');
-        break;
-      default:
-        break;
-    }
   };
 
   const handleModalClose = () => {
@@ -75,28 +56,33 @@ export default function AddExpensePage() {
   return (
     <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-[22px]">
-          <div>
-            <div className="eyebrow">Record spend</div>
-            <h1 className="text-[26px] font-bold tracking-tight mt-1">Add expense</h1>
-            <p className="text-[13.5px] text-slate-600 mt-0.5">Pick a category or scan a receipt.</p>
-          </div>
-          <button
-            className="hidden lg:inline-flex items-center gap-2 px-3.5 py-2 bg-accent hover:bg-accent-600 text-white text-[12.5px] font-medium rounded-ot-sm"
-            onClick={() => handleQuickAction('quick')}
-          >
-            <Zap className="w-4 h-4" />
-            Quick add
-          </button>
+        <div className="mb-[18px]">
+          <div className="eyebrow">Record spend</div>
+          <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Add expense</h1>
+          <p className="text-[13.5px] text-slate-600 mt-0.5">
+            Saved on <span className="font-semibold text-ink">{projectName || 'this job'}</span>. Scan the receipt, or pick a category and type it in.
+          </p>
         </div>
 
-        <div>
-          <ExpenseCategoryGrid
-            onCategorySelect={handleCategorySelect}
-            onQuickAction={handleQuickAction}
-            selectedCategory={selectedCategory}
-          />
-        </div>
+        <button
+          type="button"
+          onClick={() => setOcrScannerOpen(true)}
+          className="pressable w-full flex items-center gap-4 text-left bg-steel-900 text-white rounded-ot p-4 md:p-5 mb-[22px] border border-steel-900"
+        >
+          <span className="w-12 h-12 rounded-[11px] bg-accent grid place-items-center shrink-0">
+            <Camera className="w-6 h-6" strokeWidth={1.8} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <b className="block text-[15px] font-extrabold">Scan a receipt</b>
+            <small className="block text-[12.5px] text-[#B4B9C1] mt-0.5">
+              Take a photo. We read the supplier, amount and date, and flag anything to check.
+            </small>
+          </span>
+          <ChevronRight className="w-5 h-5 text-[#767B84] shrink-0" strokeWidth={1.8} />
+        </button>
+
+        <div className="text-[11px] font-bold tracking-[0.14em] uppercase text-slate-400 mb-3">Or pick a category</div>
+        <ExpenseCategoryGrid onCategorySelect={handleCategorySelect} selectedCategory={selectedCategory} />
 
         <ErrorBoundary>
           <ExpenseModal
