@@ -1,141 +1,209 @@
-# Phase 11 — Make it load fast (agent brief)
+# Phase 11 — Cold start (agent brief)
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
-Branch: **`phase-11-load-time`** from the merged Phase 10 branch. Tag `pre-phase11-2026-09-XX` first. One part per session, one commit per part.
+Branch: **`phase-11-cold-start`** from the merged Phase 10 branch. Tag `pre-phase11-2026-09-XX` first. One part per session, one commit per part.
 
-This phase changes **when and how often** data is fetched. It does not change what is stored, what is displayed, or any rule. If a task here seems to need a schema change, stop.
+This phase changes **when and how often** data is fetched, and what is on screen while it is fetched. It does not change what is stored, what is displayed, or any security rule. If a task here seems to need a schema change, stop and ask.
 
-## Why the app feels slow
+## The problem, in the owner's words
 
-It is not the bundle. Initial JS is 245.4 KB gzipped against a 250 KB budget, which is fine. **It is the number of network round trips that have to finish, one after another, before anything useful appears.**
+> "Only the start is slow. When I first open the app, that's the main concern. The rest I'm happy to fix but the start is way too slow."
 
-Signing in and landing on Jobs runs this chain. Each numbered step waits for the one above it:
+**This phase is about the first three seconds after tapping the icon.** Everything else in here is secondary and can wait.
 
-| # | What | Round trips |
-|---|---|---|
-| 1 | Download and parse the JS bundle | 1 |
-| 2 | Firebase Auth restores the session | 1 |
-| 3 | `resolveInvitation` + `loadProfile` (correctly parallel) | 1 |
-| 4 | `listInvitedProjects(email)` in `App.js` | 1 |
-| 5 | Jobs home calls `listOrgProjects`, which runs `listInvitedProjects` **again** | 1 |
-| 6 | Then 2 counts **per job, sequentially** | 2 × jobs |
-| 7 | If a job was open last time, `AppContext` fires 12 loads | 1 wave, up to 1,000 docs |
+## Why cold start is slow
 
-With two jobs that is **nine round trips in series**. With ten jobs it is twenty-five. At a realistic 150 to 300 ms each on a phone, the Jobs screen cannot appear in under about two seconds no matter how fast the code is, and on a site with one bar it is far worse.
+It is not the bundle. Initial JS is 245.4 KB gzipped against a 250 KB budget, which is fine.
 
-**Nothing above is cached between page loads.** `App.js` and `AppContext` use raw promises, not TanStack Query, so every refresh, every tab, every return to the app repeats all of it from zero.
+**It is distance multiplied by the number of things that must happen in order.**
 
-### The four specific faults
+Firestore and all five Cloud Functions are in the United States (`functions/index.js` sets `region: 'us-central1'` on every one). Sydney to `us-central1` is roughly **200 ms round trip**. Sydney to `australia-southeast1` would be about 10 ms. Every single request pays that, and no code change makes light faster.
 
-1. **`listOrgProjects` awaited inside a `for...of`.** Two sequential round trips per job when they are all independent.
-2. **`listInvitedProjects` runs twice per page load.** Once in `App.js` during sign-in, once inside `listOrgProjects` on the Jobs screen. Same query, same answer, no cache.
-3. **The Jobs screen waits for counts it does not need.** Names, status and kind are already in hand after step 4. The expense and invoice counts are decoration on a card, and the whole screen was blocked on them.
-4. **Opening a job loads twelve collections at once**, including up to 1,000 expense documents, when the Overview needs two of them.
+**A Firestore database's location is permanent.** It is chosen at project creation and cannot be moved. Relocating it means a new project and a full migration of live business data. That is not this phase, and probably should not happen until there are paying customers to justify the risk.
 
-## Already fixed (2 Sep 2026, on the Phase 10 branch)
+**Do not reflexively move the Cloud Functions either.** `allocateInvoiceNumber` is a Firestore transaction. Moving it to Sydney while Firestore stays in Iowa makes it *slower*, because the function would then be far from the database it talks to. Co-locate functions with the database, not with the user, whenever the function is database-heavy.
 
-Parts of 1, 2 and 3 are done, because they were small and safe:
+So the distance is fixed. **The only lever is the number of round trips, and what the user looks at while they happen.**
 
-- `listOrgProjects` now issues every count with `Promise.all`. Two jobs: four sequential trips become one wave. Ten jobs: twenty become one.
-- `listOrgProjects(email, projects)` accepts an already-fetched list, so the duplicate query does not run.
-- `allowedJobs` flows from `App.js` through `OrgContext`, and Jobs home paints from it immediately with counts blank, then fills the counts in when they land.
+### What the boot chain actually did
 
-That removes roughly six of the nine serial round trips on a two-job account. **Everything below is what remains.**
+`App.js` held `<BootScreen />`, which is just the RisingAMP mark on canvas, until `membershipLoading` went false. That only happened at the very end of this chain, with each step waiting on the one above:
 
----
+1. Download and parse the JS bundle
+2. Firebase Auth restores the session
+3. `resolveInvitation` + `loadProfile` (correctly parallel)
+4. `listInvitedProjects(email)`
 
-## Part A — Put the boot path behind a persisted cache
+Three network waves at ~200 ms each, plus parse, with a static logo on screen for all of it.
 
-The largest remaining win, and the one the user feels most, because it makes a **return** visit near-instant.
+## Already shipped (2 Sep 2026)
 
-Today the sign-in chain (`resolveInvitation`, `loadProfile`, `listInvitedProjects`) is raw promises in `App.js`. TanStack Query is installed, configured with `staleTime: 60_000`, and used for the Cost Plan, but the boot path bypasses it entirely.
+Three fixes are committed on the Phase 10 branch, because they were small, safe and targeted exactly this:
 
-1. Move all three into `useQuery` under the existing keys in `src/query/client.ts` (`queryKeys.jobs` is already defined and unused for this).
-2. Add a **localStorage persister** (`@tanstack/query-sync-storage-persister` and `persistQueryClient`) so the cache survives a reload. A returning user then sees their jobs painted from cache in about zero milliseconds while the network revalidates behind them.
-3. Set a sensible `staleTime` per key: the job list changes rarely, a profile almost never. Sixty seconds is too short for both.
+- **`86e2451` Boot paints from cache.** `readBootCache` / `writeBootCache` / `clearBootCache` in `tenancy.js`, the same localStorage pattern the profile already used. On any start after the first, `App.js` paints membership, the job list and the last open job **before the first request leaves the device**, then revalidates behind. Keyed by uid, cleared on sign out, and cleared when `resolveInvitation` reports a revoked invite.
+- **`57e12db` Jobs list paints without waiting on counts.** `listOrgProjects` awaited two counts inside a `for...of`, so counts were sequential per job. They now go out together. It also accepts an already-fetched list, killing a duplicate `listInvitedProjects` that ran on every page load. And `allowedJobs` flows through `OrgContext`, so Jobs home renders immediately and counts fill in after.
 
-**Care:** persisted cache must be keyed by uid and cleared on sign out, or one person sees another's job list on a shared machine. There is already a `clearSession()`; clear the query cache in the same place, and never persist anything from `profiles`.
+Serial round trips from sign-in to a painted Jobs list: **nine down to three** on two jobs, twenty-five down to three on ten.
 
-Commit: `Serve the sign-in chain from a persisted cache.`
+**Everything below is what remains. Parts A and B are the phase. C, D and E are the follow-up.**
 
 ---
 
-## Part B — Stop loading twelve collections to open a job
+## Part A — A service worker for the app shell
+
+**The biggest remaining cold-start win, and now the top priority.**
+
+There is still no service worker, so every single open re-downloads and re-parses 245 KB of JavaScript before anything runs. For an app that lives on a home screen, that is the difference between a web page and an app.
+
+1. Add a service worker that **cache-firsts the built assets** and **network-firsts the HTML**. Vite has `vite-plugin-pwa`, which generates the manifest from the real build output. Use it rather than hand-writing a worker.
+2. Assets are content-hashed by Vite, so cache-first on them is safe: a new build produces new filenames.
+3. **Cache the shell only.** Do not cache Firestore requests, Cloud Function calls, or Storage downloads in the service worker. Those have their own caching story in Part B, and a service worker caching money data is how someone sees a stale total.
+
+**The trap:** a bad service worker serves a stale app forever, and the user cannot fix it by refreshing. Get this right:
+
+- New builds must take over on the next open, not require a hard refresh. Configure `skipWaiting` and `clientsClaim`, or show a small "update ready, reload" prompt. Decide which with the owner; for a four-person family app, taking over automatically is usually right.
+- Test the upgrade path deliberately: install the worker, deploy a change, reopen, confirm the new version is running.
+- Keep a way to unregister. If the worker ever ships broken, there must be a route back.
+
+Phase 7 already made this a home-screen app with correct safe areas. This is the piece that makes it feel like one.
+
+Commit: `Cache the app shell so a repeat open starts from disk.`
+
+---
+
+## Part B — Firestore's own disk cache, and listeners on the hot paths
+
+`src/firebase/config.js` line 39 is `getFirestore(app)`. Plain. **That is a memory-only cache, wiped on every reload.** So data read ten seconds ago comes back from Iowa on the next open.
+
+1. Switch to `initializeFirestore` with `persistentLocalCache({ tabManager: persistentMultipleTabManager() })`, which backs the cache with IndexedDB so it survives a reload.
+
+2. **Understand what that does and does not do, because the config alone changes almost nothing.** `getDocs()` still goes to the server; it only falls back to cache when offline. The payoff comes from `onSnapshot`, which fires **immediately from disk** and then again from the server.
+
+   So the work is converting the hot read paths from one-shot `getDocs` to listeners: the job list, and a job's expenses and invoices. Reopen the app and those are on screen before a packet leaves Australia.
+
+3. **Attach and detach listeners properly.** A listener left running after unmount costs money and memory, and Firestore bills per document delivered. Every `onSnapshot` returns an unsubscribe; return it from the effect.
+
+4. **This replaces the TanStack localStorage persister** that an earlier draft of this brief proposed. Firestore's own persistence is the better fit for Firestore data: one cache instead of two, and Firestore handles staleness itself rather than you guessing a `staleTime`. Keep TanStack Query for the Cost Plan and derived values, where it already works well.
+
+5. **Care with money.** A cached total that is thirty seconds stale is fine. A cached total presented as current when a write failed is not. Where a figure is about to be acted on (raising an invoice, saving a plan), read fresh.
+
+Commit: `Serve the ledger from Firestore's disk cache and update it live.`
+
+---
+
+## Part C — Stop loading twelve collections to open a job
+
+Secondary. Do it after A and B.
 
 `AppContext` fires all of these the moment a job opens: expenses, labour, trades, companies, suppliers, service providers, progress payments, invoices, HIA contracts, client details, bank details, payers.
 
-The job Overview needs **expenses and invoices**. The other ten belong to screens the user may never open in that session.
+The job Overview needs **expenses and invoices**. The other ten belong to screens the user may never open.
 
-- Move each directory load (labour, trades, suppliers, service providers, payers, clients) to a `useQuery` that runs on the screen that needs it. They are reference data that changes rarely, so a long `staleTime` makes them free after the first visit.
+- Move each directory load (labour, trades, suppliers, service providers, payers, clients) to a `useQuery` on the screen that needs it. They are reference data that changes rarely, so a long `staleTime` makes them free after the first visit.
 - Move progress payments, HIA contracts and bank details to the invoice and contract routes.
-- **`getClients` is called twice** in the same wave, by `loadCompanies` and by `loadClientDetails`. One of them goes.
-
-This is the change that makes tapping into a job feel instant, and it takes about ten queries and up to a thousand documents off the critical path.
+- **`getClients` is called twice** in the same wave, by `loadCompanies` and by `loadClientDetails`. One of them goes. This one is free.
 
 Commit: `Load a job's reference data on the screen that uses it.`
 
 ---
 
-## Part C — Stop reading the whole ledger to show a total
-
-`fetchExpensesFromFirestore` pulls up to 1,000 expense documents so the Overview can add them up. That is the largest single payload in the app and it grows with every receipt.
-
-This is the rollup work deferred from Phase 8 and it is now the right time. Maintain a summary document per job (cost to date, count, per-category and per-month totals) written by a Cloud Function on expense create, update and delete. The Overview and Jobs home then read one small document instead of the ledger.
-
-**Non-negotiable:** the rollup must be recomputable from the ledger by a script, and there must be a check that recomputes and compares. If a rollup and the ledger ever disagree, **the ledger wins and the app says so.** A fast wrong number is worse than a slow right one, and the 1,000 cap already hides spend rather than showing a partial total, which is the correct instinct to preserve.
-
-Deploy the function **by name**. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber` and `checkEstimateImport`.
-
-Commit: `Read job totals from a rollup instead of the ledger.`
-
----
-
 ## Part D — Scope the cache invalidation
 
-`AppContext` line 373 calls `queryClient.invalidateQueries()` with no arguments. That throws away **the entire cache** on any mutation, so one saved expense makes every screen refetch from scratch, which undoes much of Parts A and B.
+`AppContext` calls `queryClient.invalidateQueries()` with **no arguments**, which throws away the entire cache on any mutation. One saved expense makes every screen refetch, undoing much of Parts B and C.
 
-Invalidate by key: saving an expense touches `queryKeys.expenses` and the job's rollup, nothing else.
+Invalidate by key. Saving an expense touches `queryKeys.expenses` and the job's totals, nothing else.
 
 Commit: `Invalidate only the keys a write actually changes.`
 
 ---
 
-## Part E — Cache the shell so a repeat visit downloads nothing
+## Part E — Rollups instead of reading the ledger
 
-There is still no service worker, so every visit re-downloads 245 KB of JavaScript even when nothing changed.
+`fetchExpensesFromFirestore` pulls up to 1,000 expense documents so the Overview can add them up. It is the largest single payload in the app and it grows with every receipt.
 
-Add a service worker that cache-firsts the built assets (they are content-hashed, so this is safe) and network-firsts the HTML. This is **not** offline data support, which remains its own phase. It is only the shell, and it is the difference between a two second start and an instant one on a repeat visit.
+This is the rollup work deferred from Phase 8. Maintain a summary document per job (cost to date, count, per-category and per-month totals) written by a Cloud Function on expense create, update and delete. Overview and Jobs home then read one small document.
 
-**Care:** a bad service worker serves a stale app forever. Use a generated manifest tied to the build hashes, and make sure a new deploy takes over on the next load rather than needing a hard refresh.
+**Non-negotiable:** the rollup must be recomputable from the ledger by a script, and a check must recompute and compare. If a rollup and the ledger ever disagree, **the ledger wins and the app says so.** A fast wrong number is worse than a slow right one. The existing 1,000 cap already hides spend rather than showing a partial total, which is the correct instinct to preserve.
 
-Commit: `Cache the app shell so a repeat visit starts instantly.`
+Deploy the function **by name**. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`.
+
+Commit: `Read job totals from a rollup instead of the ledger.`
 
 ---
 
 ## Measure, do not guess
 
-Every part states a number before and after, recorded in `ARCHITECTURE.md`:
+Record before and after in `ARCHITECTURE.md` for each part:
 
-- Serial round trips from sign-in to the Jobs list painting, counted in the Network panel.
-- Documents read on that path, from the Firestore usage tab.
-- Time to the Jobs list being readable, throttled to Fast 3G in devtools, which is closer to a site than office wifi.
+- **Time from tapping the home-screen icon to the Jobs list being readable.** This is the number the owner cares about. Measure by force-closing the app and reopening, not by refreshing a tab.
+- Serial round trips on that path, counted in the Network panel.
+- Documents read, from the Firestore usage tab.
 
-Take the readings on **production with real data**, not on a two-job staging account, because the whole problem scales with the number of jobs.
+Take readings on **production with real data**, throttled to Fast 3G, on a phone. The whole problem scales with distance and job count, so office wifi against a two-job staging account will always look fine and tell you nothing.
 
 ## Out of scope
 
-- Offline data and queued writes. Still its own phase, still worse done badly.
-- Any change to what is stored or displayed.
-- Rules, auth, or the design system.
+- **Moving the Firestore database.** Permanent at creation; a migration of live data is its own decision, not a performance fix.
+- **Moving Cloud Functions to Sydney.** Would make the database-heavy ones slower while Firestore is in the US.
+- Offline data and queued writes. Still its own phase, still worse done badly than not at all.
+- Any change to what is stored or displayed, or to rules, auth or the design system.
 - App Check enforcement.
-- Deploying anything unless Lalit names it.
+- Deploying anything unless the owner names it.
 
 ## Definition of done
 
-- Sign-in to a painted Jobs list is **one wave of parallel requests**, not a chain.
-- A repeat visit paints from cache before the network answers.
+- Reopening the app from the home screen shows the Jobs list **immediately**, from disk, with no logo pause.
+- A new build takes over cleanly on the next open, verified deliberately.
 - Opening a job issues two queries, not twelve.
 - No screen reads the expense ledger to show a total.
 - A write invalidates only its own keys.
-- Numbers recorded in `ARCHITECTURE.md`, measured on production, throttled.
+- The measured icon-to-Jobs time recorded in `ARCHITECTURE.md`, on production, on a phone, throttled.
+- `npm run typecheck`, `test`, `test:rules` and `build` all pass.
+
+---
+
+## Paste this to start the next chat
+
+```
+Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Open
+design/risingamp-vision.html in a browser.
+
+Phase 11 is cold start. The owner's complaint is specific: opening the app is
+too slow, navigation once inside is fine. Work only on that.
+
+Branch: create phase-11-cold-start from the merged Phase 10 branch, and tag a
+restore point before the first change. Never commit to master or main.
+Localhost stays on staging (.env.local, rising-amp-staging). Deploy nothing
+unless he names it.
+
+Context you need before you start:
+- Firestore and all five Cloud Functions are in us-central1. Sydney to Iowa is
+  ~200ms per round trip. Firestore's location is permanent and moving it is out
+  of scope. The only lever is fewer round trips and better caching.
+- Three cold-start fixes already shipped on the Phase 10 branch (86e2451,
+  57e12db). Boot now paints membership, the job list and the last open job from
+  a localStorage cache before the first request. Do not redo those.
+- Part A is a service worker for the app shell (vite-plugin-pwa). Part B is
+  Firestore persistentLocalCache plus onSnapshot on the hot paths. A and B are
+  the phase. C, D and E are follow-up and should not be started until A and B
+  are done and measured.
+
+Rules that matter here:
+- One part per session, one commit per part. A previous phase shipped seven
+  parts in one 86-file commit and pushed a broken import to production.
+- Never cache Firestore, Cloud Function or Storage responses in the service
+  worker. Shell only. A service worker caching money data is how someone sees a
+  stale total.
+- A bad service worker serves a stale app forever. Prove the upgrade path
+  before committing: install it, deploy a change, reopen, confirm the new build
+  is running.
+- Measure on production, on a phone, throttled, by force-closing and reopening.
+  Not by refreshing a tab on office wifi.
+- Never hard-delete user records. Never accept a pasted API key. Deploy
+  functions by name only.
+
+Start by reading src/App.js (the boot chain and the render gate around line
+305), src/firebase/tenancy.js (the boot cache that already exists), and
+src/firebase/config.js line 39. Then propose Part A and wait for a yes.
+```

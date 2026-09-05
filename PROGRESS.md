@@ -12,6 +12,24 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 ## Where we are (2026-09-02)
 
+**Cold start work has started (2 Sep 2026), on the Phase 10 branch, not yet deployed.** Brief: `PHASE11.md`. The owner's complaint is specific: opening the app is too slow, navigation once inside is fine.
+
+Three fixes are committed:
+
+- `86e2451` — boot paints from a localStorage cache. `readBootCache` / `writeBootCache` / `clearBootCache` in `tenancy.js`, same pattern the profile already used. `App.js` now paints membership, the job list and the last open job before the first request leaves the device, then revalidates behind. Keyed by uid, cleared on sign out and on a revoked invite. Previously `<BootScreen />` was held until `listInvitedProjects` returned, which is three network waves to a US database.
+- `57e12db` — `listOrgProjects` ran two counts per job sequentially inside a `for...of`; they now go out together. It also accepts an already-fetched list, killing a duplicate `listInvitedProjects` that ran every page load. `allowedJobs` flows through `OrgContext` so Jobs home paints at once and counts fill in after.
+- `713e971`, `abec093` — BOQ import read the estimator's "Actual Total" column instead of "Total" (whole file imported as $0.00), and a note containing "GST" beside a real line item turned that line into a phantom grand total. Both verified against a real 22-section BOQ: $321,916.29 exactly.
+
+Serial round trips from sign-in to a painted Jobs list: nine down to three on two jobs.
+
+**Not done, and next:** `PHASE11.md` Part A is a service worker for the app shell, Part B is Firestore `persistentLocalCache` plus `onSnapshot` on the hot paths. Those two are the phase. Parts C, D and E (twelve collections on job open, unscoped `invalidateQueries`, ledger rollups) are follow-up.
+
+**Geography, for context:** Firestore and all five Cloud Functions are `us-central1`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
+
+**Run on the Mac before deploying:** `npm run typecheck`, `npm test`, `npm run test:rules`, `npm run build`. The cloud session can only run `tsc` (its `node_modules` is macOS, vitest needs the Linux rollup binary).
+
+**Housekeeping:** `backups/boq-rows.json`, `backups/__boqRealFile.test.ts.removed`, and stale `.git/HEAD.lock.stale*` files can be deleted.
+
 **Phase 10 Cost Plan is live on production.** Brief: `PHASE10.md`. Vision: `design/risingamp-costplan-vision.html`.
 
 **Parts A–E are on production hosting and Firestore rules (2 Sep 2026).** A job can carry a GST-inclusive target, then optional trade amounts, quotes and an imported spreadsheet. Cost Plan is in the job sidebar even before a plan exists. Spend comes from active expenses, not paid invoices. Jobs with no plan remain unchanged except for Overview and Cost Plan empty states. Own builds (`job.kind: own`) lead with estimate against actual instead of a missing-invoice margin. TanStack Query shares the plan, quotes and org trade list. The 1,000-expense cap hides spend and progress rather than showing a partial total.
