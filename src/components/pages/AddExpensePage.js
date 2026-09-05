@@ -69,7 +69,7 @@ export default function AddExpensePage() {
     });
     setUncertainFields(extractedData.uncertainFields || {});
     setModalOpen(true);
-    showToast('✅ Invoice data extracted successfully!', 'success');
+    showToast('Receipt read. Check the details, then save.', 'success');
   };
 
   return (

@@ -1,15 +1,21 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { pageFromPath, pathForPage } from '../navigation';
-import logger from '../utils/logger';
+import Toaster from '../components/ui/Toaster';
 
 const UIContext = createContext(null);
+
+const TOAST_MS = { success: 3200, info: 3600, warning: 5000, error: 6000 };
+const MAX_TOASTS = 3;
 
 export function UIProvider({ children, jobId }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [toasts, setToasts] = useState([]);
+  const nextToastId = useRef(1);
+  const timers = useRef(new Map());
 
   const currentPage = pageFromPath(location.pathname);
 
@@ -23,9 +29,28 @@ export function UIProvider({ children, jobId }) {
     [navigate, jobId],
   );
 
-  const showToast = useCallback((message, type = 'info') => {
-    logger.info(`toast ${type}: ${message}`);
+  const dismissToast = useCallback((id) => {
+    const timer = timers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timers.current.delete(id);
+    }
+    setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
+
+  const showToast = useCallback((message, type = 'info') => {
+    const text = String(message || '').trim();
+    if (!text) return;
+    const kind = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
+    const id = nextToastId.current++;
+    setToasts((current) => {
+      // Same message twice in a row is one toast, not a stack of them.
+      const withoutDuplicate = current.filter((toast) => toast.message !== text);
+      return [...withoutDuplicate, { id, message: text, kind }].slice(-MAX_TOASTS);
+    });
+    const timer = setTimeout(() => dismissToast(id), TOAST_MS[kind]);
+    timers.current.set(id, timer);
+  }, [dismissToast]);
 
   const value = useMemo(
     () => ({
@@ -36,11 +61,17 @@ export function UIProvider({ children, jobId }) {
       mobileMenuOpen,
       setMobileMenuOpen,
       showToast,
+      dismissToast,
     }),
-    [currentPage, setCurrentPage, commandPaletteOpen, mobileMenuOpen, showToast],
+    [currentPage, setCurrentPage, commandPaletteOpen, mobileMenuOpen, showToast, dismissToast],
   );
 
-  return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
+  return (
+    <UIContext.Provider value={value}>
+      {children}
+      <Toaster toasts={toasts} onDismiss={dismissToast} />
+    </UIContext.Provider>
+  );
 }
 
 export function useUI() {
