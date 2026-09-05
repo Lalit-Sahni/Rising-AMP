@@ -53,19 +53,19 @@ export async function renderInvoicePdf({ invoice, business, jobName, title, gstN
       backgroundColor: '#ffffff',
       logging: false,
     });
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = 210;
     const pageHeight = 297;
     const imgHeight = (canvas.height * pageWidth) / canvas.width;
     let heightLeft = imgHeight;
     let position = 0;
-    pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+    pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
     heightLeft -= pageHeight;
     while (heightLeft > 0) {
       position -= pageHeight;
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, pageWidth, imgHeight);
+      pdf.addImage(imgData, 'JPEG', 0, position, pageWidth, imgHeight);
       heightLeft -= pageHeight;
     }
     return pdf;

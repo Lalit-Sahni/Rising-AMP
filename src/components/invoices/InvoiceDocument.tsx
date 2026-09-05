@@ -14,6 +14,13 @@ type AnyRecord = Record<string, any>;
 
 const DAY = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
+/** Older invoices carry "NA", "N/A" or "-" where a field was skipped. Print nothing for those. */
+function text(value: unknown): string {
+  const v = String(value ?? '').trim();
+  if (!v || /^(n\/?a|none|nil|-+)$/i.test(v)) return '';
+  return v;
+}
+
 function day(value: unknown): string {
   const date = value instanceof Date ? value : parseCalendarDate(value);
   if (!date || Number.isNaN(date.getTime())) return '—';
@@ -73,8 +80,16 @@ export default function InvoiceDocument({ invoice, business, jobName, fixedWidth
   const lines: AnyRecord[] = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
   const title = titleProp || (totals.hasGst ? 'Tax invoice' : 'Invoice');
   const status = String(invoice.status || '').toLowerCase();
-  const bank = [invoice.bsb, invoice.accountName, invoice.accountNumber].some((v) => String(v || '').trim());
-  const project = String(invoice.projectName || '').trim();
+  const client = {
+    name: text(invoice.clientName),
+    company: text(invoice.clientCompany),
+    abn: text(invoice.clientABN),
+    address: text(invoice.clientAddress),
+    email: text(invoice.clientEmail),
+    phone: text(invoice.clientPhone),
+  };
+  const bank = [invoice.bsb, invoice.accountName, invoice.accountNumber].some((v) => text(v));
+  const project = text(invoice.projectName);
   const showProject = project && project !== (jobName || '');
 
   return (
@@ -120,13 +135,13 @@ export default function InvoiceDocument({ invoice, business, jobName, fixedWidth
         <div className="grid grid-cols-2 gap-6 mt-9 pt-6 border-t border-hairline">
           <div>
             <div className="text-[11px] font-bold tracking-[0.14em] uppercase text-slate-400 mb-1.5">Bill to</div>
-            <div className="text-[14px] font-bold">{invoice.clientName || '—'}</div>
-            {invoice.clientCompany ? <div className="text-[12.5px] text-slate-600">{invoice.clientCompany}</div> : null}
-            {invoice.clientABN ? <div className="text-[12.5px] text-slate-600">ABN {invoice.clientABN}</div> : null}
-            {invoice.clientAddress ? <div className="text-[12.5px] text-slate-600 whitespace-pre-line mt-1">{invoice.clientAddress}</div> : null}
-            {invoice.clientEmail || invoice.clientPhone ? (
+            <div className="text-[14px] font-bold">{client.name || '—'}</div>
+            {client.company ? <div className="text-[12.5px] text-slate-600">{client.company}</div> : null}
+            {client.abn ? <div className="text-[12.5px] text-slate-600">ABN {client.abn}</div> : null}
+            {client.address ? <div className="text-[12.5px] text-slate-600 whitespace-pre-line mt-1">{client.address}</div> : null}
+            {client.email || client.phone ? (
               <div className="text-[12.5px] text-slate-600 mt-1">
-                {[invoice.clientEmail, invoice.clientPhone].filter(Boolean).join(' · ')}
+                {[client.email, client.phone].filter(Boolean).join(' · ')}
               </div>
             ) : null}
           </div>
@@ -134,7 +149,7 @@ export default function InvoiceDocument({ invoice, business, jobName, fixedWidth
             <div className="text-[11px] font-bold tracking-[0.14em] uppercase text-slate-400 mb-1.5">Job</div>
             <div className="text-[14px] font-bold">{jobName || project || '—'}</div>
             {showProject ? <div className="text-[12.5px] text-slate-600">{project}</div> : null}
-            {invoice.projectReference ? <div className="text-[12.5px] text-slate-600">Ref {invoice.projectReference}</div> : null}
+            {text(invoice.projectReference) ? <div className="text-[12.5px] text-slate-600">Ref {text(invoice.projectReference)}</div> : null}
           </div>
         </div>
 

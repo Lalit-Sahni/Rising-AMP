@@ -30,17 +30,17 @@ import "react-datepicker/dist/react-datepicker.css";
 const categoryFields = {
   labour: [
     { name: 'date', label: 'Date', type: 'date', required: true },
-    { name: 'workerName', label: 'Worker Name', type: 'text', required: true },
+    { name: 'workerName', label: 'Worker', type: 'text', required: true },
     { name: 'role', label: 'Role', type: 'text', required: true },
     { name: 'hours', label: 'Hours', type: 'number', required: true, step: '0.5' },
-    { name: 'rate', label: 'Rate/Hour', type: 'number', required: true, step: '0.01' },
+    { name: 'rate', label: 'Rate per hour', type: 'number', required: true, step: '0.01' },
     { name: 'notes', label: 'Notes', type: 'textarea', required: false },
   ],
   trade: [
-    { name: 'tradeCategory', label: 'Trade Category', type: 'select', required: true, 
+    { name: 'tradeCategory', label: 'Trade type', type: 'select', required: true, 
       options: ['Electrician', 'Plumber', 'Carpenter', 'Painter', 'Roofer', 'HVAC', 'Concrete', 'Tiling', 'Flooring', 'Other']
     },
-    { name: 'tradeName', label: 'Trade Name', type: 'text', required: true },
+    { name: 'tradeName', label: 'Trade', type: 'text', required: true },
     { name: 'task', label: 'Task', type: 'text', required: true },
     { name: 'amount', label: 'Amount', type: 'number', required: true, step: '0.01' },
     { name: 'date', label: 'Date', type: 'date', required: true },
@@ -48,9 +48,9 @@ const categoryFields = {
   ],
   equipment: [
     { name: 'equipmentName', label: 'Equipment', type: 'text', required: true },
-    { name: 'startDate', label: 'Start Date', type: 'date', required: false },
-    { name: 'endDate', label: 'End Date', type: 'date', required: false },
-    { name: 'totalPrice', label: 'Total Price', type: 'number', required: false, step: '0.01' },
+    { name: 'startDate', label: 'Start date', type: 'date', required: false },
+    { name: 'endDate', label: 'End date', type: 'date', required: false },
+    { name: 'totalPrice', label: 'Total price', type: 'number', required: false, step: '0.01' },
     { name: 'notes', label: 'Notes', type: 'textarea', required: false },
   ],
   service: [
@@ -63,7 +63,7 @@ const categoryFields = {
   purchase: [
     { name: 'itemName', label: 'Item', type: 'text', required: true },
     { name: 'supplier', label: 'Supplier', type: 'text', required: true },
-    { name: 'unitCost', label: 'Unit Cost', type: 'number', required: true, step: '0.01' },
+    { name: 'unitCost', label: 'Unit cost', type: 'number', required: true, step: '0.01' },
     { name: 'quantity', label: 'Quantity', type: 'number', required: true, step: '1' },
     { name: 'date', label: 'Date', type: 'date', required: true },
     { name: 'notes', label: 'Notes', type: 'textarea', required: false },
