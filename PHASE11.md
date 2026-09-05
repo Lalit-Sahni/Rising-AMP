@@ -4,7 +4,7 @@ Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
 Branch: **`phase-11-cold-start`**. Restore tag: `pre-phase11-2026-09-05`. One part per session, one commit per part.
 
-**Parts A–E are on the branch (5 Sep 2026).** Staging has `maintainLedgerRollup`, Part E Firestore rules and rollup docs. Production hosting, function and rules are not deployed. Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Firestore uses `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Opening a job no longer loads the ten directory collections; those wait for the screen that uses them. Writes invalidate only their own query keys. Overview and Jobs home read `ledgerRollup/current` for expense totals. Function `maintainLedgerRollup` is the named Cloud Function. Escape hatch: `/clear-sw`. Production is not deployed. The owner runs the Part E production list below (or names it). Phone timing is the last check after that list, not a hosting-only deploy.
+**Parts A–E are live on production (5 Sep 2026).** Function `maintainLedgerRollup`, Part E Firestore rules, `ledgerRollup/current` for both production jobs, and hosting. Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Firestore uses `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Opening a job no longer loads the ten directory collections; those wait for the screen that uses them. Writes invalidate only their own query keys. Overview and Jobs home read `ledgerRollup/current` for expense totals. Function `maintainLedgerRollup` is the named Cloud Function. Escape hatch: `/clear-sw`. **Next is the owner’s phone:** force-close, reopen, Overview totals vs History on a known job.
 
 This phase changes **when and how often** data is fetched, and what is on screen while it is fetched. It does not change what is stored, what is displayed, or any security rule. If a task here seems to need a schema change, stop and ask.
 
@@ -20,7 +20,7 @@ It is not the bundle. Initial JS is ~272.7 KB gzipped against a **275 KB ceiling
 
 **It is distance multiplied by the number of things that must happen in order.**
 
-Firestore and all five Cloud Functions are in the United States (`functions/index.js` sets `region: 'us-central1'` on every one). Sydney to `us-central1` is roughly **200 ms round trip**. Sydney to `australia-southeast1` would be about 10 ms. Every single request pays that, and no code change makes light faster.
+Firestore and Cloud Functions are in the United States (`functions/index.js` sets `region: 'us-central1'` on every one). Production has six functions, including `maintainLedgerRollup`. Sydney to `us-central1` is roughly **200 ms round trip**. Sydney to `australia-southeast1` would be about 10 ms. Every single request pays that, and no code change makes light faster.
 
 **A Firestore database's location is permanent.** It is chosen at project creation and cannot be moved. Relocating it means a new project and a full migration of live business data. That is not this phase, and probably should not happen until there are paying customers to justify the risk.
 
@@ -48,7 +48,7 @@ Three fixes are committed on the Phase 10 branch, because they were small, safe 
 
 Serial round trips from sign-in to a painted Jobs list: **nine down to three** on two jobs, twenty-five down to three on ten.
 
-**Everything below is what remains. Parts A–E are on the branch. Production follows the Part E runbook in this file — backup first, then function, rules, recompute, then hosting.**
+**Parts A–E shipped to production 5 Sep 2026.** Phone Overview vs History is the last check.
 
 ---
 
@@ -78,7 +78,7 @@ Commit: `Cache the app shell so a repeat open starts from disk.`
 
 ## Part B — Firestore's own disk cache, and listeners on the hot paths
 
-**On the branch 5 Sep 2026, not deployed.**
+**Live on production hosting 5 Sep 2026.**
 
 `src/firebase/config.js` used `getFirestore(app)` (memory-only, wiped on reload). It now uses `initializeFirestore` with `persistentLocalCache({ tabManager: persistentMultipleTabManager() })`, and falls back to `memoryLocalCache` when IndexedDB is missing (private mode, tests).
 
@@ -96,7 +96,7 @@ Commit: `Serve the ledger from Firestore's disk cache and update it live.`
 
 ## Part C — Stop loading twelve collections to open a job
 
-**On the branch 5 Sep 2026, not deployed.** The owner overrode waiting on production-phone timing.
+**Live on production hosting 5 Sep 2026.** The owner overrode waiting on production-phone timing.
 
 `AppContext` used to fire all of these the moment a job opened: expenses, labour, trades, companies, suppliers, service providers, progress payments, invoices, HIA contracts, client details, bank details, payers.
 
@@ -108,7 +108,7 @@ Commit: `Load a job's reference data on the screen that uses it.`
 
 ## Part D — Scope the cache invalidation
 
-**On the branch 5 Sep 2026, not deployed.**
+**Live on production hosting 5 Sep 2026.**
 
 `AppContext` used to call `queryClient.invalidateQueries()` with **no arguments**, which threw away the entire cache. A write now invalidates only its own keys via `invalidateKeys` in `src/query/client.ts`. Saving an expense touches `queryKeys.expenses`. Voiding, restoring or removing an invoice touches `queryKeys.invoices`. Directories, Cost Plan and quotes stay in cache.
 
@@ -118,7 +118,7 @@ Commit: `Invalidate only the keys a write actually changes.`
 
 ## Part E — Rollups instead of reading the ledger
 
-**On the branch 5 Sep 2026. Staging function, rules and recompute applied; not deployed to production.** Named function: `maintainLedgerRollup` (Firestore `onDocumentWritten` on expenses, `us-central1`). First staging create needed `--force` because `retry: true` (the function is a full recompute, so retries are safe). **Production never uses `--force`.** `--force` suppresses the confirmation before deleting functions. This repo never lets a functions deploy delete something.
+**Live on production 5 Sep 2026** (function, rules, recompute, hosting). Named function: `maintainLedgerRollup` (Firestore `onDocumentWritten` on expenses, `us-central1`). First staging create needed `--force` because `retry: true` (the function is a full recompute, so retries are safe). **Production never uses `--force`.** `--force` suppresses the confirmation before deleting functions. This repo never lets a functions deploy delete something. Production create answered the retry prompt Yes; no delete prompt. First production attempt failed on Eventarc permission propagation; the retry (same command, still no `--force`) created the function.
 
 `fetchExpensesFromFirestore` pulled up to 1,000 expense documents so Overview could add them up. That is still how History and “what needs you” read rows. Totals now come from `organizations/{orgId}/projects/{jobId}/ledgerRollup/current`:
 
@@ -128,7 +128,7 @@ Commit: `Invalidate only the keys a write actually changes.`
 
 The function **recomputes from the whole expense collection**, then writes that complete document in one `set()` inside a revision compare-and-set. If the write fails, the previous document stays. A payload missing any money field is refused.
 
-`scripts/recompute-ledger-rollups.js` rebuilds the same document from the ledger. Dry-run is the default. `--apply --staging` writes. `--clear --apply --staging` deletes only the rollup docs (expenses are untouched). Staging apply on 5 Sep 2026 wrote three jobs (72 Centenary Dr, Kelly Street, Test 1). A second dry-run must report `ok`, not `create`. Production is the ordered list below — do not jump to `--apply --production` or hosting.
+`scripts/recompute-ledger-rollups.js` rebuilds the same document from the ledger. Dry-run is the default. `--apply --staging` writes. `--clear --apply --staging` deletes only the rollup docs (expenses are untouched). Staging apply on 5 Sep 2026 wrote three jobs (72 Centenary Dr, Kelly Street, Test 1). Production apply on 5 Sep 2026 wrote two jobs (72 Centenary Dr, Kelly St). A second dry-run reported `0 write(s) planned` / `ok`.
 
 The client still uses the ledger for History, “what needs you,” and the Cost Plan trade board. If they disagree, the ledger wins on Overview.
 
@@ -138,7 +138,9 @@ Commit: `Read job totals from a rollup instead of the ledger.`
 
 ### Part E production runbook
 
-The owner will run this himself (or name the list). Do not skip a step. Do not hosting-deploy until step 6 reports zero changes.
+**Shipped 5 Sep 2026.** Backup `backups/production-2026-09-05T10-02-16-995Z` (521 Firestore documents, 34 Storage files, 0 failed). Function `maintainLedgerRollup` created with no `--force` (six functions, none deleted). Firestore rules released. Recompute created two `ledgerRollup/current` docs (72 Centenary Dr `costCents=79758713` / 131 live; Kelly St `costCents=569741` investor `5574194` / 7 live). Second dry-run: `0 write(s) planned`. Hosting live (`index-CO1k2DT5.js` on https://risingamp.com.au, channel live 5 Sep 2026 20:16). **Left for the owner:** phone, force-close, reopen, Overview totals vs History on a known job.
+
+The ordered list below is the record of what ran. Do not re-run apply unless a later change needs it. Do not hosting-deploy until a verification dry-run reports zero changes.
 
 1. `npm run backup:production` — non-negotiable, first. Last backup was 2 Sep; today is 5 Sep. CLAUDE.md: nothing against production Firestore without a full backup and a tested restore first.
 
@@ -156,7 +158,7 @@ The owner will run this himself (or name the list). Do not skip a step. Do not h
 
 7. `firebase deploy --project production --only hosting`
 
-Then: phone, force-close, reopen, Overview totals vs History on a known job. That is the last check that matters.
+Then: phone, force-close, reopen, Overview totals vs History on a known job. That is the last check that matters. **Not done in-agent** (no signed-in production session).
 
 Reverse if anything looks off: `--clear --apply --production` removes only rollup documents, leaves every expense untouched.
 
@@ -200,17 +202,18 @@ Take readings on **production with real data**, throttled to Fast 3G, on a phone
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
 
-Phase 11 is cold start. Parts A–E are on
-phase-11-cold-start. Staging has maintainLedgerRollup and rollup docs.
-Production is not deployed. Restore tag pre-phase11-2026-09-05.
+Phase 11 is cold start. Parts A–E are live on
+production (5 Sep 2026): maintainLedgerRollup, Firestore
+rules, hosting, ledgerRollup/current. Branch
+phase-11-cold-start. Restore tag pre-phase11-2026-09-05.
 Never commit to master or main. Localhost stays on staging
 (.env.local, rising-amp-staging). Deploy nothing unless he names it.
 
 Part E is ledger rollups: function maintainLedgerRollup, document
 ledgerRollup/current. Do not redo Parts A–D or the boot cache
-(86e2451, 57e12db). Production is not deployed. Next is the Part E
-production list in PHASE11.md (backup first; no --force; second
-dry-run must be zero before hosting). Owner runs it or names it.
+(86e2451, 57e12db). Next is his phone: force-close, reopen,
+Overview totals vs History on a known job. 275 KB is the
+held ceiling.
 
 Never cache Firestore, Cloud Function or Storage responses in the
 service worker. Never hard-delete user records. Never accept a

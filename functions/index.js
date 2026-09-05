@@ -1,7 +1,8 @@
 /**
  * Production functions are sendJobInviteEmail, readReceiptImage,
- * allocateInvoiceNumber, checkEstimateImport and readQuoteFile.
- * Phase 11 Part E adds maintainLedgerRollup (Firestore trigger). Deploy by name:
+ * allocateInvoiceNumber, checkEstimateImport, readQuoteFile and
+ * maintainLedgerRollup (Firestore trigger, Phase 11 Part E, live 5 Sep 2026).
+ * Deploy by name:
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
  *   firebase deploy --project production --only functions:sendJobInviteEmail
@@ -19,7 +20,7 @@
  * No --force. --force suppresses the confirmation before deleting functions.
  * This repo never lets a functions deploy delete something. First staging
  * create needed --force because retry: true; that create already happened.
- * Production order is the Part E list in PHASE11.md (backup first).
+ * Production create (5 Sep 2026) answered the retry prompt; no --force.
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):
  *   RESEND_API_KEY, OPENAI_API_KEY

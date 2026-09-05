@@ -24,7 +24,7 @@ then computed margin, “needs you,” and the subtitle **in the browser**. Two 
 
 The cheap UX fix (now in the app, no schema change): show job **names** as soon as the invited-jobs query has an answer (boot cache, then IndexedDB, then the server), then hydrate **counts** from `ledgerRollup/current` when it exists, else `getCountFromServer`. Drawing the Jobs list does **not** download the ledger. Opening a job still listens to expenses and invoices for History and “what needs you,” but Overview cost comes from the rollup.
 
-The **real** scale fix is the Phase 11 Part E rollup document (`ledgerRollup/current`), written by `maintainLedgerRollup`. Staging function, rules and recompute applied 5 Sep 2026. Recompute with `scripts/recompute-ledger-rollups.js`. If rollup and ledger disagree, the ledger wins. Production is not deployed unless named.
+The **real** scale fix is the Phase 11 Part E rollup document (`ledgerRollup/current`), written by `maintainLedgerRollup`. Staging and production function, rules and recompute applied 5 Sep 2026. Recompute with `scripts/recompute-ledger-rollups.js`. If rollup and ledger disagree, the ledger wins.
 
 ### Is the model right for a family construction tracker?
 

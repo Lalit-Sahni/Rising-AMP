@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-11-cold-start` — Phase 11 Parts A–E (app-shell worker + Firestore disk cache + directories on the screen that uses them + scoped invalidation + ledger rollups) are on this branch, **not deployed to production**. Phase 10 remains live on production hosting and Firestore rules (2 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-11-cold-start` — Phase 11 Parts A–E (app-shell worker + Firestore disk cache + directories on the screen that uses them + scoped invalidation + ledger rollups) are **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase11-2026-09-05` (this phase), `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -12,9 +12,9 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 ## Where we are (2026-09-05)
 
-**Phase 11 Parts A–E are on the branch.** Staging has `maintainLedgerRollup`, Part E Firestore rules, and rollup docs for the three staging jobs. **Not deployed to production.** Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview.
+**Phase 11 Parts A–E are live on production (5 Sep 2026).** Function `maintainLedgerRollup`, Part E Firestore rules, `ledgerRollup/current` for both production jobs, and hosting (`index-CO1k2DT5.js` on https://risingamp.com.au). Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview.
 
-**Next is the owner running the Part E production list in `PHASE11.md`** (or naming that list for an agent). Do not start any step unless he names it. Last production backup was 2 Sep 2026; today is 5 Sep. **Part E is on the branch and staging. Production is not deployed.** Browser UI click-through of Overview vs History was not done in-agent on this docs pass. Localhost stays on staging.
+**Next is the owner’s phone:** force-close, reopen, Overview totals vs History on a known job. Production backup taken 5 Sep 2026 (`backups/production-2026-09-05T10-02-16-995Z`, 521 Firestore documents, 34 Storage files). In-agent browser was not signed in as the owner, so Overview vs History was not click-through on production. Localhost stays on staging.
 
 Boot-cache and Jobs-list work from 2 Sep 2026 stays:
 
@@ -28,9 +28,9 @@ Serial round trips from sign-in to a painted Jobs list: nine down to three on tw
 
 Part E initial JS gzip **272.7 KB**. **275 KB is the held ceiling** (moved 250 → 275 in Part B because IndexedDB persistence cannot be split out of `firebase/firestore`). Hold 275. Do not raise it because a build exceeds it. Part D was **272.6 KB**. Part C was **272.5 KB**. Part B was **270.0 KB**.
 
-**Not done, and next:** The owner runs the Part E production list in `PHASE11.md` (backup → function with no `--force` → rules → dry-run → apply → dry-run must be zero → hosting), or names that list. Phone timing is the last check after hosting, not a hosting-only shortcut. Production `maintainLedgerRollup`, production Firestore rules and production hosting are not deployed. In-agent browser click-through of Overview vs History is still not done.
+**Not done, and next:** Phone check on production — force-close, reopen, Overview totals vs History on a known job. In-agent browser click-through of Overview vs History is still not done (no signed-in production session). 275 KB remains the held ceiling.
 
-**Geography, for context:** Firestore and Cloud Functions are `us-central1`. Production still has five callables; staging also has `maintainLedgerRollup`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
+**Geography, for context:** Firestore and Cloud Functions are `us-central1`. Production has six functions, including `maintainLedgerRollup`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
 
 **Run on the Mac before deploying:** `npm run typecheck`, `npm test`, `npm run test:rules`, `npm run build`. The cloud session can only run `tsc` (its `node_modules` is macOS, vitest needs the Linux rollup binary).
 
@@ -96,16 +96,17 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
 
-Phase 11 is cold start. Parts A–E are on
-phase-11-cold-start. Staging has maintainLedgerRollup and rollup docs.
-Production is not deployed. Restore tag pre-phase11-2026-09-05.
+Phase 11 is cold start. Parts A–E are live on
+production (5 Sep 2026): maintainLedgerRollup, Firestore
+rules, hosting, ledgerRollup/current. Branch
+phase-11-cold-start. Restore tag pre-phase11-2026-09-05.
 Localhost stays on staging. Deploy nothing unless he names it.
 
 Part E is ledger rollups (`maintainLedgerRollup`, `ledgerRollup/current`).
 Do not redo the boot cache, the service worker, the Firestore listeners,
-the directory hooks, or scoped invalidation. Next is the Part E
-production list in PHASE11.md (backup first; no --force; second
-dry-run must be zero before hosting). Owner runs it or names it.
+the directory hooks, or scoped invalidation. Next is his phone:
+force-close, reopen, Overview totals vs History. 275 KB is the
+held ceiling.
 
 Never cache Firestore, Cloud Function or Storage responses in
 the service worker. Never hard-delete user records. Never accept
@@ -114,7 +115,7 @@ a pasted API key.
 
 ## Remaining work
 
-1. **Part E production list in `PHASE11.md`** — owner runs it (or names it). Backup first. No `--force`. Second dry-run must be zero before hosting. Then phone: Overview totals vs History.
+1. **Phone check on production** — force-close, reopen, Overview totals vs History on a known job. Hosting, function, rules and recompute are already live (5 Sep 2026).
 2. Click through Cost Plan on the live shopfront (sidebar **Cost plan**, then a target, trades or an import). Localhost stays on staging. In-agent browser click-through of Overview vs History is still not done.
 3. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; money-field migration; dismantle remaining AppContext ledger/directory blob.
 4. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
@@ -149,11 +150,12 @@ a pasted API key.
 - [x] History receipts live on production hosting (2 Sep 2026)
 - [x] File names on Add files before upload — production hosting 2 Sep 2026
 - [x] Quote AI fill (`readQuoteFile`) live on staging and production 2 Sep 2026
-- [x] Phase 11 Part A — app-shell service worker (branch only, 5 Sep 2026)
-- [x] Phase 11 Part B — Firestore disk cache and hot-path listeners (branch only, 5 Sep 2026)
-- [x] Phase 11 Part C — directories load on the screen that uses them (branch only, 5 Sep 2026)
-- [x] Phase 11 Part D — invalidate only the keys a write changes (branch only, 5 Sep 2026)
-- [x] Phase 11 Part E — ledger rollups (`maintainLedgerRollup`, branch only, 5 Sep 2026)
+- [x] Phase 11 Part A — app-shell service worker (production hosting 5 Sep 2026)
+- [x] Phase 11 Part B — Firestore disk cache and hot-path listeners (production hosting 5 Sep 2026)
+- [x] Phase 11 Part C — directories load on the screen that uses them (production hosting 5 Sep 2026)
+- [x] Phase 11 Part D — invalidate only the keys a write changes (production hosting 5 Sep 2026)
+- [x] Phase 11 Part E — ledger rollups (`maintainLedgerRollup`) live on production 5 Sep 2026
+- [ ] Phase 11 phone — Overview totals vs History after force-close / reopen
 
 ## What shipped (localhost / staging)
 

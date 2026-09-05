@@ -1,6 +1,6 @@
-# Rising AMP — Architecture (Phase 10 live, 2026-09-02; Phase 11 Parts A–E on branch)
+# Rising AMP — Architecture (Phase 11 Parts A–E live, 2026-09-05)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A–E are on `phase-11-cold-start`. Staging has `maintainLedgerRollup` and rollup docs; production hosting, function and rules are not deployed unless named.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live. Phase 11 Parts A–E are live on production (hosting, Firestore rules, `maintainLedgerRollup`, `ledgerRollup/current`) as of 5 Sep 2026.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
@@ -159,7 +159,7 @@ Removed from the UI. Cold export under gitignored `backups/cold-export-site-log-
 
 ## 11. Backups
 
-Usable production backups: gitignored `backups/production-*` (Firestore + Storage), taken with `scripts/backup-production.js`. Keep them. Do not commit them. Last production backup was 2 Sep 2026. Part E production starts with `npm run backup:production` (see `PHASE11.md`). Do not invent a backup record.
+Usable production backups: gitignored `backups/production-*` (Firestore + Storage), taken with `scripts/backup-production.js`. Keep them. Do not commit them. Last production backup: `backups/production-2026-09-05T10-02-16-995Z` (521 Firestore documents, 34 Storage files; restore not applied). Previous: 2 Sep 2026.
 
 The old Oct 2025 `latest-backup.json` is not a usable restore.
 
@@ -244,7 +244,7 @@ Done on the Phase 10 branch:
 Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.
-- Ledger rollups: `maintainLedgerRollup` writes `ledgerRollup/current`. Overview, Jobs home counts, Cost Plan headline spend and Budget read it. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview. Staging function, rules and recompute applied 5 Sep 2026. Production is not deployed. Runbook: `PHASE11.md` Part E production list.
+- Ledger rollups: `maintainLedgerRollup` writes `ledgerRollup/current`. Overview, Jobs home counts, Cost Plan headline spend and Budget read it. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview. Staging and production function, rules and recompute applied 5 Sep 2026.
 - TanStack Query is mounted. Cost Plan, quotes, the org trade list, and job directories load on the screen that uses them. Expenses and invoices still sit in `AppContext`.
 - App Check enforcement is off until a site key exists and traffic is clean.
 - Gmail invite fallback remains until the owner asks to remove it.
@@ -291,7 +291,7 @@ Part B (new PNG icons) was skipped — owner did not want a new home-screen icon
 
 ## 15. Cold start (Phase 11)
 
-The owner’s number is **time from tapping the home-screen icon to the Jobs list being readable**, on production, on a phone, throttled, force-close then reopen. That production-phone reading is still pending the Part E production list in `PHASE11.md` (not a hosting-only deploy).
+The owner’s number is **time from tapping the home-screen icon to the Jobs list being readable**, on production, on a phone, throttled, force-close then reopen. That production-phone reading is still pending (Part E is live; he still needs to force-close and reopen).
 
 | | Before Part A | After Part A (localhost `vite preview`, 5 Sep 2026) |
 |--|--|--|
@@ -306,10 +306,10 @@ The owner’s number is **time from tapping the home-screen icon to the Jobs lis
 
 Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache from `86e2451` still paints Jobs after JS parses.
 
-**Part B (on the branch, 5 Sep 2026):** `initializeFirestore` with `persistentLocalCache` (IndexedDB; memory fallback if IndexedDB is missing). The job list, expenses and invoices use `onSnapshot`, so a repeat open paints from disk then revalidates. Empty disk snapshots are ignored so they cannot wipe a boot-cached list. Invoice numbers stay on `allocateInvoiceNumber`; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. The service worker still never caches Firestore.
+**Part B (live on production hosting, 5 Sep 2026):** `initializeFirestore` with `persistentLocalCache` (IndexedDB; memory fallback if IndexedDB is missing). The job list, expenses and invoices use `onSnapshot`, so a repeat open paints from disk then revalidates. Empty disk snapshots are ignored so they cannot wipe a boot-cached list. Invoice numbers stay on `allocateInvoiceNumber`; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. The service worker still never caches Firestore.
 
-**Part C (on the branch, 5 Sep 2026):** Opening a job only attaches the expenses and invoices listeners. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load with `useQuery` on the screen that needs them. Clients are one query (`queryKeys.clients`), not the old pair of `loadCompanies` + `loadClientDetails`. Directory lists stay fresh for 30 minutes; invoice/contract extras use the default minute. Writes still go through `AppContext` mutations, which patch the same query cache. Initial JS gzip **272.5 KB** (275 KB held ceiling).
+**Part C (live on production hosting, 5 Sep 2026):** Opening a job only attaches the expenses and invoices listeners. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load with `useQuery` on the screen that needs them. Clients are one query (`queryKeys.clients`), not the old pair of `loadCompanies` + `loadClientDetails`. Directory lists stay fresh for 30 minutes; invoice/contract extras use the default minute. Writes still go through `AppContext` mutations, which patch the same query cache. Initial JS gzip **272.5 KB** (275 KB held ceiling).
 
-**Part D (on the branch, 5 Sep 2026):** `invalidateKeys` in `src/query/client.ts` invalidates only the keys a write changes. An expense write touches `queryKeys.expenses`. An invoice void/restore/purge touches `queryKeys.invoices`. The old `invalidateQueries()` with no arguments is gone, so a save no longer refetches Cost Plan, quotes or directories. Initial JS gzip **272.6 KB** (275 KB held ceiling).
+**Part D (live on production hosting, 5 Sep 2026):** `invalidateKeys` in `src/query/client.ts` invalidates only the keys a write changes. An expense write touches `queryKeys.expenses`. An invoice void/restore/purge touches `queryKeys.invoices`. The old `invalidateQueries()` with no arguments is gone, so a save no longer refetches Cost Plan, quotes or directories. Initial JS gzip **272.6 KB** (275 KB held ceiling).
 
-**Part E (on the branch, 5 Sep 2026):** `maintainLedgerRollup` recomputes `ledgerRollup/current` from every expense on that job, then writes the complete document in one `set()` if the revision is unchanged. Members read; clients cannot write. Overview cost, period, categories, Jobs home expense counts, Cost Plan headline spend and Budget use the rollup. History, “what needs you,” and the Cost Plan trade board still read the ledger. If an uncapped ledger disagrees, the ledger wins on Overview. Staging: function, Firestore rules and `node scripts/recompute-ledger-rollups.js --apply --staging` (Kelly Street `costCents=465633`, 5 live). Production is not deployed. The owner runs the Part E production list in `PHASE11.md` (backup first; no `--force`; second dry-run must be zero before hosting). Initial JS gzip **272.7 KB**. **275 KB is the held ceiling — do not raise it because a build exceeds it.**
+**Part E (live on production, 5 Sep 2026):** `maintainLedgerRollup` recomputes `ledgerRollup/current` from every expense on that job, then writes the complete document in one `set()` if the revision is unchanged. Members read; clients cannot write. Overview cost, period, categories, Jobs home expense counts, Cost Plan headline spend and Budget use the rollup. History, “what needs you,” and the Cost Plan trade board still read the ledger. If an uncapped ledger disagrees, the ledger wins on Overview. Staging: function, Firestore rules and `node scripts/recompute-ledger-rollups.js --apply --staging` (Kelly Street `costCents=465633`, 5 live). Production: backup first, function with no `--force`, Firestore rules, then `--apply --production` (72 Centenary Dr `costCents=79758713` / 131 live; Kelly St `costCents=569741` investor `5574194` / 7 live). Second dry-run: `0 write(s) planned`. Hosting live. Initial JS gzip **272.7 KB**. **275 KB is the held ceiling — do not raise it because a build exceeds it.**
