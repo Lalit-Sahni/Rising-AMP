@@ -28,7 +28,7 @@ const Header = ({ onLogout, projectName }) => {
   const showJobCrumb = currentPage !== 'jobs' && currentPage !== 'profile' && projectName;
 
   return (
-    <header className="bg-surface border-b border-hairline px-4 md:px-[26px] py-3.5">
+    <header className="bg-canvas md:bg-surface border-b border-hairline px-4 md:px-[26px] py-3.5">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <button
