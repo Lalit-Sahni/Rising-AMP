@@ -6,7 +6,7 @@ import {
   activeTrades,
   canCodeExpenses,
   deriveCostPlanBoard,
-  deriveCostPlanProgress,
+  deriveCostPlanProgressFromSpent,
   hasActiveCostPlan,
   planHasTrades,
   quotesForTrade,
@@ -14,6 +14,8 @@ import {
 } from '../../domain/costPlan';
 import { formatCents } from '../../money';
 import { ymdToLocalDate } from '../../dates';
+import { resolveExpenseTotals } from '../../domain/ledgerRollup';
+import { useLedgerRollup } from '../../hooks/useLedgerRollup';
 import EmptyState from '../EmptyState';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
 import SetTargetCostSheet from '../costPlan/SetTargetCostSheet';
@@ -68,12 +70,14 @@ export default function CostPlanPage() {
     authUser,
     expenses,
     expensesCapped,
+    expensesLoaded,
     showToast,
     codeExpenseTrade,
   } = useApp();
   const planQuery = useCostPlan(orgId, jobId);
   const tradeQuery = useTradeList(orgId);
   const quotesQuery = useCostPlanQuotes(orgId, jobId, planHasTrades(planQuery.data));
+  const rollupQuery = useLedgerRollup(orgId, jobId);
   const [targetSheetOpen, setTargetSheetOpen] = useState(false);
   const [tradesSheetOpen, setTradesSheetOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -91,9 +95,18 @@ export default function CostPlanPage() {
   const plan = planQuery.data;
   const trades = useMemo(() => activeTrades(tradeQuery.data || []), [tradeQuery.data]);
   const quotes = quotesQuery.data || [];
+  const totals = useMemo(
+    () => resolveExpenseTotals({
+      rollup: rollupQuery.rollup,
+      expenses: expenses || [],
+      expensesCapped,
+      expensesLoaded,
+    }),
+    [rollupQuery.rollup, expenses, expensesCapped, expensesLoaded],
+  );
   const progress = useMemo(
-    () => (plan ? deriveCostPlanProgress(plan.targetCents, expenses || [], expensesCapped) : null),
-    [plan, expenses, expensesCapped],
+    () => (plan ? deriveCostPlanProgressFromSpent(plan.targetCents, totals.hidden ? null : totals.costCents) : null),
+    [plan, totals],
   );
   const board = useMemo(
     () => (plan && planHasTrades(plan)
@@ -289,9 +302,9 @@ export default function CostPlanPage() {
           </div>
         </div>
 
-        {progress?.expensesCapped ? (
+        {expensesCapped ? (
           <div className="bg-warn-tint border border-hairline border-l-2 border-l-warn rounded-ot-sm px-4 py-3 text-[13px] text-slate-600 mb-4">
-            There are more than 1,000 expenses on this job, so spend and progress are not shown. A missing number is honest; a partial one is not.
+            There are more than 1,000 expenses on this job, so the trade-by-trade board is not shown. A missing number is honest; a partial one is not.
           </div>
         ) : board ? (
           <div className="bg-surface border border-hairline rounded-ot px-5 py-[18px] shadow-whisper mb-4">

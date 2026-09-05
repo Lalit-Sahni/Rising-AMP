@@ -444,6 +444,10 @@ service cloud.firestore {
             && request.resource.data.storagePath == resource.data.storagePath;
           allow delete: if false;
         }
+        match /ledgerRollup/{docId} {
+          allow read: if canUseProject() && docId == 'current';
+          allow create, update, delete: if false;
+        }
         match /{allPaths=**} {
           allow read, write: if false;
         }

@@ -39,13 +39,12 @@ export type CostPlanProgress = {
   expensesCapped: boolean;
 };
 
-export function deriveCostPlanProgress(
+export function deriveCostPlanProgressFromSpent(
   targetCents: number,
-  expenses: Array<Record<string, unknown>> = [],
-  expensesCapped = false,
+  spentCents: number | null,
 ): CostPlanProgress {
   const target = cents(targetCents);
-  if (expensesCapped) {
+  if (spentCents == null) {
     return {
       targetCents: target,
       spentCents: null,
@@ -57,12 +56,7 @@ export function deriveCostPlanProgress(
     };
   }
 
-  const spent = addCents(
-    ...expenses
-      .filter((expense) => !isInvestorExpense(expense))
-      .map((expense) => getExpenseTotalCents(expense)),
-    0,
-  );
+  const spent = cents(Math.round(Number(spentCents) || 0));
   const left = cents(target - spent);
   const percent = target > 0 ? (spent / target) * 100 : null;
 
@@ -75,6 +69,24 @@ export function deriveCostPlanProgress(
     overTarget: spent > target,
     expensesCapped: false,
   };
+}
+
+export function deriveCostPlanProgress(
+  targetCents: number,
+  expenses: Array<Record<string, unknown>> = [],
+  expensesCapped = false,
+): CostPlanProgress {
+  if (expensesCapped) {
+    return deriveCostPlanProgressFromSpent(targetCents, null);
+  }
+
+  const spent = addCents(
+    ...expenses
+      .filter((expense) => !isInvestorExpense(expense))
+      .map((expense) => getExpenseTotalCents(expense)),
+    0,
+  );
+  return deriveCostPlanProgressFromSpent(targetCents, spent);
 }
 
 export function convertGstCents(

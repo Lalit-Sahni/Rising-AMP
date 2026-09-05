@@ -46,7 +46,7 @@
     "preview:staging": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true; vite build --mode staging && vite preview --port 3000 --strictPort",
     "build:analyze": "vite build",
     "analyze": "node scripts/analyze-bundle.js",
-    "test": "vitest run && node --test functions/lib/emailMatch.test.js functions/lib/estimateCheck.test.js functions/lib/quoteRead.test.js",
+    "test": "vitest run && node --test functions/lib/emailMatch.test.js functions/lib/estimateCheck.test.js functions/lib/quoteRead.test.js functions/lib/ledgerRollup.test.js functions/lib/maintainLedgerRollup.test.js",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "test:rules": "sh scripts/run-rules-tests.sh",

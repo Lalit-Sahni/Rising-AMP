@@ -11,8 +11,8 @@ Read these files **in this order** before touching anything:
 
 Do not rely on chat history. If chat and these files disagree, these files win.
 
-**Where we are (2026-09-05):** Phase 11 Parts A–D are on `phase-11-cold-start`, not deployed. Restore tag `pre-phase11-2026-09-05`. Part E (ledger rollups) is parked. Localhost still uses staging. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`; deploy by name. Never commit to `master` or `main`. Never accept a raw API key or secret pasted into chat.
+**Where we are (2026-09-05):** Phase 11 Parts A–E are on `phase-11-cold-start`, not deployed to production. Restore tag `pre-phase11-2026-09-05`. Function `maintainLedgerRollup`. Localhost still uses staging. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`; deploy by name. Never commit to `master` or `main`. Never accept a raw API key or secret pasted into chat.
 
 **Paste this to start a new chat:**
 
-Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Parts A–D are on `phase-11-cold-start`, not deployed. Part E (rollups) is parked. Restore tag: pre-phase11-2026-09-05. Localhost stays on staging. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Parts A–E are on `phase-11-cold-start`, not deployed to production. Function `maintainLedgerRollup`. Restore tag: pre-phase11-2026-09-05. Localhost stays on staging. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.

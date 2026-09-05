@@ -9,6 +9,7 @@ import {
   deriveCostPlanAttention,
   deriveCostPlanBoard,
   deriveCostPlanProgress,
+  deriveCostPlanProgressFromSpent,
   hasActiveCostPlan,
   mergeTradeList,
   quoteForecastCents,
@@ -127,6 +128,13 @@ describe('cost plan progress', () => {
     expect(progress.leftCents).toBeNull();
     expect(progress.percent).toBeNull();
     expect(progress.expensesCapped).toBe(true);
+  });
+
+  test('a complete spent total from the rollup still shows when the list is capped', () => {
+    const progress = deriveCostPlanProgressFromSpent(100_000, 465_600);
+    expect(progress.spentCents).toBe(465_600);
+    expect(progress.expensesCapped).toBe(false);
+    expect(progress.overTarget).toBe(true);
   });
 });
 

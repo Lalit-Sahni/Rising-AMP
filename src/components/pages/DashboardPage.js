@@ -16,9 +16,11 @@ import JobPeople from '../JobPeople';
 import EmptyState from '../EmptyState';
 import { fetchJobFiles } from '../../firebase/jobFiles';
 import { withFileAttention } from '../../domain/jobFileAttention';
-import { withCostPlanAttention, deriveCostPlanProgress, hasActiveCostPlan, planHasTrades } from '../../domain/costPlan';
+import { withCostPlanAttention, deriveCostPlanProgressFromSpent, hasActiveCostPlan, planHasTrades } from '../../domain/costPlan';
+import { overlayExpenseTotals, resolveExpenseTotals } from '../../domain/ledgerRollup';
 import { useCostPlan, useCostPlanQuotes } from '../../hooks/useCostPlan';
 import { useJobClients } from '../../hooks/useJobDirectories';
+import { useLedgerRollup } from '../../hooks/useLedgerRollup';
 import SetTargetCostSheet from '../costPlan/SetTargetCostSheet';
 import { getCategoryStyle } from '../../utils/categoryStyle';
 import { formatCents } from '../../money';
@@ -56,6 +58,7 @@ export default function DashboardPage() {
     jobId,
     jobStatus,
     expensesCapped,
+    expensesLoaded,
     setCurrentPage,
     showToast,
     jobInvitedEmails,
@@ -73,6 +76,7 @@ export default function DashboardPage() {
   const costPlanQuery = useCostPlan(orgId, jobId);
   const quotesQuery = useCostPlanQuotes(orgId, jobId, planHasTrades(costPlanQuery.data));
   const clientsQuery = useJobClients(orgId, jobId);
+  const rollupQuery = useLedgerRollup(orgId, jobId);
 
   useEffect(() => {
     if (!jobId) {
@@ -96,28 +100,39 @@ export default function DashboardPage() {
     };
   }, [jobId]);
 
+  const totals = useMemo(
+    () => resolveExpenseTotals({
+      rollup: rollupQuery.rollup,
+      expenses,
+      expensesCapped,
+      expensesLoaded,
+      period: selectedPeriod,
+    }),
+    [rollupQuery.rollup, expenses, expensesCapped, expensesLoaded, selectedPeriod],
+  );
   const metrics = useMemo(
     () => {
       const base = withFileAttention(
         deriveJobMetrics({ expenses, invoices }, { period: selectedPeriod, expensesCapped, jobKind }),
         { files: jobFiles, invoices },
       );
-      return withCostPlanAttention(base, {
+      const withAttention = withCostPlanAttention(base, {
         plan: costPlanQuery.data,
         expenses,
         quotes: quotesQuery.data || [],
         expensesCapped,
       });
+      return overlayExpenseTotals(withAttention, totals);
     },
-    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped, jobKind, costPlanQuery.data, quotesQuery.data]
+    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped, jobKind, costPlanQuery.data, quotesQuery.data, totals]
   );
   const planProgress = useMemo(
     () => (
       hasActiveCostPlan(costPlanQuery.data)
-        ? deriveCostPlanProgress(costPlanQuery.data.targetCents, expenses || [], expensesCapped)
+        ? deriveCostPlanProgressFromSpent(costPlanQuery.data.targetCents, totals.hidden ? null : totals.costCents)
         : null
     ),
-    [costPlanQuery.data, expenses, expensesCapped],
+    [costPlanQuery.data, totals],
   );
   let banner = bannerMessage(metrics);
   if (jobKind === 'own' && planProgress?.spentCents != null) {
@@ -369,6 +384,12 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        {metrics.ledgerWins ? (
+          <p className="text-[12.5px] text-slate-600 mb-4">
+            Totals were rebuilt from the expense list because the saved summary did not match.
+          </p>
+        ) : null}
 
         {!costPlanQuery.isLoading
           && !costPlanQuery.isError

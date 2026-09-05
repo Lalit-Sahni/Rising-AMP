@@ -1,14 +1,17 @@
 import React from 'react';
 import { Target, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { formatCents, parseToCents } from '../../money';
+import { formatCents, parseToCents, fromCents } from '../../money';
 import { getExpenseTotal, getInvoiceTotal, isPaidInvoice } from '../../utils/jobMetrics';
+import { liveSpendCents, resolveExpenseTotals } from '../../domain/ledgerRollup';
+import { useLedgerRollup } from '../../hooks/useLedgerRollup';
 
 function money(n) {
+  if (n == null || !Number.isFinite(Number(n))) return '—';
   try {
     return formatCents(parseToCents(n));
   } catch {
-    return formatCents(0);
+    return '—';
   }
 }
 
@@ -24,14 +27,22 @@ function formatInvoiceDate(value) {
 }
 
 const BudgetTrackingPage = () => {
-  const { expenses, invoices, setCurrentPage } = useApp();
+  const { orgId, jobId, expenses, invoices, expensesCapped, expensesLoaded, setCurrentPage } = useApp();
+  const rollupQuery = useLedgerRollup(orgId, jobId);
+  const totals = resolveExpenseTotals({
+    rollup: rollupQuery.rollup,
+    expenses,
+    expensesCapped,
+    expensesLoaded,
+  });
+  const liveSpend = liveSpendCents(totals);
 
   const totalPaidInvoices = invoices
     .filter(isPaidInvoice)
     .reduce((sum, invoice) => sum + getInvoiceTotal(invoice), 0);
-  const totalExpenses = expenses.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
-  const remainingBudget = totalPaidInvoices - totalExpenses;
-  const budgetUsedPercentage = totalPaidInvoices > 0 ? (totalExpenses / totalPaidInvoices) * 100 : 0;
+  const totalExpenses = liveSpend == null ? null : fromCents(liveSpend);
+  const remainingBudget = totalExpenses == null ? null : totalPaidInvoices - totalExpenses;
+  const budgetUsedPercentage = totalPaidInvoices > 0 && totalExpenses != null ? (totalExpenses / totalPaidInvoices) * 100 : 0;
   const budgetUnset = totalPaidInvoices <= 0;
 
   const getBurnRate = () => {
@@ -50,6 +61,7 @@ const BudgetTrackingPage = () => {
 
   const getBudgetStatus = () => {
     if (budgetUnset) return { color: 'text-slate-400', icon: Target, text: 'No budget set' };
+    if (totalExpenses == null) return { color: 'text-slate-400', icon: Target, text: 'Spend not shown' };
     if (remainingBudget < 0) return { color: 'text-neg', icon: AlertTriangle, text: 'Over budget' };
     if (budgetUsedPercentage >= 90) return { color: 'text-accent', icon: AlertTriangle, text: 'Critical' };
     if (budgetUsedPercentage >= 75) return { color: 'text-accent', icon: Clock, text: 'Warning' };
@@ -96,8 +108,8 @@ const BudgetTrackingPage = () => {
         </div>
         <div className="bg-surface rounded-ot p-[18px] shadow-whisper border border-hairline">
           <p className="text-slate-400 text-xs font-medium">Remaining</p>
-          <p className={`tabular text-[25px] font-semibold mt-2.5 ${budgetUnset ? 'text-slate-400' : remainingBudget >= 0 ? 'text-pos' : 'text-neg'}`}>
-            {budgetUnset ? '—' : money(Math.abs(remainingBudget))}
+          <p className={`tabular text-[25px] font-semibold mt-2.5 ${budgetUnset || remainingBudget == null ? 'text-slate-400' : remainingBudget >= 0 ? 'text-pos' : 'text-neg'}`}>
+            {budgetUnset || remainingBudget == null ? '—' : money(Math.abs(remainingBudget))}
           </p>
         </div>
         <div className="bg-surface rounded-ot p-[18px] shadow-whisper border border-hairline">
@@ -153,7 +165,7 @@ const BudgetTrackingPage = () => {
         <div className="bg-surface rounded-ot p-[18px] shadow-whisper border border-hairline">
           <h4 className="text-xs text-slate-400 font-medium mb-2">Days remaining</h4>
           <p className="tabular text-xl font-semibold">
-            {budgetUnset || burnRate <= 0 ? '—' : Math.floor(remainingBudget / burnRate)}
+            {budgetUnset || remainingBudget == null || burnRate <= 0 ? '—' : Math.floor(remainingBudget / burnRate)}
           </p>
           <p className="text-xs text-slate-400 mt-1">at current rate</p>
         </div>

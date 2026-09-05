@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-11-cold-start` — Phase 11 Parts A–D (app-shell worker + Firestore disk cache + directories on the screen that uses them + scoped invalidation) are on this branch, **not deployed**. Phase 10 remains live on production hosting and Firestore rules (2 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-11-cold-start` — Phase 11 Parts A–E (app-shell worker + Firestore disk cache + directories on the screen that uses them + scoped invalidation + ledger rollups) are on this branch, **not deployed to production**. Phase 10 remains live on production hosting and Firestore rules (2 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase11-2026-09-05` (this phase), `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -12,9 +12,9 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 ## Where we are (2026-09-05)
 
-**Phase 11 Parts A–D are on the branch, not deployed.** Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories.
+**Phase 11 Parts A–E are on the branch, not deployed to production.** Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History and “what needs you” still read expense rows. If an uncapped ledger disagrees, the ledger wins and Overview says so.
 
-**Next is Part E** (parked) — job totals from a rollup, Cloud Function by name, ledger wins if they disagree. Do not start it without a named function deploy and a recompute script. Production phone timing for icon-to-Jobs is still pending a named hosting deploy.
+**Next is a named production hosting deploy** so icon-to-Jobs can be timed on a phone. Do not start production functions or rules unless he names them (`maintainLedgerRollup`, `firestore:rules`). Localhost stays on staging.
 
 Boot-cache and Jobs-list work from 2 Sep 2026 stays:
 
@@ -26,9 +26,9 @@ Serial round trips from sign-in to a painted Jobs list: nine down to three on tw
 
 **Tested 5 Sep 2026 on localhost:3000 against staging** (`npm start`, signed in as the owner): Jobs list (72 Centenary Dr, Kelly Street), Kelly Street overview ($4,656 cost to date, 5 expenses), Cost Plan ($348,608 estimated / $4,656 spent), History (5 expenses). IndexedDB held `firestore/[DEFAULT]/rising-amp-staging/main`. Reload still showed the same spend. Part A worker test (`npm run preview:staging`) still stands: `/clear-sw` unregisters it. `npm start` is the day-to-day server and does **not** install a worker.
 
-Part D initial JS gzip **272.6 KB** (budget 275). Part C was **272.5 KB**. Part B was **270.0 KB**. Part B’s IndexedDB persistence cannot be split out of `firebase/firestore`.
+Part E initial JS gzip **272.7 KB** (budget 275). Part D was **272.6 KB**. Part C was **272.5 KB**. Part B was **270.0 KB**. Part B’s IndexedDB persistence cannot be split out of `firebase/firestore`.
 
-**Not done, and next:** Part E (parked) — job totals from a rollup. Measuring icon-to-Jobs on production after a named hosting deploy is still outstanding.
+**Not done, and next:** Measuring icon-to-Jobs on production after a named hosting deploy. Production `maintainLedgerRollup` and production Firestore rules are not deployed unless named.
 
 **Geography, for context:** Firestore and all five Cloud Functions are `us-central1`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
 
@@ -76,7 +76,7 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 
 **Phase 8 shipped:** Vite + TypeScript for new files, real URLs, integer cents, server invoice numbers (`YYYY-0001`), void not delete, named collection rules (no wildcard write), org from membership, Vitest + GitHub Action. Profile leak closed on production and verified from a second account that is not on a family job. App Check client is wired; **do not enforce**. Jobs list uses `getCountFromServer`. `generateWeeklyReport` was deleted from production by name (it was a callable, unused, no log entries). Production functions are `sendJobInviteEmail`, `readReceiptImage` and `allocateInvoiceNumber`; deploy **by name**. History edit of an expense no longer resets the form on each keystroke (a default `uncertainFields={}` was a new object every render). Production hosting and Firestore rules were deployed 29 Aug 2026 (expense edit fix).
 
-**Left on purpose:** App Check enforcement, ledger rollup documents, normalising stored money fields, TanStack Query on the ledger, dismantling the remaining AppContext ledger blob, Gmail invite fallback.
+**Left on purpose:** App Check enforcement, normalising stored money fields, TanStack Query on the ledger, dismantling the remaining AppContext ledger blob, Gmail invite fallback.
 
 **Phase 7 shipped (28 Aug 2026):** standalone portrait measured `t:0 r:0 b:34 l:0`. Top 0 because iOS reserves the status bar under `default`. Bottom 34 is the home indicator. Manifest / PNG icons skipped on purpose. Orientation not locked. No service worker.
 
@@ -96,12 +96,12 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
 
-Phase 11 is cold start. Parts A–D are on
-phase-11-cold-start, not deployed. Restore tag pre-phase11-2026-09-05.
+Phase 11 is cold start. Parts A–E are on
+phase-11-cold-start, not deployed to production. Restore tag pre-phase11-2026-09-05.
 Localhost stays on staging. Deploy nothing unless he names it.
 
-Part E (ledger rollups) is parked. Do not redo
-the boot cache, the service worker, the Firestore listeners,
+Part E is ledger rollups (`maintainLedgerRollup`, `ledgerRollup/current`).
+Do not redo the boot cache, the service worker, the Firestore listeners,
 the directory hooks, or scoped invalidation.
 
 Never cache Firestore, Cloud Function or Storage responses in
@@ -112,7 +112,7 @@ a pasted API key.
 ## Remaining work
 
 1. Click through Cost Plan on the live shopfront (sidebar **Cost plan**, then a target, trades or an import). Localhost stays on staging.
-2. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; ledger rollups; money-field migration; dismantle remaining AppContext ledger/directory blob.
+2. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; money-field migration; dismantle remaining AppContext ledger/directory blob.
 3. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
 4. Offline queue / queued writes — still its own phase. The Part A worker caches the shell only.
 
@@ -149,6 +149,7 @@ a pasted API key.
 - [x] Phase 11 Part B — Firestore disk cache and hot-path listeners (branch only, 5 Sep 2026)
 - [x] Phase 11 Part C — directories load on the screen that uses them (branch only, 5 Sep 2026)
 - [x] Phase 11 Part D — invalidate only the keys a write changes (branch only, 5 Sep 2026)
+- [x] Phase 11 Part E — ledger rollups (`maintainLedgerRollup`, branch only, 5 Sep 2026)
 
 ## What shipped (localhost / staging)
 

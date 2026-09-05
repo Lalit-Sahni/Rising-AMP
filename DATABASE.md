@@ -22,9 +22,9 @@ Until this session, opening Jobs home called `loadInvitedJobSummaries`, which fo
 
 then computed margin, “needs you,” and the subtitle **in the browser**. Two live jobs and ~130 expenses is about **~200 document reads** and a large JSON payload before the first card appears. Opening a job then downloads those collections **again** for the dashboard.
 
-The cheap UX fix (now in the app, no schema change): show job **names** as soon as the invited-jobs query has an answer (boot cache, then IndexedDB, then the server), then hydrate **counts** with `getCountFromServer` (one read per thousand documents). Drawing the Jobs list does **not** download the ledger. Opening a job still downloads expenses and invoices for the dashboard, but those listeners paint from Firestore’s disk cache on a repeat open.
+The cheap UX fix (now in the app, no schema change): show job **names** as soon as the invited-jobs query has an answer (boot cache, then IndexedDB, then the server), then hydrate **counts** from `ledgerRollup/current` when it exists, else `getCountFromServer`. Drawing the Jobs list does **not** download the ledger. Opening a job still listens to expenses and invoices for History and “what needs you,” but Overview cost comes from the rollup.
 
-The **real** scale fix is denormalised summary fields on the job document (section 7). Do not do that until you approve a write plan. Phase 8 skipped rollups on purpose so the ledger stays the only source of truth.
+The **real** scale fix is the Phase 11 Part E rollup document (`ledgerRollup/current`), written by `maintainLedgerRollup`. Recompute with `scripts/recompute-ledger-rollups.js`. If rollup and ledger disagree, the ledger wins.
 
 ### Is the model right for a family construction tracker?
 
@@ -55,6 +55,7 @@ organizations/{orgId}
     budget, expenses[]                         # leftover PIN copy fields; ignore
     files/{id}             job documents (Phase 9). type from a fixed list including estimate; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored.
     costPlan/current        optional Phase 10 plan. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections hold trade amounts and optional imported lines. sourceFileId optional. Members only; delete denied. Archiving is reversible: the same `current` document can be replaced with a new draft.
+    ledgerRollup/current    Phase 11 Part E. Server-owned expense totals (costCents, counts, byCategory, byMonth, byDay). Members read; client write denied. Recomputed from the expense collection; a failed write leaves the previous document.
     quotes/{id}            optional Phase 10 quotes. Allocations must sum to amountCents. status received | chosen | passed | void. Optional fileIds (max 10) point at files/{id}; fileId is the first pointer. The PDF is not stored on the quote. Delete denied.
     expenses/{id}          + jobId, optional tradeId (or not-in-estimate | investor)
     invoices/{id}          + jobId, invoiceNumber, status including void
@@ -121,23 +122,13 @@ These are product-grade decisions. Scaling does not mean throwing them away.
 
 ## 3. What is not right (honest)
 
-### 3.1 Jobs home downloads the ledger to draw a list
+### 3.1 Jobs home used to download the ledger to draw a list
 
-`src/firebase/jobSummaries.js` still fetches every expense, invoice, and client per job to compute:
-
-- paid / cost / margin
-- attention count
-- subtitle (client name · suburb)
-
-That is fine for **two** jobs and a couple of hundred expenses. It is the wrong query for a chooser at 20 or 200 jobs.
-
-Opening a job (`fetchExpensesFromFirestore` and friends) repeats the same reads.
-
-**Cost today:** a few hundred reads per Jobs visit. Firestore’s bill is still tiny (reads are $0.06 per 100,000). **What you feel is latency and main-thread work**, not the invoice from Google.
+`src/firebase/jobSummaries.js` still exists as the old per-job expense/invoice/client download. Jobs home no longer calls it. Counts come from `ledgerRollup/current` when present, else `getCountFromServer`.
 
 ### 3.2 Expense fetch cap
 
-`fetchExpensesFromFirestore` still pages at `limit(1000)`, but it now compares that page to `getCountFromServer`. A job with exactly 1,000 expenses is complete. A job past 1,000 is **capped**: Overview hides cost and margin instead of totalling a subset and presenting it as fact. Rollup documents (the optimisation that would let a bigger job total correctly) are still deferred. Centenary is ~124. Invoices have no cap.
+`fetchExpensesFromFirestore` still pages at `limit(1000)`, but it now compares that page to `getCountFromServer`. A job with exactly 1,000 expenses is complete. A job past 1,000 is **capped**: Overview hides cost and margin unless `ledgerRollup/current` exists. Rollup documents are Phase 11 Part E (`maintainLedgerRollup`). Centenary is ~124. Invoices have no cap.
 
 ### 3.3 Login no longer scans every profile
 
@@ -267,21 +258,9 @@ Do these in order. Earlier items are worth it even if you never “scale.” Lat
 
 ### When you add a third job, or Jobs home feels slow again
 
-10. **Denormalise a summary on the job document**, updated in the same write as the expense/invoice (client today; callable later if you do not trust the client):
+10. **Denormalise a summary on the job** — done in Phase 11 Part E as `ledgerRollup/current`, not fields on the job document. Function `maintainLedgerRollup`. Recompute: `node scripts/recompute-ledger-rollups.js --dry-run --staging`.
 
-    ```
-    projects/{jobId}
-      summary.expenseCount
-      summary.invoiceCount
-      summary.paidTotal
-      summary.costTotal
-      summary.attentionCount
-      summary.updatedAt
-    ```
-
-    Jobs home then reads **only job documents**. Dashboard still loads the ledger when you open a job. This is the single highest-leverage scaling change. It is a **write** to every job on every expense save, so it needs a plan, staging, and a yes. Idempotent backfill from existing expenses first.
-
-11. **Optional:** `onWrite` Cloud Function to recompute summary if a client write is skipped. Deploy **by name**. Do not bundle it with a full functions deploy.
+11. **onWrite Cloud Function** — `maintainLedgerRollup`. Deploy **by name**. Do not bundle it with a full functions deploy.
 
 ### When you productise (many orgs, many users)
 
@@ -331,6 +310,7 @@ Firestore is a good database for this product **if** list screens read small doc
 | `src/firebase/partyName.js` | Canonical names |
 | `scripts/backup-production.js` | Backup before writes |
 | `scripts/backfill-job-ids.js` | Already applied |
+| `scripts/recompute-ledger-rollups.js` | Rebuild `ledgerRollup/current` from expenses (dry-run default) |
 | `scripts/split-directory-parties.js` | Already applied |
 
 ---
@@ -339,7 +319,7 @@ Firestore is a good database for this product **if** list screens read small doc
 
 - Do not hard-delete live user records. Void first (Recently deleted). Permanent delete is only allowed on already-voided expenses and invoices.
 - Do not run production schema or data writes without a backup, a staging run, and an explicit yes.
-- Do not `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`. Deploy **by name**.
+- Do not `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`. Phase 11 adds `maintainLedgerRollup`. Deploy **by name**.
 - Do not accept a pasted API key.
 - Do not “fix” localhost receipts by pointing `.env.local` at production.
 - If chat and this file disagree, this file plus `CLAUDE.md` / `PROGRESS.md` win.

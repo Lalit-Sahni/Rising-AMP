@@ -1,6 +1,6 @@
 # Rising AMP — Architecture (Phase 10 live, 2026-09-02; Phase 11 Parts A–C on branch)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A–D (app-shell service worker + Firestore disk cache + directories on the screen that uses them + scoped invalidation) are on `phase-11-cold-start`, not deployed.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A–E (app-shell service worker + Firestore disk cache + directories on the screen that uses them + scoped invalidation + ledger rollups) are on `phase-11-cold-start`, not deployed to production.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
@@ -19,7 +19,7 @@ App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category col
 | Money | Integer cents in `src/money.ts`. Parse at the Firestore / form boundary. Stored documents stay mixed until a later migration. |
 | Server state | TanStack Query. Cost Plan, quotes, org trade list, and job directories (labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts, bank details) load on the screen that uses them. Expenses and invoices still live in `AppContext` via `onSnapshot`. |
 | Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions. Analytics removed. App Check client is wired but **not enforced**. |
-| Functions | Node 22. Live: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile`. Deploy functions **by name**. |
+| Functions | Node 22. Live on production: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile`. Phase 11 Part E adds `maintainLedgerRollup` (on the branch; deploy **by name**). |
 | OCR | OpenAI Vision via Cloud Function `readReceiptImage` (receipts) and `readQuoteFile` (quote photo or PDF). If that fails, show an error. |
 | PWA | Standalone meta tags + safe-area CSS. `vite-plugin-pwa` generates `sw.js` and a minimal webmanifest (existing favicon only; no new PNG icons). Hashed assets are cache-first. HTML is network-first. Firestore, Cloud Functions and Storage are NetworkOnly. `npm start` does not register a worker. |
 
@@ -109,7 +109,7 @@ organizations/{orgId}
   counters/invoices            # year + next sequence; written by allocateInvoiceNumber
   tradeList/{tradeId}          org-wide cost-plan trades (not job trade contacts)
   projects/{projectId}
-    expenses, invoices, files, costPlan, quotes, clients, labour, trades, …
+    expenses, invoices, files, costPlan, quotes, ledgerRollup, clients, labour, trades, …
 profiles/{uid}              # private: name, mobile, ABN, address, photo
 publicProfiles/{email}      # display name + photo only
 users/{accessCode}          # leftover copies, unused by the app
@@ -117,7 +117,7 @@ users/{accessCode}          # leftover copies, unused by the app
 
 Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `orgId`, optional `kind` (`client` | `own`).
 
-`costPlan/current` is optional. Level 1 stores one GST-inclusive target. Level 2 adds `sections` keyed by trade. Level 3 adds imported lines under those trades. `quotes/{quoteId}` are separate documents with optional `fileIds` (and leftover `fileId`) pointing at `files/{fileId}`. Expenses may carry optional `tradeId` and a retaggable `category`. A job with no document has no Cost Plan nav item. Plan, quotes and the org trade list are shared through TanStack Query; they are not added to AppContext.
+`costPlan/current` is optional. Level 1 stores one GST-inclusive target. Level 2 adds `sections` keyed by trade. Level 3 adds imported lines under those trades. `quotes/{quoteId}` are separate documents with optional `fileIds` (and leftover `fileId`) pointing at `files/{fileId}`. Expenses may carry optional `tradeId` and a retaggable `category`. `ledgerRollup/current` is the server-owned expense summary (cost, counts, category and calendar buckets). Members can read it; only Cloud Functions write it. A job with no document has no Cost Plan nav item. Plan, quotes and the org trade list are shared through TanStack Query; they are not added to AppContext.
 
 ---
 
@@ -136,11 +136,13 @@ Staging has a Storage bucket so localhost can upload receipts. Production Storag
 
 ## 8. Cloud Functions
 
-Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile` (us-central1, callable). Deploy **by name**:
+Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile` (us-central1, callable). Phase 11 Part E adds `maintainLedgerRollup` (Firestore trigger on expenses). Deploy **by name**:
 
 ```
 firebase deploy --project rising-amp-staging --only functions:readQuoteFile
 firebase deploy --project production --only functions:readQuoteFile
+firebase deploy --project staging --only functions:maintainLedgerRollup
+firebase deploy --project production --only functions:maintainLedgerRollup
 ```
 
 Deploying by name is the habit for this live app. Do not run a bare `firebase deploy --only functions` unless you intend to publish every exported function in `functions/index.js`.
@@ -242,7 +244,7 @@ Done on the Phase 10 branch:
 Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.
-- Ledger rollups (Cloud Function summaries) were skipped. The list no longer reads the ledger; the dashboard still does.
+- Ledger rollups: `maintainLedgerRollup` writes `ledgerRollup/current`. Overview, Jobs home counts, Cost Plan headline spend and Budget read it. History and “what needs you” still read expense rows. On the branch, not production.
 - TanStack Query is mounted. Cost Plan, quotes, the org trade list, and job directories load on the screen that uses them. Expenses and invoices still sit in `AppContext`.
 - App Check enforcement is off until a site key exists and traffic is clean.
 - Gmail invite fallback remains until the owner asks to remove it.
@@ -309,3 +311,5 @@ Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache f
 **Part C (on the branch, 5 Sep 2026):** Opening a job only attaches the expenses and invoices listeners. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load with `useQuery` on the screen that needs them. Clients are one query (`queryKeys.clients`), not the old pair of `loadCompanies` + `loadClientDetails`. Directory lists stay fresh for 30 minutes; invoice/contract extras use the default minute. Writes still go through `AppContext` mutations, which patch the same query cache. Initial JS gzip **272.5 KB** (budget 275).
 
 **Part D (on the branch, 5 Sep 2026):** `invalidateKeys` in `src/query/client.ts` invalidates only the keys a write changes. An expense write touches `queryKeys.expenses`. An invoice void/restore/purge touches `queryKeys.invoices`. The old `invalidateQueries()` with no arguments is gone, so a save no longer refetches Cost Plan, quotes or directories. Initial JS gzip **272.6 KB** (budget 275).
+
+**Part E (on the branch, 5 Sep 2026):** `maintainLedgerRollup` recomputes `ledgerRollup/current` from every expense on that job, then writes the complete document in one `set()` if the revision is unchanged. Members read; clients cannot write. Overview cost, period, categories, Jobs home expense counts, Cost Plan headline spend and Budget use the rollup. If an uncapped ledger disagrees, the ledger wins. Recompute: `node scripts/recompute-ledger-rollups.js --dry-run --staging`. Production function and rules are not deployed unless named. Initial JS gzip **272.7 KB** (budget 275).

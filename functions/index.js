@@ -1,6 +1,7 @@
 /**
  * Production functions are sendJobInviteEmail, readReceiptImage,
- * allocateInvoiceNumber, checkEstimateImport and readQuoteFile. Deploy by name:
+ * allocateInvoiceNumber, checkEstimateImport and readQuoteFile.
+ * Phase 11 Part E adds maintainLedgerRollup (Firestore trigger). Deploy by name:
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
  *   firebase deploy --project production --only functions:sendJobInviteEmail
@@ -12,6 +13,8 @@
  *   firebase deploy --project production --only functions:checkEstimateImport
  *   firebase deploy --project rising-amp-staging --only functions:readQuoteFile
  *   firebase deploy --project production --only functions:readQuoteFile
+ *   firebase deploy --project staging --only functions:maintainLedgerRollup
+ *   firebase deploy --project production --only functions:maintainLedgerRollup
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):
  *   RESEND_API_KEY, OPENAI_API_KEY
@@ -19,6 +22,8 @@
 
 const admin = require('firebase-admin');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { recomputeLedgerRollupForJob } = require('./lib/maintainLedgerRollup');
 const { defineSecret } = require('firebase-functions/params');
 const {
   canonicalEmail,
@@ -522,6 +527,26 @@ exports.allocateInvoiceNumber = onCall(
     });
 
     return { invoiceNumber };
+  }
+);
+
+exports.maintainLedgerRollup = onDocumentWritten(
+  {
+    region: 'us-central1',
+    document: 'organizations/{orgId}/projects/{jobId}/expenses/{expenseId}',
+    timeoutSeconds: 120,
+    memory: '512MiB',
+    maxInstances: 10,
+    retry: true,
+  },
+  async (event) => {
+    const orgId = String((event.params && event.params.orgId) || '');
+    const jobId = String((event.params && event.params.jobId) || '');
+    const db = admin.firestore();
+    await recomputeLedgerRollupForJob(db, orgId, jobId, {
+      FieldValue: admin.firestore.FieldValue,
+      FieldPath: admin.firestore.FieldPath,
+    });
   }
 );
 

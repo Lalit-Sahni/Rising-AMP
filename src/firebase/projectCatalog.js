@@ -17,6 +17,7 @@ import { auth, db } from './config';
 import { canonicalEmail, emailInviteVariants, normalizeEmail } from './email';
 import { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJobArchived, newJobId } from './jobIdentity';
 import { FAMILY_ORG_ID, getActiveOrgId } from './tenancy';
+import { LEDGER_ROLLUP_COLLECTION, LEDGER_ROLLUP_DOC_ID } from '../domain/ledgerRollupMeta';
 
 export { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJobArchived, newJobId };
 
@@ -32,6 +33,19 @@ function mapProjectDoc(projectDoc) {
     status: isJobArchived(data) ? 'archived' : 'active',
     kind: data.kind === 'own' ? 'own' : 'client',
   };
+}
+
+async function expenseCountForJob(projectRef) {
+  try {
+    const snap = await getDoc(doc(projectRef, LEDGER_ROLLUP_COLLECTION, LEDGER_ROLLUP_DOC_ID));
+    if (snap.exists()) {
+      const count = snap.data()?.documentCount;
+      if (Number.isInteger(count) && count >= 0) return count;
+    }
+  } catch (error) {
+    console.warn('Could not read expense rollup:', error);
+  }
+  return countSubcollection(projectRef, 'expenses');
 }
 
 async function countSubcollection(projectRef, name) {
@@ -115,7 +129,7 @@ export async function listOrgProjects(email, projects = null) {
     listed.map(async (project) => {
       const projectRef = doc(db, 'organizations', orgId(), 'projects', project.projectId);
       const [expenses, invoices] = await Promise.all([
-        countSubcollection(projectRef, 'expenses'),
+        expenseCountForJob(projectRef),
         countSubcollection(projectRef, 'invoices'),
       ]);
       return { ...project, expenseCount: expenses, invoiceCount: invoices };
