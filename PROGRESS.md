@@ -16,6 +16,8 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 **Phone header gap fix shipped to production hosting (5 Sep 2026).** The home-screen top bar sat below the notch because a 59px standalone floor stacked on iOS `default`. Hosting only (`index-BTUZ3uws.js` / `index-KkFsMgb2.css` on https://risingamp.com.au). Force-close and reopen twice so the new worker takes over.
 
+**Phone header colour shipped to production hosting (5 Sep 2026).** The phone top bar is `--canvas` `#F5F6F8`, the same token as `theme-color` and the status strip, so it is not a separate white slab; desktop from `md` stays `--surface`. Hosting only (`index-CRibAGMP.js` / `index-DWt6CaPQ.css` on https://risingamp.com.au). Force-close and reopen twice so the new worker takes over.
+
 **Next is the owner’s phone:** force-close, reopen, Overview totals vs History on a known job. Production backup taken 5 Sep 2026 (`backups/production-2026-09-05T10-02-16-995Z`, 521 Firestore documents, 34 Storage files). In-agent browser was not signed in as the owner, so Overview vs History was not click-through on production. Localhost stays on staging.
 
 Boot-cache and Jobs-list work from 2 Sep 2026 stays:
