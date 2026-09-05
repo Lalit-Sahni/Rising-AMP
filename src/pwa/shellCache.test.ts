@@ -83,6 +83,15 @@ describe('app-shell service worker', () => {
     expect(rewrite?.destination).toBe('/clear-sw.html');
   });
 
+  test('default status bar is not stacked with a floored top inset', () => {
+    const html = read('index.html');
+    const css = read('src/index.css');
+    expect(html).toContain('apple-mobile-web-app-status-bar-style" content="default"');
+    expect(css).not.toMatch(/max\(env\(safe-area-inset-top/);
+    expect(css).not.toContain('59px');
+    expect(css).not.toMatch(/\.app-main[\s\S]{0,120}padding-top:\s*var\(--safe-top\)/);
+  });
+
   test('localhost preview of the shell uses staging, not production', () => {
     const pkg = JSON.parse(read('package.json')) as { scripts: Record<string, string> };
     expect(pkg.scripts['build:staging']).toContain('--mode staging');

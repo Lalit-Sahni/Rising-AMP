@@ -267,23 +267,23 @@ Variables in `src/index.css`:
 Where they are applied:
 
 - `.content` — bottom always; right always; left only under 768px (sidebar already sits on the left at `md`)
-- `.app-main` / `.auth-frame` / `.boot-screen` — `padding-top: var(--safe-top)` so the header is below the clock
+- Header — **no** top safe-area padding. `default` already starts the webview below the clock.
 - Header menu button — in the header row on the left, not `position:fixed`
-- `.sidebar-safe` — pad the drawer **contents**, not the steel panel
-- `.auth-frame` — sign-in / sign-up shell
+- `.sidebar-safe` — pad the drawer **contents**, not the steel panel (`--safe-top` once, for the fixed overlay)
+- `.auth-frame` — bottom / left / right only
 - `.app-shell` / `body` / `.mobile-modal` — `100dvh` with `100vh` as the fallback
 
-Status bar: `apple-mobile-web-app-status-bar-style` is `default` (dark clock text on the light canvas). `.app-main`, `.auth-frame` and `.boot-screen` get `padding-top: var(--safe-top)` so the header sits below the clock.
+Status bar: `apple-mobile-web-app-status-bar-style` is `default` (dark clock text on the light canvas). Do not also pad `.app-main`, `.auth-frame` or `.boot-screen` with `--safe-top`. That stacks on the reserved strip and shows as an empty canvas band between the notch and the top bar.
 
-**iOS 26 standalone reports `--safe-top: 0` while the page still draws under the clock** (WebKit 301994). Bottom env() is fine (`34px` measured). On a home-screen iPhone only, `--safe-top` is `max(env(safe-area-inset-top), 59px)` so the header sits below the Dynamic Island even when env() is lying. A Safari tab is not that media query, so it stays at `0`. This is not a per-device table and it is not a JavaScript standalone check.
+A 59px `--safe-top` floor on `display-mode: standalone` was added 28 Aug 2026 for an iOS 26 env(top)=0 report. It is gone: Phase 7 measured `t:0` with `default` because iOS already reserved the strip, and the Phase 11 webmanifest makes `standalone` match on the home-screen app, so that floor became the gap. If env() later reports a real top inset *and* the header draws under the clock, apply the inset **once**, never a pixel floor on top of `default`.
 
 **Measured (owner iPhone, standalone, 28 Aug 2026):**
 
 | Mode | top | right | bottom | left |
 |------|-----|-------|--------|------|
-| Home screen, portrait | `0px` (env, buggy) | `0px` | `34px` | `0px` |
+| Home screen, portrait | `0px` | `0px` | `34px` | `0px` |
 
-Do not treat that top `0` as “iOS reserved the strip”. The header was going under the clock. The 59px floor is the workaround until env() reports the real island height.
+Top `0` is expected with `default`: iOS reserves the status-bar strip, so the webview starts below the clock. Bottom `34px` is the home indicator. Do not hardcode those numbers; they are evidence that `env()` is live.
 
 Part B (new PNG icons) was skipped — owner did not want a new home-screen icon. Orientation was not locked. Phase 11 Part A added a shell-only service worker; it does not change that icon.
 
