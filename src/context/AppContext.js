@@ -21,16 +21,13 @@ import {
   deleteHIAContractFromFirestore,
   saveUserBankDetailsToFirestore,
   fetchUserBankDetailsFromFirestore,
-  savePayerToFirestore,
-  fetchPayersFromFirestore
+  savePayerToFirestore
 } from '../data';
 import { listenJobExpenses, listenJobInvoices } from '../firebase/ledgerListen';
 import { 
   getLabour, 
   getTrades, 
   getClients,
-  getSuppliers,
-  getServiceProviders,
   saveLabourInfo,
   saveTradeInfo,
   saveClientInfo,
@@ -38,13 +35,13 @@ import {
   saveServiceProviderInfo,
   deleteClient
 } from '../data';
-import { upsertNamedRow } from '../firebase/partyName';
 import logger from '../utils/logger';
 import { isPermissionDenied } from '../firebase/tenancy';
 import { AuthProvider, useAuth } from './AuthContext';
 import { OrgProvider, useOrg } from './OrgContext';
 import { UIProvider, useUI } from './UIContext';
-import { queryClient } from '../query/client';
+import { queryClient, queryKeys } from '../query/client';
+import { patchNamedList, setBankDetails, setList } from '../hooks/useJobDirectories';
 
 const AppDataContext = createContext();
 
@@ -127,23 +124,25 @@ const AppDataProvider = ({
   onJobKindChange = null,
 }) => {
   const { showToast } = useUI();
+  const orgId = (membership && membership.orgId) || '';
   const [expenses, setExpenses] = useState([]);
   const [expensesCapped, setExpensesCapped] = useState(false);
   const [expensesLoaded, setExpensesLoaded] = useState(false);
   const [budget, setBudget] = useState(0);
-  const [savedLabour, setSavedLabour] = useState([]);
-  const [savedTrades, setSavedTrades] = useState([]);
-  const [clients, setClients] = useState([]);
-  const [savedSuppliers, setSavedSuppliers] = useState([]);
-  const [savedServiceProviders, setSavedServiceProviders] = useState([]);
-  const [progressPayments, setProgressPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [hiaContracts, setHiaContracts] = useState([]);
-  const [clientDetails, setClientDetails] = useState([]);
-  const [userBankDetails, setUserBankDetails] = useState(null);
-  const [savedPayers, setSavedPayers] = useState([]);
 
-  // Load all data from Firestore when the selected job list changes
+  const labourKey = queryKeys.labour(orgId, jobListId || '');
+  const tradesKey = queryKeys.trades(orgId, jobListId || '');
+  const clientsKey = queryKeys.clients(orgId, jobListId || '');
+  const suppliersKey = queryKeys.suppliers(orgId, jobListId || '');
+  const serviceProvidersKey = queryKeys.serviceProviders(orgId, jobListId || '');
+  const payersKey = queryKeys.payers(orgId, jobListId || '');
+  const progressPaymentsKey = queryKeys.progressPayments(orgId, jobListId || '');
+  const hiaContractsKey = queryKeys.hiaContracts(orgId, jobListId || '');
+  const bankDetailsKey = queryKeys.bankDetails(orgId, jobListId || '');
+
+  // Listen to expenses and invoices when the selected job changes.
+  // Directories and invoice/contract extras load on the screen that uses them.
   useEffect(() => {
     if (!jobListId) return undefined;
     logger.firebase('LOAD_DATA', 'Loading job data');
@@ -190,180 +189,11 @@ const AppDataProvider = ({
       },
     );
 
-      // Load saved labour
-      const loadLabour = async () => {
-        try {
-          const result = await getLabour(jobListId);
-          if (result.success) {
-            const labourData = result.labour || [];
-            setSavedLabour(Array.isArray(labourData) ? labourData : []);
-          } else {
-            console.error('Failed to load saved labour:', result.error);
-            setSavedLabour([]);
-          }
-        } catch (error) {
-          console.error('Error loading saved labour:', error);
-          setSavedLabour([]);
-        }
-      };
-
-      // Load saved trades
-      const loadTrades = async () => {
-        try {
-          const result = await getTrades(jobListId);
-          if (result.success) {
-            const tradesData = result.trades || [];
-            setSavedTrades(Array.isArray(tradesData) ? tradesData : []);
-          } else {
-            console.error('Failed to load saved trades:', result.error);
-            setSavedTrades([]);
-          }
-        } catch (error) {
-          console.error('Error loading saved trades:', error);
-          setSavedTrades([]);
-        }
-      };
-
-      // Load saved companies
-      const loadCompanies = async () => {
-        try {
-          const result = await getClients(jobListId);
-          if (result.success) {
-            const clientsData = result.clients || [];
-            setClients(Array.isArray(clientsData) ? clientsData : []);
-          } else {
-            console.error('Failed to load saved companies:', result.error);
-            setClients([]);
-          }
-        } catch (error) {
-          console.error('Error loading saved companies:', error);
-          setClients([]);
-        }
-      };
-
-      const loadSuppliers = async () => {
-        try {
-          const result = await getSuppliers(jobListId);
-          if (result.success) {
-            setSavedSuppliers(Array.isArray(result.suppliers) ? result.suppliers : []);
-          } else {
-            setSavedSuppliers([]);
-          }
-        } catch (error) {
-          console.error('Error loading suppliers:', error);
-          setSavedSuppliers([]);
-        }
-      };
-
-      const loadServiceProviders = async () => {
-        try {
-          const result = await getServiceProviders(jobListId);
-          if (result.success) {
-            setSavedServiceProviders(Array.isArray(result.providers) ? result.providers : []);
-          } else {
-            setSavedServiceProviders([]);
-          }
-        } catch (error) {
-          console.error('Error loading service providers:', error);
-          setSavedServiceProviders([]);
-        }
-      };
-
-      // Load progress payments
-      const loadPayments = async () => {
-        try {
-          const result = await fetchProgressPayments(jobListId);
-          if (result.success) {
-            setProgressPayments(result.progressPayments);
-          } else {
-            console.error('Failed to load progress payments:', result.error);
-          }
-        } catch (error) {
-          console.error('Error loading progress payments:', error);
-        }
-      };
-
-      // Load HIA contracts
-      const loadHIAContracts = async () => {
-        try {
-          const result = await fetchHIAContractsFromFirestore(jobListId);
-          if (result.success) {
-            setHiaContracts(result.hiaContracts);
-          } else {
-            console.error('Failed to load HIA contracts:', result.error);
-          }
-        } catch (error) {
-          console.error('Error loading HIA contracts:', error);
-        }
-      };
-
-      // Load client details - using clients collection now
-      const loadClientDetails = async () => {
-        try {
-          const result = await getClients(jobListId);
-          if (result.success) {
-            setClientDetails(result.clients);
-          } else {
-            console.error('Failed to load client details:', result.error);
-          }
-        } catch (error) {
-          console.error('Error loading client details:', error);
-        }
-      };
-
-      // Load user bank details
-      const loadUserBankDetails = async () => {
-        try {
-          const result = await fetchUserBankDetailsFromFirestore(jobListId);
-          if (result.success) {
-            setUserBankDetails(result.userBankDetails);
-          } else {
-            console.error('Failed to load user bank details:', result.error);
-          }
-        } catch (error) {
-          console.error('Error loading user bank details:', error);
-        }
-      };
-
-      // Load payers
-      const loadPayers = async () => {
-        try {
-          const result = await fetchPayersFromFirestore(jobListId);
-          if (result.success) {
-            setSavedPayers(result.payers || []);
-          } else {
-            setSavedPayers([]);
-          }
-        } catch (error) {
-          console.error('Error loading payers:', error);
-          setSavedPayers([]);
-        }
-      };
-
-      // Load all data in parallel. Expenses and invoices come from listeners
-      // so they can paint from IndexedDB before Iowa answers.
-      Promise.all([
-        loadLabour(),
-        loadTrades(),
-        loadCompanies(),
-        loadSuppliers(),
-        loadServiceProviders(),
-        loadPayments(),
-        loadHIAContracts(),
-        loadClientDetails(),
-        loadUserBankDetails(),
-        loadPayers()
-      ]).catch((error) => {
-        if (isMounted) {
-          console.error('Error loading data:', error);
-        }
-      });
-
-      return () => {
-        isMounted = false;
-        unsubExpenses();
-        unsubInvoices();
-      };
+    return () => {
+      isMounted = false;
+      unsubExpenses();
+      unsubInvoices();
+    };
   }, [jobListId]);
 
   const invalidateJobQueries = () => {
@@ -522,7 +352,7 @@ const AppDataProvider = ({
       const result = await saveLabourInfo(jobListId, labourData);
       if (result.success) {
         const labourItem = result.labour || result.savedLabour;
-        setSavedLabour((prev) => upsertNamedRow(prev, labourItem, (row) => row.name));
+        patchNamedList(labourKey, labourItem, (row) => row.name);
         if (!options.quiet && result.created) {
           showToast('Labour saved successfully', 'success');
         }
@@ -543,7 +373,7 @@ const AppDataProvider = ({
       const result = await saveTradeInfo(jobListId, tradeData);
       if (result.success) {
         const tradeItem = result.trade || result.savedTrade;
-        setSavedTrades((prev) => upsertNamedRow(prev, tradeItem, (row) => row.tradeName));
+        patchNamedList(tradesKey, tradeItem, (row) => row.tradeName);
         if (!options.quiet && result.created) {
           showToast('Trade saved successfully', 'success');
         }
@@ -564,15 +394,15 @@ const AppDataProvider = ({
       const result = await getLabour(jobListId);
       if (result.success) {
         const labourData = result.labour || [];
-        setSavedLabour(labourData);
+        setList(labourKey, labourData);
         return { success: true, savedLabour: labourData };
       } else {
-        setSavedLabour([]);
+        setList(labourKey, []);
         return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error loading saved labour:', error);
-      setSavedLabour([]);
+      setList(labourKey, []);
       return { success: false, error: error.message };
     }
   };
@@ -582,15 +412,15 @@ const AppDataProvider = ({
       const result = await getTrades(jobListId);
       if (result.success) {
         const tradesData = result.trades || [];
-        setSavedTrades(tradesData);
+        setList(tradesKey, tradesData);
         return { success: true, savedTrades: tradesData };
       } else {
-        setSavedTrades([]);
+        setList(tradesKey, []);
         return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error loading saved trades:', error);
-      setSavedTrades([]);
+      setList(tradesKey, []);
       return { success: false, error: error.message };
     }
   };
@@ -600,7 +430,9 @@ const AppDataProvider = ({
     try {
       const result = await addProgressPayment(jobListId, paymentData);
       if (result.success) {
-        setProgressPayments(prev => [...prev, result.progressPayment]);
+        queryClient.setQueryData(progressPaymentsKey, (prev) => (
+          [...(Array.isArray(prev) ? prev : []), result.progressPayment]
+        ));
         showToast('Progress payment added successfully', 'success');
         return { success: true, progressPayment: result.progressPayment };
       } else {
@@ -618,7 +450,11 @@ const AppDataProvider = ({
     try {
       const result = await updateProgressPayment(jobListId, paymentId, paymentData);
       if (result.success) {
-        setProgressPayments(prev => prev.map(payment => payment.id === paymentId ? result.progressPayment : payment));
+        queryClient.setQueryData(progressPaymentsKey, (prev) => (
+          (Array.isArray(prev) ? prev : []).map((payment) => (
+            payment.id === paymentId ? result.progressPayment : payment
+          ))
+        ));
         showToast('Progress payment updated successfully', 'success');
         return { success: true, progressPayment: result.progressPayment };
       } else {
@@ -636,9 +472,11 @@ const AppDataProvider = ({
     try {
       const result = await deleteProgressPayment(jobListId, paymentId);
       if (result.success) {
-        setProgressPayments((prev) => prev.map((payment) => (
-          payment.id === paymentId ? { ...payment, status: 'void' } : payment
-        )));
+        queryClient.setQueryData(progressPaymentsKey, (prev) => (
+          (Array.isArray(prev) ? prev : []).map((payment) => (
+            payment.id === paymentId ? { ...payment, status: 'void' } : payment
+          ))
+        ));
         showToast('Progress payment voided', 'success');
         return { success: true };
       } else {
@@ -656,7 +494,7 @@ const AppDataProvider = ({
     try {
       const result = await fetchProgressPayments(jobListId);
       if (result.success) {
-        setProgressPayments(result.progressPayments);
+        setList(progressPaymentsKey, result.progressPayments);
         return { success: true, progressPayments: result.progressPayments };
       } else {
         return { success: false, error: result.error };
@@ -799,7 +637,7 @@ const AppDataProvider = ({
     try {
       const result = await saveSupplierInfo(jobListId, companyData);
       if (result.success) {
-        setSavedSuppliers((prev) => upsertNamedRow(prev, result.supplier, (row) => row.name));
+        patchNamedList(suppliersKey, result.supplier, (row) => row.name);
         if (!options.quiet && result.created) {
           showToast('Supplier saved', 'success');
         }
@@ -819,7 +657,7 @@ const AppDataProvider = ({
     try {
       const result = await saveServiceProviderInfo(jobListId, providerData);
       if (result.success) {
-        setSavedServiceProviders((prev) => upsertNamedRow(prev, result.provider, (row) => row.name));
+        patchNamedList(serviceProvidersKey, result.provider, (row) => row.name);
         if (!options.quiet && result.created) {
           showToast('Service provider saved', 'success');
         }
@@ -839,7 +677,7 @@ const AppDataProvider = ({
     try {
       const result = await saveClientInfo(jobListId, clientData);
       if (result.success) {
-        setClients((prev) => upsertNamedRow(prev, result.client, (row) => row.name));
+        patchNamedList(clientsKey, result.client, (row) => row.name);
         if (!options.quiet && result.created) {
           showToast('Client saved', 'success');
         }
@@ -859,7 +697,9 @@ const AppDataProvider = ({
     try {
       const result = await deleteClient(jobListId, clientId);
       if (result.success) {
-        setClients(prev => prev.filter(client => client.id !== clientId));
+        queryClient.setQueryData(clientsKey, (prev) => (
+          (Array.isArray(prev) ? prev : []).filter((client) => client.id !== clientId)
+        ));
         showToast('Client removed from this job', 'success');
         return { success: true };
       } else {
@@ -877,7 +717,7 @@ const AppDataProvider = ({
     try {
       const result = await getClients(jobListId);
       if (result.success) {
-        setClients(result.clients);
+        setList(clientsKey, result.clients);
         return { success: true, clients: result.clients };
       } else {
         return { success: false, error: result.error };
@@ -893,7 +733,9 @@ const AppDataProvider = ({
     try {
       const result = await saveHIAContractToFirestore(jobListId, contractData);
       if (result.success) {
-        setHiaContracts(prev => [...prev, result.hiaContract]);
+        queryClient.setQueryData(hiaContractsKey, (prev) => (
+          [...(Array.isArray(prev) ? prev : []), result.hiaContract]
+        ));
         showToast('HIA Contract saved successfully', 'success');
         return { success: true, hiaContract: result.hiaContract };
       } else {
@@ -911,7 +753,11 @@ const AppDataProvider = ({
     try {
       const result = await updateHIAContractInFirestore(jobListId, contractId, updates);
       if (result.success) {
-        setHiaContracts(prev => prev.map(contract => contract.id === contractId ? result.hiaContract : contract));
+        queryClient.setQueryData(hiaContractsKey, (prev) => (
+          (Array.isArray(prev) ? prev : []).map((contract) => (
+            contract.id === contractId ? result.hiaContract : contract
+          ))
+        ));
         showToast('HIA Contract updated successfully', 'success');
         return { success: true, hiaContract: result.hiaContract };
       } else {
@@ -929,9 +775,11 @@ const AppDataProvider = ({
     try {
       const result = await deleteHIAContractFromFirestore(jobListId, contractId);
       if (result.success) {
-        setHiaContracts((prev) => prev.map((contract) => (
-          contract.id === contractId ? { ...contract, status: 'void' } : contract
-        )));
+        queryClient.setQueryData(hiaContractsKey, (prev) => (
+          (Array.isArray(prev) ? prev : []).map((contract) => (
+            contract.id === contractId ? { ...contract, status: 'void' } : contract
+          ))
+        ));
         showToast('HIA contract voided', 'success');
         return { success: true };
       } else {
@@ -949,7 +797,7 @@ const AppDataProvider = ({
     try {
       const result = await fetchHIAContractsFromFirestore(jobListId);
       if (result.success) {
-        setHiaContracts(result.hiaContracts);
+        setList(hiaContractsKey, result.hiaContracts);
         return { success: true, hiaContracts: result.hiaContracts };
       } else {
         return { success: false, error: result.error };
@@ -967,8 +815,7 @@ const AppDataProvider = ({
       const clientWithProject = { ...clientData, projectId };
       const result = await saveClientInfo(jobListId, clientWithProject);
       if (result.success) {
-        setClientDetails((prev) => upsertNamedRow(prev, result.client, (row) => row.name));
-        setClients((prev) => upsertNamedRow(prev, result.client, (row) => row.name));
+        patchNamedList(clientsKey, result.client, (row) => row.name);
         showToast('Client details saved successfully', 'success');
         return { success: true, clientDetails: result.client };
       } else {
@@ -990,7 +837,7 @@ const AppDataProvider = ({
         const filteredClients = projectId 
           ? result.clients.filter(client => client.projectId === projectId)
           : result.clients;
-        setClientDetails(filteredClients);
+        setList(clientsKey, result.clients);
         return { success: true, clientDetails: filteredClients };
       } else {
         return { success: false, error: result.error };
@@ -1006,7 +853,7 @@ const AppDataProvider = ({
     try {
       const result = await saveUserBankDetailsToFirestore(jobListId, bankData);
       if (result.success) {
-        setUserBankDetails(result.userBankDetails);
+        setBankDetails(bankDetailsKey, result.userBankDetails);
         showToast('Bank details saved successfully', 'success');
         return { success: true, userBankDetails: result.userBankDetails };
       } else {
@@ -1024,7 +871,7 @@ const AppDataProvider = ({
     try {
       const result = await fetchUserBankDetailsFromFirestore(jobListId);
       if (result.success) {
-        setUserBankDetails(result.userBankDetails);
+        setBankDetails(bankDetailsKey, result.userBankDetails);
         return { success: true, userBankDetails: result.userBankDetails };
       } else {
         return { success: false, error: result.error };
@@ -1041,10 +888,7 @@ const AppDataProvider = ({
     try {
       const result = await savePayerToFirestore(jobListId, payerName.trim());
       if (result.success) {
-        setSavedPayers(prev => {
-          const exists = prev.some(p => p.name === payerName.trim());
-          return exists ? prev : [...prev, result.payer];
-        });
+        patchNamedList(payersKey, result.payer, (row) => row.name);
       }
     } catch (error) {
       console.error('Error saving payer:', error);
@@ -1065,17 +909,7 @@ const AppDataProvider = ({
     expensesCapped,
     expensesLoaded,
     budget,
-    savedLabour,
-    savedTrades,
-    clients,
-    savedCompanies: savedSuppliers,
-    savedSuppliers,
-    savedServiceProviders,
-    progressPayments,
     invoices,
-    hiaContracts,
-    clientDetails,
-    userBankDetails,
     addExpenseToFirebase,
     updateExpenseInFirebase,
     codeExpenseTrade,
@@ -1112,7 +946,6 @@ const AppDataProvider = ({
     loadClientDetails,
     saveUserBankDetailsToFirebase,
     loadUserBankDetails,
-    savedPayers,
     savePayerToFirebase
   };
 

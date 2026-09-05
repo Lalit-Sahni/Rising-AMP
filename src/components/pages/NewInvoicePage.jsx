@@ -17,21 +17,23 @@ import DatePicker from 'react-datepicker';
 import "react-datepicker/dist/react-datepicker.css";
 import InvoicePreview from '../ui/InvoicePreview';
 import ClientManager from '../ui/ClientManager';
-import { getClients } from '../../data';
 import { uniqueByName } from '../../firebase/partyName';
 import { allocateInvoiceNumber } from '../../firebase/invoiceNumbers';
 import { defaultDueYmd, toYmd, ymdToLocalDate } from '../../dates';
 import { addCents, dollarsFromUnknown, formatCents, fromCents, lineCents, parseQuantity, percentOf, safeParseToCents } from '../../money';
+import { useJobBankDetails, useJobClients, useJobProgressPayments } from '../../hooks/useJobDirectories';
 
 const NewInvoicePage = ({ onComplete }) => {
-  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, jobId, projectName: jobName, saveClientToFirebase, membership } = useApp();
+  const { addInvoiceToFirebase, showToast, addProgressPaymentToFirebase, jobId, orgId, projectName: jobName, saveClientToFirebase, membership } = useApp();
+  const clientsQuery = useJobClients(orgId, jobId);
+  useJobProgressPayments(orgId, jobId);
+  useJobBankDetails(orgId, jobId);
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showClientManager, setShowClientManager] = useState(false);
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [numberError, setNumberError] = useState('');
-  const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   
   const [formData, setFormData] = useState({
@@ -87,29 +89,7 @@ const NewInvoicePage = ({ onComplete }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [membership && membership.orgId]);
 
-  // Load clients from Firebase on mount
-  useEffect(() => {
-    const loadClients = async () => {
-      if (!jobId) return;
-      
-      try {
-        const result = await getClients(jobId);
-        if (result.success) {
-          setClients(uniqueByName(result.clients || [], (row) => row.name));
-        } else {
-          console.error('Error loading clients:', result.error);
-          showToast('Failed to load clients', 'error');
-          setClients([]); // Ensure it's an array
-        }
-      } catch (error) {
-        console.error('Error loading clients:', error);
-        showToast('Failed to load clients', 'error');
-        setClients([]); // Ensure it's an array
-      }
-    };
-
-    loadClients();
-  }, [jobId, showToast]);
+  const clients = uniqueByName(clientsQuery.data || [], (row) => row.name);
 
   const handleClientSelect = (client) => {
     setSelectedClient(client);
@@ -1090,25 +1070,7 @@ const NewInvoicePage = ({ onComplete }) => {
                           {/* Client Manager Modal */}
                   <ClientManager
                     isOpen={showClientManager}
-                    onClose={() => {
-                      setShowClientManager(false);
-                      // Refresh clients from Firebase
-                      const loadClients = async () => {
-                        if (!jobId) return;
-                        try {
-                          const result = await getClients(jobId);
-                          if (result.success) {
-                            setClients(uniqueByName(result.clients || [], (row) => row.name));
-                          } else {
-                            setClients([]);
-                          }
-                        } catch (error) {
-                          console.error('Error loading clients:', error);
-                          setClients([]);
-                        }
-                      };
-                      loadClients();
-                    }}
+                    onClose={() => setShowClientManager(false)}
                     onClientSelect={handleClientSelect}
                   />
       </div>

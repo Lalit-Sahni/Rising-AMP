@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   User,
   Plus,
@@ -23,16 +23,16 @@ const iconBtn =
   'p-2 rounded-ot-sm border border-hairline text-slate-600 hover:text-ink hover:bg-canvas transition-colors';
 
 const ClientManager = ({ isOpen, onClose, onClientSelect, embedded = false }) => {
-  const { showToast, jobId } = useApp();
+  const { showToast, jobId, orgId } = useApp();
+  const active = embedded || isOpen;
   const {
     loading,
     submitting,
-    loadClients,
     saveClient,
     updateClient,
     removeClient,
     searchClients,
-  } = useClientManager(jobId, showToast);
+  } = useClientManager(jobId, showToast, orgId, active);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -46,14 +46,6 @@ const ClientManager = ({ isOpen, onClose, onClientSelect, embedded = false }) =>
     abn: '',
     notes: '',
   });
-
-  const active = embedded || isOpen;
-
-  useEffect(() => {
-    if (active && jobId) {
-      loadClients();
-    }
-  }, [active, jobId, loadClients]);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({

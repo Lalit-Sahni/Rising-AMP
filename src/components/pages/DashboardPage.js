@@ -18,6 +18,7 @@ import { fetchJobFiles } from '../../firebase/jobFiles';
 import { withFileAttention } from '../../domain/jobFileAttention';
 import { withCostPlanAttention, deriveCostPlanProgress, hasActiveCostPlan, planHasTrades } from '../../domain/costPlan';
 import { useCostPlan, useCostPlanQuotes } from '../../hooks/useCostPlan';
+import { useJobClients } from '../../hooks/useJobDirectories';
 import SetTargetCostSheet from '../costPlan/SetTargetCostSheet';
 import { getCategoryStyle } from '../../utils/categoryStyle';
 import { formatCents } from '../../money';
@@ -51,7 +52,6 @@ export default function DashboardPage() {
     orgId,
     expenses,
     invoices,
-    clients,
     projectName,
     jobId,
     jobStatus,
@@ -72,6 +72,7 @@ export default function DashboardPage() {
   const [kindBusy, setKindBusy] = useState(false);
   const costPlanQuery = useCostPlan(orgId, jobId);
   const quotesQuery = useCostPlanQuotes(orgId, jobId, planHasTrades(costPlanQuery.data));
+  const clientsQuery = useJobClients(orgId, jobId);
 
   useEffect(() => {
     if (!jobId) {
@@ -126,7 +127,7 @@ export default function DashboardPage() {
       line: `${formatCents(planProgress.spentCents, { whole: true })} spent of ${formatCents(planProgress.targetCents, { whole: true })} target.`,
     };
   }
-  const subtitle = jobSubtitle({ clients, invoices, metrics });
+  const subtitle = jobSubtitle({ clients: clientsQuery.data || [], invoices, metrics });
   const maxCategory = metrics.categories[0]?.amount || 1;
 
   const handleNavigate = (page) => {

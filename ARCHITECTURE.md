@@ -1,6 +1,6 @@
-# Rising AMP — Architecture (Phase 10 live, 2026-09-02; Phase 11 Part A on branch)
+# Rising AMP — Architecture (Phase 10 live, 2026-09-02; Phase 11 Parts A–C on branch)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A and B (app-shell service worker + Firestore disk cache) are on `phase-11-cold-start`, not deployed.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live on production hosting and Firestore rules (2 Sep 2026). Phase 11 Parts A, B and C (app-shell service worker + Firestore disk cache + job directories on the screen that uses them) are on `phase-11-cold-start`, not deployed.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
@@ -17,7 +17,7 @@ App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category col
 | UI | React 18, Vite 6, Tailwind. TypeScript `allowJs` + `strict`. New files are TypeScript. |
 | Routing | `react-router-dom`. Job id lives in the URL: `/jobs/:jobId`. |
 | Money | Integer cents in `src/money.ts`. Parse at the Firestore / form boundary. Stored documents stay mixed until a later migration. |
-| Server state | TanStack Query is provided. Most ledger fetches still run in `AppContext` on mount. |
+| Server state | TanStack Query. Cost Plan, quotes, org trade list, and job directories (labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts, bank details) load on the screen that uses them. Expenses and invoices still live in `AppContext` via `onSnapshot`. |
 | Backend | Firebase: Auth (Google or email/password), Firestore, Storage, Hosting, Cloud Functions. Analytics removed. App Check client is wired but **not enforced**. |
 | Functions | Node 22. Live: `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile`. Deploy functions **by name**. |
 | OCR | OpenAI Vision via Cloud Function `readReceiptImage` (receipts) and `readQuoteFile` (quote photo or PDF). If that fails, show an error. |
@@ -243,7 +243,7 @@ Left on purpose:
 
 - Stored money fields are still mixed strings/numbers. Normalising them is a migration.
 - Ledger rollups (Cloud Function summaries) were skipped. The list no longer reads the ledger; the dashboard still does.
-- TanStack Query is mounted but most fetches are still AppContext.
+- TanStack Query is mounted. Cost Plan, quotes, the org trade list, and job directories load on the screen that uses them. Expenses and invoices still sit in `AppContext`.
 - App Check enforcement is off until a site key exists and traffic is clean.
 - Gmail invite fallback remains until the owner asks to remove it.
 - Dismantling the remaining AppContext ledger/directory blob.
@@ -304,4 +304,6 @@ The owner’s number is **time from tapping the home-screen icon to the Jobs lis
 
 Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache from `86e2451` still paints Jobs after JS parses.
 
-**Part B (on the branch, 5 Sep 2026):** `initializeFirestore` with `persistentLocalCache` (IndexedDB; memory fallback if IndexedDB is missing). The job list, expenses and invoices use `onSnapshot`, so a repeat open paints from disk then revalidates. `getDocs()` is unchanged for the other ten job collections. Empty disk snapshots are ignored so they cannot wipe a boot-cached list. Invoice numbers stay on `allocateInvoiceNumber`; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. The service worker still never caches Firestore.
+**Part B (on the branch, 5 Sep 2026):** `initializeFirestore` with `persistentLocalCache` (IndexedDB; memory fallback if IndexedDB is missing). The job list, expenses and invoices use `onSnapshot`, so a repeat open paints from disk then revalidates. Empty disk snapshots are ignored so they cannot wipe a boot-cached list. Invoice numbers stay on `allocateInvoiceNumber`; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. The service worker still never caches Firestore.
+
+**Part C (on the branch, 5 Sep 2026):** Opening a job only attaches the expenses and invoices listeners. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load with `useQuery` on the screen that needs them. Clients are one query (`queryKeys.clients`), not the old pair of `loadCompanies` + `loadClientDetails`. Directory lists stay fresh for 30 minutes; invoice/contract extras use the default minute. Writes still go through `AppContext` mutations, which patch the same query cache. `invalidateQueries()` with no arguments is unchanged (Part D). Initial JS gzip **272.5 KB** (budget 275).

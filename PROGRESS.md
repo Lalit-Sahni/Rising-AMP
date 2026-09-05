@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-11-cold-start` — Phase 11 Parts A and B (app-shell worker + Firestore disk cache) are on this branch, **not deployed**. Phase 10 remains live on production hosting and Firestore rules (2 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-11-cold-start` — Phase 11 Parts A, B and C (app-shell worker + Firestore disk cache + directories on the screen that uses them) are on this branch, **not deployed**. Phase 10 remains live on production hosting and Firestore rules (2 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase11-2026-09-05` (this phase), `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -12,13 +12,9 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 ## Where we are (2026-09-05)
 
-**Phase 11 Parts A and B are on the branch, not deployed.** Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions.
+**Phase 11 Parts A, B and C are on the branch, not deployed.** Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. The owner overrode waiting on production-phone timing before C.
 
-**Tested 5 Sep 2026 on localhost:3000 against staging** (`npm start`, signed in as the owner): Jobs list (72 Centenary Dr, Kelly Street), Kelly Street overview ($4,656 cost to date, 5 expenses), Cost Plan ($348,608 estimated / $4,656 spent), History (5 expenses). IndexedDB held `firestore/[DEFAULT]/rising-amp-staging/main`. Reload still showed the same spend. Part A worker test (`npm run preview:staging`) still stands: `/clear-sw` unregisters it. `npm start` is the day-to-day server and does **not** install a worker.
-
-Initial JS gzip **270.0 KB** (budget 275). Part B’s IndexedDB persistence cannot be split out of `firebase/firestore`.
-
-**Next is measuring icon-to-Jobs** on production after a hosting deploy the owner names. Do not start C, D or E until that reading exists. Production phone timing is still pending that deploy.
+**Next is Part D** — scope `queryClient.invalidateQueries()` so a write only invalidates the keys it changes. Do not start Part E. Production phone timing for icon-to-Jobs is still pending a named hosting deploy; that no longer blocks D.
 
 Boot-cache and Jobs-list work from 2 Sep 2026 stays:
 
@@ -28,7 +24,11 @@ Boot-cache and Jobs-list work from 2 Sep 2026 stays:
 
 Serial round trips from sign-in to a painted Jobs list: nine down to three on two jobs.
 
-**Not done, and next:** measure icon-to-Jobs on production after a named hosting deploy. Parts C, D and E remain follow-up. Do not start them until that reading exists.
+**Tested 5 Sep 2026 on localhost:3000 against staging** (`npm start`, signed in as the owner): Jobs list (72 Centenary Dr, Kelly Street), Kelly Street overview ($4,656 cost to date, 5 expenses), Cost Plan ($348,608 estimated / $4,656 spent), History (5 expenses). IndexedDB held `firestore/[DEFAULT]/rising-amp-staging/main`. Reload still showed the same spend. Part A worker test (`npm run preview:staging`) still stands: `/clear-sw` unregisters it. `npm start` is the day-to-day server and does **not** install a worker.
+
+Part C initial JS gzip **272.5 KB** (budget 275). Part B was **270.0 KB**. Part B’s IndexedDB persistence cannot be split out of `firebase/firestore`.
+
+**Not done, and next:** Part D — scope cache invalidation. Do not start Part E. Measuring icon-to-Jobs on production after a named hosting deploy is still outstanding; it no longer blocks D.
 
 **Geography, for context:** Firestore and all five Cloud Functions are `us-central1`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
 
@@ -96,13 +96,14 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
 
-Phase 11 is cold start. Parts A and B are on
+Phase 11 is cold start. Parts A, B and C are on
 phase-11-cold-start, not deployed. Restore tag pre-phase11-2026-09-05.
 Localhost stays on staging. Deploy nothing unless he names it.
 
-Next is measuring icon-to-Jobs after a named hosting deploy.
-Do not start C, D or E until that reading exists. Do not redo
-the boot cache, the service worker, or the Firestore listeners.
+Next is Part D: scope invalidateQueries so a write only
+touches the keys it changes. Do not start E. Do not redo
+the boot cache, the service worker, the Firestore listeners,
+or the directory hooks.
 
 Never cache Firestore, Cloud Function or Storage responses in
 the service worker. Never hard-delete user records. Never accept
@@ -147,6 +148,7 @@ a pasted API key.
 - [x] Quote AI fill (`readQuoteFile`) live on staging and production 2 Sep 2026
 - [x] Phase 11 Part A — app-shell service worker (branch only, 5 Sep 2026)
 - [x] Phase 11 Part B — Firestore disk cache and hot-path listeners (branch only, 5 Sep 2026)
+- [x] Phase 11 Part C — directories load on the screen that uses them (branch only, 5 Sep 2026)
 
 ## What shipped (localhost / staging)
 

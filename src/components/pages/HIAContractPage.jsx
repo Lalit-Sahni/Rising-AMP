@@ -1,19 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useJobBankDetails, useJobClients, useJobHiaContracts } from '../../hooks/useJobDirectories';
 import { Upload, Download, Save } from 'lucide-react';
 
 const HIAContractPage = () => {
   const {
-    hiaContracts,
     addHIAContractToFirebase,
     saveClientDetailsToFirebase,
     saveUserBankDetailsToFirebase,
-    loadClientDetails,
-    loadUserBankDetails,
-    showToast
+    showToast,
+    jobId,
+    orgId,
   } = useApp();
 
-  const liveHiaContracts = (hiaContracts || []).filter(
+  const hiaQuery = useJobHiaContracts(orgId, jobId);
+  useJobClients(orgId, jobId);
+  useJobBankDetails(orgId, jobId);
+
+  const liveHiaContracts = (hiaQuery.data || []).filter(
     (contract) => String(contract.status || '').toLowerCase() !== 'void'
   );
 
@@ -38,30 +42,6 @@ const HIAContractPage = () => {
   });
 
   const fileInputRef = useRef(null);
-
-  // Load existing data
-  useEffect(() => {
-    let isMounted = true;
-    
-    const loadData = async () => {
-      try {
-        await loadClientDetails();
-        if (isMounted) {
-          await loadUserBankDetails();
-        }
-      } catch (error) {
-        if (isMounted) {
-          console.error('Error loading HIA contract data:', error);
-        }
-      }
-    };
-    
-    loadData();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [loadClientDetails, loadUserBankDetails]);
 
   // Mock OCR processing function (in a real app, you'd use a service like Google Vision API)
   const processImageOCR = async (imageFile) => {

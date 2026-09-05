@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useApp } from '../../context/AppContext';
 import { useCostPlanQuotes } from '../../hooks/useCostPlan';
+import { useJobClients, useJobHiaContracts } from '../../hooks/useJobDirectories';
 import { queryKeys } from '../../query/client';
 import EmptyState from '../EmptyState';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
@@ -45,14 +46,16 @@ export default function FilesPage() {
     profile,
     expenses,
     invoices,
-    hiaContracts,
-    clients,
     showToast,
     expensesLoaded,
   } = useApp();
   const queryClient = useQueryClient();
   const quotesQuery = useCostPlanQuotes(orgId, jobId, Boolean(orgId && jobId));
+  const clientsQuery = useJobClients(orgId, jobId);
+  const hiaQuery = useJobHiaContracts(orgId, jobId);
   const quotes = quotesQuery.data || [];
+  const clients = clientsQuery.data || [];
+  const hiaContracts = hiaQuery.data || [];
   const assignableQuotes = liveQuoteFileTargets(quotes);
   const [files, setFiles] = useState<JobFile[]>([]);
   const [loading, setLoading] = useState(true);

@@ -14,6 +14,13 @@ import { doc, collection } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { getActiveOrgId } from '../firebase/tenancy';
 import { useCostPlan, useTradeList } from '../hooks/useCostPlan';
+import {
+  useJobLabour,
+  useJobPayers,
+  useJobServiceProviders,
+  useJobSuppliers,
+  useJobTrades,
+} from '../hooks/useJobDirectories';
 import { activeTrades, canCodeExpenses, INVESTOR_TRADE_ID } from '../domain/costPlan';
 import { EXPENSE_CATEGORIES, tradeIdAfterCategoryChange } from '../domain/expenseCategory';
 import ExpenseTradePicker from './costPlan/ExpenseTradePicker';
@@ -188,11 +195,6 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
     addExpenseToFirebase,
     updateExpenseInFirebase,
     showToast,
-    savedLabour = [],
-    savedTrades = [],
-    savedCompanies = [],
-    savedServiceProviders = [],
-    savedPayers = [],
     saveLabourToFirebase,
     saveTradeToFirebase,
     saveCompanyToFirebase,
@@ -204,6 +206,16 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
   } = useApp();
   const planQuery = useCostPlan(orgId, jobId);
   const tradeQuery = useTradeList(orgId);
+  const labourQuery = useJobLabour(orgId, jobId, isOpen);
+  const tradesQuery = useJobTrades(orgId, jobId, isOpen);
+  const suppliersQuery = useJobSuppliers(orgId, jobId, isOpen);
+  const providersQuery = useJobServiceProviders(orgId, jobId, isOpen);
+  const payersQuery = useJobPayers(orgId, jobId, isOpen);
+  const savedLabour = labourQuery.data || [];
+  const savedTrades = tradesQuery.data || [];
+  const savedCompanies = suppliersQuery.data || [];
+  const savedServiceProviders = providersQuery.data || [];
+  const savedPayers = payersQuery.data || [];
   const showTradeCoding = canCodeExpenses(planQuery.data);
   const trades = activeTrades(tradeQuery.data || []);
 

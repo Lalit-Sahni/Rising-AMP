@@ -11,8 +11,8 @@ Read these files **in this order** before touching anything:
 
 Do not rely on chat history. If chat and these files disagree, these files win.
 
-**Where we are (2026-09-05):** Phase 11 Parts A and B are on `phase-11-cold-start`, not deployed. Restore tag `pre-phase11-2026-09-05`. Next is measuring icon-to-Jobs after a named hosting deploy. Do not start C, D or E. Localhost still uses staging. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`; deploy by name. Never commit to `master` or `main`. Never accept a raw API key or secret pasted into chat.
+**Where we are (2026-09-05):** Phase 11 Parts A, B and C are on `phase-11-cold-start`, not deployed. Restore tag `pre-phase11-2026-09-05`. Next is Part D (scope cache invalidation). Do not start E. Localhost still uses staging. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`; deploy by name. Never commit to `master` or `main`. Never accept a raw API key or secret pasted into chat.
 
 **Paste this to start a new chat:**
 
-Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Parts A and B are on `phase-11-cold-start`, not deployed. Next is measuring icon-to-Jobs after a named hosting deploy. Do not start C, D or E. Restore tag: pre-phase11-2026-09-05. Localhost stays on staging. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Parts A, B and C are on `phase-11-cold-start`, not deployed. Next is Part D (scope cache invalidation). Do not start E. Restore tag: pre-phase11-2026-09-05. Localhost stays on staging. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.

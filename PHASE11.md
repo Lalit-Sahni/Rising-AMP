@@ -4,7 +4,7 @@ Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
 Branch: **`phase-11-cold-start`**. Restore tag: `pre-phase11-2026-09-05`. One part per session, one commit per part.
 
-**Part A and Part B are on the branch (5 Sep 2026), not deployed.** Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Firestore uses `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Escape hatch: `/clear-sw`. Next is measuring icon-to-Jobs after a named hosting deploy. Do not start C, D or E until that reading exists.
+**Part A, Part B and Part C are on the branch (5 Sep 2026), not deployed.** Service worker cache-firsts hashed assets, network-firsts HTML, and never caches Firestore / functions / Storage. Firestore uses `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. Opening a job no longer loads the ten directory collections; those wait for the screen that uses them. Escape hatch: `/clear-sw`. Next is Part D (scope cache invalidation). The owner overrode waiting on production-phone timing. Do not start Part E until C and D are committed.
 
 This phase changes **when and how often** data is fetched, and what is on screen while it is fetched. It does not change what is stored, what is displayed, or any security rule. If a task here seems to need a schema change, stop and ask.
 
@@ -48,7 +48,7 @@ Three fixes are committed on the Phase 10 branch, because they were small, safe 
 
 Serial round trips from sign-in to a painted Jobs list: **nine down to three** on two jobs, twenty-five down to three on ten.
 
-**Everything below is what remains. Parts A and B are the phase. C, D and E are the follow-up.**
+**Everything below is what remains. Parts A, B and C are on the branch. D and E are the follow-up.**
 
 ---
 
@@ -85,7 +85,7 @@ Commit: `Cache the app shell so a repeat open starts from disk.`
 `getDocs()` still goes to the server. The payoff is `onSnapshot`, which fires from disk then the server:
 
 - Job list: `listenInvitedProjects` in `App.js` (one-shot `listInvitedProjects` stays for invite/remove)
-- Expenses and invoices: `listenJobExpenses` / `listenJobInvoices` in `AppContext` (the other ten collections stay one-shot until Part C)
+- Expenses and invoices: `listenJobExpenses` / `listenJobInvoices` in `AppContext` (directories moved to Part C)
 - Raising an invoice still allocates the number on the server; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves already use `runTransaction`.
 
 Empty disk snapshots are ignored so they cannot wipe a boot-cached job list while Iowa answers.
@@ -96,15 +96,11 @@ Commit: `Serve the ledger from Firestore's disk cache and update it live.`
 
 ## Part C — Stop loading twelve collections to open a job
 
-Secondary. Do it after A and B.
+**On the branch 5 Sep 2026, not deployed.** The owner overrode waiting on production-phone timing.
 
-`AppContext` fires all of these the moment a job opens: expenses, labour, trades, companies, suppliers, service providers, progress payments, invoices, HIA contracts, client details, bank details, payers.
+`AppContext` used to fire all of these the moment a job opened: expenses, labour, trades, companies, suppliers, service providers, progress payments, invoices, HIA contracts, client details, bank details, payers.
 
-The job Overview needs **expenses and invoices**. The other ten belong to screens the user may never open.
-
-- Move each directory load (labour, trades, suppliers, service providers, payers, clients) to a `useQuery` on the screen that needs it. They are reference data that changes rarely, so a long `staleTime` makes them free after the first visit.
-- Move progress payments, HIA contracts and bank details to the invoice and contract routes.
-- **`getClients` is called twice** in the same wave, by `loadCompanies` and by `loadClientDetails`. One of them goes. This one is free.
+Job open now only attaches **expenses and invoices** listeners. The other collections load with `useQuery` on the screen that needs them (`src/hooks/useJobDirectories.ts`). Directories use a 30-minute `staleTime`. Progress payments, HIA contracts and bank details load on the invoice and contract routes. `getClients` runs once (`queryKeys.clients`); `loadCompanies` and `loadClientDetails` share that key.
 
 Commit: `Load a job's reference data on the screen that uses it.`
 
@@ -170,15 +166,15 @@ Take readings on **production with real data**, throttled to Fast 3G, on a phone
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
 
-Phase 11 is cold start. Parts A and B are on
+Phase 11 is cold start. Parts A, B and C are on
 phase-11-cold-start, not deployed. Restore tag pre-phase11-2026-09-05.
 Never commit to master or main. Localhost stays on staging
 (.env.local, rising-amp-staging). Deploy nothing unless he names it.
 
-Next is measuring icon-to-Jobs on production after a named hosting
-deploy. Do not start Parts C, D or E until that reading exists.
+Next is Part D: scope `invalidateQueries()` so a write only
+touches the keys it changes. Do not start E.
 
-Do not redo Part A, Part B, or the boot cache (86e2451, 57e12db).
+Do not redo Part A, Part B, Part C, or the boot cache (86e2451, 57e12db).
 Never cache Firestore, Cloud Function or Storage responses in the
 service worker. Never hard-delete user records. Never accept a
 pasted API key.

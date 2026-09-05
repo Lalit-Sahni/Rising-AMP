@@ -1,33 +1,24 @@
 import { useState, useCallback } from 'react';
-import { saveClientInfo, getClients, updateClient, deleteClient } from '../data';
+import { saveClientInfo, updateClient, deleteClient } from '../data';
+import { queryClient, queryKeys } from '../query/client';
+import { patchNamedList, useJobClients } from './useJobDirectories';
 
-export const useClientManager = (jobId, showToast) => {
-  const [clients, setClients] = useState([]);
-  const [loading, setLoading] = useState(false);
+export const useClientManager = (jobId, showToast, orgId, enabled = true) => {
+  const query = useJobClients(orgId, jobId, enabled);
+  const clients = query.data || [];
+  const loading = query.isLoading;
   const [submitting, setSubmitting] = useState(false);
+  const clientsKey = queryKeys.clients(orgId || '', jobId || '');
 
   const loadClients = useCallback(async () => {
-    if (!jobId) return;
-    
+    if (!orgId || !jobId) return;
     try {
-      setLoading(true);
-      const result = await getClients(jobId);
-      
-      if (result.success) {
-        setClients(result.clients);
-      } else {
-        console.error('Failed to load clients:', result.error);
-        showToast?.(result.error || 'Failed to load clients', 'error');
-        setClients([]);
-      }
+      await query.refetch();
     } catch (error) {
       console.error('Error loading clients:', error);
       showToast?.('Failed to load clients', 'error');
-      setClients([]);
-    } finally {
-      setLoading(false);
     }
-  }, [jobId, showToast]);
+  }, [orgId, jobId, query, showToast]);
 
   const saveClient = useCallback(async (clientData) => {
     if (!jobId || !clientData.name?.trim()) {
@@ -38,15 +29,14 @@ export const useClientManager = (jobId, showToast) => {
     try {
       setSubmitting(true);
       const result = await saveClientInfo(jobId, clientData);
-      
+
       if (result.success) {
+        patchNamedList(clientsKey, result.client, (row) => row.name);
         showToast?.('Client saved successfully', 'success');
-        await loadClients(); // Reload clients after save
-        return result;
-      } else {
-        showToast?.(result.error || 'Failed to save client', 'error');
         return result;
       }
+      showToast?.(result.error || 'Failed to save client', 'error');
+      return result;
     } catch (error) {
       console.error('Error saving client:', error);
       showToast?.('Failed to save client', 'error');
@@ -54,7 +44,7 @@ export const useClientManager = (jobId, showToast) => {
     } finally {
       setSubmitting(false);
     }
-  }, [jobId, showToast, loadClients]);
+  }, [jobId, showToast, clientsKey]);
 
   const updateClientData = useCallback(async (clientId, clientData) => {
     if (!jobId || !clientId || !clientData.name?.trim()) {
@@ -65,15 +55,14 @@ export const useClientManager = (jobId, showToast) => {
     try {
       setSubmitting(true);
       const result = await updateClient(jobId, clientId, clientData);
-      
+
       if (result.success) {
+        patchNamedList(clientsKey, result.client, (row) => row.name);
         showToast?.('Client updated successfully', 'success');
-        await loadClients(); // Reload clients after update
-        return result;
-      } else {
-        showToast?.(result.error || 'Failed to update client', 'error');
         return result;
       }
+      showToast?.(result.error || 'Failed to update client', 'error');
+      return result;
     } catch (error) {
       console.error('Error updating client:', error);
       showToast?.('Failed to update client', 'error');
@@ -81,7 +70,7 @@ export const useClientManager = (jobId, showToast) => {
     } finally {
       setSubmitting(false);
     }
-  }, [jobId, showToast, loadClients]);
+  }, [jobId, showToast, clientsKey]);
 
   const removeClient = useCallback(async (clientId) => {
     if (!jobId || !clientId) {
@@ -91,27 +80,28 @@ export const useClientManager = (jobId, showToast) => {
 
     try {
       const result = await deleteClient(jobId, clientId);
-      
+
       if (result.success) {
+        queryClient.setQueryData(clientsKey, (prev) => (
+          (Array.isArray(prev) ? prev : []).filter((client) => client.id !== clientId)
+        ));
         showToast?.('Client removed from this job', 'success');
-        await loadClients(); // Reload clients after delete
-        return result;
-      } else {
-        showToast?.(result.error || 'Failed to delete client', 'error');
         return result;
       }
+      showToast?.(result.error || 'Failed to delete client', 'error');
+      return result;
     } catch (error) {
       console.error('Error deleting client:', error);
       showToast?.('Failed to delete client', 'error');
       return { success: false, error: error.message };
     }
-  }, [jobId, showToast, loadClients]);
+  }, [jobId, showToast, clientsKey]);
 
   const searchClients = useCallback((searchTerm) => {
     if (!searchTerm?.trim()) return clients;
-    
+
     const term = searchTerm.toLowerCase();
-    return clients.filter(client =>
+    return clients.filter((client) =>
       client.name?.toLowerCase().includes(term) ||
       client.email?.toLowerCase().includes(term) ||
       client.company?.toLowerCase().includes(term) ||
@@ -127,6 +117,6 @@ export const useClientManager = (jobId, showToast) => {
     saveClient,
     updateClient: updateClientData,
     removeClient,
-    searchClients
+    searchClients,
   };
 };
