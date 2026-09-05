@@ -66,6 +66,7 @@ export const AppProvider = (props) => {
     storageKey,
     projectName,
     membership,
+    allowedJobs,
     onOpenJob,
     onJobAccessLost,
     jobStatus,
@@ -80,6 +81,7 @@ export const AppProvider = (props) => {
     <AuthProvider authUser={authUser} profile={profile} setProfile={setProfile}>
       <OrgProvider
         membership={membership}
+        allowedJobs={allowedJobs}
         jobId={projectId}
         storageKey={storageKey}
         projectName={projectName}

@@ -332,6 +332,7 @@ function AppShell() {
       storageKey={workspaceId}
       projectName={projectName}
       membership={membership}
+      allowedJobs={allowedJobs}
       onOpenJob={handlePickProject}
       onJobAccessLost={handleJobAccessLost}
       jobStatus={projectStatus}

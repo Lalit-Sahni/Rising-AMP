@@ -34,7 +34,7 @@ function initialsFromEmail(email) {
 }
 
 export default function JobsHomePage() {
-  const { membership, onOpenJob } = useApp();
+  const { membership, allowedJobs, onOpenJob } = useApp();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -60,11 +60,26 @@ export default function JobsHomePage() {
         setMetricsLoading(false);
         return;
       }
-      setLoading(true);
-      setMetricsLoading(true);
       setError('');
+      // Sign-in already listed the jobs. Paint them now, with counts blank, so
+      // the screen is usable immediately. The counts are decoration and arrive
+      // a moment later; waiting for them was most of the spinner.
+      const prefetched = allowedJobs || [];
+      if (prefetched.length > 0) {
+        if (!cancelled) {
+          setJobs((current) => (current.length > 0 ? current : prefetched));
+          setLoading(false);
+          setMetricsLoading(true);
+        }
+      } else {
+        setLoading(true);
+        setMetricsLoading(true);
+      }
       try {
-        const listed = await listOrgProjects(membership.email);
+        const listed = await listOrgProjects(
+          membership.email,
+          prefetched.length > 0 ? prefetched : null,
+        );
         if (!cancelled) {
           setJobs(listed);
         }
@@ -82,7 +97,7 @@ export default function JobsHomePage() {
     return () => {
       cancelled = true;
     };
-  }, [membership]);
+  }, [membership, allowedJobs]);
 
   const activeJobs = useMemo(() => jobs.filter((row) => row.status !== 'archived'), [jobs]);
   const archivedJobs = useMemo(() => jobs.filter((row) => row.status === 'archived'), [jobs]);

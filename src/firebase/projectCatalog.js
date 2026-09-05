@@ -76,19 +76,26 @@ export async function listInvitedProjects(email) {
 /**
  * Job lists this email is invited to (not every job in the company).
  */
-export async function listOrgProjects(email) {
-  const listed = await listInvitedProjects(email);
-  const rows = [];
-  for (const project of listed) {
-    const projectRef = doc(db, 'organizations', orgId(), 'projects', project.projectId);
-    const expenses = await countSubcollection(projectRef, 'expenses');
-    const invoices = await countSubcollection(projectRef, 'invoices');
-    rows.push({
-      ...project,
-      expenseCount: expenses,
-      invoiceCount: invoices,
-    });
-  }
+/**
+ * Counts for a list of jobs. Every count is an independent round trip, so they
+ * go out together. A `for...of` with an await inside made this 2 sequential
+ * round trips PER JOB: four in a row for two jobs, twenty for ten, each one a
+ * full trip to Firestore before the next was even sent. That is the Jobs screen
+ * spinner. Pass `projects` when the caller already listed them, so the same
+ * query is not run twice on one page load.
+ */
+export async function listOrgProjects(email, projects = null) {
+  const listed = projects || (await listInvitedProjects(email));
+  const rows = await Promise.all(
+    listed.map(async (project) => {
+      const projectRef = doc(db, 'organizations', orgId(), 'projects', project.projectId);
+      const [expenses, invoices] = await Promise.all([
+        countSubcollection(projectRef, 'expenses'),
+        countSubcollection(projectRef, 'invoices'),
+      ]);
+      return { ...project, expenseCount: expenses, invoiceCount: invoices };
+    }),
+  );
 
   return rows.sort((a, b) => b.expenseCount - a.expenseCount || b.invoiceCount - a.invoiceCount);
 }

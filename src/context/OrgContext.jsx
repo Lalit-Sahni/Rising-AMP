@@ -5,6 +5,7 @@ const OrgContext = createContext(null);
 export function OrgProvider({
   children,
   membership,
+  allowedJobs,
   jobId,
   storageKey,
   projectName,
@@ -19,6 +20,9 @@ export function OrgProvider({
     <OrgContext.Provider
       value={{
         membership,
+        // Already fetched during sign-in. Jobs home renders from this at once
+        // instead of running the same query a second time.
+        allowedJobs: allowedJobs || [],
         jobId,
         storageKey,
         projectName,
