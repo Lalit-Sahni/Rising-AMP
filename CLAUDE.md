@@ -6,18 +6,18 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-11-cold-start`**. Phase 10 Cost Plan is live. **Phase 11 Parts A–E are live on production** (hosting, Firestore rules, `maintainLedgerRollup`, `ledgerRollup/current`) as of 5 Sep 2026. Restore tag: `pre-phase11-2026-09-05`. Never commit to `master` or `main`. Older restore tags: `pre-phase10-2026-09-02`, `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
-2. Read `PROGRESS.md` (next concrete step), then `PHASE11.md`. Open `design/risingamp-vision.html` before changing the shell. `PHASE10.md` is the closed Cost Plan record. `PHASE9.md` through `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
+1. Confirm git branch. Latest work is **`phase-12-fables-upgrade`** (front-end upgrade, not yet deployed; brief and record in `PHASE12.md`). Restore tag: `pre-phase12-2026-09-05`. **Phase 11 Parts A–E are live on production** (hosting, Firestore rules, `maintainLedgerRollup`, `ledgerRollup/current`) as of 5 Sep 2026, restore tag `pre-phase11-2026-09-05`. Never commit to `master` or `main`. Older restore tags: `pre-phase10-2026-09-02`, `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+2. Read `PROGRESS.md` (next concrete step), then `PHASE12.md`, then `PHASE11.md`. Open `design/risingamp-vision.html` before changing the shell. `PHASE10.md` is the closed Cost Plan record. `PHASE9.md` through `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
 3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`. `npm start` does not register a service worker; `npm run build` then `npm run preview` does.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Owner phone check — force-close, reopen, Overview totals vs History on a known job. Part E production shipped 5 Sep 2026 (backup first, then function with no `--force`, rules, recompute, hosting). Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile` and `maintainLedgerRollup`. Do not deploy unless he names the project and surface. Do not use `--force` on a functions deploy. **275 KB is the held ceiling.**
+5. **Next:** Owner reviews Phase 12 on localhost (staging) and `PHASE12.md`, then names a hosting-only deploy. After that, the Phase 11 phone check — force-close, reopen, Overview totals vs History on a known job. Part E production shipped 5 Sep 2026 (backup first, then function with no `--force`, rules, recompute, hosting). Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile` and `maintainLedgerRollup`. Do not deploy unless he names the project and surface. Do not use `--force` on a functions deploy. **275 KB is the held ceiling.**
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. **All new files are TypeScript.** Existing JS converts only when a brief says so, or when the file is being substantially rewritten anyway.
 8. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE11.md. Phase 11 Parts A–E are live on production (5 Sep 2026): `maintainLedgerRollup`, Firestore rules, hosting, and `ledgerRollup/current`. Branch `phase-11-cold-start`. Localhost stays on staging. Restore tag: pre-phase11-2026-09-05. Next is his phone: force-close, reopen, Overview vs History. 275 KB is the held ceiling. Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE12.md. Phase 12 (front-end upgrade) is on branch `phase-12-fables-upgrade`, verified on localhost against staging, not deployed; it needs hosting only. Restore tag: pre-phase12-2026-09-05. Phase 11 Parts A–E are live on production (5 Sep 2026). Localhost stays on staging. 275 KB is the held ceiling (now 267.9 KB). Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -102,6 +102,10 @@ Brief: `PHASE10.md`. Mockup: `design/risingamp-costplan-vision.html`. Branch: `p
 
 Brief: `PHASE11.md`. Branch: `phase-11-cold-start`. Restore tag: `pre-phase11-2026-09-05`. Parts A–E are live: app-shell service worker, Firestore disk cache, directories on the screen that uses them, scoped invalidation, ledger rollups. Production backup 5 Sep 2026 (`backups/production-2026-09-05T10-02-16-995Z`). Function `maintainLedgerRollup` created with no `--force` (six functions, none deleted). Firestore rules released. Recompute wrote `ledgerRollup/current` for 72 Centenary Dr and Kelly St; second dry-run was zero. Hosting live (`index-CO1k2DT5.js` on https://risingamp.com.au). **Next is the owner’s phone:** force-close, reopen, Overview totals vs History. Initial JS gzip **272.7 KB**. **275 KB is the held ceiling.** Localhost stays on staging.
 
+## Phase 12 (on branch `phase-12-fables-upgrade`, not deployed)
+
+Brief and record: `PHASE12.md`. Restore tag: `pre-phase12-2026-09-05`. Front-end only: no rules, functions, schema or data changes. Dead code removed (`jobSummaries.js`, `firebaseService.js`, `invoiceNumber.ts`, `premium-animations.css`, unused CSS, unused exports, `recharts`). Real toasts. Real search palette. Sign out moved to the sidebar footer and Profile. Phone tab bar inside a job. Budget tracking retired (`/budget` redirects to Cost plan). Clients moved under the job. Add expense without fake buttons; expense form and scanner on the design tokens. History and Invoices have phone card lists, Australian dates and real money formatting. One `InvoiceDocument` with the builder's profile details drives the preview, the PDF and HIA progress claims. HIA contracts no longer 'read' a fake contract; stages are typed in. Jobs home shows cost to date from the rollup. Initial JS gzip **267.9 KB** (ceiling 275). Deploy is hosting only, when the owner names it.
+
 ## Out of scope until asked
 
 - Billing, Stripe, a second product, deleting leftover PIN folders unless the owner asks, deploying functions beyond what the current phase names, new npm packages except the list already in `PHASE8.md` and `vite-plugin-pwa` for Phase 11 Part A, Phase 4 Gmail-fallback removal, a service worker **offline queue**, App Check **enforcement** until staging traffic is clean, normalising stored money fields, dismantling the remaining AppContext ledger blob
@@ -109,7 +113,8 @@ Brief: `PHASE11.md`. Branch: `phase-11-cold-start`. Restore tag: `pre-phase11-20
 ## Continuity
 
 - `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
-- `PHASE11.md` — Cold start — active brief.
+- `PHASE12.md` — Front-end upgrade (Fable) — active brief and record.
+- `PHASE11.md` — Cold start — closed record (live 5 Sep 2026).
 - `PHASE10.md` — Cost Plan — closed record.
 - `PHASE9.md` — Job Files — closed record.
 - `PHASE8.md` — foundations / technical revamp — closed record.

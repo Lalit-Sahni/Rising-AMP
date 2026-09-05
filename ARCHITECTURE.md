@@ -1,11 +1,11 @@
-# Rising AMP — Architecture (Phase 11 Parts A–E live, 2026-09-05)
+# Rising AMP — Architecture (Phase 12 on the branch, 2026-09-05)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE11.md`. Phase 10 Cost Plan is live. Phase 11 Parts A–E are live on production (hosting, Firestore rules, `maintainLedgerRollup`, `ledgerRollup/current`) as of 5 Sep 2026.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE12.md`. Phase 11 Parts A–E are live on production (hosting, Firestore rules, `maintainLedgerRollup`, `ledgerRollup/current`) as of 5 Sep 2026. Phase 12 (`PHASE12.md`) is the front-end upgrade on branch `phase-12-fables-upgrade`: not yet deployed.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging (localhost): `rising-amp-staging`  
-Working branch: `phase-11-cold-start`. Never commit to `master` / `main`.
+Working branch: `phase-12-fables-upgrade`. Never commit to `master` / `main`.
 App name in the sidebar: “RisingAMP”. Look: Manrope, Palette 1, category colour as data ink only.
 
 ---
@@ -44,15 +44,17 @@ Wired in `src/components/MainContent.js`. Map: `src/navigation.ts`.
 | `/jobs/:jobId/history` | `HistoryPage.js` |
 | `/jobs/:jobId/files` | `FilesPage.tsx` |
 | `/jobs/:jobId/cost-plan` | `CostPlanPage.tsx` |
-| `/jobs/:jobId/budget` | `BudgetTrackingPage.js` |
+| `/jobs/:jobId/budget` | redirects to `cost-plan` (Budget tracking retired in Phase 12) |
 | `/jobs/:jobId/contracts` | `HIAContractPage.jsx` |
-| `/clients` | `ClientManagerPage.jsx` |
+| `/jobs/:jobId/clients` | `ClientManagerPage.jsx` (Phase 12; `/clients` redirects onto the open job) |
 | `/profile` | `ProfilePage.js` |
 | `/privacy` `/terms` | static HTML via `firebase.json` rewrites |
 | `/clear-sw` | static HTML that unregisters the service worker and clears its caches |
 | anything else | `NotFoundPage.jsx` |
 
 The URL is the source of truth for the open job. `localStorage` is a cold-start fallback only.
+
+**Shell (Phase 12).** `Header.js` is breadcrumb + job pill + Search. Sign out lives in the sidebar footer and on Profile, not in the header. On phones inside a job, `BottomNav.tsx` shows Overview · Invoices · Add · Files · History and toggles `html.has-tabbar` so `.content` and toasts pad above it (`showsJobTabBar` in `navigation.ts`). `PaletteHost.tsx` owns Ctrl/Cmd+K and lazy-loads `CommandPalette.tsx`, which searches jobs, screens, and the open job's expenses and invoices. `showToast` in `UIContext` renders a real `Toaster.tsx` (it used to log to the console only). `components/invoices/InvoiceDocument.tsx` is the one invoice layout; `pdf/invoicePdf.tsx` prints it (also used for HIA progress claims). Pure email-address helpers live in `firebase/emailAddress.ts` so the mail templates stay out of the first paint.
 
 Login (outside those routes): `LoginScreen.jsx`, `ProfileSetupScreen.jsx`, `AskForAccessScreen.jsx` when the signed-in email is on no organisation. While auth loads: `BootScreen.jsx`.
 

@@ -2,15 +2,19 @@
 
 ## Current branch
 
-`phase-11-cold-start` — Phase 11 Parts A–E (app-shell worker + Firestore disk cache + directories on the screen that uses them + scoped invalidation + ledger rollups) are **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-12-fables-upgrade` — Phase 12 front-end upgrade, **on the branch, not deployed**. Brief and record: `PHASE12.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
-Restore tags: `pre-phase11-2026-09-05` (this phase), `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
+Restore tags: `pre-phase12-2026-09-05` (this phase), `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local`  
 `.firebaserc` default is **staging**. Git push does not deploy.
 
-## Where we are (2026-09-05)
+## Where we are (2026-09-05, evening)
+
+**Phase 12 is eleven commits on `phase-12-fables-upgrade`, verified on localhost against staging (typecheck, 254 tests, build, and a real-browser click-through on phone and desktop including one add/void/purge round trip of a test expense), not deployed.** Front-end only: no rules, functions, schema or data writes changed. What it does, in one line each: dead code out (two dead modules, a dead stylesheet, ~30 dead exports, `recharts`, a tracked `.DS_Store`); toasts actually show; the search palette finds jobs, screens, expenses and invoices; sign out moved off the header; a phone tab bar inside a job; Budget tracking retired (`/budget` → Cost plan) and Clients moved under the job; Add expense without fake buttons and an expense form that fits a phone; History and Invoices with phone cards, Australian dates and real money; one invoice document with the builder's own details for preview, PDF and HIA progress claims; HIA contracts typed in instead of a fake "scan"; Jobs home shows spend from the rollup. Initial JS gzip **267.9 KB** (was 272.7 KB; ceiling 275). Full detail and reasons: `PHASE12.md`.
+
+**Next:** the owner reviews on localhost (`npm start`, phone-sized window) and the Phase 12 report, then names a hosting deploy: `firebase deploy --project production --only hosting`. Nothing else needs deploying. After that, the Phase 11 phone check (force-close, reopen, Overview vs History) still stands.
 
 **Phase 11 Parts A–E are live on production (5 Sep 2026).** Function `maintainLedgerRollup`, Part E Firestore rules, `ledgerRollup/current` for both production jobs, and hosting (`index-BTUZ3uws.js` on https://risingamp.com.au). Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview.
 
@@ -98,19 +102,18 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE11.md.
+Read CLAUDE.md, then PROGRESS.md, then PHASE12.md.
 
-Phase 11 is cold start. Parts A–E are live on
-production (5 Sep 2026): maintainLedgerRollup, Firestore
-rules, hosting, ledgerRollup/current. Branch
-phase-11-cold-start. Restore tag pre-phase11-2026-09-05.
-Localhost stays on staging. Deploy nothing unless he names it.
+Phase 12 is the front-end upgrade: eleven commits on branch
+phase-12-fables-upgrade, verified on localhost against staging,
+NOT deployed. Restore tag pre-phase12-2026-09-05. Phase 11 Parts
+A–E are live on production (5 Sep 2026). Localhost stays on
+staging. Deploy nothing unless he names it; Phase 12 needs
+hosting only.
 
-Part E is ledger rollups (`maintainLedgerRollup`, `ledgerRollup/current`).
-Do not redo the boot cache, the service worker, the Firestore listeners,
-the directory hooks, or scoped invalidation. Next is his phone:
-force-close, reopen, Overview totals vs History. 275 KB is the
-held ceiling.
+Do not redo the toasts, the search palette, the tab bar, the
+invoice document, the HIA rebuild, or the dead-code removal.
+275 KB is the held ceiling (now 267.9 KB).
 
 Never cache Firestore, Cloud Function or Storage responses in
 the service worker. Never hard-delete user records. Never accept
@@ -119,6 +122,7 @@ a pasted API key.
 
 ## Remaining work
 
+0. **Phase 12 review and hosting deploy** — owner reviews localhost and `PHASE12.md`, then names `firebase deploy --project production --only hosting`.
 1. **Phone check on production** — force-close, reopen, Overview totals vs History on a known job. Hosting, function, rules and recompute are already live (5 Sep 2026).
 2. Click through Cost Plan on the live shopfront (sidebar **Cost plan**, then a target, trades or an import). Localhost stays on staging. In-agent browser click-through of Overview vs History is still not done.
 3. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; money-field migration; dismantle remaining AppContext ledger/directory blob.
@@ -160,6 +164,8 @@ a pasted API key.
 - [x] Phase 11 Part D — invalidate only the keys a write changes (production hosting 5 Sep 2026)
 - [x] Phase 11 Part E — ledger rollups (`maintainLedgerRollup`) live on production 5 Sep 2026
 - [ ] Phase 11 phone — Overview totals vs History after force-close / reopen
+- [x] Phase 12 — front-end upgrade on the branch (dead code, toasts, search, tab bar, Add expense, History, Invoices, Jobs home, HIA)
+- [ ] Phase 12 — owner review, then production hosting
 
 ## What shipped (localhost / staging)
 
@@ -186,7 +192,7 @@ Honest numbers, display only, no new stored verdict field, no document rewrites.
 
 **Jobs home** lists every invited job, rolls those metrics up. Combined margin only includes jobs that have a paid-invoice figure.
 
-**Nav:** Jobs, Add expense, Invoices, Files, History. Budget tracking, HIA contracts, and Clients stay under **More**. Invite/rename still on each job row (person icon / pencil).
+**Nav:** Jobs, Overview, Cost plan, Add expense, Invoices, Files, History. Clients and HIA contracts under **More**. Budget tracking retired in Phase 12. Invite/rename still on each job row (person icon / pencil). Phones get a tab bar inside a job.
 
 **Auth (localhost / staging)**
 - Sign in and sign up match `design/risingamp-auth.html` (Google or email + password). Any email domain.
