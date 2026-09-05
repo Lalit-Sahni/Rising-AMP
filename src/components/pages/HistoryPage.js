@@ -1,28 +1,101 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { Trash2, Pencil, Filter, Search, Download, Eye, Calendar, DollarSign, Hash, RotateCcw, Image } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Download,
+  Eye,
+  Image,
+  Pencil,
+  RotateCcw,
+  Search,
+  Trash2,
+} from 'lucide-react';
 import ExportDialog from '../ExportDialog';
 import ExpenseModal from '../ExpenseModal';
 import ReceiptViewer from '../ReceiptViewer';
 import CategoryChip from '../ui/CategoryChip';
-import { CATEGORY_STYLE } from '../../utils/categoryStyle';
-import { getExpenseFaceTotal, getExpenseTotal, isVoidExpense, expenseHasReceipt } from '../../utils/jobMetrics';
 import EmptyState from '../EmptyState';
 import ExpenseTradePicker from '../costPlan/ExpenseTradePicker';
 import ExpenseCategoryPicker from '../costPlan/ExpenseCategoryPicker';
+import { CATEGORY_STYLE, getCategoryStyle } from '../../utils/categoryStyle';
+import {
+  expenseDate,
+  expenseHasReceipt,
+  formatMoney,
+  getExpenseFaceTotal,
+  getExpenseTotal,
+  isVoidExpense,
+} from '../../utils/jobMetrics';
+import { expenseDisplayName } from '../../domain/expenseDisplay';
 import { useCostPlan, useTradeList } from '../../hooks/useCostPlan';
 import { activeTrades, canCodeExpenses } from '../../domain/costPlan';
+import { parseCalendarDate } from '../../dates';
 
-const categoryLabels = {
-  labour: 'Labour',
-  trade: 'Trade',
-  equipment: 'Equipment',
-  service: 'Service',
-  purchase: 'Materials',
-  installation: 'Installation',
-  investor: 'Investor',
+const DAY = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+
+function formatDay(value) {
+  const date = value instanceof Date ? value : parseCalendarDate(value);
+  if (!date || Number.isNaN(date.getTime())) return '—';
+  return DAY.format(date);
+}
+
+function money(value) {
+  return formatMoney(value, { cents: true });
+}
+
+const DETAIL_FIELDS = {
+  labour: [
+    ['Worker', 'workerName'],
+    ['Role', 'role'],
+    ['Hours', 'hours'],
+    ['Rate', 'rate', (v) => `${money(Number(v))}/hr`],
+  ],
+  trade: [
+    ['Trade', 'tradeName'],
+    ['Trade type', 'tradeCategory'],
+    ['Task', 'task'],
+  ],
+  purchase: [
+    ['Item', 'itemName'],
+    ['Supplier', 'supplier'],
+    ['Quantity', 'quantity'],
+    ['Unit cost', 'unitCost', (v) => money(Number(v))],
+  ],
+  equipment: [
+    ['Equipment', 'equipmentName'],
+    ['Start', 'startDate', formatDay],
+    ['End', 'endDate', formatDay],
+    ['Total price', 'totalPrice', (v) => money(Number(v))],
+  ],
+  service: [
+    ['Service', 'serviceName'],
+    ['Provider', 'provider'],
+    ['Cost', 'cost', (v) => money(Number(v))],
+  ],
+  investor: [
+    ['What it is', 'itemName'],
+  ],
+  installation: [
+    ['Item', 'item'],
+  ],
 };
+
+function detailRows(expense) {
+  const rows = [];
+  rows.push(['Date', formatDay(expenseDate(expense))]);
+  rows.push(['Amount', money(getExpenseFaceTotal(expense))]);
+  if (expense.paidBy) rows.push(['Paid by', expense.paidBy]);
+  (DETAIL_FIELDS[expense.category] || []).forEach(([label, key, format]) => {
+    const value = expense[key];
+    if (value == null || value === '') return;
+    rows.push([label, format ? format(value) : String(value)]);
+  });
+  if (expense.notes) rows.push(['Notes', expense.notes]);
+  return rows;
+}
 
 export default function HistoryPage() {
   const {
@@ -35,6 +108,7 @@ export default function HistoryPage() {
     jobId,
     codeExpenseTrade,
     codeExpenseCategory,
+    setCurrentPage,
   } = useApp();
   const planQuery = useCostPlan(orgId, jobId);
   const tradeQuery = useTradeList(orgId);
@@ -47,10 +121,7 @@ export default function HistoryPage() {
   const [payerFilter, setPayerFilter] = useState('all');
   const [expandedExpense, setExpandedExpense] = useState(null);
   const [editingExpense, setEditingExpense] = useState(null);
-  const [sortConfig, setSortConfig] = useState({
-    key: 'date',
-    direction: 'desc'
-  });
+  const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showRecentlyDeleted, setShowRecentlyDeleted] = useState(false);
   const [receiptView, setReceiptView] = useState(null);
@@ -65,66 +136,6 @@ export default function HistoryPage() {
     navigate('.', { replace: true, state: {} });
   }, [location.state, expenses, navigate]);
 
-  // Safe date helper for sorting
-  const safeDate = (expense) => {
-    /**
-     * Normalise any supported date-like value into a valid JS Date
-     * Supports:
-     * - Firestore Timestamp objects (value.toDate())
-     * - Native Date instances
-     * - ISO / string dates
-     */
-    const toValidDate = (value) => {
-      if (!value) return null;
-
-      // Firestore Timestamp (has .toDate())
-      if (value.toDate && typeof value.toDate === 'function') {
-        const dt = value.toDate();
-        return isNaN(dt.getTime()) ? null : dt;
-      }
-
-      // Already a JS Date
-      if (value instanceof Date) {
-        return isNaN(value.getTime()) ? null : value;
-      }
-
-      // Fallback: treat as string/number
-      const dt = new Date(value);
-      return isNaN(dt.getTime()) ? null : dt;
-    };
-
-    // Prefer explicit form date, then fallback to created timestamp
-    const formDate = toValidDate(expense.date);
-    if (formDate) return formDate;
-
-    const createdDate = toValidDate(expense.timestamp);
-    if (createdDate) return createdDate;
-
-    return null;
-  };
-
-  // Helper function to get expense display name
-  const getExpenseDisplayName = (expense) => {
-    switch (expense.category) {
-      case 'labour':
-        return expense.workerName || 'Labour';
-      case 'trade':
-        return expense.tradeName || expense.trade || 'Trade';
-      case 'equipment':
-        return expense.equipmentName || 'Equipment';
-      case 'purchase':
-        return expense.itemName || 'Purchase';
-      case 'service':
-        return expense.serviceName || 'Service';
-      case 'installation':
-        return expense.item || 'Installation';
-      case 'investor':
-        return expense.itemName || expense.serviceName || 'Investor';
-      default:
-        return expense.category || 'Unknown';
-    }
-  };
-
   const openHistoryReceipt = async (expense) => {
     const { resolveExpenseReceiptUrl } = await import('../../firebase/resolveReceiptUrl');
     const url = await resolveExpenseReceiptUrl(expense, {
@@ -135,134 +146,73 @@ export default function HistoryPage() {
       showToast('Could not open that receipt', 'error');
       return;
     }
-    setReceiptView({
-      url,
-      name: getExpenseDisplayName(expense),
-    });
+    setReceiptView({ url, name: expenseDisplayName(expense) });
   };
 
-  // Unique payer names for filter dropdown
   const uniquePayers = useMemo(() => {
-    const names = new Set(expenses.filter(e => e.paidBy && !isVoidExpense(e)).map(e => e.paidBy));
+    const names = new Set(expenses.filter((e) => e.paidBy && !isVoidExpense(e)).map((e) => e.paidBy));
     return Array.from(names).sort();
   }, [expenses]);
 
-  // Filter and sort expenses
   const filteredAndSortedExpenses = useMemo(() => {
-    let filtered = expenses.filter(expense => {
-      // Category filter
-      if (categoryFilter !== 'all' && expense.category !== categoryFilter) {
-        return false;
+    const q = searchTerm.trim().toLowerCase();
+    const filtered = expenses.filter((expense) => {
+      if (categoryFilter !== 'all' && expense.category !== categoryFilter) return false;
+      if (payerFilter !== 'all' && expense.paidBy !== payerFilter) return false;
+      if (q) {
+        const hay = [
+          expenseDisplayName(expense),
+          getCategoryStyle(expense.category).label,
+          expense.notes,
+          expense.supplier,
+          expense.provider,
+          expense.paidBy,
+          String(getExpenseFaceTotal(expense)),
+        ].map((v) => String(v || '').toLowerCase()).join(' ');
+        if (!hay.includes(q)) return false;
       }
-
-      // Payer filter
-      if (payerFilter !== 'all' && expense.paidBy !== payerFilter) {
-        return false;
-      }
-
-      // Search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const displayName = getExpenseDisplayName(expense).toLowerCase();
-        const category = (categoryLabels[expense.category] || expense.category || '').toLowerCase();
-        const notes = (expense.notes || '').toLowerCase();
-
-        if (!displayName.includes(searchLower) &&
-            !category.includes(searchLower) &&
-            !notes.includes(searchLower)) {
-          return false;
-        }
-      }
-
       return true;
     });
 
-    // Sort expenses
     filtered.sort((a, b) => {
       if (sortConfig.key === 'date') {
-        const dateA = safeDate(a);
-        const dateB = safeDate(b);
-        
-        // Handle null dates
+        const dateA = expenseDate(a);
+        const dateB = expenseDate(b);
         if (!dateA && !dateB) return 0;
-        if (!dateA) return 1;  // null dates go to end
+        if (!dateA) return 1;
         if (!dateB) return -1;
-        
         return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
       }
-      
       if (sortConfig.key === 'total') {
         const totalA = getExpenseFaceTotal(a);
         const totalB = getExpenseFaceTotal(b);
         return sortConfig.direction === 'asc' ? totalA - totalB : totalB - totalA;
       }
-      
-      const aValue = a[sortConfig.key];
-      const bValue = b[sortConfig.key];
-      
-      if (sortConfig.direction === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      }
-      return aValue < bValue ? 1 : -1;
+      const aValue = String(a[sortConfig.key] || '');
+      const bValue = String(b[sortConfig.key] || '');
+      return sortConfig.direction === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
     });
 
     return filtered;
   }, [expenses, searchTerm, categoryFilter, payerFilter, sortConfig]);
 
-  // Handle sorting
   const handleSort = (key) => {
-    setSortConfig(prevConfig => ({
+    setSortConfig((prev) => ({
       key,
-      direction: prevConfig.key === key && prevConfig.direction === 'desc' ? 'asc' : 'desc'
+      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc',
     }));
   };
 
-  // Sort icon component
   const SortIcon = ({ column }) => {
-    if (sortConfig.key !== column) {
-      return <Hash className="w-4 h-4 text-slate-400" />;
-    }
-    return sortConfig.direction === 'asc' 
-      ? <Hash className="w-4 h-4 text-accent" />
-      : <Hash className="w-4 h-4 text-accent" />;
-  };
-
-  // Format date with proper validation
-  const formatDate = (dateString) => {
-    if (!dateString) return '—';
-    
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return '—';
-      }
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      });
-    } catch (error) {
-      console.error('Date formatting error:', error);
-      return '—';
-    }
-  };
-
-  // Get the correct date for display (form date first, then timestamp)
-  const getExpenseDate = (expense) => {
-    const safeDateObj = safeDate(expense);
-    return safeDateObj ? safeDateObj.toISOString() : null;
+    if (sortConfig.key !== column) return <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />;
+    return sortConfig.direction === 'asc'
+      ? <ArrowUp className="w-3.5 h-3.5 text-accent" />
+      : <ArrowDown className="w-3.5 h-3.5 text-accent" />;
   };
 
   const handleDelete = async (expenseId) => {
-    if (!expenseId) {
-      showToast('Cannot void expense: No ID found', 'error');
-      return;
-    }
-
-    if (!window.confirm('Move this expense to Recently deleted? It leaves this list. Totals will ignore it.')) {
-      return;
-    }
-
+    if (!expenseId) return;
+    if (!window.confirm('Move this expense to Recently deleted? It leaves this list and totals ignore it. You can restore it later.')) return;
     await deleteExpenseFromFirebase(expenseId);
   };
 
@@ -272,9 +222,7 @@ export default function HistoryPage() {
 
   const handlePurge = async (expenseId) => {
     if (!expenseId) return;
-    if (!window.confirm('Remove this expense for good? This cannot be undone.')) {
-      return;
-    }
+    if (!window.confirm('Remove this expense for good? This cannot be undone.')) return;
     await purgeExpenseFromFirebase(expenseId);
   };
 
@@ -286,7 +234,7 @@ export default function HistoryPage() {
         filename,
       );
       if (result.success) {
-        showToast('Excel file exported successfully!', 'success');
+        showToast('Excel file downloaded', 'success');
       } else {
         showToast(`Export failed: ${result.error}`, 'error');
       }
@@ -296,99 +244,148 @@ export default function HistoryPage() {
     }
   };
 
+  const hasFilters = Boolean(searchTerm) || categoryFilter !== 'all' || payerFilter !== 'all';
+  const clearFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('all');
+    setPayerFilter('all');
+  };
 
-  // Calculate totals
   const liveRows = filteredAndSortedExpenses.filter((expense) => !isVoidExpense(expense));
   const deletedRows = filteredAndSortedExpenses.filter((expense) => isVoidExpense(expense));
   const rows = showRecentlyDeleted ? deletedRows : liveRows;
   const totalAmount = liveRows.reduce((sum, expense) => sum + getExpenseTotal(expense), 0);
+  const nothingOnJob = expenses.length === 0;
+
+  const rowActions = (expense) => (
+    showRecentlyDeleted ? (
+      <>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-ot-sm border border-hairline text-[12px] font-semibold text-ink hover:bg-canvas"
+          onClick={(e) => { e.stopPropagation(); handleRestore(expense.id); }}
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Restore
+        </button>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-ot-sm border border-hairline text-[12px] font-semibold text-neg hover:bg-canvas"
+          onClick={(e) => { e.stopPropagation(); handlePurge(expense.id); }}
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          Remove for good
+        </button>
+      </>
+    ) : (
+      <>
+        {expenseHasReceipt(expense) ? (
+          <button
+            type="button"
+            className="w-8 h-8 grid place-items-center rounded-ot-sm border border-hairline text-slate-600 hover:text-ink hover:bg-canvas"
+            title="View receipt"
+            aria-label="View receipt"
+            onClick={(e) => { e.stopPropagation(); openHistoryReceipt(expense); }}
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="w-8 h-8 grid place-items-center rounded-ot-sm border border-hairline text-slate-600 hover:text-ink hover:bg-canvas"
+          title="Edit"
+          aria-label="Edit"
+          onClick={(e) => { e.stopPropagation(); setEditingExpense(expense); }}
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+        <button
+          type="button"
+          className="w-8 h-8 grid place-items-center rounded-ot-sm border border-hairline text-slate-600 hover:text-neg hover:bg-canvas"
+          title="Move to Recently deleted"
+          aria-label="Move to Recently deleted"
+          onClick={(e) => { e.stopPropagation(); handleDelete(expense.id); }}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </>
+    )
+  );
 
   return (
     <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
       <div className="max-w-7xl mx-auto space-y-4">
-        
-        {/* Header */}
+
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="eyebrow">Ledger</div>
-            <h1 className="text-[26px] font-bold tracking-tight mt-1">History</h1>
+            <h1 className="text-[25px] font-extrabold tracking-tight mt-1">History</h1>
             <p className="text-[13.5px] text-slate-600 mt-0.5">Every recorded expense on this job.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setShowExportDialog(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-2 bg-accent hover:bg-accent-600 text-white rounded-ot-sm text-[12.5px] font-medium"
-            >
-              <Download className="w-4 h-4" />
-              Export
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowExportDialog(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 bg-surface border border-hairline hover:border-[#D6D9DD] text-ink rounded-ot-sm text-[12.5px] font-semibold"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export to Excel</span>
+            <span className="sm:hidden">Export</span>
+          </button>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-3.5">
-          <div className="relative bg-surface rounded-ot p-[18px] border border-hairline shadow-whisper">
-            <span className="absolute left-[18px] right-[18px] top-0 h-0.5 bg-accent rounded-b" />
-            <p className="text-slate-400 text-xs font-medium">Total expenses</p>
-            <p className="tabular text-[25px] font-semibold text-ink mt-2.5">{liveRows.length}</p>
+          <div className="bg-surface rounded-ot p-[15px] md:p-[18px] border border-hairline shadow-whisper">
+            <p className="text-slate-400 text-[11.5px] font-semibold">{hasFilters ? 'Matching expenses' : 'Expenses'}</p>
+            <p className="tabular text-[22px] md:text-[25px] font-extrabold tracking-tight text-ink mt-1.5">{liveRows.length}</p>
           </div>
-
-          <div className="bg-surface rounded-ot p-[18px] border border-hairline shadow-whisper">
-            <p className="text-slate-400 text-xs font-medium">Total amount</p>
-            <p className="tabular text-[25px] font-semibold text-ink mt-2.5">${totalAmount.toLocaleString()}</p>
+          <div className="relative bg-surface rounded-ot p-[15px] md:p-[18px] border border-hairline shadow-whisper">
+            <span className="absolute left-[15px] right-[15px] md:left-[18px] md:right-[18px] top-0 h-0.5 bg-accent rounded-b" />
+            <p className="text-slate-400 text-[11.5px] font-semibold">{hasFilters ? 'Matching total' : 'Total'}</p>
+            <p className="tabular text-[22px] md:text-[25px] font-extrabold tracking-tight text-ink mt-1.5">{formatMoney(totalAmount)}</p>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-surface rounded-ot p-4 md:p-5 border border-hairline shadow-whisper">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-ink">Filters</h2>
-            <Filter className="w-4 h-4 text-slate-400" />
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div className="bg-surface rounded-ot p-3.5 md:p-5 border border-hairline shadow-whisper">
+          <div className="flex flex-col sm:flex-row gap-2.5">
+            <label className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
-                type="text"
-                placeholder="Search expenses..."
+                type="search"
+                placeholder="Search by name, supplier, note or amount"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder-slate-400 focus:outline-none focus:border-accent"
+                className="w-full pl-10 pr-4 py-2.5 bg-canvas border border-hairline rounded-ot-sm text-ink placeholder:text-slate-400 focus:outline-none focus:border-accent"
               />
-            </div>
-
-            {/* Payer Filter */}
-            <select
-              value={payerFilter}
-              onChange={(e) => setPayerFilter(e.target.value)}
-              className="px-4 py-2 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent"
-            >
-              <option value="all">All Payers</option>
-              {uniquePayers.map(name => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-
-            {/* Clear Filters */}
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setCategoryFilter('all');
-                setPayerFilter('all');
-              }}
-              className="pressable px-4 py-2 bg-surface border border-hairline text-ink rounded-ot-sm text-[13px] font-medium"
-            >
-              Clear Filters
-            </button>
+            </label>
+            {uniquePayers.length > 0 ? (
+              <select
+                value={payerFilter}
+                onChange={(e) => setPayerFilter(e.target.value)}
+                className="px-3.5 py-2.5 bg-canvas border border-hairline rounded-ot-sm text-ink focus:outline-none focus:border-accent sm:max-w-[200px]"
+                aria-label="Paid by"
+              >
+                <option value="all">Anyone paid</option>
+                {uniquePayers.map((name) => (
+                  <option key={name} value={name}>Paid by {name}</option>
+                ))}
+              </select>
+            ) : null}
+            {hasFilters ? (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="pressable px-3.5 py-2.5 bg-surface border border-hairline text-ink rounded-ot-sm text-[13px] font-semibold"
+              >
+                Clear
+              </button>
+            ) : null}
           </div>
 
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          <div className="flex flex-wrap gap-1.5 mt-3 -mx-3.5 px-3.5 md:mx-0 md:px-0 overflow-x-auto">
             <button
               type="button"
               onClick={() => setCategoryFilter('all')}
-              className={`pressable px-2.5 py-1 rounded-full text-xs font-medium border ${
+              className={`pressable px-2.5 py-1 rounded-full text-xs font-semibold border ${
                 categoryFilter === 'all'
                   ? 'border-accent bg-accent-tint text-accent'
                   : 'border-hairline bg-surface text-slate-600'
@@ -402,8 +399,8 @@ export default function HistoryPage() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => setCategoryFilter(key)}
-                  className={`pressable inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-surface ${
+                  onClick={() => setCategoryFilter(active ? 'all' : key)}
+                  className={`pressable inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border bg-surface whitespace-nowrap ${
                     active ? 'border-accent text-ink' : 'border-hairline text-slate-600'
                   }`}
                 >
@@ -415,13 +412,12 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        {/* Expense Table */}
         <div className="bg-surface rounded-ot border border-hairline shadow-whisper overflow-hidden">
           <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-hairline">
             <p className="text-[13px] text-slate-600">
               {showRecentlyDeleted
                 ? 'Off the job until you restore them or remove them for good.'
-                : 'Every recorded expense on this job.'}
+                : `${rows.length} ${rows.length === 1 ? 'expense' : 'expenses'}${hasFilters ? ' match' : ''}.`}
             </p>
             <button
               type="button"
@@ -436,107 +432,71 @@ export default function HistoryPage() {
                 : `Recently deleted${deletedRows.length ? ` (${deletedRows.length})` : ''}`}
             </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-ink">
-              <thead className="bg-canvas text-slate-600 text-[11px] uppercase tracking-wide">
-                <tr>
-                  <th 
-                    className="px-4 py-3 cursor-pointer hover:text-ink"
-                    onClick={() => handleSort('date')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="w-3 h-3" />
-                      <span>Date</span>
-                      <SortIcon column="date" />
-                    </div>
-                  </th>
-                  <th 
-                    className="px-4 py-3 cursor-pointer hover:text-ink"
-                    onClick={() => handleSort('category')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <span>Category</span>
-                      <SortIcon column="category" />
-                    </div>
-                  </th>
-                  <th className="px-4 py-3">
-                    <span>Description</span>
-                  </th>
-                  {showTradeCoding && !showRecentlyDeleted ? (
-                    <th className="px-4 py-3">
-                      <span>Cost plan</span>
-                    </th>
-                  ) : null}
-                  <th 
-                    className="px-4 py-3 cursor-pointer hover:text-ink"
-                    onClick={() => handleSort('total')}
-                  >
-                    <div className="flex items-center space-x-1">
-                      <DollarSign className="w-3 h-3" />
-                      <span>Amount</span>
-                      <SortIcon column="total" />
-                    </div>
-                  </th>
-                  <th className="px-4 py-3">
-                    <span>Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length > 0 ? (
-                  rows.map((expense, index) => (
-                    <React.Fragment key={`${expense.id || index}-${getExpenseDate(expense)}`}>
-                      <tr 
-                        className="bg-surface border-b border-hairline hover:bg-canvas transition-colors cursor-pointer"
-                        onClick={() => setExpandedExpense(expandedExpense === expense.id ? null : expense.id)}
+
+          {rows.length === 0 ? (
+            <div className="p-4">
+              {nothingOnJob && !showRecentlyDeleted ? (
+                <EmptyState
+                  title="No expenses yet"
+                  body="The first receipt or labour row you add will show up here."
+                  actionLabel="Add expense"
+                  onAction={() => setCurrentPage('add-expense')}
+                />
+              ) : (
+                <EmptyState
+                  title={showRecentlyDeleted ? 'Recently deleted is empty' : 'Nothing matches'}
+                  body={showRecentlyDeleted
+                    ? 'Expenses you move here can be restored or removed for good.'
+                    : 'Try a different search, or clear the filters.'}
+                  actionLabel={!showRecentlyDeleted && hasFilters ? 'Clear filters' : undefined}
+                  onAction={!showRecentlyDeleted && hasFilters ? clearFilters : undefined}
+                />
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Phone: cards */}
+              <ul className="md:hidden divide-y divide-hairline">
+                {rows.map((expense) => {
+                  const style = getCategoryStyle(expense.category);
+                  const name = expenseDisplayName(expense);
+                  return (
+                    <li key={expense.id} className="px-4 py-3">
+                      <button
+                        type="button"
+                        className="w-full text-left"
+                        onClick={() => (showRecentlyDeleted ? null : setEditingExpense(expense))}
                       >
-                        <td className="px-4 py-4 text-slate-600 font-mono text-xs">
-                          {formatDate(getExpenseDate(expense))}
-                        </td>
-                        <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
-                          {showRecentlyDeleted ? (
-                            <CategoryChip category={expense.category} />
-                          ) : (
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: style.hex }} />
+                              <span className="text-[14px] font-bold text-ink truncate">{name}</span>
+                              {expenseHasReceipt(expense) ? <Image className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : null}
+                            </div>
+                            <div className="text-[12px] text-slate-400 mt-0.5 truncate">
+                              {style.label} · {formatDay(expenseDate(expense))}
+                              {expense.paidBy ? ` · ${expense.paidBy}` : ''}
+                            </div>
+                            {expense.notes ? (
+                              <div className="text-[12px] text-slate-500 mt-0.5 line-clamp-2">{expense.notes}</div>
+                            ) : null}
+                          </div>
+                          <span className={`tabular text-[15px] font-extrabold shrink-0 ${showRecentlyDeleted ? 'text-slate-400 line-through' : 'text-ink'}`}>
+                            {money(getExpenseFaceTotal(expense))}
+                          </span>
+                        </div>
+                      </button>
+                      <div className="flex items-center justify-between gap-2 mt-2.5" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {!showRecentlyDeleted ? (
                             <ExpenseCategoryPicker
                               expense={expense}
                               compact
                               onChange={(category) => codeExpenseCategory(expense.id, category)}
                             />
-                          )}
-                        </td>
-                        <td className="px-4 py-4 font-medium text-ink">
-                          <div>
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span className="truncate">{getExpenseDisplayName(expense)}</span>
-                              {expenseHasReceipt(expense) ? (
-                                <button
-                                  type="button"
-                                  className="shrink-0 p-1 rounded text-slate-400 hover:text-accent"
-                                  aria-label="View receipt"
-                                  title="View receipt"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    openHistoryReceipt(expense);
-                                  }}
-                                >
-                                  <Image className="w-3.5 h-3.5" />
-                                </button>
-                              ) : null}
-                            </div>
-                            {expense.paidBy && (
-                              <div className="text-xs text-slate-400 mt-0.5">
-                                Paid by: {expense.paidBy}
-                              </div>
-                            )}
-                            {expense.notes && (
-                              <div className="text-xs text-slate-400 mt-1 truncate max-w-xs">
-                                {expense.notes}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        {showTradeCoding && !showRecentlyDeleted ? (
-                          <td className="px-4 py-4" onClick={(event) => event.stopPropagation()}>
+                          ) : <CategoryChip category={expense.category} />}
+                          {showTradeCoding && !showRecentlyDeleted ? (
                             <ExpenseTradePicker
                               expense={expense}
                               expenses={expenses}
@@ -545,282 +505,126 @@ export default function HistoryPage() {
                               disabled={String(expense.category || '').toLowerCase() === 'investor'}
                               onCode={(tradeId) => codeExpenseTrade(expense.id, tradeId)}
                             />
-                          </td>
-                        ) : null}
-                        <td className="px-4 py-4 tabular font-medium text-ink">
-                          ${getExpenseFaceTotal(expense).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center gap-3">
-                            {showRecentlyDeleted ? (
-                              <>
-                                <button
-                                  className="text-slate-400 hover:text-accent transition-colors"
-                                  title="Restore"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRestore(expense.id);
-                                  }}
-                                >
-                                  <RotateCcw className="w-4 h-4" />
-                                </button>
-                                <button
-                                  className="text-neg hover:opacity-80 transition-colors"
-                                  title="Remove for good"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handlePurge(expense.id);
-                                  }}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                            {expenseHasReceipt(expense) ? (
-                            <button
-                              className="text-slate-400 hover:text-accent transition-colors"
-                              title="View receipt"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openHistoryReceipt(expense);
-                              }}
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            ) : null}
-                            <button
-                              className="text-slate-400 hover:text-accent transition-colors"
-                              title="Edit"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingExpense(expense);
-                              }}
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              className="text-neg hover:opacity-80 transition-colors"
-                              title="Move to Recently deleted"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDelete(expense.id);
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                      
-                      {/* Expanded Details Row */}
-                      {expandedExpense === expense.id && (
-                        <tr className="bg-canvas border-b border-hairline">
-                          <td colSpan={showTradeCoding && !showRecentlyDeleted ? '6' : '5'} className="px-4 py-6">
-                            <div className="bg-surface rounded-ot p-5 border border-hairline">
-                              <h3 className="text-sm font-semibold text-ink mb-4 flex items-center gap-2">
-                                <CategoryChip category={expense.category} />
-                                {getExpenseDisplayName(expense)}
-                              </h3>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                  <h4 className="text-sm font-semibold text-ink mb-3">Expense Details</h4>
-                                  <div className="space-y-2 text-sm">
-                                    <div className="flex justify-between">
-                                      <span className="text-slate-600">Date:</span>
-                                      <span className="text-ink">{formatDate(getExpenseDate(expense))}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span className="text-slate-600">Amount:</span>
-                                      <span className="tabular text-ink font-medium">${getExpenseFaceTotal(expense).toLocaleString()}</span>
-                                    </div>
-                                    {expense.paidBy && (
-                                      <div className="flex justify-between">
-                                        <span className="text-slate-600">Paid by:</span>
-                                        <span className="text-ink font-medium">{expense.paidBy}</span>
-                                      </div>
-                                    )}
-                                    {expense.notes && (
-                                      <div className="flex justify-between">
-                                        <span className="text-slate-600">Notes:</span>
-                                        <span className="text-ink text-right max-w-xs">{expense.notes}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                                
-                                <div>
-                                  <h4 className="text-sm font-semibold text-ink mb-3">Category Specific Details</h4>
-                                  <div className="space-y-2 text-sm">
-                                    {expense.category === 'labour' && (
-                                      <>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Worker:</span>
-                                          <span className="text-ink">{expense.workerName || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Role:</span>
-                                          <span className="text-ink">{expense.role || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Hours:</span>
-                                          <span className="text-ink">{expense.hours || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Rate:</span>
-                                          <span className="text-ink">${expense.rate || 'N/A'}/hr</span>
-                                        </div>
-                                      </>
-                                    )}
-                                    
-                                    {expense.category === 'trade' && (
-                                      <>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Trade:</span>
-                                          <span className="text-ink">{expense.tradeName || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Category:</span>
-                                          <span className="text-ink">{expense.tradeCategory || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Task:</span>
-                                          <span className="text-ink">{expense.task || 'N/A'}</span>
-                                        </div>
-                                      </>
-                                    )}
-                                    
-                                    {expense.category === 'purchase' && (
-                                      <>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Item:</span>
-                                          <span className="text-ink">{expense.itemName || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Supplier:</span>
-                                          <span className="text-ink">{expense.supplier || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Quantity:</span>
-                                          <span className="text-ink">{expense.quantity || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Unit Cost:</span>
-                                          <span className="text-ink">${expense.unitCost || 'N/A'}</span>
-                                        </div>
-                                      </>
-                                    )}
-                                    
-                                    {expense.category === 'equipment' && (
-                                      <>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Equipment:</span>
-                                          <span className="text-ink">{expense.equipmentName || 'N/A'}</span>
-                                        </div>
-                                        {expense.startDate && (
-                                          <div className="flex justify-between">
-                                            <span className="text-slate-600">Start Date:</span>
-                                            <span className="text-ink">{formatDate(expense.startDate)}</span>
-                                          </div>
-                                        )}
-                                        {expense.endDate && (
-                                          <div className="flex justify-between">
-                                            <span className="text-slate-600">End Date:</span>
-                                            <span className="text-ink">{formatDate(expense.endDate)}</span>
-                                          </div>
-                                        )}
-                                        {expense.totalPrice && (
-                                          <div className="flex justify-between">
-                                            <span className="text-slate-600">Total Price:</span>
-                                            <span className="text-ink">${expense.totalPrice}</span>
-                                          </div>
-                                        )}
-                                      </>
-                                    )}
-                                    
-                                    {expense.category === 'service' && (
-                                      <>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Service:</span>
-                                          <span className="text-ink">{expense.serviceName || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Provider:</span>
-                                          <span className="text-ink">{expense.provider || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Cost:</span>
-                                          <span className="text-ink">${expense.cost || 'N/A'}</span>
-                                        </div>
-                                      </>
-                                    )}
+                          ) : null}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">{rowActions(expense)}</div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
 
-                                    {expense.category === 'investor' && (
-                                      <>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">What it is:</span>
-                                          <span className="text-ink">{expense.itemName || 'N/A'}</span>
-                                        </div>
-                                        <div className="flex justify-between">
-                                          <span className="text-slate-600">Amount:</span>
-                                          <span className="text-ink">${expense.amount || expense.total || 'N/A'}</span>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              {expenseHasReceipt(expense) ? (
-                                <div className="mt-5 pt-4 border-t border-hairline">
-                                  <h4 className="text-sm font-semibold text-ink mb-2">Receipt</h4>
+              {/* Desktop: table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full text-sm text-left text-ink">
+                  <thead className="bg-canvas text-slate-600 text-[11px] uppercase tracking-wide">
+                    <tr>
+                      <th className="px-4 py-3 cursor-pointer hover:text-ink select-none" onClick={() => handleSort('date')}>
+                        <span className="inline-flex items-center gap-1.5">Date <SortIcon column="date" /></span>
+                      </th>
+                      <th className="px-4 py-3 cursor-pointer hover:text-ink select-none" onClick={() => handleSort('category')}>
+                        <span className="inline-flex items-center gap-1.5">Category <SortIcon column="category" /></span>
+                      </th>
+                      <th className="px-4 py-3">Description</th>
+                      {showTradeCoding && !showRecentlyDeleted ? <th className="px-4 py-3">Cost plan</th> : null}
+                      <th className="px-4 py-3 text-right cursor-pointer hover:text-ink select-none" onClick={() => handleSort('total')}>
+                        <span className="inline-flex items-center gap-1.5">Amount <SortIcon column="total" /></span>
+                      </th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((expense) => {
+                      const open = expandedExpense === expense.id;
+                      const colSpan = showTradeCoding && !showRecentlyDeleted ? 6 : 5;
+                      return (
+                        <React.Fragment key={expense.id}>
+                          <tr
+                            className="bg-surface border-b border-hairline hover:bg-canvas transition-colors cursor-pointer"
+                            onClick={() => setExpandedExpense(open ? null : expense.id)}
+                          >
+                            <td className="px-4 py-3.5 text-slate-600 tabular text-[13px] whitespace-nowrap">
+                              {formatDay(expenseDate(expense))}
+                            </td>
+                            <td className="px-4 py-3.5" onClick={(event) => event.stopPropagation()}>
+                              {showRecentlyDeleted ? (
+                                <CategoryChip category={expense.category} />
+                              ) : (
+                                <ExpenseCategoryPicker
+                                  expense={expense}
+                                  compact
+                                  onChange={(category) => codeExpenseCategory(expense.id, category)}
+                                />
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 font-medium text-ink">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="truncate">{expenseDisplayName(expense)}</span>
+                                {expenseHasReceipt(expense) ? (
                                   <button
                                     type="button"
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      openHistoryReceipt(expense);
-                                    }}
-                                    className="inline-flex items-center gap-2 min-h-[40px] px-3 rounded-ot-sm border border-hairline text-[13px] font-bold text-ink"
+                                    className="shrink-0 p-1 rounded text-slate-400 hover:text-accent"
+                                    aria-label="View receipt"
+                                    title="View receipt"
+                                    onClick={(event) => { event.stopPropagation(); openHistoryReceipt(expense); }}
                                   >
-                                    <Eye className="w-4 h-4" />
-                                    View receipt
+                                    <Image className="w-3.5 h-3.5" />
                                   </button>
+                                ) : null}
+                              </div>
+                              {expense.paidBy ? <div className="text-xs text-slate-400 mt-0.5">Paid by {expense.paidBy}</div> : null}
+                              {expense.notes ? <div className="text-xs text-slate-400 mt-0.5 truncate max-w-xs">{expense.notes}</div> : null}
+                            </td>
+                            {showTradeCoding && !showRecentlyDeleted ? (
+                              <td className="px-4 py-3.5" onClick={(event) => event.stopPropagation()}>
+                                <ExpenseTradePicker
+                                  expense={expense}
+                                  expenses={expenses}
+                                  trades={trades}
+                                  compact
+                                  disabled={String(expense.category || '').toLowerCase() === 'investor'}
+                                  onCode={(tradeId) => codeExpenseTrade(expense.id, tradeId)}
+                                />
+                              </td>
+                            ) : null}
+                            <td className={`px-4 py-3.5 tabular font-bold text-right whitespace-nowrap ${showRecentlyDeleted ? 'text-slate-400 line-through' : 'text-ink'}`}>
+                              {money(getExpenseFaceTotal(expense))}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <div className="flex items-center justify-end gap-1.5">{rowActions(expense)}</div>
+                            </td>
+                          </tr>
+                          {open ? (
+                            <tr className="bg-canvas border-b border-hairline">
+                              <td colSpan={colSpan} className="px-4 py-4">
+                                <div className="bg-surface rounded-ot p-4 border border-hairline">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <CategoryChip category={expense.category} />
+                                    <b className="text-[13.5px] font-bold">{expenseDisplayName(expense)}</b>
+                                  </div>
+                                  <dl className="grid grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-2.5 text-[13px]">
+                                    {detailRows(expense).map(([label, value]) => (
+                                      <div key={label} className={label === 'Notes' ? 'col-span-2 lg:col-span-4' : ''}>
+                                        <dt className="text-[11px] font-semibold text-slate-400">{label}</dt>
+                                        <dd className="text-ink mt-0.5 break-words">{value}</dd>
+                                      </div>
+                                    ))}
+                                  </dl>
                                 </div>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="6" className="px-4 py-8 text-center text-slate-600">
-                      <div className="flex flex-col items-center">
-                        <Eye className="w-12 h-12 mb-4 opacity-50" />
-                        <h3 className="text-lg font-semibold mb-2">{showRecentlyDeleted ? 'Recently deleted is empty' : 'No Expenses Found'}</h3>
-                        <p className="text-sm">
-                          {showRecentlyDeleted
-                            ? 'Deleted expenses will sit here until you restore them or remove them for good.'
-                            : searchTerm || categoryFilter !== 'all'
-                            ? 'Try adjusting your filters to see more results.'
-                            : 'Add some expenses to see them here.'
-                          }
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                              </td>
+                            </tr>
+                          ) : null}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
-
       </div>
 
-      {/* Export Dialog */}
       <ExportDialog
         isOpen={showExportDialog}
         onClose={() => setShowExportDialog(false)}
@@ -828,26 +632,23 @@ export default function HistoryPage() {
         expenseCount={liveRows.length}
       />
 
-      {receiptView ? (
-        <ReceiptViewer
-          isOpen
-          onClose={() => setReceiptView(null)}
-          receiptUrl={receiptView.url}
-          receiptMetadata={{ fileName: receiptView.name }}
-        />
-      ) : null}
-
-      {/* Edit Expense Modal */}
-      {editingExpense && (
+      {editingExpense ? (
         <ExpenseModal
           key={editingExpense.id}
-          isOpen={true}
+          isOpen
           onClose={() => setEditingExpense(null)}
           category={editingExpense.category === 'materials' ? 'purchase' : editingExpense.category}
           initialData={editingExpense}
           expenseId={editingExpense.id}
         />
-      )}
+      ) : null}
+
+      <ReceiptViewer
+        isOpen={Boolean(receiptView)}
+        onClose={() => setReceiptView(null)}
+        receiptUrl={receiptView ? receiptView.url : null}
+        receiptMetadata={receiptView ? { fileName: receiptView.name } : null}
+      />
     </div>
   );
-} 
+}
