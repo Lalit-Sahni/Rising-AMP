@@ -13,9 +13,22 @@ import {
 import LoadingSkeleton from '../ui/LoadingSkeleton';
 import EmptyState from '../EmptyState';
 import JobPeople from '../JobPeople';
-import {
-  jobMark,
-} from '../../utils/jobMetrics';
+import { jobMark } from '../../utils/jobMetrics';
+import { formatCents } from '../../money';
+
+function costLabel(row) {
+  if (!Number.isInteger(row.costCents)) return null;
+  return formatCents(row.costCents, { whole: true });
+}
+
+function rowSubtitle(row, metricsLoading) {
+  if (row.status === 'archived') return 'Archived';
+  const cost = costLabel(row);
+  const count = row.expenseCount ?? 0;
+  if (cost) return `${cost} spent · ${count} ${count === 1 ? 'expense' : 'expenses'}`;
+  if (metricsLoading && row.expenseCount == null) return 'Loading the figures…';
+  return count ? `${count} ${count === 1 ? 'expense' : 'expenses'}` : 'No expenses yet';
+}
 
 function displayInviteEmails(emails) {
   const seen = new Set();
@@ -113,7 +126,15 @@ export default function JobsHomePage() {
     const active = activeJobs.length;
     const expenses = activeJobs.reduce((sum, row) => sum + (row.expenseCount || 0), 0);
     const invoices = activeJobs.reduce((sum, row) => sum + (row.invoiceCount || 0), 0);
-    return { activeJobs: active, expenses, invoices };
+    const known = activeJobs.filter((row) => Number.isInteger(row.costCents));
+    const costCents = known.reduce((sum, row) => sum + row.costCents, 0);
+    return {
+      activeJobs: active,
+      expenses,
+      invoices,
+      costCents: known.length > 0 ? costCents : null,
+      costPartial: known.length > 0 && known.length < active,
+    };
   }, [activeJobs]);
 
   const openJob = (project) => {
@@ -341,15 +362,23 @@ export default function JobsHomePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3.5 mb-[18px]">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 md:gap-3.5 mb-[18px]">
           {[
-            ['Active jobs', loading ? '…' : portfolio.activeJobs],
-            ['Expenses', loading ? '…' : portfolio.expenses],
-            ['Invoices', loading ? '…' : portfolio.invoices],
-          ].map(([label, value]) => (
-            <div key={label} className="bg-surface border border-hairline rounded-ot px-[17px] py-[15px] shadow-whisper">
+            ['Active jobs', loading ? '…' : portfolio.activeJobs, ''],
+            [
+              'Spent across jobs',
+              loading || (metricsLoading && portfolio.costCents == null)
+                ? '…'
+                : (portfolio.costCents == null ? '—' : formatCents(portfolio.costCents, { whole: true })),
+              portfolio.costPartial ? 'Some jobs not yet totalled' : 'Construction spend, from the ledger',
+            ],
+            ['Expenses', loading ? '…' : portfolio.expenses, ''],
+            ['Invoices', loading ? '…' : portfolio.invoices, ''],
+          ].map(([label, value, hint]) => (
+            <div key={label} className="bg-surface border border-hairline rounded-ot px-3.5 md:px-[17px] py-3 md:py-[15px] shadow-whisper min-w-0">
               <div className="text-[11.5px] text-slate-400 font-semibold">{label}</div>
-              <div className="tabular text-[21px] font-extrabold tracking-tight mt-1.5">{value}</div>
+              <div className="tabular text-[19px] md:text-[21px] font-extrabold tracking-tight mt-1.5 truncate">{value}</div>
+              {hint ? <div className="hidden md:block text-[11px] text-slate-400 mt-0.5 truncate">{hint}</div> : null}
             </div>
           ))}
         </div>
@@ -357,8 +386,9 @@ export default function JobsHomePage() {
         {error && <p className="text-neg text-sm mb-4">{error}</p>}
 
         <div className="bg-surface border border-hairline rounded-ot shadow-whisper overflow-hidden">
-          <div className="hidden md:grid grid-cols-[minmax(0,2.3fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_28px] gap-3.5 items-center px-[18px] py-3.5 text-[11px] font-bold tracking-[0.06em] uppercase text-slate-400 border-b border-hairline">
+          <div className="hidden md:grid grid-cols-[minmax(0,2.3fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_28px] gap-3.5 items-center px-[18px] py-3.5 text-[11px] font-bold tracking-[0.06em] uppercase text-slate-400 border-b border-hairline">
             <span>Job</span>
+            <span>Spent</span>
             <span>Expenses</span>
             <span>Invoices</span>
             <span>Status</span>
@@ -527,7 +557,7 @@ export default function JobsHomePage() {
               return (
                 <div
                   key={project.id}
-                  className="grid grid-cols-[minmax(0,1fr)_28px] md:grid-cols-[minmax(0,2.3fr)_minmax(0,1.5fr)_minmax(0,1.2fr)_minmax(0,1fr)_28px] gap-3.5 items-center px-[18px] py-3.5 border-b border-hairline last:border-0 hover:bg-[#FCFCFD] cursor-pointer"
+                  className="grid grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,2.3fr)_minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_28px] gap-3.5 items-center px-[18px] py-3.5 border-b border-hairline last:border-0 hover:bg-[#FCFCFD] cursor-pointer"
                   onClick={() => openJob(project)}
                   role="button"
                   tabIndex={0}
@@ -545,9 +575,12 @@ export default function JobsHomePage() {
                     <div className="min-w-0">
                       <b className="block text-sm font-bold truncate">{project.name}</b>
                       <small className="block text-xs text-slate-400 truncate">
-                        {project.status === 'archived' ? 'Archived' : 'Open for the figures'}
+                        {rowSubtitle(project, metricsLoading)}
                       </small>
                     </div>
+                  </div>
+                  <div className="hidden md:block tabular text-[13px] font-bold text-ink" title={costLabel(project) ? 'Construction spend from the ledger' : 'Not totalled yet'}>
+                    {costLabel(project) || <span className="text-slate-400 font-medium">—</span>}
                   </div>
                   <div className="hidden md:block tabular text-[13px] font-bold text-ink">
                     {project.expenseCount ?? 0}

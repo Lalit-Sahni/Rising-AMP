@@ -35,17 +35,28 @@ function mapProjectDoc(projectDoc) {
   };
 }
 
-async function expenseCountForJob(projectRef) {
+/**
+ * One rollup read gives the Jobs list both the expense count and the cost to
+ * date. Jobs without a rollup fall back to a count and no cost figure.
+ */
+async function expenseSummaryForJob(projectRef) {
   try {
     const snap = await getDoc(doc(projectRef, LEDGER_ROLLUP_COLLECTION, LEDGER_ROLLUP_DOC_ID));
     if (snap.exists()) {
-      const count = snap.data()?.documentCount;
-      if (Number.isInteger(count) && count >= 0) return count;
+      const data = snap.data() || {};
+      const count = data.documentCount;
+      const cost = data.costCents;
+      if (Number.isInteger(count) && count >= 0) {
+        return {
+          expenseCount: count,
+          costCents: Number.isInteger(cost) && cost >= 0 ? cost : null,
+        };
+      }
     }
   } catch (error) {
     console.warn('Could not read expense rollup:', error);
   }
-  return countSubcollection(projectRef, 'expenses');
+  return { expenseCount: await countSubcollection(projectRef, 'expenses'), costCents: null };
 }
 
 async function countSubcollection(projectRef, name) {
@@ -128,11 +139,11 @@ export async function listOrgProjects(email, projects = null) {
   const rows = await Promise.all(
     listed.map(async (project) => {
       const projectRef = doc(db, 'organizations', orgId(), 'projects', project.projectId);
-      const [expenses, invoices] = await Promise.all([
-        expenseCountForJob(projectRef),
+      const [summary, invoices] = await Promise.all([
+        expenseSummaryForJob(projectRef),
         countSubcollection(projectRef, 'invoices'),
       ]);
-      return { ...project, expenseCount: expenses, invoiceCount: invoices };
+      return { ...project, expenseCount: summary.expenseCount, costCents: summary.costCents, invoiceCount: invoices };
     }),
   );
 
