@@ -3,7 +3,7 @@
 ## Fleet state
 
 - **Part A1:** committed `5e78dd7`. Initial JS gzip **268.3 KB**.
-- **Part A2:** done this commit. Staging dry-run: 60 parties to create, 183 rows to stamp, 19 unlinked ledger rows, 3 candidate merge groups (Metro Consulting / Group, Sydney Excavation Demo / Demolition, Lalit / Lalit Sahni — listed, not merged). Smith→Smithson and Mark apostrophe pairs were not in staging data. Initial JS gzip **268.3 KB** (unchanged; no `src/` edits). Production untouched. Staging rules + apply via `scripts/deploy-part-a2-staging.sh` after this commit.
+- **Part A2:** committed `cabc330`. Staging Firestore rules deployed. Applied on staging: **60** parties created, **183** rows stamped, **19** unlinked ledger rows. Second dry-run: `0 write(s) planned`. Candidate groups listed not merged: Metro Consulting / Group, Sydney Excavation Demo / Demolition, Lalit / Lalit Sahni. Smith→Smithson and Mark apostrophe pairs were not in staging data. Initial JS gzip **268.3 KB** (unchanged; no `src/` edits). Production untouched. No functions or hosting.
 - **Not started:** Parts B–E. Do not start Part B until the owner names it.
 - **Do not start Phase 14** until the owner names it. 275 KB is the held ceiling.
 

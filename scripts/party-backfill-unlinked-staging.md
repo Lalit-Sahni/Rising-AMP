@@ -2,13 +2,17 @@
 
 Auto-link is **exact `canonicalPartyName` equality only**, plus kind. Fuzzy `namesMatch` is listed here and is never written as a `partyId`.
 
-## Counts
+## Apply (staging, 7 Sep 2026)
 
-- Parties to create: 60
-- Rows to stamp: 183
-- Rows already stamped (skipped): 0
+Staging Firestore rules deployed. Created **60** parties. Stamped **183** rows. Second dry-run: `0 write(s) planned`. Production was not touched. No functions or hosting.
+
+## Counts (plan that was applied)
+
+- Parties created: 60
+- Rows stamped: 183
+- Rows already stamped on verify: 183
 - Unlinked ledger rows: 19
-- Writes planned: 243
+- Writes after apply: 0
 
 ## Candidate merge groups
 
@@ -42,6 +46,8 @@ Canonical forms: `lalit`, `lalit sahni`
 | Lalit | `lalit` | 72 Centenary Dr | expenses |
 | Lalit Sahni | `lalit sahni` | 72 Centenary Dr | labour |
 
+Smith / Smithson Electrical and Mark's Joinery / Mark Joinery Pty Ltd were **not** in staging data, so they did not appear as groups. Tests still lock that bar.
+
 ## Unlinked ledger rows
 
 Expenses, invoices and quotes whose typed name did not exact-match one party of the right kind. Grouped by name.
@@ -58,7 +64,7 @@ Expenses, invoices and quotes whose typed name did not exact-match one party of 
 
 ## Created / linked
 
-Parties to create:
+Parties created on staging:
 
 - Vaneet Khera — `vaneet khera` (client)
 - Fable test supplier — `fable test supplier` (supplier)
@@ -121,5 +127,4 @@ Parties to create:
 - Land Vendor — `land vendor` (service provider)
 - Solicitor Prabhjit Kaur — `solicitor prabhjit kaur` (service provider)
 
-Stamps: 183. Already correct: 0.
-
+Stamped: 183. Verify already-correct: 183.
