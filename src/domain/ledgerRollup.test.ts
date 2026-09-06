@@ -306,9 +306,16 @@ describe('screens read the rollup for totals', () => {
 
   test('Overview and Cost Plan overlay rollup totals', () => {
     const dashboard = read('src/components/pages/DashboardPage.js');
-    expect(dashboard).toContain('useLedgerRollup');
-    expect(dashboard).toContain('resolveExpenseTotals');
+    expect(dashboard).toContain('useJobSummary');
     expect(dashboard).toContain('overlayExpenseTotals');
+    expect(dashboard).not.toContain('resolveExpenseTotals');
+    expect(dashboard).not.toContain('useLedgerRollup');
+    expect(dashboard).not.toContain("from '../../queries/files'");
+    expect(dashboard).not.toContain("from '../../queries/fetch'");
+    const hook = read('src/hooks/useJobSummary.ts');
+    expect(hook).toContain('jobSummary');
+    expect(hook).toContain('../queries/summary');
+    expect(hook).not.toContain('../queries/files');
     const costPlan = read('src/components/pages/CostPlanPage.tsx');
     expect(costPlan).toContain('useLedgerRollup');
     expect(costPlan).toContain('resolveExpenseTotals');

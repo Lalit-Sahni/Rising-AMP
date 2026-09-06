@@ -17,10 +17,10 @@ import EmptyState from '../EmptyState';
 import { fetchJobFiles } from '../../firebase/jobFiles';
 import { withFileAttention } from '../../domain/jobFileAttention';
 import { withCostPlanAttention, deriveCostPlanProgressFromSpent, hasActiveCostPlan, planHasTrades } from '../../domain/costPlan';
-import { overlayExpenseTotals, resolveExpenseTotals } from '../../domain/ledgerRollup';
+import { overlayExpenseTotals } from '../../domain/ledgerRollup';
 import { useCostPlan, useCostPlanQuotes } from '../../hooks/useCostPlan';
 import { useJobClients } from '../../hooks/useJobDirectories';
-import { useLedgerRollup } from '../../hooks/useLedgerRollup';
+import { useJobSummary } from '../../hooks/useJobSummary';
 import SetTargetCostSheet from '../costPlan/SetTargetCostSheet';
 import { getCategoryStyle } from '../../utils/categoryStyle';
 import { formatCents } from '../../money';
@@ -52,6 +52,7 @@ function costPlanDismissKey(jobId) {
 export default function DashboardPage() {
   const {
     orgId,
+    allowedJobs,
     expenses,
     invoices,
     projectName,
@@ -76,7 +77,16 @@ export default function DashboardPage() {
   const costPlanQuery = useCostPlan(orgId, jobId);
   const quotesQuery = useCostPlanQuotes(orgId, jobId, planHasTrades(costPlanQuery.data));
   const clientsQuery = useJobClients(orgId, jobId);
-  const rollupQuery = useLedgerRollup(orgId, jobId);
+  const summaryQuery = useJobSummary({
+    orgId,
+    jobId,
+    allowedJobs,
+    expenses,
+    expensesCapped,
+    expensesLoaded,
+    period: selectedPeriod,
+  });
+  const totals = summaryQuery.totals;
 
   useEffect(() => {
     if (!jobId) {
@@ -100,16 +110,6 @@ export default function DashboardPage() {
     };
   }, [jobId]);
 
-  const totals = useMemo(
-    () => resolveExpenseTotals({
-      rollup: rollupQuery.rollup,
-      expenses,
-      expensesCapped,
-      expensesLoaded,
-      period: selectedPeriod,
-    }),
-    [rollupQuery.rollup, expenses, expensesCapped, expensesLoaded, selectedPeriod],
-  );
   const metrics = useMemo(
     () => {
       const base = withFileAttention(
