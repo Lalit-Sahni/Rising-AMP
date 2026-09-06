@@ -122,7 +122,7 @@ Canonical matching lives in `src/firebase/partyName.js`. Soft-moved old rows kee
 8. **Staging vs production.** Localhost → staging. Production only behind an explicit yes. That split is correct and must stay.
 9. **Job files have a type, not a folder.** Certificates, variations, plans live as typed records on the job. Do not add a folder tree. Archive, never hard-delete. Extracted text lives on `files/{id}/content/text`, not on the file list document.
 10. **Cost Plan expenses will code to stable trades, never imported sections.** Sections belong to a replaceable estimate. Part A ships the stable ids in code; organisation trade documents wait for Part B.
-11. **The query layer is read-only and rollup-first.** `src/queries/` answers spend, summaries, files, invoices and quotes from membership (`orgId` + invited `allowedJobIds`). It never writes. Numbers are computed in code, never by a model. Overview totals use `jobSummary`.
+11. **The query layer is read-only and rollup-first.** `src/queries/` answers spend, summaries, files, invoices and quotes from membership (`orgId` + invited `allowedJobIds`). It never writes. Numbers are computed in code, never by a model. Overview totals use `jobSummary`. The command palette answers spend, file text and invoice status from the same queries.
 
 These are product-grade decisions. Scaling does not mean throwing them away.
 
