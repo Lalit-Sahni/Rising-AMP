@@ -67,18 +67,18 @@ export default function AddExpensePage() {
         <button
           type="button"
           onClick={() => setOcrScannerOpen(true)}
-          className="pressable w-full flex items-center gap-4 text-left bg-steel-900 text-white rounded-ot p-4 md:p-5 mb-[22px] border border-steel-900"
+          className="pressable w-full flex items-center gap-4 text-left bg-surface text-ink rounded-ot p-4 md:p-5 mb-[22px] border border-hairline shadow-whisper"
         >
           <span className="w-12 h-12 rounded-[11px] bg-accent grid place-items-center shrink-0">
-            <Camera className="w-6 h-6" strokeWidth={1.8} />
+            <Camera className="w-6 h-6 text-white" strokeWidth={1.8} />
           </span>
           <span className="min-w-0 flex-1">
             <b className="block text-[15px] font-extrabold">Scan a receipt</b>
-            <small className="block text-[12.5px] text-[#B4B9C1] mt-0.5">
+            <small className="block text-[12.5px] text-slate-500 mt-0.5">
               Take a photo. We read the supplier, amount and date, and flag anything to check.
             </small>
           </span>
-          <ChevronRight className="w-5 h-5 text-[#767B84] shrink-0" strokeWidth={1.8} />
+          <ChevronRight className="w-5 h-5 text-slate-400 shrink-0" strokeWidth={1.8} />
         </button>
 
         <div className="text-[11px] font-bold tracking-[0.14em] uppercase text-slate-400 mb-3">Or pick a category</div>
