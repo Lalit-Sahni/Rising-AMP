@@ -1,0 +1,104 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null
+        && request.auth.token.email is string
+        && request.auth.token.email.size() > 0;
+    }
+
+    function emailLower() {
+      return request.auth.token.email.lower();
+    }
+
+    // Fallback for receipt objects uploaded before Phase 9, which have no
+    // orgId in metadata. New uploads send orgId; new job-file paths will
+    // carry orgId in the path (Part B). Do not copy this into those paths.
+    function familyOrgId() {
+      return 'opal-ss-constructions';
+    }
+
+    function orgPath(orgId) {
+      return /databases/(default)/documents/organizations/$(orgId);
+    }
+
+    function jobPath(orgId, jobId) {
+      return /databases/(default)/documents/organizations/$(orgId)/projects/$(jobId);
+    }
+
+    function isJobMember(orgId, jobId) {
+      return firestore.exists(jobPath(orgId, jobId))
+        && emailLower() in firestore.get(jobPath(orgId, jobId)).data.invitedEmails;
+    }
+
+    function isLegacyWorkspaceFolder(orgId, folder) {
+      return firestore.exists(orgPath(orgId))
+        && 'legacyWorkspaceIds' in firestore.get(orgPath(orgId)).data
+        && folder in firestore.get(orgPath(orgId)).data.legacyWorkspaceIds;
+    }
+
+    function canUseFolder(orgId, folder) {
+      return isJobMember(orgId, folder) || isLegacyWorkspaceFolder(orgId, folder);
+    }
+
+    function orgIdFromMeta(meta) {
+      return meta.keys().hasAny(['orgId'])
+        && meta.orgId is string
+        && meta.orgId.size() > 0
+          ? meta.orgId
+          : familyOrgId();
+    }
+
+    function canReadReceiptFolder(folder) {
+      return signedIn() && canUseFolder(orgIdFromMeta(resource.metadata), folder);
+    }
+
+    function canWriteReceiptFolder(folder) {
+      return signedIn() && canUseFolder(orgIdFromMeta(request.resource.metadata), folder);
+    }
+
+    match /receipts/{folder}/{expenseId}/{fileName} {
+      allow read: if canReadReceiptFolder(folder);
+      allow write: if canWriteReceiptFolder(folder);
+    }
+
+    match /avatars/{uid}/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    function jobFileObjectOk() {
+      return request.resource.size > 0
+        && request.resource.size <= 26214400
+        && request.resource.contentType is string
+        && !request.resource.contentType.matches('^video/.*')
+        && request.resource.contentType in [
+          'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+          'image/heic', 'image/heif', 'image/tiff',
+          'application/pdf',
+          'application/msword',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-powerpoint',
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+          'text/plain',
+          'application/rtf',
+          'application/acad',
+          'image/vnd.dwg',
+          'application/dxf',
+          'application/x-dxf'
+        ];
+    }
+
+    match /files/{orgId}/{jobId}/{fileId}/{fileName} {
+      allow read: if signedIn() && isJobMember(orgId, jobId);
+      allow create, update: if signedIn() && isJobMember(orgId, jobId) && jobFileObjectOk();
+      allow delete: if false;
+    }
+    
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

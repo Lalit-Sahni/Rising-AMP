@@ -1,0 +1,529 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Leftover PIN copies. Keep the documents; do not leave them world-open.
+    match /users/{accessCode} {
+      allow read, write: if false;
+      match /{allPaths=**} {
+        allow read, write: if false;
+      }
+    }
+    
+    // Product-agnostic org + invite list (Phase 1 B).
+    match /organizations/{orgId} {
+      function signedIn() {
+        return request.auth != null
+          && request.auth.token.email is string
+          && request.auth.token.email.size() > 0;
+      }
+
+      function emailLower() {
+        return request.auth.token.email.lower();
+      }
+
+      function isInvited() {
+        return signedIn() && emailLower() in resource.data.invitedEmails;
+      }
+
+      allow read: if isInvited();
+      allow create, delete: if false;
+      allow update: if isInvited()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['legacyWorkspaceNames', 'invitedEmails', 'updatedAt'])
+        && request.resource.data.ownerEmail.lower() in request.resource.data.invitedEmails
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['invitedEmails'])
+          || emailLower() == resource.data.ownerEmail.lower()
+        );
+
+      match /projects/{projectId} {
+        function orgDoc() {
+          return get(/databases/$(database)/documents/organizations/$(orgId));
+        }
+
+        function isOrgOwner() {
+          return signedIn() && emailLower() == orgDoc().data.ownerEmail.lower();
+        }
+
+        function isProjectMember() {
+          return signedIn() && emailLower() in resource.data.invitedEmails;
+        }
+
+        function canUseProject() {
+          return signedIn()
+            && emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)/projects/$(projectId)).data.invitedEmails;
+        }
+
+        function ownerStaysOnJob() {
+          return orgDoc().data.ownerEmail.lower() in request.resource.data.invitedEmails;
+        }
+
+        function statusOk() {
+          return !request.resource.data.keys().hasAny(['status'])
+            || request.resource.data.status in ['active', 'archived'];
+        }
+
+        allow read: if isProjectMember();
+        allow create: if isOrgOwner()
+          && request.resource.data.orgId == orgId
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.status == 'active'
+          && request.resource.data.invitedEmails is list
+          && emailLower() in request.resource.data.invitedEmails
+          && orgDoc().data.ownerEmail.lower() in request.resource.data.invitedEmails
+          && (
+            !request.resource.data.keys().hasAny(['kind'])
+            || request.resource.data.kind in ['client', 'own']
+          )
+          && !request.resource.data.keys().hasAny(['legacyWorkspaceId', 'accessCode']);
+        allow update: if isProjectMember()
+          && ownerStaysOnJob()
+          && statusOk()
+          && (
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['name', 'updatedAt', 'budget', 'kind'])
+            || (
+              isOrgOwner()
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['name', 'invitedEmails', 'formerEmails', 'status', 'archivedAt', 'archivedBy', 'updatedAt', 'budget', 'kind'])
+            )
+          );
+        allow delete: if false;
+
+        function expenseOk() {
+          return (
+            !request.resource.data.keys().hasAny(['category'])
+            || request.resource.data.category is string
+          ) && (
+            !request.resource.data.keys().hasAny(['tradeId'])
+            || request.resource.data.tradeId == null
+            || (
+              request.resource.data.tradeId is string
+              && request.resource.data.tradeId.size() > 0
+              && request.resource.data.tradeId.size() <= 80
+            )
+          );
+        }
+
+        function invoiceOk() {
+          return request.resource.data.invoiceNumber is string
+            && (
+              !request.resource.data.keys().hasAny(['status'])
+              || request.resource.data.status in ['draft', 'sent', 'paid', 'overdue', 'void', 'pending', 'unpaid']
+            );
+        }
+
+        match /expenses/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject() && expenseOk();
+          allow delete: if canUseProject()
+            && resource.data.keys().hasAny(['status'])
+            && resource.data.status == 'void';
+        }
+        match /invoices/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject() && invoiceOk();
+          allow delete: if canUseProject()
+            && resource.data.keys().hasAny(['status'])
+            && resource.data.status == 'void';
+        }
+        match /hiaContracts/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
+        }
+        match /progressPayments/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
+        }
+        match /labour/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
+        }
+        match /trades/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
+        }
+        match /clients/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
+        }
+        match /suppliers/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
+        }
+        match /serviceProviders/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
+        }
+        match /payers/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
+        }
+        match /bankDetails/{itemId} {
+          allow read: if canUseProject();
+          allow create, update: if canUseProject();
+          allow delete: if false;
+        }
+        match /costPlan/{planId} {
+          function costPlanKeysOk() {
+            return request.resource.data.keys().hasAll([
+                'jobId', 'level', 'targetCents', 'baselineDate', 'gstMode',
+                'status', 'sections', 'createdBy', 'createdAt', 'updatedAt',
+                'archivedAt'
+              ])
+              && request.resource.data.keys().hasOnly([
+                'jobId', 'level', 'targetCents', 'baselineDate', 'gstMode',
+                'status', 'sections', 'sourceFileId', 'createdBy', 'createdAt',
+                'updatedAt', 'archivedAt'
+              ]);
+          }
+
+          // targetCents must be a positive integer at every level. Firestore
+          // rules cannot sum a list, so trades/imported also rely on the client
+          // writing sections that add up to targetCents.
+          function costPlanShapeOk() {
+            return planId == 'current'
+              && costPlanKeysOk()
+              && request.resource.data.jobId == projectId
+              && request.resource.data.level in ['target', 'trades', 'imported']
+              && request.resource.data.targetCents is int
+              && request.resource.data.targetCents > 0
+              && request.resource.data.baselineDate is string
+              && request.resource.data.baselineDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+              && request.resource.data.gstMode in ['inclusive', 'exclusive']
+              && request.resource.data.status in ['draft', 'locked', 'archived']
+              && request.resource.data.sections is list
+              && request.resource.data.sections.size() <= 120
+              && (
+                (
+                  request.resource.data.level == 'target'
+                  && request.resource.data.sections.size() == 0
+                )
+                || (
+                  request.resource.data.level in ['trades', 'imported']
+                  && request.resource.data.sections.size() > 0
+                )
+              )
+              && (
+                !request.resource.data.keys().hasAny(['sourceFileId'])
+                || request.resource.data.sourceFileId == null
+                || request.resource.data.sourceFileId is string
+              )
+              && request.resource.data.createdBy is string
+              && request.resource.data.createdBy.size() > 0
+              && request.resource.data.createdAt is timestamp
+              && request.resource.data.updatedAt is timestamp
+              && (
+                (request.resource.data.status == 'archived'
+                  && request.resource.data.archivedAt is timestamp)
+                || (request.resource.data.status != 'archived'
+                  && request.resource.data.archivedAt == null)
+              );
+          }
+
+          function costPlanIdentityOk() {
+            return request.resource.data.createdBy == resource.data.createdBy
+              && request.resource.data.createdAt == resource.data.createdAt
+              && request.resource.data.jobId == resource.data.jobId;
+          }
+
+          function costPlanDraftContentKeys() {
+            return request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['targetCents', 'baselineDate', 'gstMode', 'updatedAt', 'level', 'sections', 'sourceFileId']);
+          }
+
+          allow read: if canUseProject();
+          allow create: if canUseProject()
+            && costPlanShapeOk()
+            && request.resource.data.createdBy == request.auth.uid
+            && request.resource.data.status == 'draft'
+            && request.resource.data.level == 'target'
+            && request.resource.data.sections.size() == 0;
+          allow update: if canUseProject()
+            && costPlanShapeOk()
+            && costPlanIdentityOk()
+            && (
+              (
+                resource.data.status == 'draft'
+                && request.resource.data.status == 'draft'
+                && costPlanDraftContentKeys()
+              )
+              || (
+                resource.data.status == 'draft'
+                && request.resource.data.status == 'locked'
+                && request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['status', 'updatedAt'])
+              )
+              || (
+                resource.data.status in ['draft', 'locked']
+                && request.resource.data.status == 'archived'
+                && request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly(['status', 'archivedAt', 'updatedAt'])
+              )
+              || (
+                resource.data.status == 'archived'
+                && request.resource.data.status == 'draft'
+                && request.resource.data.archivedAt == null
+                && request.resource.data.diff(resource.data).affectedKeys()
+                  .hasOnly([
+                    'level', 'targetCents', 'baselineDate', 'gstMode', 'status',
+                    'sections', 'sourceFileId', 'updatedAt', 'archivedAt'
+                  ])
+              )
+            );
+          allow delete: if false;
+        }
+        match /quotes/{itemId} {
+          function quoteOk() {
+            // Allocations must cover amountCents in the client. Rules cannot
+            // sum a list of maps, same limit as cost-plan sections vs targetCents.
+            return request.resource.data.keys().hasAll([
+                'jobId', 'party', 'receivedDate', 'status', 'amountCents',
+                'gstMode', 'allocations', 'createdBy', 'createdAt', 'updatedAt'
+              ])
+              && request.resource.data.jobId == projectId
+              && request.resource.data.party is string
+              && request.resource.data.party.size() > 0
+              && request.resource.data.party.size() <= 120
+              && request.resource.data.receivedDate is string
+              && request.resource.data.receivedDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+              && request.resource.data.status in ['received', 'chosen', 'passed', 'void']
+              && request.resource.data.amountCents is int
+              && request.resource.data.amountCents > 0
+              && (
+                !request.resource.data.keys().hasAny(['amountHighCents'])
+                || request.resource.data.amountHighCents == null
+                || (
+                  request.resource.data.amountHighCents is int
+                  && request.resource.data.amountHighCents >= request.resource.data.amountCents
+                )
+              )
+              && request.resource.data.gstMode in ['inclusive', 'exclusive']
+              && request.resource.data.allocations is list
+              && request.resource.data.allocations.size() > 0
+              && request.resource.data.allocations.size() <= 20
+              && request.resource.data.createdBy is string
+              && request.resource.data.createdBy.size() > 0
+              && request.resource.data.createdAt is timestamp
+              && request.resource.data.updatedAt is timestamp
+              && (
+                !request.resource.data.keys().hasAny(['fileId'])
+                || request.resource.data.fileId == null
+                || (
+                  request.resource.data.fileId is string
+                  && request.resource.data.fileId.size() > 0
+                  && request.resource.data.fileId.size() <= 80
+                )
+              )
+              && (
+                !request.resource.data.keys().hasAny(['fileIds'])
+                || (
+                  request.resource.data.fileIds is list
+                  && request.resource.data.fileIds.size() <= 10
+                )
+              )
+              && (
+                request.resource.data.status != 'void'
+                || request.resource.data.voidedAt is timestamp
+              );
+          }
+
+          allow read: if canUseProject();
+          allow create: if canUseProject()
+            && quoteOk()
+            && request.resource.data.createdBy == request.auth.uid
+            && request.resource.data.status in ['received', 'chosen', 'passed'];
+          allow update: if canUseProject()
+            && quoteOk()
+            && request.resource.data.createdBy == resource.data.createdBy
+            && request.resource.data.createdAt == resource.data.createdAt
+            && request.resource.data.jobId == resource.data.jobId;
+          allow delete: if false;
+        }
+        match /files/{itemId} {
+          function jobFileTypeOk() {
+            return request.resource.data.type in [
+              'contract', 'variation', 'plan', 'permit', 'certificate',
+              'quote', 'estimate', 'photo', 'invoiceReceived', 'other'
+            ];
+          }
+
+          function jobFileContentTypeOk() {
+            return request.resource.data.contentType is string
+              && !request.resource.data.contentType.matches('^video/.*')
+              && request.resource.data.contentType in [
+                'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+                'image/heic', 'image/heif', 'image/tiff',
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'text/plain',
+                'application/rtf',
+                'application/acad',
+                'image/vnd.dwg',
+                'application/dxf',
+                'application/x-dxf'
+              ];
+          }
+
+          function jobFileLinkedToOk() {
+            return !request.resource.data.keys().hasAny(['linkedTo'])
+              || request.resource.data.linkedTo == null
+              || (
+                request.resource.data.linkedTo.keys().hasAll(['kind', 'id'])
+                && request.resource.data.linkedTo.kind in ['expense', 'invoice', 'hiaContract']
+                && request.resource.data.linkedTo.id is string
+                && request.resource.data.linkedTo.id.size() > 0
+              );
+          }
+
+          function jobFilePathOk() {
+            return request.resource.data.storagePath is string
+              && request.resource.data.storagePath.matches(
+                '^files/' + orgId + '/' + projectId + '/' + itemId + '/.+'
+              )
+              && (
+                !request.resource.data.keys().hasAny(['thumbnailPath'])
+                || request.resource.data.thumbnailPath == null
+                || (
+                  request.resource.data.thumbnailPath is string
+                  && request.resource.data.thumbnailPath.matches(
+                    '^files/' + orgId + '/' + projectId + '/' + itemId + '/.+'
+                  )
+                )
+              );
+          }
+
+          function jobFileOk() {
+            return request.resource.data.name is string
+              && request.resource.data.name.size() > 0
+              && request.resource.data.name.size() <= 200
+              && jobFileTypeOk()
+              && jobFilePathOk()
+              && jobFileContentTypeOk()
+              && request.resource.data.sizeBytes is number
+              && request.resource.data.sizeBytes >= 0
+              && request.resource.data.sizeBytes <= 26214400
+              && request.resource.data.uploadedBy is string
+              && request.resource.data.uploadedBy.size() > 0
+              && request.resource.data.documentDate is string
+              && request.resource.data.documentDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+              && (
+                !request.resource.data.keys().hasAny(['note'])
+                || request.resource.data.note is string
+              )
+              && request.resource.data.status in ['active', 'archived']
+              && (
+                request.resource.data.status == 'active'
+                || request.resource.data.archivedAt is timestamp
+              )
+              && jobFileLinkedToOk();
+          }
+
+          allow read: if canUseProject();
+          allow create: if canUseProject()
+            && jobFileOk()
+            && request.resource.data.uploadedBy == request.auth.uid
+            && request.resource.data.status == 'active';
+          allow update: if canUseProject()
+            && jobFileOk()
+            && request.resource.data.uploadedBy == resource.data.uploadedBy
+            && request.resource.data.storagePath == resource.data.storagePath;
+          allow delete: if false;
+        }
+        match /ledgerRollup/{docId} {
+          allow read: if canUseProject() && docId == 'current';
+          allow create, update, delete: if false;
+        }
+        match /{allPaths=**} {
+          allow read, write: if false;
+        }
+      }
+
+      match /tradeList/{tradeId} {
+        function isOrgInvited() {
+          return signedIn()
+            && emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)).data.invitedEmails;
+        }
+
+        function tradeListOk() {
+          return request.resource.data.keys().hasAll(['name', 'order', 'isAppDefault', 'status', 'createdAt', 'updatedAt'])
+            && request.resource.data.name is string
+            && request.resource.data.name.size() > 0
+            && request.resource.data.name.size() <= 80
+            && request.resource.data.order is int
+            && request.resource.data.order >= 0
+            && request.resource.data.isAppDefault is bool
+            && request.resource.data.status in ['active', 'archived']
+            && request.resource.data.createdAt is timestamp
+            && request.resource.data.updatedAt is timestamp;
+        }
+
+        allow read: if signedIn();
+        allow create: if isOrgInvited() && tradeListOk();
+        allow update: if isOrgInvited()
+          && tradeListOk()
+          && request.resource.data.isAppDefault == resource.data.isAppDefault
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if false;
+      }
+
+      match /{allPaths=**} {
+        allow read, write: if false;
+      }
+    }
+
+    // Private profile (mobile, ABN, business, address). Owner, or the same email on another uid.
+    match /profiles/{uid} {
+      function profileEmail() {
+        return resource.data.email is string ? resource.data.email.lower() : '';
+      }
+      function signedInEmail() {
+        return request.auth != null
+          && request.auth.token.email is string
+          && request.auth.token.email.size() > 0;
+      }
+      allow read: if request.auth != null && (
+        request.auth.uid == uid
+        || (signedInEmail() && request.auth.token.email.lower() == profileEmail())
+      );
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // Name and photo only, keyed by lowercase email. Get if signed in; no listing.
+    match /publicProfiles/{emailKey} {
+      function publicProfileShape() {
+        return request.resource.data.keys()
+            .hasOnly(['uid', 'email', 'displayName', 'photoUrl', 'updatedAt', 'createdAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.email is string
+          && request.resource.data.email == emailKey
+          && request.auth.token.email is string
+          && request.auth.token.email.lower() == request.resource.data.email;
+      }
+      allow get: if request.auth != null;
+      allow list: if false;
+      allow create, update: if request.auth != null && publicProfileShape();
+      allow delete: if false;
+    }
+
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
