@@ -20,9 +20,9 @@
  *   firebase deploy --project staging --only functions:extractJobFileText
  *
  * No --force. --force suppresses the confirmation before deleting functions.
- * This repo never lets a functions deploy delete something. First staging
- * create needed --force because retry: true; that create already happened.
- * Production create (5 Sep 2026) answered the retry prompt; no --force.
+ * This repo never lets a functions deploy delete something.
+ * extractJobFileText uses retry: false so a first create does not demand --force.
+ * Production maintainLedgerRollup create (5 Sep 2026) answered the retry prompt; no --force.
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):
  *   RESEND_API_KEY, OPENAI_API_KEY
@@ -570,7 +570,7 @@ exports.extractJobFileText = onDocumentCreated(
     timeoutSeconds: 120,
     memory: '512MiB',
     maxInstances: 10,
-    retry: true,
+    retry: false,
   },
   async (event) => {
     await handleJobFileCreated(event, {
