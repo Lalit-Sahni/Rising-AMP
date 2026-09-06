@@ -1,10 +1,17 @@
 # Progress
 
+## Fleet state
+
+- **This worker:** Part A1 — party model + forward writes (in progress). Branch `phase-13-query-layer`.
+- **Not started:** Part A2 (backfill on staging), Parts B–E.
+- **Production:** untouched this phase. Phase 12 hosting is already live (6 Sep 2026).
+- **Do not start Phase 14** until the owner names it. 275 KB gzip is the held ceiling.
+
 ## Current branch
 
-`phase-12-fables-upgrade` — Phase 12 front-end upgrade, **closed**, **live on production hosting** (6 Sep 2026). Record: `PHASE12.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-13-query-layer` — Phase 13 query layer, **open**. Part A1 in progress. Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE13.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
-Restore tags: `pre-phase12-2026-09-05` (this phase), `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
+Restore tags: `pre-phase13-2026-09-06` (this phase, before code), `pre-phase12-2026-09-05`, `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local`  
@@ -14,7 +21,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 **Phase 12 is closed and live on production hosting (6 Sep 2026).** `firebase deploy --project production --only hosting`. No functions, Firestore rules or Storage. Branch `phase-12-fables-upgrade`. Scan a receipt on Add expense is a white `--surface` card (was `steel-900`); verified on localhost as Lalit, 72 Centenary Dr, `rgb(255, 255, 255)`. Typecheck, 254 tests, build **267.9 KB** gzip (ceiling 275). Front-end only: no rules, functions, schema or data writes. Full detail: `PHASE12.md`. Ultrareview PRs #1–#4 were closed unused; the empty-base branches are gone.
 
-**Next:** wait for the owner to name the next phase. Cut it from `phase-12-fables-upgrade`, never from `master` or `main`. Optional leftover: force-close the home-screen app twice so the Phase 12 worker is in.
+**Next:** Phase 13 is named. Part A1 (party model + forward writes) is in progress on `phase-13-query-layer`. Do not start Part A2 or Phase 14 until named. Optional leftover: force-close the home-screen app twice so the Phase 12 worker is in.
 
 **Phase 11 Parts A–E are live on production (5 Sep 2026).** Function `maintainLedgerRollup`, Part E Firestore rules, `ledgerRollup/current` for both production jobs, and hosting (`index-BTUZ3uws.js` on https://risingamp.com.au). Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview.
 
@@ -36,7 +43,7 @@ Serial round trips from sign-in to a painted Jobs list: nine down to three on tw
 
 Part E initial JS gzip **272.7 KB**. **275 KB is the held ceiling** (moved 250 → 275 in Part B because IndexedDB persistence cannot be split out of `firebase/firestore`). Hold 275. Do not raise it because a build exceeds it. Part D was **272.6 KB**. Part C was **272.5 KB**. Part B was **270.0 KB**.
 
-**Not done, and next:** A new phase, when the owner names it. 275 KB remains the held ceiling. Optional: phone force-close twice for the Phase 12 worker; Overview vs History on a known job.
+**Not done, and next:** Phase 13 Part A1, then A2 on staging. 275 KB remains the held ceiling. Optional: phone force-close twice for the Phase 12 worker; Overview vs History on a known job.
 
 **Geography, for context:** Firestore and Cloud Functions are `us-central1`. Production has six functions, including `maintainLedgerRollup`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
 
@@ -102,17 +109,15 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 ## Paste this to start the next chat
 
 ```
-Read CLAUDE.md, then PROGRESS.md, then PHASE12.md.
+Read CLAUDE.md, then PROGRESS.md, then PHASE13.md.
 
-Phase 12 is the front-end upgrade: eleven commits on branch
-phase-12-fables-upgrade, verified on localhost against staging,
-NOT deployed. Restore tag pre-phase12-2026-09-05. Phase 11 Parts
-A–E are live on production (5 Sep 2026). Localhost stays on
-staging. Deploy nothing unless he names it; Phase 12 needs
-hosting only.
+Phase 13 is named and underway on phase-13-query-layer
+(Part A1 in progress). Phase 12 is closed and live on
+production hosting (6 Sep 2026). Restore tag
+pre-phase13-2026-09-06. Phase 11 Parts A–E are live
+(5 Sep 2026). Localhost stays on staging. Do not start
+Phase 14 until he names it. Deploy nothing unless named.
 
-Do not redo the toasts, the search palette, the tab bar, the
-invoice document, the HIA rebuild, or the dead-code removal.
 275 KB is the held ceiling (now 267.9 KB).
 
 Never cache Firestore, Cloud Function or Storage responses in
@@ -122,7 +127,7 @@ a pasted API key.
 
 ## Remaining work
 
-0. **Phase 12 review and hosting deploy** — owner reviews localhost and `PHASE12.md`, then names `firebase deploy --project production --only hosting`.
+0. **Phase 12 review and hosting deploy** — **done** 6 Sep 2026. Production hosting live. See `PHASE12.md`.
 1. **Phone check on production** — force-close, reopen, Overview totals vs History on a known job. Hosting, function, rules and recompute are already live (5 Sep 2026).
 2. Click through Cost Plan on the live shopfront (sidebar **Cost plan**, then a target, trades or an import). Localhost stays on staging. In-agent browser click-through of Overview vs History is still not done.
 3. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; money-field migration; dismantle remaining AppContext ledger/directory blob.
@@ -165,7 +170,9 @@ a pasted API key.
 - [x] Phase 11 Part E — ledger rollups (`maintainLedgerRollup`) live on production 5 Sep 2026
 - [ ] Phase 11 phone — Overview totals vs History after force-close / reopen
 - [x] Phase 12 — front-end upgrade on the branch (dead code, toasts, search, tab bar, Add expense, History, Invoices, Jobs home, HIA)
-- [ ] Phase 12 — owner review, then production hosting
+- [x] Phase 12 — owner review, then production hosting
+- [ ] Phase 13 Part A1 — party model + forward writes
+- [ ] Phase 13 Part A2 — backfill on staging
 
 ## What shipped (localhost / staging)
 

@@ -33,6 +33,8 @@ So every query built here must be usable by the UI as well as by a model later. 
 
 ## Part A — Party identity
 
+**Split for this branch:** Part A1 is the model + forward writes (this commit series). Part A2 is the backfill on staging (next). Do not start A2 until A1 is committed.
+
 **The one genuine mess, and the biggest single change.**
 
 `src/firebase/partyName.js` canonicalises names (`canonicalPartyName` strips "pty", "ltd", punctuation) and fuzzy-matches with `namesMatch`. It is good at what it was built for: deduplicating a dropdown at read time. It is not an identity system.
