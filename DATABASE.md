@@ -102,7 +102,7 @@ Staging may also have Part B test jobs. Localhost always talks to staging.
 
 Canonical matching lives in `src/firebase/partyName.js`. Soft-moved old rows keep `status: moved/archived/duplicate`. Never hard-delete those.
 
-**Parties (Phase 13 Part A1, forward writes only):** `organizations/{orgId}/parties/{partyId}` is the org-level identity for a supplier, worker, trade contact, client or service provider. Display name is what was typed; `canonicalName` is `canonicalPartyName` of that string. Status is `active` or `merged`. A merge points `mergedInto` at the survivor; nobody is deleted. New expense, invoice, quote and directory writes stamp `partyId` when an exact canonical match is unique for that kind. Fuzzy `namesMatch` stays for dropdowns and is not identity. Existing rows are not backfilled until Part A2.
+**Parties (Phase 13 Part A1 + A2):** `organizations/{orgId}/parties/{partyId}` is the org-level identity for a supplier, worker, trade contact, client or service provider. Display name is what was typed; `canonicalName` is `canonicalPartyName` of that string. Status is `active` or `merged`. A merge points `mergedInto` at the survivor; nobody is deleted. New expense, invoice, quote and directory writes stamp `partyId` when an exact canonical match is unique for that kind. Fuzzy `namesMatch` stays for dropdowns and is not identity. **Staging** `opal-ss-constructions` was backfilled from live directory names (exact canonical + kind only) by `scripts/backfill-parties.js`. Production has not been backfilled.
 
 ---
 
