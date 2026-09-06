@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
-Branch: **`phase-12-fables-upgrade`**. Restore tag: `pre-phase12-2026-09-05` (the last Phase 11 commit, `0af543e`). Ten commits, one concern each, plus a docs commit (eleven in all). **Not deployed.** Localhost stays on staging.
+Branch: **`phase-12-fables-upgrade`**. Restore tag: `pre-phase12-2026-09-05` (the last Phase 11 commit, `0af543e`). Ten commits, one concern each, plus a docs commit, then the Scan a receipt paint (`eae51c9`). **Production hosting live 6 Sep 2026.** Localhost stays on staging.
 
 ## What this phase is
 
@@ -79,7 +79,7 @@ Jobs home puts Archived and New job on one row on a phone with the search under 
 ## What was deliberately not done
 
 - No change to rules, functions, Storage, schema, or any migration. `progressPayments` documents that exist are untouched; the collection and its hook remain.
-- No deploy. Hosting only, when the owner names it: `firebase deploy --project production --only hosting`.
+- Hosting deployed 6 Sep 2026 (`firebase deploy --project production --only hosting`). Functions, rules and Storage were not deployed.
 - The Gmail invite fallback, App Check enforcement, money-field normalisation and the remaining AppContext ledger blob stay parked (CLAUDE.md "Out of scope").
 - `design/risingamp-scaffold-vision.html` (untracked, 24 Aug) was left alone; it is not referenced anywhere.
 - `logger.js` keeps its unused methods; it is small and touching it buys nothing.
@@ -87,7 +87,7 @@ Jobs home puts Archived and New job on one row on a phone with the search under 
 
 ## What was verified (5 Sep 2026, localhost against staging)
 
-Every commit: `npm run typecheck` clean, `npm test` 236 Vitest + 18 Node tests passing, `npm run build` under the ceiling (final: **267.9 KB** initial JS gzip; production is 272.7 KB).
+Every commit: `npm run typecheck` clean, `npm test` 236 Vitest + 18 Node tests passing, `npm run build` under the ceiling (final: **267.9 KB** initial JS gzip).
 
 Click-through with a real browser (installed Google Chrome driven by playwright-core from a scratch folder, nothing added to the repo), signed in as the owner's staging test login, iPhone 13 viewport and a 1360 px desktop:
 
@@ -111,6 +111,6 @@ npm start   # localhost:3000 against staging
 
 Then on a phone-sized window: sign in, Jobs (spent figures), open a job, tab bar, Add → Materials (sheet, sticky Save), History (cards, Australian dates), Invoices (cards, preview, PDF with your business details), Cost plan, drawer → Clients / HIA contracts, Search (top right), Profile → Sign out.
 
-## Deploy, when named
+## Deployed (6 Sep 2026)
 
-Hosting only. Force-close and reopen the home-screen app twice so the new worker takes over.
+`firebase deploy --project production --only hosting`. Force-close and reopen the home-screen app twice so the new worker takes over. Scan a receipt on Add expense is `--surface` white with the orange camera well, not a `steel-900` slab (`eae51c9`).

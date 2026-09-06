@@ -2,7 +2,7 @@
 
 ## Current branch
 
-`phase-12-fables-upgrade` — Phase 12 front-end upgrade, **on the branch, not deployed**. Brief and record: `PHASE12.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-12-fables-upgrade` — Phase 12 front-end upgrade, **live on production hosting** (6 Sep 2026). Brief and record: `PHASE12.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase12-2026-09-05` (this phase), `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -10,11 +10,11 @@ Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as htt
 Staging: `rising-amp-staging` — localhost / `.env.local`  
 `.firebaserc` default is **staging**. Git push does not deploy.
 
-## Where we are (2026-09-05, evening)
+## Where we are (2026-09-06)
 
-**Phase 12 is eleven commits on `phase-12-fables-upgrade`, verified on localhost against staging (typecheck, 254 tests, build, and a real-browser click-through on phone and desktop including one add/void/purge round trip of a test expense), not deployed.** Front-end only: no rules, functions, schema or data writes changed. What it does, in one line each: dead code out (two dead modules, a dead stylesheet, ~30 dead exports, `recharts`, a tracked `.DS_Store`); toasts actually show; the search palette finds jobs, screens, expenses and invoices; sign out moved off the header; a phone tab bar inside a job; Budget tracking retired (`/budget` → Cost plan) and Clients moved under the job; Add expense without fake buttons and an expense form that fits a phone; History and Invoices with phone cards, Australian dates and real money; one invoice document with the builder's own details for preview, PDF and HIA progress claims; HIA contracts typed in instead of a fake "scan"; Jobs home shows spend from the rollup. Initial JS gzip **267.9 KB** (was 272.7 KB; ceiling 275). Full detail and reasons: `PHASE12.md`.
+**Phase 12 is live on production hosting (6 Sep 2026).** `firebase deploy --project production --only hosting`. No functions, Firestore rules or Storage. Branch `phase-12-fables-upgrade`. Scan a receipt on Add expense is a white `--surface` card (was `steel-900`); verified on localhost as Lalit, 72 Centenary Dr, `rgb(255, 255, 255)`. Typecheck, 254 tests, build **267.9 KB** gzip (ceiling 275). Front-end only: no rules, functions, schema or data writes. Full detail: `PHASE12.md`.
 
-**Next:** the owner reviews on localhost (`npm start`, phone-sized window) and the Phase 12 report, then names a hosting deploy: `firebase deploy --project production --only hosting`. Nothing else needs deploying. After that, the Phase 11 phone check (force-close, reopen, Overview vs History) still stands.
+**Next:** force-close the home-screen app and reopen twice so the new worker takes over. Check Add expense (white Scan a receipt card) and Overview totals vs History on a known job.
 
 **Phase 11 Parts A–E are live on production (5 Sep 2026).** Function `maintainLedgerRollup`, Part E Firestore rules, `ledgerRollup/current` for both production jobs, and hosting (`index-BTUZ3uws.js` on https://risingamp.com.au). Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview.
 

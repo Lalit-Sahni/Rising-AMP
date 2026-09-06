@@ -1,6 +1,6 @@
-# Rising AMP — Architecture (Phase 12 on the branch, 2026-09-05)
+# Rising AMP — Architecture (Phase 12 live hosting, 2026-09-06)
 
-This describes the **running app**. Phase records: `PLAN.md` through `PHASE12.md`. Phase 11 Parts A–E are live on production (hosting, Firestore rules, `maintainLedgerRollup`, `ledgerRollup/current`) as of 5 Sep 2026. Phase 12 (`PHASE12.md`) is the front-end upgrade on branch `phase-12-fables-upgrade`: not yet deployed.
+This describes the **running app**. Phase records: `PLAN.md` through `PHASE12.md`. Phase 11 Parts A–E are live on production (hosting, Firestore rules, `maintainLedgerRollup`, `ledgerRollup/current`) as of 5 Sep 2026. Phase 12 (`PHASE12.md`) is live on production hosting as of 6 Sep 2026.
 
 Firebase project (production): `rising-amp-467702-b5`  
 Live URL: https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
