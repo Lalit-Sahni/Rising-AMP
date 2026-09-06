@@ -1,8 +1,16 @@
-# Phase 12 — Front-end upgrade (agent brief and record)
+# Phase 12 — Front-end upgrade (closed record)
 
-Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
+Read `CLAUDE.md` then `PROGRESS.md` then this file. This phase is **closed**. Do not start a new phase until the owner names it. Cut that work from `phase-12-fables-upgrade`, never from `master` or `main`.
 
 Branch: **`phase-12-fables-upgrade`**. Restore tag: `pre-phase12-2026-09-05` (the last Phase 11 commit, `0af543e`). Ten commits, one concern each, plus a docs commit, then the Scan a receipt paint (`eae51c9`). **Production hosting live 6 Sep 2026.** Localhost stays on staging.
+
+## Status
+
+- [x] Dead code out, toasts, search, phone tab bar, Budget retired, Clients under the job
+- [x] Add expense, History, Invoices, HIA contracts, Jobs spend from the rollup
+- [x] Scan a receipt is a white card (`eae51c9`)
+- [x] Production hosting — `firebase deploy --project production --only hosting` on 6 Sep 2026
+- [x] Ultrareview PRs #1–#4 closed unused; those empty-base branches deleted. Not a Phase 12 leftover.
 
 ## What this phase is
 

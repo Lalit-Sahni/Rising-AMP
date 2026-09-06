@@ -6,18 +6,18 @@ This is a live production app for Opal SS Constructions. It holds real, irreplac
 
 ## Next agent — start here (do this first)
 
-1. Confirm git branch. Latest work is **`phase-12-fables-upgrade`**. Phase 12 front-end is **live on production hosting** (6 Sep 2026; brief `PHASE12.md`). Restore tag: `pre-phase12-2026-09-05`. **Phase 11 Parts A–E are live on production** (hosting, Firestore rules, `maintainLedgerRollup`, `ledgerRollup/current`) as of 5 Sep 2026, restore tag `pre-phase11-2026-09-05`. Never commit to `master` or `main`. Older restore tags: `pre-phase10-2026-09-02`, `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
+1. Confirm git branch. Latest work is **`phase-12-fables-upgrade`**. Phase 12 is **closed** and **live on production hosting** (6 Sep 2026; record `PHASE12.md`). Restore tag: `pre-phase12-2026-09-05`. **Phase 11 Parts A–E are live on production** (hosting, Firestore rules, `maintainLedgerRollup`, `ledgerRollup/current`) as of 5 Sep 2026, restore tag `pre-phase11-2026-09-05`. Never commit to `master` or `main`. Older restore tags: `pre-phase10-2026-09-02`, `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`.
 2. Read `PROGRESS.md` (next concrete step), then `PHASE12.md`, then `PHASE11.md`. Open `design/risingamp-vision.html` before changing the shell. `PHASE10.md` is the closed Cost Plan record. `PHASE9.md` through `PLAN.md` are closed records. `ARCHITECTURE.md` is how the running app is built. `DATABASE.md` is the living database guide.
 3. Localhost (`npm start` → http://localhost:3000, **Vite**) must use `.env.local`, which points at **staging** (`rising-amp-staging`). Production keys are in gitignored `.env.production.local`. Do not swap them. Env vars are `VITE_*`. `npm start` does not register a service worker; `npm run build` then `npm run preview` does.
 4. Family access codes and owner email live in gitignored `.phase1-local.json`. Do not commit that file. Do not put the codes in git.
-5. **Next:** Phone check on the home-screen app — force-close, reopen twice so the new worker takes over. Confirm Add expense “Scan a receipt” is a white card (not a dark slab), then Overview totals vs History on a known job. Phase 12 hosting shipped 6 Sep 2026 (`firebase deploy --project production --only hosting`). No functions, rules or Storage. Production functions stay `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile` and `maintainLedgerRollup`. Do not deploy unless he names the project and surface. Do not use `--force` on a functions deploy. **275 KB is the held ceiling.**
+5. **Next:** Phase 12 is closed. Do not start Phase 13 (or any new brief) until the owner names it. Cut that branch from `phase-12-fables-upgrade`. Production functions stay `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile` and `maintainLedgerRollup`. Do not deploy unless he names the project and surface. Do not use `--force` on a functions deploy. **275 KB is the held ceiling.** Optional leftover: force-close the home-screen app twice so the Phase 12 worker is in.
 6. **Never accept a raw API key or secret pasted into chat.** Have the owner set Firebase secrets himself at a masked prompt.
 7. **All new files are TypeScript.** Existing JS converts only when a brief says so, or when the file is being substantially rewritten anyway.
 8. Owner (Lalit) writes in plain language. Explain in plain language.
 
 **Paste this to start a new chat:**
 
-> Read CLAUDE.md, then PROGRESS.md, then PHASE12.md. Phase 12 front-end is live on production hosting (6 Sep 2026). Branch `phase-12-fables-upgrade`. Restore tag: pre-phase12-2026-09-05. Phase 11 Parts A–E are live (5 Sep 2026). Localhost stays on staging. Next is his phone: force-close, reopen twice. 275 KB is the held ceiling (267.9 KB). Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
+> Read CLAUDE.md, then PROGRESS.md, then PHASE12.md. Phase 12 is closed and live on production hosting (6 Sep 2026). Branch `phase-12-fables-upgrade`. Restore tag: pre-phase12-2026-09-05. Phase 11 Parts A–E are live (5 Sep 2026). Localhost stays on staging. Do not start a new phase until he names it. 275 KB is the held ceiling (267.9 KB). Never hard-delete user records. Never accept a pasted API key. Do not deploy unless named.
 
 If you are unsure whether a command writes to production, do not run it.
 
@@ -113,7 +113,7 @@ Brief and record: `PHASE12.md`. Restore tag: `pre-phase12-2026-09-05`. Front-end
 ## Continuity
 
 - `AGENTS.md` — pointer. Read this file, then `PROGRESS.md`.
-- `PHASE12.md` — Front-end upgrade (Fable) — active brief and record.
+- `PHASE12.md` — Front-end upgrade — closed record (live hosting 6 Sep 2026).
 - `PHASE11.md` — Cold start — closed record (live 5 Sep 2026).
 - `PHASE10.md` — Cost Plan — closed record.
 - `PHASE9.md` — Job Files — closed record.
