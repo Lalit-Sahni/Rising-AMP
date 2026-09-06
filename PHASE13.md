@@ -2,6 +2,8 @@
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
+**Status (7 Sep 2026):** Parts A1–E are **done on `phase-13-query-layer`**. Staging applied (parties, rollups, `extractJobFileText`, rules). Production is **not** deployed. Do not start Phase 14 until the owner names it. Morning report is at the top of `PROGRESS.md`.
+
 Branch: **`phase-13-query-layer`** from the merged Phase 12 branch. Tag `pre-phase13-2026-09-XX` first. One part per session, one commit per part.
 
 **There is no AI in this phase.** Phase 14 is the assistant. Phase 13 is the structure it will stand on, and every part of it makes the existing app better on its own. If Phase 14 never happens, nothing here is wasted.
