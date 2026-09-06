@@ -1,0 +1,80 @@
+/* RisingAMP tokens — from design/opal-track-reference.html (Manrope + Palette 1). */
+:root {
+  --steel-900: #17181C;
+  --steel-800: #1F2127;
+  --steel-700: #2A2D34;
+  --ink: #1C1E23;
+  --slate-600: #565B64;
+  --slate-400: #8A9099;
+  --hairline: #E7E9EC;
+  --canvas: #F5F6F8;
+  --surface: #FFFFFF;
+  --accent: #E85D1A;
+  --accent-600: #C64E12;
+  --accent-tint: #FCEEE4;
+  --pos: #2E7D57;
+  --pos-tint: #E7F1EC;
+  --warn: #B7862B;
+  --warn-tint: #F7F0DF;
+  --neg: #C0392B;
+  --slate-500: #6B7079;
+  --c-labour: #5E82A6;
+  --c-trade: #C08A3E;
+  --c-materials: #B5654A;
+  --c-service: #4E8C82;
+  --c-equipment: #7E9B63;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 2px rgba(23, 24, 28, 0.04), 0 1px 3px rgba(23, 24, 28, 0.03);
+  --ui: 'Manrope', system-ui, -apple-system, sans-serif;
+}
+
+.eyebrow {
+  font-family: var(--ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--slate-400);
+}
+
+.tabular {
+  font-family: var(--ui);
+  font-variant-numeric: tabular-nums;
+}
+
+.pressable {
+  transition: border-color 0.12s ease, transform 0.12s ease, box-shadow 0.12s ease, background-color 0.12s ease;
+}
+.pressable:hover {
+  border-color: #D6D9DD;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+.pressable:active {
+  transform: translateY(0) scale(0.985);
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+.skeleton-bar {
+  background-image: linear-gradient(90deg, var(--canvas) 0%, #EBEDF0 45%, var(--canvas) 90%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.15s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pressable,
+  .pressable:hover,
+  .pressable:active {
+    transition: none;
+    transform: none;
+  }
+  .skeleton-bar {
+    animation: none;
+    background-image: none;
+    background-color: var(--canvas);
+  }
+}

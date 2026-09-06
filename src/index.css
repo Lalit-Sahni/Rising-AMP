@@ -1,0 +1,308 @@
+@import './styles/tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: var(--ui);
+  background: var(--canvas);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Kill the grey tap flash. Do not block selecting totals, ABNs, or addresses. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+nav,
+.sidebar,
+[role="tab"] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+select,
+[contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* iOS zooms the page on focus when a field is under 16px. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="file"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Mobile-safe area handling.
+   Applied unconditionally. env() is 0 in a normal browser tab.
+   Never hardcode a notch / home-indicator pixel value.
+   Status bar is `default`: iOS already starts the webview below the
+   clock. Do not pad .app-main / the header with --safe-top — that
+   empty canvas band is the gap between the notch and the top bar. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  /* Height of the phone tab bar (Phase 12). Content pads by this when it shows. */
+  --tabbar-height: 62px;
+}
+
+.safe-area-bottom {
+  padding-bottom: var(--safe-bottom);
+}
+
+/* Scroll column: last History row must clear the home indicator.
+   Right inset always — the content column is at the screen's right
+   edge even when the desktop sidebar is showing (iPhone landscape).
+   Left inset only on the mobile full-bleed column so the sidebar
+   is not double-counted. */
+.content {
+  padding-bottom: var(--safe-bottom);
+  padding-right: var(--safe-right);
+}
+
+@media (max-width: 767px) {
+  .content {
+    padding-left: var(--safe-left);
+  }
+  /* When the phone tab bar is showing, the scroll column and toasts end above it. */
+  html.has-tabbar .content {
+    padding-bottom: calc(var(--tabbar-height) + var(--safe-bottom));
+  }
+  html.has-tabbar {
+    --toaster-offset: var(--tabbar-height);
+  }
+}
+
+/* Steel drawer stays edge-to-edge. Pad the contents, not the panel. */
+.sidebar-safe {
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+}
+
+/* Sign-in / boot: bottom and sides only. Top stays flush — same
+   `default` status-bar rule as the header. */
+.auth-frame {
+  padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+/* Number fields: no spinner arrows. */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+/* React Select – white/black + orange accent */
+.react-select__control {
+  background-color: #ffffff !important;
+  border-color: #e5e7eb !important;
+  box-shadow: none !important;
+}
+
+.react-select__control:hover {
+  border-color: #d1d5db !important;
+}
+
+.react-select__control--is-focused {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent) !important;
+}
+
+.react-select__menu {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.react-select__option {
+  background-color: #ffffff !important;
+  color: var(--ink) !important;
+}
+
+.react-select__option:hover {
+  background-color: var(--accent-tint) !important;
+}
+
+.react-select__option--is-focused {
+  background-color: var(--accent-tint) !important;
+}
+
+.react-select__option--is-selected {
+  background-color: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+.react-select__single-value {
+  color: var(--ink) !important;
+}
+
+.react-select__input-container {
+  color: var(--ink) !important;
+}
+
+.react-select__placeholder {
+  color: #6b7280 !important;
+}
+
+.react-select__multi-value {
+  background-color: var(--accent-tint) !important;
+  border: 1px solid #fed7aa !important;
+}
+
+.react-select__multi-value__label {
+  color: var(--ink) !important;
+}
+
+.react-select__multi-value__remove:hover {
+  background-color: var(--accent-600) !important;
+  color: #ffffff !important;
+}
+
+/* React DatePicker – white/black + orange accent */
+.react-datepicker {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  color: var(--ink) !important;
+  font-family: var(--ui) !important;
+}
+
+.react-datepicker__header {
+  background-color: var(--steel-900) !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.react-datepicker__current-month {
+  color: #fafafa !important;
+}
+
+.react-datepicker__day-name {
+  color: #a1a1aa !important;
+}
+
+.react-datepicker__day {
+  color: var(--ink) !important;
+}
+
+.react-datepicker__day:hover {
+  background-color: var(--accent-tint) !important;
+}
+
+.react-datepicker__day--selected {
+  background-color: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+.react-datepicker__day--keyboard-selected {
+  background-color: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+.react-datepicker__day--disabled {
+  color: #a1a1aa !important;
+}
+
+.react-datepicker__navigation {
+  border-color: #a1a1aa !important;
+}
+
+.react-datepicker__navigation:hover {
+  border-color: #fafafa !important;
+}
+
+.react-datepicker__year-dropdown,
+.react-datepicker__month-dropdown {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+}
+
+.react-datepicker__year-option,
+.react-datepicker__month-option {
+  color: var(--ink) !important;
+}
+
+.react-datepicker__year-option:hover,
+.react-datepicker__month-option:hover {
+  background-color: var(--accent-tint) !important;
+}
+
+/* Custom scrollbar – neutral for light UI */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f4f4f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+/* Touch devices: bigger tap targets. */
+@media (hover: none) and (pointer: coarse) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Toasts (Phase 12). Bottom of the screen, above the phone tab bar. */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.toast-enter {
+  animation: toast-in 0.18s ease-out;
+}
+
+/* Reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
