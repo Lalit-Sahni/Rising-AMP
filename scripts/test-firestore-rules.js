@@ -376,6 +376,59 @@ async function main() {
     }));
     await assertFails(owner.firestore().doc(tradeListPath).delete());
 
+    const partyPath = `organizations/${ORG}/parties/bunnings`;
+    const validParty = {
+      displayName: 'Bunnings',
+      canonicalName: 'bunnings',
+      kind: 'supplier',
+      status: 'active',
+      abn: null,
+      email: null,
+      phone: null,
+      mergedInto: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    await assertSucceeds(owner.firestore().doc(partyPath).set(validParty));
+    await assertSucceeds(owner.firestore().doc(partyPath).get());
+    await assertFails(stranger.firestore().doc(partyPath).get());
+    await assertFails(stranger.firestore().doc(partyPath).set({
+      ...validParty,
+      displayName: 'Hacked',
+    }));
+    await assertFails(owner.firestore().doc(partyPath).set({
+      ...validParty,
+      kind: 'vendor',
+    }));
+    await assertFails(owner.firestore().doc(partyPath).set({
+      ...validParty,
+      status: 'merged',
+      mergedInto: 'bunnings',
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/parties/old-bunnings`).set({
+      ...validParty,
+      displayName: 'Bunnings Warehouse',
+      canonicalName: 'bunnings warehouse',
+      status: 'merged',
+      mergedInto: 'bunnings',
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/parties/old-bunnings`).update({
+      status: 'active',
+      mergedInto: null,
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(partyPath).delete());
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-party`).set({
+      category: 'purchase',
+      total: 12,
+      partyId: 'bunnings',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-party-bad`).set({
+      category: 'purchase',
+      total: 12,
+      partyId: 'x'.repeat(81),
+    }));
+
     await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}`).update({
       kind: 'own',
       updatedAt: new Date(),

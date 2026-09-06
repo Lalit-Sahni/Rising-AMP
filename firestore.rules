@@ -103,6 +103,14 @@ service cloud.firestore {
               && request.resource.data.tradeId.size() > 0
               && request.resource.data.tradeId.size() <= 80
             )
+          ) && (
+            !request.resource.data.keys().hasAny(['partyId'])
+            || request.resource.data.partyId == null
+            || (
+              request.resource.data.partyId is string
+              && request.resource.data.partyId.size() > 0
+              && request.resource.data.partyId.size() <= 80
+            )
           );
         }
 
@@ -111,6 +119,15 @@ service cloud.firestore {
             && (
               !request.resource.data.keys().hasAny(['status'])
               || request.resource.data.status in ['draft', 'sent', 'paid', 'overdue', 'void', 'pending', 'unpaid']
+            )
+            && (
+              !request.resource.data.keys().hasAny(['partyId'])
+              || request.resource.data.partyId == null
+              || (
+                request.resource.data.partyId is string
+                && request.resource.data.partyId.size() > 0
+                && request.resource.data.partyId.size() <= 80
+              )
             );
         }
 
@@ -334,6 +351,15 @@ service cloud.firestore {
               && (
                 request.resource.data.status != 'void'
                 || request.resource.data.voidedAt is timestamp
+              )
+              && (
+                !request.resource.data.keys().hasAny(['partyId'])
+                || request.resource.data.partyId == null
+                || (
+                  request.resource.data.partyId is string
+                  && request.resource.data.partyId.size() > 0
+                  && request.resource.data.partyId.size() <= 80
+                )
               );
           }
 
@@ -477,6 +503,74 @@ service cloud.firestore {
         allow update: if isOrgInvited()
           && tradeListOk()
           && request.resource.data.isAppDefault == resource.data.isAppDefault
+          && request.resource.data.createdAt == resource.data.createdAt;
+        allow delete: if false;
+      }
+
+      match /parties/{partyId} {
+        function isOrgInvited() {
+          return signedIn()
+            && emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)).data.invitedEmails;
+        }
+
+        function partyOk() {
+          return request.resource.data.keys().hasAll(['displayName', 'canonicalName', 'kind', 'status', 'createdAt', 'updatedAt'])
+            && request.resource.data.displayName is string
+            && request.resource.data.displayName.size() > 0
+            && request.resource.data.displayName.size() <= 120
+            && request.resource.data.canonicalName is string
+            && request.resource.data.canonicalName.size() > 0
+            && request.resource.data.canonicalName.size() <= 120
+            && request.resource.data.kind in ['supplier', 'worker', 'trade', 'client', 'service provider']
+            && request.resource.data.status in ['active', 'merged']
+            && request.resource.data.createdAt is timestamp
+            && request.resource.data.updatedAt is timestamp
+            && (
+              !request.resource.data.keys().hasAny(['abn'])
+              || request.resource.data.abn == null
+              || (
+                request.resource.data.abn is string
+                && request.resource.data.abn.size() <= 20
+              )
+            )
+            && (
+              !request.resource.data.keys().hasAny(['email'])
+              || request.resource.data.email == null
+              || (
+                request.resource.data.email is string
+                && request.resource.data.email.size() <= 120
+              )
+            )
+            && (
+              !request.resource.data.keys().hasAny(['phone'])
+              || request.resource.data.phone == null
+              || (
+                request.resource.data.phone is string
+                && request.resource.data.phone.size() <= 40
+              )
+            )
+            && (
+              (
+                request.resource.data.status == 'active'
+                && (
+                  !request.resource.data.keys().hasAny(['mergedInto'])
+                  || request.resource.data.mergedInto == null
+                )
+              )
+              || (
+                request.resource.data.status == 'merged'
+                && request.resource.data.mergedInto is string
+                && request.resource.data.mergedInto.size() > 0
+                && request.resource.data.mergedInto.size() <= 80
+                && request.resource.data.mergedInto != partyId
+              )
+            );
+        }
+
+        allow read: if isOrgInvited();
+        allow create: if isOrgInvited() && partyOk();
+        allow update: if isOrgInvited()
+          && partyOk()
           && request.resource.data.createdAt == resource.data.createdAt;
         allow delete: if false;
       }

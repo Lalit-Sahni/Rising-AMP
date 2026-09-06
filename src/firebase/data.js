@@ -25,6 +25,21 @@ function definedFields(data) {
   return out;
 }
 
+async function withPartyId(record, kind) {
+  if (!record) return record;
+  try {
+    const parties = await import('./parties');
+    const hint = kind === 'invoice'
+      ? parties.partyHintFromInvoice(record)
+      : parties.partyHintFromExpense(record);
+    const partyId = await parties.resolvePartyIdForWrite(hint);
+    if (partyId) return { ...record, partyId };
+  } catch (error) {
+    console.error('Party resolve error:', error);
+  }
+  return record;
+}
+
 const projectRootRef = async (projectId) => {
   if (!projectId) {
     throw new Error('Missing job list');
@@ -42,16 +57,17 @@ export const addExpenseToFirestore = async (jobId, expense) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const expenseDocRef = doc(userDocRef, 'expenses', expense.id);
+    const stamped = await withPartyId(expense, 'expense');
 
     // Use setDoc with the expense's ID as the document ID
     await setDoc(expenseDocRef, definedFields({
-      ...expense,
+      ...stamped,
       jobId: jobId,
       timestamp: serverTimestamp()
     }));
 
     const newExpense = {
-      ...expense,
+      ...stamped,
       timestamp: new Date()
     };
 
@@ -67,15 +83,16 @@ export const updateExpenseInFirestore = async (jobId, expenseId, updatedExpense)
   try {
     const userDocRef = await projectRootRef(jobId);
     const expenseDocRef = doc(userDocRef, 'expenses', expenseId);
+    const stamped = await withPartyId(updatedExpense, 'expense');
 
     await updateDoc(expenseDocRef, definedFields({
-      ...updatedExpense,
+      ...stamped,
       updatedAt: serverTimestamp()
     }));
 
     const updatedExpenseWithId = {
       id: expenseId,
-      ...updatedExpense,
+      ...stamped,
       updatedAt: new Date()
     };
 
@@ -237,16 +254,17 @@ export const addInvoiceToFirestore = async (jobId, invoice) => {
   try {
     const userDocRef = await projectRootRef(jobId);
     const invoicesCollectionRef = collection(userDocRef, 'invoices');
+    const stamped = await withPartyId(invoice, 'invoice');
 
     const docRef = await addDoc(invoicesCollectionRef, definedFields({
-      ...invoice,
+      ...stamped,
       jobId: jobId,
       timestamp: serverTimestamp()
     }));
 
     const newInvoice = {
       id: docRef.id,
-      ...invoice,
+      ...stamped,
       timestamp: new Date()
     };
 
@@ -261,15 +279,16 @@ export const updateInvoiceInFirestore = async (jobId, invoiceId, updatedInvoice)
   try {
     const userDocRef = await projectRootRef(jobId);
     const invoiceDocRef = doc(userDocRef, 'invoices', invoiceId);
+    const stamped = await withPartyId(updatedInvoice, 'invoice');
 
     await updateDoc(invoiceDocRef, definedFields({
-      ...updatedInvoice,
+      ...stamped,
       updatedAt: serverTimestamp()
     }));
 
     const updatedInvoiceWithId = {
       id: invoiceId,
-      ...updatedInvoice,
+      ...stamped,
       updatedAt: new Date()
     };
 

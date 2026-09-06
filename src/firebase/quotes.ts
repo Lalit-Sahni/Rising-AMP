@@ -19,6 +19,7 @@ import {
 } from '../domain/quoteFiles';
 import { costPlanQuoteSchema, parseAtBoundary, type CostPlanQuote } from '../domain/schemas';
 import { db } from './config';
+import { resolvePartyIdForWrite } from './parties';
 import { getActiveOrgId } from './tenancy';
 
 type QuoteWrite = {
@@ -122,10 +123,19 @@ export async function saveQuote(jobId: string, input: QuoteWrite, quoteId?: stri
     throw new Error('Quote parts must add up to the total');
   }
 
+  let partyId = parsed.data.partyId || null;
+  if (!partyId) {
+    try {
+      partyId = await resolvePartyIdForWrite({ name: parsed.data.party }) || null;
+    } catch (error) {
+      console.error('Party resolve error:', error);
+    }
+  }
+
   const payload = definedFields({
     jobId: parsed.data.jobId,
     party: parsed.data.party,
-    partyId: parsed.data.partyId || null,
+    partyId,
     receivedDate: parsed.data.receivedDate,
     status: parsed.data.status,
     amountCents: parsed.data.amountCents,
@@ -158,7 +168,7 @@ export async function saveQuote(jobId: string, input: QuoteWrite, quoteId?: stri
     await exclusiveQuoteFiles(jobId, id, files.fileIds);
   }
 
-  return { ...parsed.data, id };
+  return { ...parsed.data, id, partyId: partyId || undefined };
 }
 
 export async function voidQuote(jobId: string, quoteId: string): Promise<void> {

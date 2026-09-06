@@ -45,6 +45,7 @@ organizations/{orgId}
   name, ownerEmail, invitedEmails
   counters/invoices                            # year + next; Cloud Function only
   tradeList/{tradeId}                          # cost-plan categories; not job trade contacts
+  parties/{partyId}                            # org identity (Phase 13). kind supplier | worker | trade | client | service provider. status active | merged. Delete denied.
   legacyWorkspaceIds, legacyWorkspaceNames     # leftover PIN folder map; keep
   projects/{jobId}                             # THE job record
     name, orgId, status                        # active | archived
@@ -100,6 +101,8 @@ Staging may also have Part B test jobs. Localhost always talks to staging.
 | `labour` / `trades` | Upsert by canonical name, not append |
 
 Canonical matching lives in `src/firebase/partyName.js`. Soft-moved old rows keep `status: moved/archived/duplicate`. Never hard-delete those.
+
+**Parties (Phase 13 Part A1, forward writes only):** `organizations/{orgId}/parties/{partyId}` is the org-level identity for a supplier, worker, trade contact, client or service provider. Display name is what was typed; `canonicalName` is `canonicalPartyName` of that string. Status is `active` or `merged`. A merge points `mergedInto` at the survivor; nobody is deleted. New expense, invoice, quote and directory writes stamp `partyId` when an exact canonical match is unique for that kind. Fuzzy `namesMatch` stays for dropdowns and is not identity. Existing rows are not backfilled until Part A2.
 
 ---
 
@@ -306,6 +309,7 @@ Firestore is a good database for this product **if** list screens read small doc
 | `storage.rules` | Who can read/write files (deploy separately) |
 | `src/firebase/projectCatalog.js` | Job list, create, archive, invite, remove |
 | `src/firebase/directories.js` | Client / supplier / labour upsert |
+| `src/firebase/parties.ts` | Org party identity; exact canonical match only |
 | `src/firebase/partyName.js` | Canonical names |
 | `scripts/backup-production.js` | Backup before writes |
 | `scripts/backfill-job-ids.js` | Already applied |

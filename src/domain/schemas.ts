@@ -41,6 +41,7 @@ export const expenseSchema = z
     jobId: z.string().optional(),
     reviewed: z.boolean().optional(),
     tradeId: z.string().min(1).max(80).nullable().optional(),
+    partyId: z.string().max(80).nullable().optional(),
   })
   .passthrough();
 
@@ -54,6 +55,7 @@ export const invoiceSchema = z
     dueDate: dateInput,
     clientName: z.string().optional(),
     jobId: z.string().optional(),
+    partyId: z.string().max(80).nullable().optional(),
   })
   .passthrough();
 
@@ -168,6 +170,30 @@ export const costPlanSchema = z
   })
   .passthrough();
 
+export const partyKindSchema = z.enum([
+  'supplier',
+  'worker',
+  'trade',
+  'client',
+  'service provider',
+]);
+
+export const partyStatusSchema = z.enum(['active', 'merged']);
+
+export const partySchema = z.object({
+  id: z.string().min(1).max(80).optional(),
+  displayName: z.string().trim().min(1).max(120),
+  canonicalName: z.string().min(1).max(120),
+  kind: partyKindSchema,
+  abn: z.string().max(20).nullable().optional(),
+  email: z.string().max(120).nullable().optional(),
+  phone: z.string().max(40).nullable().optional(),
+  status: partyStatusSchema,
+  mergedInto: z.string().min(1).max(80).nullable().optional(),
+  createdAt: z.unknown().optional(),
+  updatedAt: z.unknown().optional(),
+}).passthrough();
+
 export const tradeListItemSchema = z.object({
   id: z.string().min(1).max(80),
   name: z.string().min(1).max(80),
@@ -244,6 +270,9 @@ export type CostPlanLine = z.infer<typeof costPlanLineSchema>;
 export type CostPlanSection = z.infer<typeof costPlanSectionSchema>;
 export type TradeListItem = z.infer<typeof tradeListItemSchema>;
 export type CostPlanQuote = z.infer<typeof costPlanQuoteSchema>;
+export type PartyKind = z.infer<typeof partyKindSchema>;
+export type PartyStatus = z.infer<typeof partyStatusSchema>;
+export type Party = z.infer<typeof partySchema>;
 
 export function parseAtBoundary<T>(
   schema: z.ZodType<T>,

@@ -54,6 +54,19 @@ async function upsertDirectory(projectId, collectionName, data, getName, extra =
   try {
     const rows = await listAll(projectId, collectionName);
     const existing = rows.find((row) => namesMatch(getName(row), displayName));
+    let partyId;
+    try {
+      const { partyKindFromDirectory, resolvePartyIdForWrite } = await import('./parties');
+      partyId = await resolvePartyIdForWrite({
+        name: displayName,
+        kind: partyKindFromDirectory(collectionName),
+        email: data.email,
+        phone: data.phone || data.mobile,
+        abn: data.abn,
+      });
+    } catch (error) {
+      console.error('Party resolve error:', error);
+    }
     const payload = definedFields({
       ...data,
       ...extra,
@@ -61,6 +74,7 @@ async function upsertDirectory(projectId, collectionName, data, getName, extra =
       status: 'active',
       jobId: projectId,
       updatedAt: serverTimestamp(),
+      ...(partyId ? { partyId } : {}),
     });
 
     if (existing) {
@@ -77,6 +91,7 @@ async function upsertDirectory(projectId, collectionName, data, getName, extra =
           status: 'active',
           jobId: projectId,
           updatedAt: new Date(),
+          ...(partyId ? { partyId } : {}),
         },
       };
     }
@@ -97,6 +112,7 @@ async function upsertDirectory(projectId, collectionName, data, getName, extra =
         jobId: projectId,
         createdAt: new Date(),
         updatedAt: new Date(),
+        ...(partyId ? { partyId } : {}),
       },
     };
   } catch (error) {
