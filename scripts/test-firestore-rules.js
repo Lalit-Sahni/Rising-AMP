@@ -540,6 +540,31 @@ async function main() {
       archivedAt: new Date(),
     }));
 
+    const textPath = `${filePath}/content/text`;
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(textPath).set({
+        text: 'Retention is 5 percent',
+        textStatus: 'ok',
+        charCount: 23,
+        truncated: false,
+        contentType: 'application/pdf',
+        updatedAt: new Date(),
+      });
+    });
+    await assertSucceeds(owner.firestore().doc(textPath).get());
+    await assertFails(stranger.firestore().doc(textPath).get());
+    await assertFails(owner.firestore().doc(textPath).set({
+      text: 'nope',
+      textStatus: 'ok',
+      charCount: 4,
+      truncated: false,
+      contentType: 'application/pdf',
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(textPath).update({ text: 'nope' }));
+    await assertFails(owner.firestore().doc(textPath).delete());
+    await assertFails(owner.firestore().doc(`${filePath}/content/other`).get());
+
     const storageRefPath = `files/${ORG}/${JOB}/f1/slab.pdf`;
     await assertSucceeds(
       owner.storage().ref(storageRefPath).put(Buffer.from('%PDF-1.4'), { contentType: 'application/pdf' }),

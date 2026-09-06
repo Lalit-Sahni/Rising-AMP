@@ -469,6 +469,14 @@ service cloud.firestore {
             && request.resource.data.uploadedBy == resource.data.uploadedBy
             && request.resource.data.storagePath == resource.data.storagePath;
           allow delete: if false;
+
+          // Extracted text is a sibling, not a field on the file list
+          // document. Must stay inside this match — the project catch-all
+          // below would deny it.
+          match /content/{docId} {
+            allow read: if canUseProject() && docId == 'text';
+            allow create, update, delete: if false;
+          }
         }
         match /ledgerRollup/{docId} {
           allow read: if canUseProject() && docId == 'current';

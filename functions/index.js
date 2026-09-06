@@ -2,6 +2,7 @@
  * Production functions are sendJobInviteEmail, readReceiptImage,
  * allocateInvoiceNumber, checkEstimateImport, readQuoteFile and
  * maintainLedgerRollup (Firestore trigger, Phase 11 Part E, live 5 Sep 2026).
+ * Staging also has extractJobFileText (Phase 13 Part C; not production).
  * Deploy by name:
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
@@ -16,6 +17,7 @@
  *   firebase deploy --project production --only functions:readQuoteFile
  *   firebase deploy --project staging --only functions:maintainLedgerRollup
  *   firebase deploy --project production --only functions:maintainLedgerRollup
+ *   firebase deploy --project staging --only functions:extractJobFileText
  *
  * No --force. --force suppresses the confirmation before deleting functions.
  * This repo never lets a functions deploy delete something. First staging
@@ -28,8 +30,9 @@
 
 const admin = require('firebase-admin');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { onDocumentWritten } = require('firebase-functions/v2/firestore');
+const { onDocumentWritten, onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { recomputeLedgerRollupForJob, recomputeOrgLedgerRollup } = require('./lib/maintainLedgerRollup');
+const { handleJobFileCreated } = require('./lib/extractJobFileText');
 const { defineSecret } = require('firebase-functions/params');
 const {
   canonicalEmail,
@@ -556,6 +559,24 @@ exports.maintainLedgerRollup = onDocumentWritten(
     await recomputeOrgLedgerRollup(db, orgId, {
       FieldValue: admin.firestore.FieldValue,
       FieldPath: admin.firestore.FieldPath,
+    });
+  }
+);
+
+exports.extractJobFileText = onDocumentCreated(
+  {
+    region: 'us-central1',
+    document: 'organizations/{orgId}/projects/{jobId}/files/{fileId}',
+    timeoutSeconds: 120,
+    memory: '512MiB',
+    maxInstances: 10,
+    retry: true,
+  },
+  async (event) => {
+    await handleJobFileCreated(event, {
+      db: admin.firestore(),
+      storage: admin.storage(),
+      FieldValue: admin.firestore.FieldValue,
     });
   }
 );

@@ -55,7 +55,8 @@ organizations/{orgId}
     archivedAt, archivedBy, createdAt, updatedAt
     legacyWorkspaceId, accessCode              # only on the two original jobs
     budget, expenses[]                         # leftover PIN copy fields; ignore
-    files/{id}             job documents (Phase 9). type from a fixed list including estimate; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored.
+    files/{id}             job documents (Phase 9). type from a fixed list including estimate; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored. Extracted text is not on this list document.
+    files/{id}/content/text  Phase 13 Part C sibling. text, textStatus (ok | truncated | none | unsupported | error), charCount, truncated, contentType, updatedAt. Cap 80_000 characters. Members may read `text` only; client create/update/delete denied. Written by `extractJobFileText` after the file record exists (embedded PDF text, text/plain; images are `none`; Word/Excel/other are `unsupported`). No OCR. No OpenAI. No backfill. Staging function only; production not deployed.
     costPlan/current        optional Phase 10 plan. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections hold trade amounts and optional imported lines. sourceFileId optional. Members only; delete denied. Archiving is reversible: the same `current` document can be replaced with a new draft.
     ledgerRollup/current    Phase 11 Part E + Phase 13 Part B. Server-owned expense totals (costCents, counts, byCategory, byMonth, byDay, byTrade, byParty). Schema version stays 1. Members read; client write denied. Recomputed from the expense collection; a failed write leaves the previous document. Staging has the new buckets; production still has the Phase 11 shape until named.
     quotes/{id}            optional Phase 10 quotes. Allocations must sum to amountCents. status received | chosen | passed | void. Optional fileIds (max 10) point at files/{id}; fileId is the first pointer. The PDF is not stored on the quote. Delete denied.
@@ -117,7 +118,7 @@ Canonical matching lives in `src/firebase/partyName.js`. Soft-moved old rows kee
 6. **Clients ≠ suppliers.** Mixing them made the invoice picker unusable. Keep them split.
 7. **Firestore is the system of record.** Derived things (margin %, verdict, “needs you”) are computed in the client today. That is honest. Do not store a verdict unless you also define who updates it.
 8. **Staging vs production.** Localhost → staging. Production only behind an explicit yes. That split is correct and must stay.
-9. **Job files have a type, not a folder.** Certificates, variations, plans live as typed records on the job. Do not add a folder tree. Archive, never hard-delete.
+9. **Job files have a type, not a folder.** Certificates, variations, plans live as typed records on the job. Do not add a folder tree. Archive, never hard-delete. Extracted text lives on `files/{id}/content/text`, not on the file list document.
 10. **Cost Plan expenses will code to stable trades, never imported sections.** Sections belong to a replaceable estimate. Part A ships the stable ids in code; organisation trade documents wait for Part B.
 
 These are product-grade decisions. Scaling does not mean throwing them away.
@@ -323,7 +324,7 @@ Firestore is a good database for this product **if** list screens read small doc
 
 - Do not hard-delete live user records. Void first (Recently deleted). Permanent delete is only allowed on already-voided expenses and invoices.
 - Do not run production schema or data writes without a backup, a staging run, and an explicit yes.
-- Do not `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport` and `readQuoteFile`. Phase 11 adds `maintainLedgerRollup`. Deploy **by name**.
+- Do not `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile` and `maintainLedgerRollup`. Staging also has `extractJobFileText` (Phase 13 Part C; not production). Deploy **by name**.
 - Do not accept a pasted API key.
 - Do not “fix” localhost receipts by pointing `.env.local` at production.
 - If chat and this file disagree, this file plus `CLAUDE.md` / `PROGRESS.md` win.
