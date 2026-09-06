@@ -188,6 +188,40 @@ async function main() {
     }));
     await assertFails(owner.firestore().doc(rollupPath).delete());
     await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/ledgerRollup/other`).get());
+
+    const orgRollupPath = `organizations/${ORG}/ledgerRollup/current`;
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(orgRollupPath).set({
+        schemaVersion: 1,
+        documentCount: 5,
+        liveCount: 5,
+        costCents: 465600,
+        investorCents: 0,
+        byCategory: {},
+        byMonth: {},
+        byDay: {},
+        byTrade: {},
+        byParty: {},
+        revision: 1,
+      });
+    });
+    await assertSucceeds(owner.firestore().doc(orgRollupPath).get());
+    await assertFails(stranger.firestore().doc(orgRollupPath).get());
+    await assertFails(owner.firestore().doc(orgRollupPath).set({
+      schemaVersion: 1,
+      documentCount: 0,
+      liveCount: 0,
+      costCents: 0,
+      investorCents: 0,
+      byCategory: {},
+      byMonth: {},
+      byDay: {},
+      byTrade: {},
+      byParty: {},
+      revision: 2,
+    }));
+    await assertFails(owner.firestore().doc(orgRollupPath).delete());
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/ledgerRollup/other`).get());
     await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-bad`).set({
       category: 12,
       total: 1,

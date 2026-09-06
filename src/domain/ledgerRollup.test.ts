@@ -14,12 +14,15 @@ import {
   periodFromRollup,
   resolveExpenseTotals,
   rollupsAgree,
+  sumLedgerRollups,
+  LEDGER_ROLLUP_SCHEMA_VERSION,
 } from './ledgerRollup';
 
 const require = createRequire(import.meta.url);
 const js = require('../../functions/lib/ledgerRollup.js') as {
   computeLedgerRollup: typeof computeLedgerRollup;
   rollupsAgree: typeof rollupsAgree;
+  sumLedgerRollups: typeof sumLedgerRollups;
 };
 
 const FIXTURES = [
@@ -57,6 +60,82 @@ describe('computeLedgerRollup', () => {
     const fn = js.computeLedgerRollup(FIXTURES, 1);
     expect(rollupsAgree(ts, fn)).toBe(true);
     expect(js.rollupsAgree(ts, fn)).toBe(true);
+    const withIds = [
+      { id: 'a', total: 10, category: 'purchase', date: '2026-09-01', tradeId: 'carpentry', partyId: 'p1' },
+      { id: 'b', total: 4, category: 'labour', date: '2026-09-01', name: 'Mark' },
+    ];
+    const tsIds = computeLedgerRollup(withIds, 2);
+    const fnIds = js.computeLedgerRollup(withIds, 2);
+    expect(rollupsAgree(tsIds, fnIds)).toBe(true);
+    expect(js.rollupsAgree(tsIds, fnIds)).toBe(true);
+  });
+
+  test('two tradeIds bucket separately', () => {
+    const rollup = computeLedgerRollup([
+      { id: 'a', total: 10, category: 'purchase', date: '2026-09-01', tradeId: 'carpentry' },
+      { id: 'b', total: 20, category: 'purchase', date: '2026-09-01', tradeId: 'concreting' },
+    ], 1);
+    expect(rollup.byTrade.carpentry.cents).toBe(1000);
+    expect(rollup.byTrade.carpentry.count).toBe(1);
+    expect(rollup.byTrade.concreting.cents).toBe(2000);
+    expect(rollup.byTrade.concreting.count).toBe(1);
+  });
+
+  test('missing tradeId and partyId go to unassigned', () => {
+    const rollup = computeLedgerRollup(FIXTURES, 1);
+    expect(rollup.byTrade.unassigned.count).toBe(4);
+    expect(rollup.byParty.unassigned.count).toBe(4);
+    expect(rollup.byTrade.unassigned.cents).toBe(rollup.costCents + rollup.investorCents);
+  });
+
+  test('byParty uses partyId not the typed name', () => {
+    const rollup = computeLedgerRollup([
+      {
+        id: 'a',
+        total: 10,
+        category: 'purchase',
+        date: '2026-09-01',
+        partyId: 'party-mark',
+        supplier: 'Mark Joinery Pty Ltd',
+        name: 'Mark',
+      },
+    ], 1);
+    expect(rollup.byParty['party-mark'].cents).toBe(1000);
+    expect(rollup.byParty.Mark).toBeUndefined();
+    expect(rollup.byParty['Mark Joinery Pty Ltd']).toBeUndefined();
+    expect(rollup.byParty.unassigned).toBeUndefined();
+  });
+
+  test('rollupsAgree is false when byTrade or byParty are missing', () => {
+    const rollup = computeLedgerRollup(FIXTURES, 1);
+    const { byTrade, ...noTrade } = rollup;
+    const { byParty, ...noParty } = rollup;
+    expect(parseCompleteRollup(noTrade)).toBeNull();
+    expect(parseCompleteRollup(noParty)).toBeNull();
+    expect(rollupsAgree(noTrade, rollup)).toBe(false);
+    expect(rollupsAgree(noParty, rollup)).toBe(false);
+    expect(byTrade.unassigned.count).toBe(4);
+    expect(byParty.unassigned.count).toBe(4);
+  });
+
+  test('org sum of two jobs adds cents and counts', () => {
+    const jobA = computeLedgerRollup([
+      { id: 'a', total: 10, category: 'purchase', date: '2026-09-01', tradeId: 'carpentry', partyId: 'p1' },
+    ], 1);
+    const jobB = computeLedgerRollup([
+      { id: 'b', total: 25, category: 'labour', date: '2026-09-02', tradeId: 'carpentry', partyId: 'p2' },
+    ], 2);
+    const summed = sumLedgerRollups([jobA, jobB], 0);
+    expect(summed.costCents).toBe(jobA.costCents + jobB.costCents);
+    expect(summed.liveCount).toBe(2);
+    expect(summed.byTrade.carpentry.cents).toBe(3500);
+    expect(summed.byTrade.carpentry.count).toBe(2);
+    expect(summed.byParty.p1.count).toBe(1);
+    expect(summed.byParty.p2.count).toBe(1);
+    expect(summed.schemaVersion).toBe(LEDGER_ROLLUP_SCHEMA_VERSION);
+    expect(LEDGER_ROLLUP_SCHEMA_VERSION).toBe(1);
+    expect(js.sumLedgerRollups([jobA, jobB], 0).costCents).toBe(summed.costCents);
+    expect(parseCompleteRollup({ ...summed, jobCount: 2 })).toBeNull();
   });
 });
 
@@ -250,8 +329,15 @@ describe('screens read the rollup for totals', () => {
     expect(index).toContain('exports.maintainLedgerRollup');
     expect(index).toContain('onDocumentWritten');
     expect(index).toContain('recomputeLedgerRollupForJob');
+    expect(index).toContain('recomputeOrgLedgerRollup');
     const maintain = read('functions/lib/maintainLedgerRollup.js');
     expect(maintain).toContain('commitRollupIfRevisionUnchanged');
     expect(maintain).toContain('tx.set');
+    expect(maintain).toContain('sumLedgerRollups');
+    const jsSrc = read('functions/lib/ledgerRollup.js');
+    const tsSrc = read('src/domain/ledgerRollup.ts');
+    expect(jsSrc).not.toContain('namesMatch');
+    expect(tsSrc).not.toContain('namesMatch');
+    expect(maintain).not.toContain('namesMatch');
   });
 });

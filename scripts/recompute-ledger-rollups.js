@@ -1,20 +1,22 @@
 #!/usr/bin/env node
 /**
- * Recompute ledgerRollup/current from every expense on each job.
+ * Recompute ledgerRollup/current from every expense on each job, then
+ * rebuild organizations/{orgId}/ledgerRollup/current by summing complete
+ * job rollups (not by scanning every expense in the org).
  *
- * Idempotent: if the stored rollup already matches the ledger, it is skipped.
- * Reversible: this only writes (or with --clear, deletes) ledgerRollup/current.
- * Expenses, invoices and jobs are never changed. Reverse is --clear, or a
- * Firestore restore; it does not delete user records.
+ * Idempotent: if the stored rollup already matches, it is skipped.
+ * Reversible: this only writes (or with --clear, deletes) ledgerRollup/current
+ * on jobs and the org. Expenses, invoices and jobs are never changed.
+ * Reverse is --clear, or a Firestore restore; it does not delete user records.
  *
- * Dry-run is the default. Writes require --apply and an environment flag.
+ * Dry-run is the default. Writes require --apply and --staging.
  *
  *   node scripts/recompute-ledger-rollups.js --dry-run --staging
  *   node scripts/recompute-ledger-rollups.js --apply --staging
  *   node scripts/recompute-ledger-rollups.js --clear --apply --staging
  *
- * Refuses production unless both --apply and --production are passed.
- * Do not run --apply --production unless the owner named it.
+ * Phase 13 Part B refuses --production even if passed. Production hosting
+ * still parses v1 without byTrade/byParty; do not write the new buckets there.
  */
 
 const {
@@ -31,6 +33,7 @@ const {
   parseCompleteRollup,
   rollupsAgree,
   firestorePayload,
+  sumLedgerRollups,
   LEDGER_ROLLUP_COLLECTION,
   LEDGER_ROLLUP_DOC_ID,
 } = require('../functions/lib/ledgerRollup');
@@ -43,19 +46,19 @@ function parseArgs(argv) {
   const dryRun = argv.includes('--dry-run') || !apply;
   const jobFlag = argv.find((arg) => arg.startsWith('--job='));
   const jobId = jobFlag ? jobFlag.slice('--job='.length).trim() : '';
-  if (production && staging) {
-    throw new Error('Pick --staging or --production, not both.');
+  if (production) {
+    throw new Error('Phase 13 Part B refuses --production. Staging only.');
   }
-  if (!production && !staging) {
-    throw new Error('Pass --staging or --production.');
+  if (!staging) {
+    throw new Error('Pass --staging. Phase 13 Part B refuses --production.');
   }
   return {
     apply,
     clear,
     dryRun: !apply || dryRun,
-    production,
+    production: false,
     jobId,
-    destination: production ? PRODUCTION_PROJECT : STAGING_PROJECT,
+    destination: STAGING_PROJECT,
   };
 }
 
@@ -139,35 +142,33 @@ async function listOrEmpty(accessToken, parentName, collectionId) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (args.apply && args.production && !process.argv.includes('--production')) {
-    throw new Error('Refusing production apply without --production.');
-  }
-  if (args.apply && !args.production && !process.argv.includes('--staging')) {
-    throw new Error('Refusing to write without --apply --staging (or --apply --production).');
+  if (args.apply && !process.argv.includes('--staging')) {
+    throw new Error('Refusing to write without --apply --staging.');
   }
   if (STAGING_PROJECT === PRODUCTION_PROJECT) {
     throw new Error('Staging and production IDs match. Stop.');
   }
-  if (args.apply && args.production) {
-    console.log('Destination is PRODUCTION. This should only run after staging and an owner yes.');
+  if (args.destination !== STAGING_PROJECT) {
+    throw new Error('Phase 13 Part B refuses any destination except staging.');
   }
 
   const destination = args.destination;
   const mode = args.apply ? (args.clear ? 'CLEAR' : 'WRITE') : 'DRY RUN';
   console.log(`Ledger rollups (${mode}, ${destination})`);
-  console.log('Only ledgerRollup/current is touched. Expenses are not changed.');
+  console.log('Only ledgerRollup/current is touched (job + org). Expenses are not changed.');
 
   const accessToken = await getAccessToken();
   const root = `projects/${destination}/databases/(default)/documents`;
   const orgs = await listDocuments(accessToken, root, 'organizations');
-  const planned = [];
+  const jobPlans = [];
+  const jobsByOrg = new Map();
 
   for (const org of orgs) {
     const orgId = relativeDocPath(org.name).split('/')[1];
     const jobs = await listDocuments(accessToken, org.name, 'projects');
+    const orgJobs = [];
     for (const job of jobs) {
       const jobId = relativeDocPath(job.name).split('/')[3];
-      if (args.jobId && args.jobId !== jobId) continue;
       const name = decodeValue(job.fields && job.fields.name) || jobId;
       const expenses = (await listOrEmpty(accessToken, job.name, 'expenses')).map(decodeExpense);
       const computed = computeLedgerRollup(expenses, 0);
@@ -177,7 +178,7 @@ async function main() {
       const existing = existingDoc ? parseCompleteRollup(decodeFields(existingDoc)) : null;
       const path = `organizations/${orgId}/projects/${jobId}/${LEDGER_ROLLUP_COLLECTION}/${LEDGER_ROLLUP_DOC_ID}`;
       const agrees = existing ? rollupsAgree(existing, computed) : false;
-      planned.push({
+      const row = {
         orgId,
         jobId,
         name,
@@ -191,11 +192,16 @@ async function main() {
         parseFailed: Boolean(existingDoc) && !existing,
         nextRevision: (existing && existing.revision ? existing.revision : 0) + 1,
         computed,
-      });
+        existing,
+      };
+      orgJobs.push(row);
+      if (args.jobId && args.jobId !== jobId) continue;
+      jobPlans.push(row);
     }
+    jobsByOrg.set(orgId, orgJobs);
   }
 
-  planned.forEach((row) => {
+  jobPlans.forEach((row) => {
     const flag = args.clear
       ? (row.hasExisting ? 'delete' : 'skip')
       : (row.agrees ? 'ok' : (row.parseFailed ? 'repair' : (row.hasExisting ? 'update' : 'create')));
@@ -204,18 +210,77 @@ async function main() {
     );
   });
 
-  const writes = args.clear
-    ? planned.filter((row) => row.hasExisting).map((row) => ({
+  const orgPlans = [];
+  for (const org of orgs) {
+    const orgId = relativeDocPath(org.name).split('/')[1];
+    const orgJobs = jobsByOrg.get(orgId) || [];
+    if (args.jobId && !orgJobs.some((row) => row.jobId === args.jobId)) continue;
+    const parts = [];
+    if (!args.clear) {
+      orgJobs.forEach((row) => {
+        const inWriteSet = !args.jobId || args.jobId === row.jobId;
+        const willWrite = inWriteSet && !row.agrees;
+        const afterWrite = willWrite ? row.computed : row.existing;
+        const parsed = parseCompleteRollup(afterWrite);
+        if (parsed) parts.push(parsed);
+      });
+    }
+    const computed = sumLedgerRollups(parts, 0);
+    const existingDocs = await listOrEmpty(accessToken, org.name, LEDGER_ROLLUP_COLLECTION);
+    const existingDoc = existingDocs.find((doc) => relativeDocPath(doc.name).endsWith(`/${LEDGER_ROLLUP_DOC_ID}`));
+    const existing = existingDoc ? parseCompleteRollup(decodeFields(existingDoc)) : null;
+    const path = `organizations/${orgId}/${LEDGER_ROLLUP_COLLECTION}/${LEDGER_ROLLUP_DOC_ID}`;
+    const agrees = existing ? rollupsAgree(existing, computed) : false;
+    orgPlans.push({
+      orgId,
+      path,
+      liveCount: computed.liveCount,
+      costCents: computed.costCents,
+      investorCents: computed.investorCents,
+      agrees,
+      hasExisting: Boolean(existingDoc),
+      parseFailed: Boolean(existingDoc) && !existing,
+      nextRevision: (existing && existing.revision ? existing.revision : 0) + 1,
+      computed,
+      jobsIncluded: parts.length,
+      jobCount: orgJobs.length,
+    });
+  }
+
+  orgPlans.forEach((row) => {
+    const flag = args.clear
+      ? (row.hasExisting ? 'delete' : 'skip')
+      : (row.agrees ? 'ok' : (row.parseFailed ? 'repair' : (row.hasExisting ? 'update' : 'create')));
+    console.log(
+      `${flag.padEnd(6)} org ${row.orgId}  jobs=${row.jobsIncluded}/${row.jobCount} live=${row.liveCount} costCents=${row.costCents} investorCents=${row.investorCents}`,
+    );
+  });
+
+  const jobWrites = args.clear
+    ? jobPlans.filter((row) => row.hasExisting).map((row) => ({
       delete: docResourceName(destination, '(default)', row.path),
     }))
-    : planned.filter((row) => !row.agrees).map((row) => ({
+    : jobPlans.filter((row) => !row.agrees).map((row) => ({
       update: {
         name: docResourceName(destination, '(default)', row.path),
         fields: encodeRollup({ ...row.computed, revision: row.nextRevision }),
       },
     }));
 
-  console.log(`${writes.length} write(s) planned of ${planned.length} job(s).`);
+  const orgWrites = args.clear
+    ? orgPlans.filter((row) => row.hasExisting).map((row) => ({
+      delete: docResourceName(destination, '(default)', row.path),
+    }))
+    : orgPlans.filter((row) => !row.agrees).map((row) => ({
+      update: {
+        name: docResourceName(destination, '(default)', row.path),
+        fields: encodeRollup({ ...row.computed, revision: row.nextRevision }),
+      },
+    }));
+
+  const writes = jobWrites.concat(orgWrites);
+
+  console.log(`${writes.length} write(s) planned`);
 
   if (!args.apply) {
     console.log('Dry run. Re-run with --apply --staging to write.');

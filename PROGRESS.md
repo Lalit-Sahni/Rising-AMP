@@ -3,8 +3,9 @@
 ## Fleet state
 
 - **Part A1:** committed `5e78dd7`. Initial JS gzip **268.3 KB**.
-- **Part A2:** committed `cabc330`. Staging Firestore rules deployed. Applied on staging: **60** parties created, **183** rows stamped, **19** unlinked ledger rows. Second dry-run: `0 write(s) planned`. Candidate groups listed not merged: Metro Consulting / Group, Sydney Excavation Demo / Demolition, Lalit / Lalit Sahni. Smith→Smithson and Mark apostrophe pairs were not in staging data. Initial JS gzip **268.3 KB** (unchanged; no `src/` edits). Production untouched. No functions or hosting.
-- **Not started:** Parts B–E. Do not start Part B until the owner names it.
+- **Part A2:** accepted. `cabc330` + docs-only apply record `b031ee3`. Independent proof: typecheck/test/test:rules/build, gzip **268.3 KB**, staging dry-run `0 write(s) planned`. Two-commit nit noted, not a reject.
+- **Part B:** done (this commit). Job rollup adds required `byTrade` / `byParty` (schema v1). Org rollup at `organizations/{orgId}/ledgerRollup/current` is the sum of complete job rollups. `maintainLedgerRollup` rebuilds the org after a job write. Initial JS gzip **268.3 KB**. Staging: function `maintainLedgerRollup` + Firestore rules + recompute after this commit. Production untouched; the recompute script refuses `--production`.
+- **Not started:** Parts C–E. C waits until B is accepted (`functions/index.js` and `firestore.rules` overlap).
 - **Do not start Phase 14** until the owner names it. 275 KB is the held ceiling.
 
 ## Current branch
@@ -21,7 +22,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 **Phase 12 is closed and live on production hosting (6 Sep 2026).** `firebase deploy --project production --only hosting`. No functions, Firestore rules or Storage. Branch `phase-12-fables-upgrade`. Scan a receipt on Add expense is a white `--surface` card (was `steel-900`); verified on localhost as Lalit, 72 Centenary Dr, `rgb(255, 255, 255)`. Typecheck, 254 tests, build **267.9 KB** gzip (ceiling 275). Front-end only: no rules, functions, schema or data writes. Full detail: `PHASE12.md`. Ultrareview PRs #1–#4 were closed unused; the empty-base branches are gone.
 
-**Next:** Phase 13 Part A2 is done (staging backfill). Do not start Part B or Phase 14 until named. Optional leftover: force-close the home-screen app twice so the Phase 12 worker is in.
+**Next:** Phase 13 Part B is done (this commit). Do not start Part C or Phase 14 until named. Optional leftover: force-close the home-screen app twice so the Phase 12 worker is in.
 
 **Phase 11 Parts A–E are live on production (5 Sep 2026).** Function `maintainLedgerRollup`, Part E Firestore rules, `ledgerRollup/current` for both production jobs, and hosting (`index-BTUZ3uws.js` on https://risingamp.com.au). Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview.
 
@@ -43,7 +44,7 @@ Serial round trips from sign-in to a painted Jobs list: nine down to three on tw
 
 Part E initial JS gzip **272.7 KB**. **275 KB is the held ceiling** (moved 250 → 275 in Part B because IndexedDB persistence cannot be split out of `firebase/firestore`). Hold 275. Do not raise it because a build exceeds it. Part D was **272.6 KB**. Part C was **272.5 KB**. Part B was **270.0 KB**.
 
-**Not done, and next:** Phase 13 Part B (rollup buckets) is not started. 275 KB remains the held ceiling. Optional: phone force-close twice for the Phase 12 worker; Overview vs History on a known job.
+**Not done, and next:** Phase 13 Part C is not started. 275 KB remains the held ceiling. Optional: phone force-close twice for the Phase 12 worker; Overview vs History on a known job.
 
 **Geography, for context:** Firestore and Cloud Functions are `us-central1`. Production has six functions, including `maintainLedgerRollup`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
 
@@ -112,13 +113,13 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 Read CLAUDE.md, then PROGRESS.md, then PHASE13.md.
 
 Phase 13 is named and underway on phase-13-query-layer
-(Part A1 done, A2 not started). Phase 12 is closed and live on
+(Parts A1, A2 and B done). Phase 12 is closed and live on
 production hosting (6 Sep 2026). Restore tag
 pre-phase13-2026-09-06. Phase 11 Parts A–E are live
 (5 Sep 2026). Localhost stays on staging. Do not start
 Phase 14 until he names it. Deploy nothing unless named.
 
-275 KB is the held ceiling (now 267.9 KB).
+275 KB is the held ceiling (now 268.3 KB).
 
 Never cache Firestore, Cloud Function or Storage responses in
 the service worker. Never hard-delete user records. Never accept

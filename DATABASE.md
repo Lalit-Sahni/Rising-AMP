@@ -24,7 +24,7 @@ then computed margin, “needs you,” and the subtitle **in the browser**. Two 
 
 The cheap UX fix (now in the app, no schema change): show job **names** as soon as the invited-jobs query has an answer (boot cache, then IndexedDB, then the server), then hydrate **counts** from `ledgerRollup/current` when it exists, else `getCountFromServer`. Drawing the Jobs list does **not** download the ledger. Opening a job still listens to expenses and invoices for History and “what needs you,” but Overview cost comes from the rollup.
 
-The **real** scale fix is the Phase 11 Part E rollup document (`ledgerRollup/current`), written by `maintainLedgerRollup`. Staging and production function, rules and recompute applied 5 Sep 2026. Recompute with `scripts/recompute-ledger-rollups.js`. If rollup and ledger disagree, the ledger wins.
+The **real** scale fix is the Phase 11 Part E rollup document (`ledgerRollup/current`), written by `maintainLedgerRollup`. Staging and production function, rules and recompute applied 5 Sep 2026. Phase 13 Part B adds `byTrade` and `byParty` on the same document (schema v1) and an org rollup at `organizations/{orgId}/ledgerRollup/current`, summed from complete job rollups. Staging function, rules and recompute applied in Part B; production not recomputed. Recompute with `scripts/recompute-ledger-rollups.js`. If rollup and ledger disagree, the ledger wins.
 
 ### Is the model right for a family construction tracker?
 
@@ -46,6 +46,7 @@ organizations/{orgId}
   counters/invoices                            # year + next; Cloud Function only
   tradeList/{tradeId}                          # cost-plan categories; not job trade contacts
   parties/{partyId}                            # org identity (Phase 13). kind supplier | worker | trade | client | service provider. status active | merged. Delete denied.
+  ledgerRollup/current                         # Phase 13 Part B. Org sum of complete job rollups. Same shape as the job rollup (no extra keys). Members read; client write denied. Staging recomputed; production not recomputed.
   legacyWorkspaceIds, legacyWorkspaceNames     # leftover PIN folder map; keep
   projects/{jobId}                             # THE job record
     name, orgId, status                        # active | archived
@@ -56,7 +57,7 @@ organizations/{orgId}
     budget, expenses[]                         # leftover PIN copy fields; ignore
     files/{id}             job documents (Phase 9). type from a fixed list including estimate; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored.
     costPlan/current        optional Phase 10 plan. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections hold trade amounts and optional imported lines. sourceFileId optional. Members only; delete denied. Archiving is reversible: the same `current` document can be replaced with a new draft.
-    ledgerRollup/current    Phase 11 Part E. Server-owned expense totals (costCents, counts, byCategory, byMonth, byDay). Members read; client write denied. Recomputed from the expense collection; a failed write leaves the previous document. Staging has the docs; production does not unless named.
+    ledgerRollup/current    Phase 11 Part E + Phase 13 Part B. Server-owned expense totals (costCents, counts, byCategory, byMonth, byDay, byTrade, byParty). Schema version stays 1. Members read; client write denied. Recomputed from the expense collection; a failed write leaves the previous document. Staging has the new buckets; production still has the Phase 11 shape until named.
     quotes/{id}            optional Phase 10 quotes. Allocations must sum to amountCents. status received | chosen | passed | void. Optional fileIds (max 10) point at files/{id}; fileId is the first pointer. The PDF is not stored on the quote. Delete denied.
     expenses/{id}          + jobId, optional tradeId (or not-in-estimate | investor)
     invoices/{id}          + jobId, invoiceNumber, status including void
@@ -313,7 +314,7 @@ Firestore is a good database for this product **if** list screens read small doc
 | `src/firebase/partyName.js` | Canonical names |
 | `scripts/backup-production.js` | Backup before writes |
 | `scripts/backfill-job-ids.js` | Already applied |
-| `scripts/recompute-ledger-rollups.js` | Rebuild `ledgerRollup/current` from expenses (dry-run default) |
+| `scripts/recompute-ledger-rollups.js` | Rebuild job `ledgerRollup/current` from expenses, then the org rollup from those job docs (dry-run default). Part B refuses `--production`. |
 | `scripts/split-directory-parties.js` | Already applied |
 
 ---

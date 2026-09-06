@@ -49,6 +49,8 @@ export type LedgerRollup = {
   byCategory: Record<string, RollupBucket>;
   byMonth: Record<string, RollupBucket>;
   byDay: Record<string, RollupBucket>;
+  byTrade: Record<string, RollupBucket>;
+  byParty: Record<string, RollupBucket>;
   revision: number;
   updatedAt?: unknown;
 };
@@ -79,6 +81,13 @@ function isNonNegInt(value: unknown): value is number {
 export function categoryKey(expense: ExpenseLike | null | undefined): string {
   const raw = String((expense && expense.category) || '').trim() || 'uncategorized';
   return raw.replace(/\//g, '_').slice(0, 80);
+}
+
+/** Stamped tradeId / partyId only. Missing or blank → unassigned. Never a typed name. */
+export function idBucketKey(value: unknown): string {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return 'unassigned';
+  return raw.slice(0, 80);
 }
 
 export function formatYmdInTimeZone(date: Date, timeZone = LEDGER_ROLLUP_TIME_ZONE): string {
@@ -133,6 +142,16 @@ function addBucket(map: Record<string, RollupBucket>, key: string, cents: number
   map[key] = current;
 }
 
+function mergeIntoBucketMap(target: Record<string, RollupBucket>, source: Record<string, RollupBucket>) {
+  Object.keys(source || {}).forEach((key) => {
+    const bucket = source[key];
+    const current = target[key] || { cents: 0, count: 0 };
+    current.cents += bucket.cents;
+    current.count += bucket.count;
+    target[key] = current;
+  });
+}
+
 function sortBucketMap(map: Record<string, RollupBucket>): Record<string, RollupBucket> {
   const out: Record<string, RollupBucket> = {};
   Object.keys(map).sort().forEach((key) => {
@@ -169,6 +188,8 @@ export function parseCompleteRollup(value: unknown): LedgerRollup | null {
   if (!isBucketMap(row.byCategory, CATEGORY_KEY)) return null;
   if (!isBucketMap(row.byMonth, YEAR_MONTH)) return null;
   if (!isBucketMap(row.byDay, YMD)) return null;
+  if (!isBucketMap(row.byTrade, CATEGORY_KEY)) return null;
+  if (!isBucketMap(row.byParty, CATEGORY_KEY)) return null;
   const keys = Object.keys(row);
   const allowed = new Set([
     'schemaVersion',
@@ -179,6 +200,8 @@ export function parseCompleteRollup(value: unknown): LedgerRollup | null {
     'byCategory',
     'byMonth',
     'byDay',
+    'byTrade',
+    'byParty',
     'revision',
     'updatedAt',
   ]);
@@ -192,6 +215,8 @@ export function parseCompleteRollup(value: unknown): LedgerRollup | null {
     byCategory: sortBucketMap(row.byCategory as Record<string, RollupBucket>),
     byMonth: sortBucketMap(row.byMonth as Record<string, RollupBucket>),
     byDay: sortBucketMap(row.byDay as Record<string, RollupBucket>),
+    byTrade: sortBucketMap(row.byTrade as Record<string, RollupBucket>),
+    byParty: sortBucketMap(row.byParty as Record<string, RollupBucket>),
     revision: row.revision,
     updatedAt: row.updatedAt,
   };
@@ -211,6 +236,8 @@ export function emptyLedgerRollup(revision = 0): LedgerRollup {
     byCategory: {},
     byMonth: {},
     byDay: {},
+    byTrade: {},
+    byParty: {},
     revision,
   };
 }
@@ -221,6 +248,8 @@ export function computeLedgerRollup(
 ): LedgerRollup {
   const byCategory: Record<string, RollupBucket> = {};
   const byDay: Record<string, RollupBucket> = {};
+  const byTrade: Record<string, RollupBucket> = {};
+  const byParty: Record<string, RollupBucket> = {};
   let documentCount = 0;
   let liveCount = 0;
   let costCents = 0;
@@ -235,6 +264,8 @@ export function computeLedgerRollup(
     if (isInvestorExpense(expense)) investorCents += amount;
     else costCents += amount;
     addBucket(byCategory, categoryKey(expense), amount);
+    addBucket(byTrade, idBucketKey(expense.tradeId), amount);
+    addBucket(byParty, idBucketKey(expense.partyId), amount);
     const ymd = expenseCalendarYmd(expense);
     if (ymd) addBucket(byDay, ymd, amount);
   });
@@ -257,6 +288,52 @@ export function computeLedgerRollup(
     byCategory: sortBucketMap(byCategory),
     byMonth: sortBucketMap(byMonth),
     byDay: sortBucketMap(byDay),
+    byTrade: sortBucketMap(byTrade),
+    byParty: sortBucketMap(byParty),
+    revision,
+  };
+}
+
+/** Sum complete job rollups into one org document. Skips missing or unparseable rows. */
+export function sumLedgerRollups(
+  rollups: Array<unknown> = [],
+  revision = 0,
+): LedgerRollup {
+  const byCategory: Record<string, RollupBucket> = {};
+  const byMonth: Record<string, RollupBucket> = {};
+  const byDay: Record<string, RollupBucket> = {};
+  const byTrade: Record<string, RollupBucket> = {};
+  const byParty: Record<string, RollupBucket> = {};
+  let documentCount = 0;
+  let liveCount = 0;
+  let costCents = 0;
+  let investorCents = 0;
+
+  (rollups || []).forEach((row) => {
+    const part = parseCompleteRollup(row);
+    if (!part) return;
+    documentCount += part.documentCount;
+    liveCount += part.liveCount;
+    costCents += part.costCents;
+    investorCents += part.investorCents;
+    mergeIntoBucketMap(byCategory, part.byCategory);
+    mergeIntoBucketMap(byMonth, part.byMonth);
+    mergeIntoBucketMap(byDay, part.byDay);
+    mergeIntoBucketMap(byTrade, part.byTrade);
+    mergeIntoBucketMap(byParty, part.byParty);
+  });
+
+  return {
+    schemaVersion: LEDGER_ROLLUP_SCHEMA_VERSION,
+    documentCount,
+    liveCount,
+    costCents,
+    investorCents,
+    byCategory: sortBucketMap(byCategory),
+    byMonth: sortBucketMap(byMonth),
+    byDay: sortBucketMap(byDay),
+    byTrade: sortBucketMap(byTrade),
+    byParty: sortBucketMap(byParty),
     revision,
   };
 }
@@ -270,6 +347,8 @@ function moneyShape(rollup: LedgerRollup) {
     byCategory: rollup.byCategory,
     byMonth: rollup.byMonth,
     byDay: rollup.byDay,
+    byTrade: rollup.byTrade,
+    byParty: rollup.byParty,
   };
 }
 

@@ -81,6 +81,13 @@ function categoryKey(expense) {
   return raw.replace(/\//g, '_').slice(0, 80);
 }
 
+/** Stamped tradeId / partyId only. Missing or blank → unassigned. Never a typed name. */
+function idBucketKey(value) {
+  const raw = String(value == null ? '' : value).trim();
+  if (!raw) return 'unassigned';
+  return raw.slice(0, 80);
+}
+
 function formatYmdInTimeZone(date, timeZone) {
   const parts = new Intl.DateTimeFormat('en-AU', {
     timeZone: timeZone || LEDGER_ROLLUP_TIME_ZONE,
@@ -132,6 +139,16 @@ function addBucket(map, key, cents) {
   map[key] = current;
 }
 
+function mergeIntoBucketMap(target, source) {
+  Object.keys(source || {}).forEach((key) => {
+    const bucket = source[key];
+    const current = target[key] || { cents: 0, count: 0 };
+    current.cents += bucket.cents;
+    current.count += bucket.count;
+    target[key] = current;
+  });
+}
+
 function sortBucketMap(map) {
   const out = {};
   Object.keys(map).sort().forEach((key) => {
@@ -164,6 +181,8 @@ function parseCompleteRollup(value) {
   if (!isBucketMap(value.byCategory, CATEGORY_KEY)) return null;
   if (!isBucketMap(value.byMonth, YEAR_MONTH)) return null;
   if (!isBucketMap(value.byDay, YMD)) return null;
+  if (!isBucketMap(value.byTrade, CATEGORY_KEY)) return null;
+  if (!isBucketMap(value.byParty, CATEGORY_KEY)) return null;
   const allowed = {
     schemaVersion: true,
     documentCount: true,
@@ -173,6 +192,8 @@ function parseCompleteRollup(value) {
     byCategory: true,
     byMonth: true,
     byDay: true,
+    byTrade: true,
+    byParty: true,
     revision: true,
     updatedAt: true,
   };
@@ -186,6 +207,8 @@ function parseCompleteRollup(value) {
     byCategory: sortBucketMap(value.byCategory),
     byMonth: sortBucketMap(value.byMonth),
     byDay: sortBucketMap(value.byDay),
+    byTrade: sortBucketMap(value.byTrade),
+    byParty: sortBucketMap(value.byParty),
     revision: value.revision,
     updatedAt: value.updatedAt,
   };
@@ -205,6 +228,8 @@ function emptyLedgerRollup(revision) {
     byCategory: {},
     byMonth: {},
     byDay: {},
+    byTrade: {},
+    byParty: {},
     revision: revision || 0,
   };
 }
@@ -212,6 +237,8 @@ function emptyLedgerRollup(revision) {
 function computeLedgerRollup(expenses, revision) {
   const byCategory = {};
   const byDay = {};
+  const byTrade = {};
+  const byParty = {};
   let documentCount = 0;
   let liveCount = 0;
   let costCents = 0;
@@ -226,6 +253,8 @@ function computeLedgerRollup(expenses, revision) {
     if (isInvestorExpense(expense)) investorCents += amount;
     else costCents += amount;
     addBucket(byCategory, categoryKey(expense), amount);
+    addBucket(byTrade, idBucketKey(expense.tradeId), amount);
+    addBucket(byParty, idBucketKey(expense.partyId), amount);
     const ymd = expenseCalendarYmd(expense);
     if (ymd) addBucket(byDay, ymd, amount);
   });
@@ -248,6 +277,49 @@ function computeLedgerRollup(expenses, revision) {
     byCategory: sortBucketMap(byCategory),
     byMonth: sortBucketMap(byMonth),
     byDay: sortBucketMap(byDay),
+    byTrade: sortBucketMap(byTrade),
+    byParty: sortBucketMap(byParty),
+    revision: revision || 0,
+  };
+}
+
+/** Sum complete job rollups into one org document. Skips missing or unparseable rows. */
+function sumLedgerRollups(rollups, revision) {
+  const byCategory = {};
+  const byMonth = {};
+  const byDay = {};
+  const byTrade = {};
+  const byParty = {};
+  let documentCount = 0;
+  let liveCount = 0;
+  let costCents = 0;
+  let investorCents = 0;
+
+  (rollups || []).forEach((row) => {
+    const part = parseCompleteRollup(row);
+    if (!part) return;
+    documentCount += part.documentCount;
+    liveCount += part.liveCount;
+    costCents += part.costCents;
+    investorCents += part.investorCents;
+    mergeIntoBucketMap(byCategory, part.byCategory);
+    mergeIntoBucketMap(byMonth, part.byMonth);
+    mergeIntoBucketMap(byDay, part.byDay);
+    mergeIntoBucketMap(byTrade, part.byTrade);
+    mergeIntoBucketMap(byParty, part.byParty);
+  });
+
+  return {
+    schemaVersion: LEDGER_ROLLUP_SCHEMA_VERSION,
+    documentCount,
+    liveCount,
+    costCents,
+    investorCents,
+    byCategory: sortBucketMap(byCategory),
+    byMonth: sortBucketMap(byMonth),
+    byDay: sortBucketMap(byDay),
+    byTrade: sortBucketMap(byTrade),
+    byParty: sortBucketMap(byParty),
     revision: revision || 0,
   };
 }
@@ -261,6 +333,8 @@ function moneyShape(rollup) {
     byCategory: rollup.byCategory,
     byMonth: rollup.byMonth,
     byDay: rollup.byDay,
+    byTrade: rollup.byTrade,
+    byParty: rollup.byParty,
   };
 }
 
@@ -305,6 +379,8 @@ function firestorePayload(rollup, updatedAt) {
     byCategory: complete.byCategory,
     byMonth: complete.byMonth,
     byDay: complete.byDay,
+    byTrade: complete.byTrade,
+    byParty: complete.byParty,
     revision: complete.revision,
   };
   if (updatedAt !== undefined) payload.updatedAt = updatedAt;
@@ -318,12 +394,14 @@ module.exports = {
   LEDGER_ROLLUP_TIME_ZONE,
   MAINTAIN_LEDGER_ROLLUP_FUNCTION,
   categoryKey,
+  idBucketKey,
   formatYmdInTimeZone,
   expenseCalendarYmd,
   parseCompleteRollup,
   isCompleteRollup,
   emptyLedgerRollup,
   computeLedgerRollup,
+  sumLedgerRollups,
   rollupsAgree,
   commitCompleteRollup,
   commitRollupIfRevisionUnchanged,

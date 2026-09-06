@@ -575,6 +575,16 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      match /ledgerRollup/{docId} {
+        function isOrgInvited() {
+          return signedIn()
+            && emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)).data.invitedEmails;
+        }
+
+        allow read: if isOrgInvited() && docId == 'current';
+        allow create, update, delete: if false;
+      }
+
       match /{allPaths=**} {
         allow read, write: if false;
       }

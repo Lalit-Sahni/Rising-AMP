@@ -29,7 +29,7 @@
 const admin = require('firebase-admin');
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
-const { recomputeLedgerRollupForJob } = require('./lib/maintainLedgerRollup');
+const { recomputeLedgerRollupForJob, recomputeOrgLedgerRollup } = require('./lib/maintainLedgerRollup');
 const { defineSecret } = require('firebase-functions/params');
 const {
   canonicalEmail,
@@ -550,6 +550,10 @@ exports.maintainLedgerRollup = onDocumentWritten(
     const jobId = String((event.params && event.params.jobId) || '');
     const db = admin.firestore();
     await recomputeLedgerRollupForJob(db, orgId, jobId, {
+      FieldValue: admin.firestore.FieldValue,
+      FieldPath: admin.firestore.FieldPath,
+    });
+    await recomputeOrgLedgerRollup(db, orgId, {
       FieldValue: admin.firestore.FieldValue,
       FieldPath: admin.firestore.FieldPath,
     });
