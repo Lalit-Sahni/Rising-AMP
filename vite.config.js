@@ -11,9 +11,9 @@ import { fileURLToPath } from 'node:url';
 const root = path.dirname(fileURLToPath(import.meta.url));
 // 250 was Phase 8–10. Part B’s IndexedDB persistence lives in the same
 // firebase/firestore module as getDocs, so it cannot be code-split.
-// 275 KB gzip is the held ceiling (owner, 5 Sep 2026). Hold it. Do not
-// raise it because a build exceeds it. Current bundle ~272.7 KB.
-const INITIAL_GZIP_BUDGET = 275 * 1024;
+// 400 KB gzip is the held ceiling (owner, 7 Sep 2026). Still fail the
+// build on breach. Prefer smaller when free. Current bundle ~270.1 KB.
+const INITIAL_GZIP_BUDGET = 400 * 1024;
 
 function jsxInJs() {
   return {
@@ -116,7 +116,7 @@ export default defineConfig({
     react({ include: /\.(js|jsx|ts|tsx)$/ }),
     legalPages(),
     // Shell-only service worker. Do not import virtual:pwa-register in src/
-    // (that would spend the 275 KB gzip budget). Inline register stays in
+    // (that would spend the 400 KB gzip budget). Inline register stays in
     // index.html. skipWaiting must be set here: the plugin only auto-sets it
     // when injectRegister is "auto".
     VitePWA({

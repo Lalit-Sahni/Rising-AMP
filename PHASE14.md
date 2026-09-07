@@ -108,7 +108,7 @@ Commit: `Add the eval set, injection and scope tests for the router.`
 
 ## Decisions to bring to the owner, not take alone
 
-- **The bundle ceiling.** 275 KB is nearly spent (270.1 KB). This phase adds UI. The owner has been asked whether to raise it to 400 KB with the build still failing on breach. Get that answer before Part B rather than compromising the interface to squeeze under a line.
+- **The bundle ceiling.** 400 KB is the held ceiling (owner, 7 Sep 2026; currently 270.1 KB). This phase adds UI. Prefer smaller when free. The build still fails on breach.
 - **Which model.** `gpt-4o-mini` matches the five existing functions. Routing is an easy task and a bigger model is probably waste, but say what you chose and why in an ADR.
 - Anything that would need a write, a new npm package in the Vite app, or a production deploy.
 

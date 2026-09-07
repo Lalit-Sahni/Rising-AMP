@@ -17,7 +17,7 @@ Phase 13 is **done on `phase-13-query-layer`**, plus a **Part D amendment** on t
 | E palette answers spend / files / invoices | `68e1a64` | **270.1 KB** |
 | D amendment uncoded pool on trade answers | this commit | **270.1 KB** |
 
-Ceiling **275 KB**, held. Independent typecheck / test / test:rules / build on every accepted part.
+Ceiling **400 KB** (owner, 7 Sep 2026), held. Current **270.1 KB**. The build still fails on breach. Prefer smaller when free. Independent typecheck / test / test:rules / build on every accepted part.
 
 **Staging (named):** party backfill 60 created / 183 stamped / 19 unlinked, second dry-run `0 write(s) planned`; job+org rollups recomputed (`0 write(s)` after); Firestore rules for parties, org rollup, `files/.../content/text`; `extractJobFileText` created with `retry: false`. Production functions still the original six. No production hosting, rules, functions, or data writes.
 
@@ -50,7 +50,7 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 - **Part E:** done `68e1a64`. Command palette answers spend (tradeList → `spendByTrade`, rollup-first), file text (`findFiles` / Part C `content/text`), and invoice status (`invoicesByStatus`) with a visible job-scope chip (current job by default; clear for org-wide). No AI. `PaletteHost` still lazy-loads `CommandPalette`. `App.js` and `PaletteHost` have no query imports. JobFileViewer is lazy inside the palette. Typecheck, 279+40 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 275). Production untouched. No deploy. Matcher tests were positive-only; junk queries could still hit a trade via alias prefixes.
 - **Part D amendment:** uncoded pool on this commit. `planVsActual` / `spendByTrade` / `spendByCategory` return `uncoded: { count, cents }` and `affected`. Uncoded = live expenses with no stored `tradeId` (`expenseTradeId` only). Trade lines stay coded-only and carry the pool; job totals stay inclusive. Palette states a non-zero pool with Code them → Cost plan. Matcher negatives: `zzzzq` / `banana-xyz` / `xx` / `ing` / `air` return no spend answers. Typecheck, 294+40 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 275). Production untouched. No deploy.
 - **Not started:** Phase 14. Do not start it until named.
-- **Do not start Phase 14** until the owner names it. 275 KB is the held ceiling.
+- **Do not start Phase 14** until the owner names it. 400 KB is the held ceiling (270.1 KB). The build still fails on breach.
 - **Dependency rule:** root Vite `package.json` takes **no new packages**. Functions may add **one** PDF-text library (`unpdf@1.8.1`). It is not imported from `src/`. It does not change initial JS gzip. No OpenAI SDK.
 
 ## Current branch
@@ -87,9 +87,9 @@ Serial round trips from sign-in to a painted Jobs list: nine down to three on tw
 
 **Tested 5 Sep 2026 on localhost:3000 against staging** (`npm start`, signed in as the owner): Jobs list (72 Centenary Dr, Kelly Street), Kelly Street overview ($4,656 cost to date, 5 expenses), Cost Plan ($348,608 estimated / $4,656 spent), History (5 expenses). IndexedDB held `firestore/[DEFAULT]/rising-amp-staging/main`. Reload still showed the same spend. Part A worker test (`npm run preview:staging`) still stands: `/clear-sw` unregisters it. `npm start` is the day-to-day server and does **not** install a worker.
 
-Part E initial JS gzip **272.7 KB**. **275 KB is the held ceiling** (moved 250 → 275 in Part B because IndexedDB persistence cannot be split out of `firebase/firestore`). Hold 275. Do not raise it because a build exceeds it. Part D was **272.6 KB**. Part C was **272.5 KB**. Part B was **270.0 KB**.
+Part E initial JS gzip **272.7 KB**. That phase held **275 KB** (moved 250 → 275 in Part B because IndexedDB persistence cannot be split out of `firebase/firestore`). Owner raised the held ceiling to **400 KB** on 7 Sep 2026; the build still fails on breach. Part D was **272.6 KB**. Part C was **272.5 KB**. Part B was **270.0 KB**.
 
-**Not done, and next:** Phase 14 is not named. 275 KB remains the held ceiling (now **270.1 KB**). Optional: phone force-close twice for the Phase 12 worker; Overview vs History on a known job.
+**Not done, and next:** Phase 14 is not named. 400 KB remains the held ceiling (now **270.1 KB**). The build still fails on breach. Optional: phone force-close twice for the Phase 12 worker; Overview vs History on a known job.
 
 **Geography, for context:** Firestore and Cloud Functions are `us-central1`. Production has six functions, including `maintainLedgerRollup`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
 
@@ -165,7 +165,7 @@ pre-phase13-2026-09-06. Phase 11 Parts A–E are live
 (5 Sep 2026). Localhost stays on staging. Do not start
 Phase 14 until he names it. Deploy nothing unless named.
 
-275 KB is the held ceiling (now 270.1 KB).
+400 KB is the held ceiling (now 270.1 KB). The build still fails on breach.
 Look first: scripts/party-backfill-unlinked-staging.md.
 
 Never cache Firestore, Cloud Function or Storage responses in

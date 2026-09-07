@@ -155,5 +155,5 @@ Commit: `Let the command palette answer questions, not just find rows.`
 - Ten typed read-only queries exist, membership-scoped, rollup-first, each returning provenance.
 - At least one existing screen is rebuilt on the query layer to prove the shape.
 - The command palette answers a spend question on a job with no model involved.
-- Initial JS gzip still under the 275 KB ceiling. That ceiling is held, not raised.
+- Initial JS gzip still under the 400 KB ceiling (owner, 7 Sep 2026; currently 270.1 KB). That ceiling is held. The build still fails on breach. Prefer smaller when free.
 - `npm run typecheck`, `test`, `test:rules` and `build` all pass.

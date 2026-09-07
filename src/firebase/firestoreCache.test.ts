@@ -57,6 +57,6 @@ describe('Firestore disk cache wiring', () => {
     const viteConfig = read('vite.config.js');
     expect(viteConfig).toContain("handler: 'NetworkOnly'");
     expect(viteConfig).toContain('firestore.googleapis.com');
-    expect(viteConfig).toContain('INITIAL_GZIP_BUDGET = 275 * 1024');
+    expect(viteConfig).toContain('INITIAL_GZIP_BUDGET = 400 * 1024');
   });
 });
