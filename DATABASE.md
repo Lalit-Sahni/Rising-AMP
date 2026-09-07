@@ -26,7 +26,7 @@ The cheap UX fix (now in the app, no schema change): show job **names** as soon 
 
 The **real** scale fix is the Phase 11 Part E rollup document (`ledgerRollup/current`), written by `maintainLedgerRollup`. Staging and production function, rules and recompute applied 5 Sep 2026. Phase 13 Part B adds `byTrade` and `byParty` on the same document (schema v1) and an org rollup at `organizations/{orgId}/ledgerRollup/current`, summed from complete job rollups. Staging function, rules and recompute applied in Part B; production not recomputed. Recompute with `scripts/recompute-ledger-rollups.js`. If rollup and ledger disagree, the ledger wins.
 
-Phase 13 Part D adds a typed, **read-only** query layer in `src/queries/` (no barrel file). Spend, job and portfolio summaries are rollup-first. Overview totals go through `jobSummary`, which calls the same `resolveExpenseTotals` helper. Membership is `{ orgId, allowedJobIds }` from invited jobs — never a free orgId. Production is untouched this phase.
+Phase 13 Part D adds a typed, **read-only** query layer in `src/queries/` (no barrel file). Spend, job and portfolio summaries are rollup-first. Overview totals go through `jobSummary`, which calls the same `resolveExpenseTotals` helper. Membership is `{ orgId, allowedJobIds }` from invited jobs — never a free orgId. Trade and plan-versus-actual results carry the uncoded pool (live expenses with no stored `tradeId`). Production is untouched this phase.
 
 ### Is the model right for a family construction tracker?
 
@@ -122,7 +122,7 @@ Canonical matching lives in `src/firebase/partyName.js`. Soft-moved old rows kee
 8. **Staging vs production.** Localhost → staging. Production only behind an explicit yes. That split is correct and must stay.
 9. **Job files have a type, not a folder.** Certificates, variations, plans live as typed records on the job. Do not add a folder tree. Archive, never hard-delete. Extracted text lives on `files/{id}/content/text`, not on the file list document.
 10. **Cost Plan expenses will code to stable trades, never imported sections.** Sections belong to a replaceable estimate. Part A ships the stable ids in code; organisation trade documents wait for Part B.
-11. **The query layer is read-only and rollup-first.** `src/queries/` answers spend, summaries, files, invoices and quotes from membership (`orgId` + invited `allowedJobIds`). It never writes. Numbers are computed in code, never by a model. Overview totals use `jobSummary`. The command palette answers spend, file text and invoice status from the same queries.
+11. **The query layer is read-only and rollup-first.** `src/queries/` answers spend, summaries, files, invoices and quotes from membership (`orgId` + invited `allowedJobIds`). It never writes. Numbers are computed in code, never by a model. Overview totals use `jobSummary`. The command palette answers spend, file text and invoice status from the same queries. Spend-by-trade and plan-versus-actual results carry the uncoded pool (`{ count, cents }` plus `affected`): live expenses with no stored `tradeId`, never a guessed trade.
 
 These are product-grade decisions. Scaling does not mean throwing them away.
 

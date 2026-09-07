@@ -21,7 +21,7 @@ import { expenseDisplayName, formatExpenseDay } from '../domain/expenseDisplay';
 import { jobFileToBrowserItem } from '../domain/jobFileBrowser';
 import type { FileBrowserItem } from '../domain/jobFileBrowser';
 import type { JobFileType } from '../domain/jobFiles';
-import { useTradeList } from '../hooks/useCostPlan';
+import { useCostPlan, useTradeList } from '../hooks/useCostPlan';
 import { useLedgerRollup } from '../hooks/useLedgerRollup';
 import type { JobMoneySnapshot } from '../queries/core';
 import { formatMoney, getExpenseFaceTotal, isVoidExpense, isVoidInvoice } from '../utils/jobMetrics';
@@ -116,6 +116,7 @@ export default function CommandPalette() {
   const [viewerBusy, setViewerBusy] = useState(false);
 
   const tradeQuery = useTradeList(orgId);
+  const planQuery = useCostPlan(orgId, scopedJobId);
   const rollupQuery = useLedgerRollup(orgId, scopedJobId || undefined);
   const scope = useMemo(() => membershipScope(orgId, allowedJobs), [orgId, allowedJobs]);
   const scopeChip = defaultPaletteScope({
@@ -290,6 +291,7 @@ export default function CommandPalette() {
         scope,
         jobId: scopedJobId,
         jobs: moneyJobs,
+        plan: scopedJobId ? planQuery.data : null,
       }).forEach((row) => answers.push(row));
       answers.forEach((answer) => {
         out.push({
@@ -448,6 +450,7 @@ export default function CommandPalette() {
     scopedJobId,
     moneyJobs,
     tradeQuery.data,
+    planQuery.data,
     fileHits,
     remoteInvoiceHits,
     openFileHit,
@@ -656,6 +659,27 @@ export default function CommandPalette() {
                         {row.section}
                       </div>
                     ) : null}
+                    {row.kind === 'spend' && row.answer ? (
+                      <div
+                        data-index={index}
+                        onMouseEnter={() => setCursor(index)}
+                        onClick={() => pick(row)}
+                        className={`flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left ${
+                          active ? 'bg-canvas' : ''
+                        }`}
+                      >
+                        <SpendAnswerBody
+                          row={row.answer}
+                          onCodeThem={row.answer.kind === 'spend' && row.answer.affected
+                            ? (event) => {
+                              event.stopPropagation();
+                              pick(row);
+                            }
+                            : undefined}
+                        />
+                        {active ? <CornerDownLeft className="hidden h-4 w-4 shrink-0 text-slate-400 md:block" strokeWidth={1.7} /> : null}
+                      </div>
+                    ) : (
                     <button
                       type="button"
                       data-index={index}
@@ -665,9 +689,7 @@ export default function CommandPalette() {
                         active ? 'bg-canvas' : ''
                       }`}
                     >
-                      {row.kind === 'spend' && row.answer ? (
-                        <SpendAnswerBody row={row.answer} />
-                      ) : row.kind === 'invoice' && row.invoice ? (
+                      {row.kind === 'invoice' && row.invoice ? (
                         <InvoiceAnswerBody hit={row.invoice} />
                       ) : row.kind === 'file' && row.file ? (
                         <FileAnswerBody hit={row.file} />
@@ -689,6 +711,7 @@ export default function CommandPalette() {
                       )}
                       {active ? <CornerDownLeft className="hidden h-4 w-4 shrink-0 text-slate-400 md:block" strokeWidth={1.7} /> : null}
                     </button>
+                    )}
                   </React.Fragment>
                 );
               })

@@ -42,6 +42,17 @@ export const provenanceSchema = z.object({
 });
 export type QueryProvenance = z.infer<typeof provenanceSchema>;
 
+/** Live expenses with no stored tradeId. Not a category bucket. */
+export const uncodedPoolSchema = z.object({
+  count: z.number().int().nonnegative(),
+  cents: z.number().int().nonnegative(),
+});
+export type UncodedPool = z.infer<typeof uncodedPoolSchema>;
+
+export function affectedByUncoded(pool: UncodedPool): boolean {
+  return pool.cents > 0 || pool.count > 0;
+}
+
 export const queryErrorCodeSchema = z.enum(['job_not_allowed', 'invalid_input', 'org_required']);
 export type QueryErrorCode = z.infer<typeof queryErrorCodeSchema>;
 

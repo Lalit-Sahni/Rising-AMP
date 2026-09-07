@@ -5,10 +5,12 @@
 import { parseCalendarDate } from '../../dates';
 import { filesDrawerMeta, isJobFileType, type FilesDrawerType } from '../../domain/jobFiles';
 import { formatCents } from '../../money';
-import type { JobMoneySnapshot, QueryFailure, QueryScope } from '../../queries/core';
+import type { CostPlan } from '../../domain/schemas';
+import type { JobMoneySnapshot, QueryFailure, QueryScope, UncodedPool } from '../../queries/core';
 import { scopeFromMembership } from '../../queries/core';
 import type { FindFilesResult } from '../../queries/files';
 import { invoicesByStatus, type InvoicesByStatusResult } from '../../queries/invoices';
+import { planVsActual } from '../../queries/plan';
 import { spendByTrade } from '../../queries/spend';
 import { portfolioSummary } from '../../queries/summary';
 import { getInvoiceTotalCents, isInvoiceOverdue } from '../../utils/jobMetrics';
@@ -27,6 +29,9 @@ export type SpendAnswer = {
   detail: string;
   amount: string;
   tradeId: string;
+  uncoded: UncodedPool;
+  affected: boolean;
+  warning?: string;
 };
 
 export type PortfolioAnswer = {
@@ -121,8 +126,33 @@ export function membershipScope(
   return isQueryScope(next) ? next : null;
 }
 
-function tradeHaystack(trade: TradeListRow): string {
-  return [trade.name, String(trade.id || '').replace(/-/g, ' ')].map(norm).join(' ');
+function tradeWords(trade: TradeListRow): string[] {
+  return [trade.name, String(trade.id || '').replace(/-/g, ' ')]
+    .map(norm)
+    .join(' ')
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+}
+
+/** Prefix of a longer name word, or an exact token of at least 4 letters. */
+function nameWordMatches(word: string, q: string): boolean {
+  if (!word || !q) return false;
+  if (word === q) return q.length >= 4;
+  if (!word.startsWith(q)) return false;
+  if (q.length >= 3) return true;
+  return word.length >= 6;
+}
+
+/**
+ * Aliases fire only when the typed query matches the alias
+ * ("concrete" → Concreting). A short fragment of an alias ("air" vs
+ * "aircon") does not count.
+ */
+function queryMatchesAlias(q: string, alias: string): boolean {
+  const a = norm(alias);
+  if (!a || a.length < 3) return false;
+  if (q === a || q.includes(a)) return true;
+  return q.length >= 4 && a.startsWith(q);
 }
 
 export function matchTrades(tradeList: TradeListRow[] | null | undefined, query: string): TradeListRow[] {
@@ -130,27 +160,11 @@ export function matchTrades(tradeList: TradeListRow[] | null | undefined, query:
   if (q.length < 2) return [];
   return (tradeList || []).filter((trade) => {
     if (!trade || trade.status === 'archived') return false;
-    // A word in the trade STARTS with what was typed. A raw
-    // `hay.includes(q)` matched two letters anywhere, so "in" hit 13 of 20
-    // trades (concret-in-g, plumb-in-g, roof-in-g) and "er" hit 13.
-    const hay = tradeHaystack(trade);
-    if (hay.split(/[^a-z0-9]+/).some((word) => word && word.startsWith(q))) return true;
     const name = norm(trade.name);
-    if (name.length >= 4 && q.includes(name)) return true;
-    // A name word counts when the query is a real prefix of it, or the query
-    // names it outright. `word.includes(q)` matched any two letters found
-    // anywhere: "in" hit 13 of 20 trades, "er" hit 13.
-    const words = name.split(/[^a-z0-9]+/).filter((word) => word.length >= 3);
-    if (q.length >= 3 && words.some((word) => word.startsWith(q) || q.includes(word))) return true;
-    // An alias counts only against the QUERY. The old third condition was
-    // `name.includes(alias)`, which never read the query, so every trade whose
-    // display name contained its own alias matched everything typed:
-    // "Tiling and flooring" (flooring), "Kitchen and joinery" (joinery) and
-    // "Air-conditioning" (air-conditioning) were returned for every search.
+    if (name.length >= 4 && (q === name || q.includes(name))) return true;
+    if (tradeWords(trade).some((word) => nameWordMatches(word, q))) return true;
     const aliases = TRADE_ALIASES[trade.id] || [];
-    return aliases.some((alias) => (
-      alias.length >= 4 && (q.includes(alias) || (q.length >= 3 && alias.startsWith(q)))
-    ));
+    return aliases.some((alias) => queryMatchesAlias(q, alias));
   });
 }
 
@@ -189,14 +203,35 @@ function statusLabel(status: string, overdue: boolean): string {
   return status || 'Draft';
 }
 
+function expenseCountBit(count: number | null | undefined): string | null {
+  if (count == null) return null;
+  return `${count} expense${count === 1 ? '' : 's'}`;
+}
+
+function uncodedWarning(tradeName: string, uncoded: UncodedPool, affected: boolean): string | undefined {
+  if (!affected || (uncoded.count === 0 && uncoded.cents === 0)) return undefined;
+  const countBit = `${uncoded.count} expense${uncoded.count === 1 ? '' : 's'}`;
+  const verb = uncoded.count === 1 ? 'is' : 'are';
+  return `${countBit} worth ${formatCents(uncoded.cents)} ${verb} not coded to any trade, so some of that could be ${tradeName.toLowerCase()} too.`;
+}
+
+function spendTitleFromPlan(tradeName: string, planCents: number, actualCents: number): string {
+  const delta = actualCents - planCents;
+  if (delta > 0) return `${tradeName} is ${formatCents(delta)} over.`;
+  if (delta < 0) return `${tradeName} is ${formatCents(-delta)} under.`;
+  return `${tradeName} is on plan.`;
+}
+
 export function spendAnswersForQuery(input: {
   query: string;
   tradeList: TradeListRow[] | null | undefined;
   scope: QueryScope;
   jobId?: string | null;
   jobs: JobMoneySnapshot[];
+  plan?: CostPlan | null;
 }): SpendAnswer[] {
   const jobId = input.jobId || undefined;
+  const job = jobId ? input.jobs.find((row) => row.jobId === jobId) : undefined;
   const out: SpendAnswer[] = [];
   matchTrades(input.tradeList, input.query).slice(0, 4).forEach((trade) => {
     const result = spendByTrade({
@@ -206,21 +241,55 @@ export function spendAnswersForQuery(input: {
       jobs: input.jobs,
     });
     if (!result.ok) return;
+    const planResult = jobId
+      ? planVsActual({
+        scope: input.scope,
+        jobId,
+        tradeId: trade.id,
+        plan: input.plan,
+        job,
+      })
+      : null;
+    const uncoded = (planResult && planResult.ok ? planResult.uncoded : result.uncoded);
+    const affected = (planResult && planResult.ok ? planResult.affected : result.affected);
+    const warning = uncodedWarning(trade.name, uncoded, affected);
     const amount = formatCents(result.cents);
     const count = result.count;
-    const countBit = count == null ? null : `${count} expense${count === 1 ? '' : 's'}`;
+    const countBit = expenseCountBit(count);
     const where = jobId ? 'On this job' : 'Across jobs';
     const hidden = result.cents == null || result.provenance.capped;
+    const hasPlanLine = Boolean(
+      planResult
+      && planResult.ok
+      && planResult.hasPlan
+      && planResult.actualCents != null
+      && !planResult.provenance.capped,
+    );
+    const codedBit = count == null
+      ? null
+      : `across ${count} coded expense${count === 1 ? '' : 's'}`;
     out.push({
       id: `spend:${trade.id}`,
       section: 'Answers',
       kind: 'spend',
-      title: trade.name,
-      amount,
+      title: hasPlanLine && planResult && planResult.ok && planResult.actualCents != null
+        ? spendTitleFromPlan(trade.name, planResult.planCents, planResult.actualCents)
+        : trade.name,
+      amount: hasPlanLine && planResult && planResult.ok
+        ? formatCents(planResult.actualCents)
+        : amount,
       detail: hidden
         ? [amount, 'Spend hidden', where].join(' · ')
-        : [amount, countBit, where].filter(Boolean).join(' · '),
+        : hasPlanLine && planResult && planResult.ok
+          ? [
+            `Estimated ${formatCents(planResult.planCents)}, spent ${formatCents(planResult.actualCents)} ${codedBit || ''}`.trim(),
+            where,
+          ].filter(Boolean).join(' · ')
+          : [amount, countBit, where].filter(Boolean).join(' · '),
       tradeId: trade.id,
+      uncoded,
+      affected,
+      warning,
     });
   });
   return out;

@@ -8,14 +8,17 @@ import {
 } from '../domain/ledgerRollup';
 import type { CostPlan } from '../domain/schemas';
 import {
+  affectedByUncoded,
   compactParams,
   firstZodIssue,
   invalidInput,
   provenanceSchema,
   queryScopeSchema,
   resolveTargetJobIds,
+  uncodedPoolSchema,
   type JobMoneySnapshot,
 } from './core';
+import { uncodedPoolForJob } from './spend';
 
 const inputSchema = z.object({
   scope: queryScopeSchema,
@@ -40,6 +43,8 @@ export const planVsActualResultSchema = z.discriminatedUnion('ok', [
     planCents: z.number().int().nonnegative(),
     actualCents: z.number().int().nonnegative().nullable(),
     trades: z.array(tradeRowSchema),
+    uncoded: uncodedPoolSchema,
+    affected: z.boolean(),
     provenance: provenanceSchema,
   }),
   z.object({
@@ -71,6 +76,8 @@ export function planVsActual(input: unknown): PlanVsActualResult {
     tradeId: parsed.data.tradeId,
   });
   const plan = hasActiveCostPlan(parsed.data.plan) ? parsed.data.plan : null;
+  const uncoded = uncodedPoolForJob(job);
+  const affected = affectedByUncoded(uncoded);
 
   if (overlay.hidden) {
     return planVsActualResultSchema.parse({
@@ -80,6 +87,8 @@ export function planVsActual(input: unknown): PlanVsActualResult {
       planCents: 0,
       actualCents: null,
       trades: [],
+      uncoded,
+      affected,
       provenance: {
         query: 'planVsActual',
         params,
@@ -134,6 +143,8 @@ export function planVsActual(input: unknown): PlanVsActualResult {
     planCents,
     actualCents,
     trades,
+    uncoded,
+    affected,
     provenance: {
       query: 'planVsActual',
       params,

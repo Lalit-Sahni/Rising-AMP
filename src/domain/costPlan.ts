@@ -230,6 +230,29 @@ function liveExpenses(expenses: Array<Record<string, unknown>> = []) {
   return (expenses || []).filter((expense) => expense && !isVoidExpense(expense));
 }
 
+/**
+ * Live construction expenses with no stored tradeId. Reads tradeId only —
+ * never a typed name, category, or guess. Investor rows are not this pool
+ * (same meaning as the Cost Plan board).
+ */
+export function listUncodedExpenses(
+  expenses: Array<Record<string, unknown>> = [],
+): Array<Record<string, unknown>> {
+  return liveExpenses(expenses).filter((expense) => (
+    !isInvestorExpense(expense) && !expenseTradeId(expense)
+  ));
+}
+
+export function uncodedSpendPool(
+  expenses: Array<Record<string, unknown>> = [],
+): { count: number; cents: number } {
+  const rows = listUncodedExpenses(expenses);
+  return {
+    count: rows.length,
+    cents: addCents(...rows.map((expense) => getExpenseTotalCents(expense)), 0),
+  };
+}
+
 const TRADE_ALIASES: Record<string, string[]> = {
   electrical: ['electrician', 'sparky'],
   plumbing: ['plumber'],

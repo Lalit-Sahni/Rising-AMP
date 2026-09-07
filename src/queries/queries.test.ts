@@ -184,6 +184,97 @@ describe('rollup-first spend', () => {
     expect(result.provenance.capped).toBe(false);
     expect(result.provenance.source).toBe('rollup');
   });
+
+  test('uncoded is live expenses with no stored tradeId — never a typed name', () => {
+    const expenses = [
+      { id: 'coded', total: 10, category: 'purchase', date: '2026-09-01', tradeId: 'concreting' },
+      { id: 'named', total: 50, category: 'purchase', date: '2026-09-01', tradeName: 'Concreting' },
+      { id: 'blank', total: 7, category: 'purchase', date: '2026-09-01', tradeId: '  ' },
+      { id: 'voided', total: 99, category: 'purchase', date: '2026-09-01', status: 'void' },
+    ];
+    const result = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-a',
+      tradeId: 'concreting',
+      jobs: [jobSnap('job-a', expenses)],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.cents).toBe(1000);
+    expect(result.uncoded).toEqual({ count: 2, cents: 5700 });
+    expect(result.affected).toBe(true);
+  });
+
+  test('a job with uncoded spend cannot omit the pool or set affected false', () => {
+    const spend = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-a',
+      tradeId: 'concreting',
+      jobs: [jobSnap('job-a')],
+    });
+    expect(spend.ok).toBe(true);
+    if (!spend.ok) return;
+    expect(spend.cents).toBe(1000);
+    expect(spend.uncoded.count).toBe(1);
+    expect(spend.uncoded.cents).toBe(400);
+    expect(spend.affected).toBe(true);
+
+    const category = spendByCategory({
+      scope: SCOPE,
+      jobId: 'job-a',
+      jobs: [jobSnap('job-a')],
+    });
+    expect(category.ok).toBe(true);
+    if (!category.ok) return;
+    expect(category.cents).toBe(2000);
+    expect(category.uncoded).toEqual({ count: 1, cents: 400 });
+    expect(category.affected).toBe(true);
+  });
+
+  test('investor rows are not the uncoded-to-trade pool', () => {
+    const expenses = [
+      { id: 'c', total: 10, category: 'purchase', date: '2026-09-01', tradeId: 'concreting' },
+      { id: 'land', total: 50, category: 'investor', date: '2026-09-01' },
+    ];
+    const result = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-a',
+      tradeId: 'concreting',
+      jobs: [jobSnap('job-a', expenses)],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.cents).toBe(1000);
+    expect(result.uncoded).toEqual({ count: 0, cents: 0 });
+    expect(result.affected).toBe(false);
+  });
+
+  test('job totals stay inclusive of uncoded spend', () => {
+    const result = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-a',
+      jobs: [jobSnap('job-a')],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.cents).toBe(2000);
+    expect(result.uncoded.cents).toBe(400);
+    expect(result.affected).toBe(true);
+  });
+
+  test('a fully coded job reports an empty uncoded pool', () => {
+    const expenses = EXPENSES_A.filter((row) => row.tradeId);
+    const result = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-a',
+      tradeId: 'concreting',
+      jobs: [jobSnap('job-a', expenses)],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.uncoded).toEqual({ count: 0, cents: 0 });
+    expect(result.affected).toBe(false);
+  });
 });
 
 describe('jobSummary and portfolioSummary', () => {
@@ -275,6 +366,8 @@ describe('plan, invoices, quotes', () => {
     if (!result.ok) return;
     expect(result.planCents).toBe(2500);
     expect(result.actualCents).toBe(1000);
+    expect(result.uncoded).toEqual({ count: 1, cents: 400 });
+    expect(result.affected).toBe(true);
     expect(result.provenance.source).toBe('rollup');
   });
 

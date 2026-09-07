@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
-**Status (7 Sep 2026):** Parts A1–E are **done on `phase-13-query-layer`**. Staging applied (parties, rollups, `extractJobFileText`, rules). Production is **not** deployed. Do not start Phase 14 until the owner names it. Morning report is at the top of `PROGRESS.md`.
+**Status (7 Sep 2026):** Parts A1–E are **done on `phase-13-query-layer`**. Part D amendment (uncoded pool on trade answers) is on this branch. Staging applied (parties, rollups, `extractJobFileText`, rules). Production is **not** deployed. Do not start Phase 14 until the owner names it. Morning report is at the top of `PROGRESS.md`.
 
 Branch: **`phase-13-query-layer`** from the merged Phase 12 branch. Tag `pre-phase13-2026-09-XX` first. One part per session, one commit per part.
 
@@ -113,6 +113,7 @@ Rules for every one of them:
 - **Served from the rollup where a rollup exists.** Only fall through to the ledger when a question genuinely needs rows.
 - **Returns a typed result plus its provenance**: which query ran, with what parameters, and how many rows or which rollup revision it came from. Phase 14 needs that to show its working; the UI can use it to say "as at".
 - **Honest about limits.** The 1,000-expense cap must surface in the result, not be silently absorbed. A query that cannot answer completely says so.
+- **Honest about uncoded spend.** `planVsActual`, `spendByTrade` and `spendByCategory` return `uncoded: { count, cents }` and `affected` for the job or allowed-jobs scope. Uncoded means a live expense with no stored `tradeId` (`expenseTradeId` only — no inference). Trade and plan-variance lines stay coded-only and must carry the pool; job/org totals stay inclusive. A success result with uncoded cents cannot omit the pool or set `affected: false`.
 
 **Build it so the UI uses it too.** That is the test of whether it is right. If a screen cannot be rebuilt on these queries, they are shaped for a chatbot rather than for the product.
 

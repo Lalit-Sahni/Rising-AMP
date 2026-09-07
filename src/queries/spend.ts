@@ -13,8 +13,10 @@ import {
   type LedgerRollup,
   type RollupBucket,
 } from '../domain/ledgerRollup';
+import { uncodedSpendPool } from '../domain/costPlan';
 import { getExpenseTotalCents, isVoidExpense } from '../utils/jobMetrics';
 import {
+  affectedByUncoded,
   compactParams,
   firstZodIssue,
   invalidInput,
@@ -22,9 +24,11 @@ import {
   provenanceSchema,
   queryScopeSchema,
   resolveTargetJobIds,
+  uncodedPoolSchema,
   ymdSchema,
   type JobMoneySnapshot,
   type QueryFailure,
+  type UncodedPool,
 } from './core';
 import { dateFilterNeedsRows, expenseInRange, isYmdRange } from './dates';
 
@@ -50,6 +54,8 @@ export const spendResultSchema = z.discriminatedUnion('ok', [
     cents: z.number().int().nonnegative().nullable(),
     count: z.number().int().nonnegative().nullable(),
     buckets: z.array(spendBucketSchema),
+    uncoded: uncodedPoolSchema,
+    affected: z.boolean(),
     provenance: provenanceSchema,
   }),
   z.object({
@@ -107,12 +113,66 @@ function expenseDimensionKey(expense: Record<string, unknown>, dimension: Dimens
   return categoryKey(expense);
 }
 
+const EMPTY_UNCODED: UncodedPool = { count: 0, cents: 0 };
+
+function withUncoded(
+  result: Omit<Extract<SpendResult, { ok: true }>, 'uncoded' | 'affected'>,
+  uncoded: UncodedPool,
+): SpendResult {
+  return spendResultSchema.parse({
+    ...result,
+    uncoded,
+    affected: affectedByUncoded(uncoded),
+  });
+}
+
+function uncodedFromRollup(job: JobMoneySnapshot | undefined): UncodedPool {
+  const parsed = parseCompleteRollup(job?.rollup);
+  const computed = parsed || (job?.expenses ? computeLedgerRollup(job.expenses) : null);
+  const bucket = computed?.byTrade?.unassigned;
+  return { count: bucket?.count || 0, cents: bucket?.cents || 0 };
+}
+
+/**
+ * Uncoded = live expenses with no stored tradeId. Date slices use rows in
+ * range. A complete rollup's byTrade.unassigned is the fallback when rows
+ * cannot be trusted (capped / not loaded).
+ */
+export function uncodedPoolForJob(
+  job: JobMoneySnapshot | undefined,
+  from?: string,
+  to?: string,
+): UncodedPool {
+  if (!job) return EMPTY_UNCODED;
+  const ranged = Boolean(from || to);
+  if (ranged) {
+    if (job.expensesCapped) return EMPTY_UNCODED;
+    const rows = liveExpenses(job).filter((expense) => expenseInRange(expense, from, to));
+    return uncodedSpendPool(rows);
+  }
+  const rowsOk = !job.expensesCapped && job.expensesLoaded !== false && Array.isArray(job.expenses);
+  if (rowsOk) return uncodedSpendPool(job.expenses);
+  return uncodedFromRollup(job);
+}
+
+export function uncodedPoolForJobs(
+  jobIds: string[],
+  byJob: Map<string, JobMoneySnapshot>,
+  from?: string,
+  to?: string,
+): UncodedPool {
+  return jobIds.reduce<UncodedPool>((sum, jobId) => {
+    const part = uncodedPoolForJob(byJob.get(jobId), from, to);
+    return { count: sum.count + part.count, cents: sum.cents + part.cents };
+  }, EMPTY_UNCODED);
+}
+
 function cappedSpend(
   query: SpendInput['query'],
   params: Record<string, unknown>,
   source: 'rollup' | 'ledger' | 'mixed' = 'ledger',
 ): SpendResult {
-  return spendResultSchema.parse({
+  return withUncoded({
     ok: true,
     cents: null,
     count: null,
@@ -124,7 +184,7 @@ function cappedSpend(
       rowCount: 0,
       capped: true,
     },
-  });
+  }, EMPTY_UNCODED);
 }
 
 function resolveJobRollup(job: JobMoneySnapshot | undefined): {
@@ -191,7 +251,7 @@ function spendFromRows(
   const buckets = bucketsFromMap(map, input.filterKey);
   const cents = buckets.reduce((sum, row) => sum + row.cents, 0);
   const count = buckets.reduce((sum, row) => sum + row.count, 0);
-  return spendResultSchema.parse({
+  return withUncoded({
     ok: true,
     cents,
     count,
@@ -203,7 +263,7 @@ function spendFromRows(
       rowCount,
       capped: false,
     },
-  });
+  }, uncodedPoolForJobs(jobIds, byJob, input.from, input.to));
 }
 
 function runSpend(input: SpendInput): SpendResult {
@@ -245,7 +305,7 @@ function runSpend(input: SpendInput): SpendResult {
     ? 'mixed'
     : sources.has('ledger') ? 'ledger' : 'rollup';
 
-  return spendResultSchema.parse({
+  return withUncoded({
     ok: true,
     cents,
     count,
@@ -258,7 +318,7 @@ function runSpend(input: SpendInput): SpendResult {
       rowCount: count,
       capped: false,
     },
-  });
+  }, uncodedPoolForJobs(access.jobIds, byJob));
 }
 
 function parseSpendBase(input: unknown): z.infer<typeof spendParamsSchema> | QueryFailure {

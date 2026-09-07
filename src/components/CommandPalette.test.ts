@@ -75,6 +75,37 @@ describe('command palette answers', () => {
     expect(`${row.title} ${row.detail} ${row.amount}`).toContain(money);
     expect(row.detail).toContain('On this job');
     expect(money).toBe('$48.50');
+    expect(row.affected).toBe(true);
+    expect(row.uncoded.count).toBe(1);
+    expect(row.uncoded.cents).toBe(1000);
+    expect(row.warning).toContain(formatCents(1000));
+    expect(row.warning).toContain('not coded to any trade');
+  });
+
+  test('a nonsense query returns no spend Answers', () => {
+    const tradeList = [{
+      id: 'concreting',
+      name: 'Concreting',
+      status: 'active' as const,
+      order: 0,
+      isAppDefault: true,
+    }];
+    const jobs = [{
+      jobId: 'job-1',
+      rollup: computeLedgerRollup(EXPENSES, 4),
+      expenses: EXPENSES,
+      expensesCapped: false,
+      expensesLoaded: true,
+    }];
+    ['zzzzq', 'banana-xyz', 'xx', 'ing', 'air'].forEach((query) => {
+      expect(spendAnswersForQuery({
+        query,
+        tradeList,
+        scope: SCOPE,
+        jobId: 'job-1',
+        jobs,
+      })).toEqual([]);
+    });
   });
 
   test('scope chip is the current job by default', () => {

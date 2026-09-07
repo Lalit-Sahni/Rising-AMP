@@ -2,7 +2,7 @@
 
 ## Morning report (7 Sep 2026)
 
-Phase 13 is **done on `phase-13-query-layer`**. Production is **untouched**. Do not start Phase 14 until named. Restore tag `pre-phase13-2026-09-06`.
+Phase 13 is **done on `phase-13-query-layer`**, plus a **Part D amendment** on this commit. Production is **untouched**. Do not start Phase 14 until named. Restore tag `pre-phase13-2026-09-06`.
 
 ### Parts committed, and gzip
 
@@ -15,6 +15,7 @@ Phase 13 is **done on `phase-13-query-layer`**. Production is **untouched**. Do 
 | C1 staging function without `--force` | `cc5c07a` | **268.3 KB** |
 | D typed query layer (Overview on `jobSummary`) | `250508c` | **270.0 KB** |
 | E palette answers spend / files / invoices | `68e1a64` | **270.1 KB** |
+| D amendment uncoded pool on trade answers | this commit | **270.1 KB** |
 
 Ceiling **275 KB**, held. Independent typecheck / test / test:rules / build on every accepted part.
 
@@ -27,7 +28,7 @@ Nothing committed was rejected for scope. Closed and replaced, not resumed:
 - First A2 worker stalled after reading; wrote no files. Fresh worker shipped A2.
 - First B audit stalled on a full diff dump and never ran tests. Tight audit accepted B.
 
-Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DATABASE claimed staging already had `extractJobFileText` before the create (fixed in C1).
+Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DATABASE claimed staging already had `extractJobFileText` before the create (fixed in C1). **Part E matcher was too weakly tested** — every case checked that a real query finds the right trade; none checked that a nonsense query returns nothing, so 279 tests still shipped an over-eager matcher.
 
 ### Decided on your behalf
 
@@ -39,8 +40,6 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 
 `scripts/party-backfill-unlinked-staging.md` — merge or leave: **Lalit / Lalit Sahni**, **Metro Consulting / Metro Consulting Group**, **Sydney Excavation and Demo / Demolition**. Exact canonical bar held; they were listed, not merged.
 
-Nit, not blocking: palette trade aliases can show Concreting / Kitchen spend on unrelated two-letter searches. Numbers still come from `spendByTrade`.
-
 ## Fleet state
 
 - **Part A1:** committed `5e78dd7`. Initial JS gzip **268.3 KB**.
@@ -48,14 +47,15 @@ Nit, not blocking: palette trade aliases can show Concreting / Kitchen spend on 
 - **Part B:** accepted `649a518`. Independent proof: typecheck, 255+40 tests, rules, build, gzip **268.3 KB**. Staging: function `maintainLedgerRollup` updated, Firestore rules released, recompute **5** writes (3 job repairs + 2 org creates). Second dry-run: `0 write(s) planned`. Schema v1. Production untouched; the recompute script refuses `--production`.
 - **Part C:** done `e3ce605`. `extractJobFileText` writes `files/{fileId}/content/text` after upload (embedded PDF text / text/plain; images `none`; Word/Excel `unsupported`; 80_000 cap). No OCR. No OpenAI. No `src/` changes. Functions-only PDF lib: `unpdf@1.8.1`. Initial JS gzip **268.3 KB**. Staging Firestore rules released (nested `files/{id}/content/text` read for members, client writes denied). First create was blocked: CLI required `--force` for a new function with `retry: true`; we did not pass `--force`. Follow-up: `retry: false` on **`extractJobFileText` only** (`maintainLedgerRollup` still `retry: true`) at `cc5c07a`. Staging create succeeded without `--force`. Staging list is the original six plus `extractJobFileText`. Production still the original six. No backfill.
 - **Part D:** done `250508c`. Typed read-only query layer in `src/queries/` (no barrel). Overview totals rebuilt on `jobSummary` / `useJobSummary` (same `resolveExpenseTotals` helper; ledger still wins a disagreement). `findFiles` stays off the first-paint chunk. Typecheck, 276+40 tests, rules, build. Initial JS gzip **270.0 KB** (ceiling 275). Production untouched. No deploy.
-- **Part E:** done on this commit. Command palette answers spend (tradeList → `spendByTrade`, rollup-first), file text (`findFiles` / Part C `content/text`), and invoice status (`invoicesByStatus`) with a visible job-scope chip (current job by default; clear for org-wide). No AI. `PaletteHost` still lazy-loads `CommandPalette`. `App.js` and `PaletteHost` have no query imports. JobFileViewer is lazy inside the palette. Typecheck, 279+40 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 275). Production untouched. No deploy.
+- **Part E:** done `68e1a64`. Command palette answers spend (tradeList → `spendByTrade`, rollup-first), file text (`findFiles` / Part C `content/text`), and invoice status (`invoicesByStatus`) with a visible job-scope chip (current job by default; clear for org-wide). No AI. `PaletteHost` still lazy-loads `CommandPalette`. `App.js` and `PaletteHost` have no query imports. JobFileViewer is lazy inside the palette. Typecheck, 279+40 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 275). Production untouched. No deploy. Matcher tests were positive-only; junk queries could still hit a trade via alias prefixes.
+- **Part D amendment:** uncoded pool on this commit. `planVsActual` / `spendByTrade` / `spendByCategory` return `uncoded: { count, cents }` and `affected`. Uncoded = live expenses with no stored `tradeId` (`expenseTradeId` only). Trade lines stay coded-only and carry the pool; job totals stay inclusive. Palette states a non-zero pool with Code them → Cost plan. Matcher negatives: `zzzzq` / `banana-xyz` / `xx` / `ing` / `air` return no spend answers. Typecheck, 294+40 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 275). Production untouched. No deploy.
 - **Not started:** Phase 14. Do not start it until named.
 - **Do not start Phase 14** until the owner names it. 275 KB is the held ceiling.
 - **Dependency rule:** root Vite `package.json` takes **no new packages**. Functions may add **one** PDF-text library (`unpdf@1.8.1`). It is not imported from `src/`. It does not change initial JS gzip. No OpenAI SDK.
 
 ## Current branch
 
-`phase-13-query-layer` — Phase 13 query layer, **done on this branch**, **not on production**. Parts A1–E committed (`68e1a64` HEAD). Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE13.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-13-query-layer` — Phase 13 query layer, **done on this branch**, **not on production**. Parts A1–E plus the Part D uncoded-pool amendment. Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE13.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase13-2026-09-06` (this phase, before code), `pre-phase12-2026-09-05`, `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -157,7 +157,8 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 ```
 Read CLAUDE.md, then PROGRESS.md, then PHASE13.md.
 
-Phase 13 is done on phase-13-query-layer (Parts A1–E).
+Phase 13 is done on phase-13-query-layer (Parts A1–E plus
+the Part D uncoded-pool amendment).
 Production is untouched. Phase 12 is closed and live on
 production hosting (6 Sep 2026). Restore tag
 pre-phase13-2026-09-06. Phase 11 Parts A–E are live
@@ -224,6 +225,7 @@ a pasted API key.
 - [x] Phase 13 Part C — extract document text at upload
 - [x] Phase 13 Part D — typed read-only query layer (Overview on `jobSummary`)
 - [x] Phase 13 Part E — command palette answers real questions
+- [x] Phase 13 Part D amendment — uncoded pool on trade/plan answers; matcher negatives
 - [ ] Phase 13 production — not deployed; owner names project and surface first
 - [ ] Phase 13 owner list — merge or leave unlinked parties on staging
 

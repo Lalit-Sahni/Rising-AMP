@@ -1,12 +1,37 @@
 import React from 'react';
-import type { FileHit, InvoiceHit, PaletteAnswer } from './answers';
+import type { FileHit, InvoiceHit, PaletteAnswer, SpendAnswer } from './answers';
 
-export function SpendAnswerBody({ row }: { row: PaletteAnswer }) {
+export function SpendAnswerBody({
+  row,
+  onCodeThem,
+}: {
+  row: PaletteAnswer;
+  onCodeThem?: (event: React.MouseEvent) => void;
+}) {
+  const spend = row.kind === 'spend' ? row as SpendAnswer : null;
+  const warning = spend?.warning;
   return (
     <span className="flex min-w-0 flex-1 items-start justify-between gap-3">
       <span className="min-w-0">
-        <span className="block truncate text-[13.5px] font-extrabold text-ink">{row.title}</span>
-        <span className="block truncate text-[12px] text-slate-500">{row.detail}</span>
+        <span className="block text-[13.5px] font-extrabold text-ink">{row.title}</span>
+        <span className="mt-0.5 block text-[12px] text-slate-500">{row.detail}</span>
+        {warning ? (
+          <span className="mt-1.5 block text-[12px] leading-snug text-slate-600">
+            {warning}
+            {onCodeThem ? (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  onClick={onCodeThem}
+                  className="font-bold text-accent"
+                >
+                  Code them
+                </button>
+              </>
+            ) : null}
+          </span>
+        ) : null}
       </span>
       <span className="shrink-0 text-right">
         <span className="block tabular text-[15px] font-extrabold text-ink">{row.amount}</span>
