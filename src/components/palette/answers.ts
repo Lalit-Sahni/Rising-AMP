@@ -130,15 +130,26 @@ export function matchTrades(tradeList: TradeListRow[] | null | undefined, query:
   if (q.length < 2) return [];
   return (tradeList || []).filter((trade) => {
     if (!trade || trade.status === 'archived') return false;
+    // A word in the trade STARTS with what was typed. A raw
+    // `hay.includes(q)` matched two letters anywhere, so "in" hit 13 of 20
+    // trades (concret-in-g, plumb-in-g, roof-in-g) and "er" hit 13.
     const hay = tradeHaystack(trade);
-    if (hay.includes(q)) return true;
+    if (hay.split(/[^a-z0-9]+/).some((word) => word && word.startsWith(q))) return true;
     const name = norm(trade.name);
     if (name.length >= 4 && q.includes(name)) return true;
+    // A name word counts when the query is a real prefix of it, or the query
+    // names it outright. `word.includes(q)` matched any two letters found
+    // anywhere: "in" hit 13 of 20 trades, "er" hit 13.
     const words = name.split(/[^a-z0-9]+/).filter((word) => word.length >= 3);
-    if (words.some((word) => word.includes(q) || q.includes(word))) return true;
+    if (q.length >= 3 && words.some((word) => word.startsWith(q) || q.includes(word))) return true;
+    // An alias counts only against the QUERY. The old third condition was
+    // `name.includes(alias)`, which never read the query, so every trade whose
+    // display name contained its own alias matched everything typed:
+    // "Tiling and flooring" (flooring), "Kitchen and joinery" (joinery) and
+    // "Air-conditioning" (air-conditioning) were returned for every search.
     const aliases = TRADE_ALIASES[trade.id] || [];
     return aliases.some((alias) => (
-      alias.length >= 4 && (q.includes(alias) || alias.includes(q) || name.includes(alias))
+      alias.length >= 4 && (q.includes(alias) || (q.length >= 3 && alias.startsWith(q)))
     ));
   });
 }
