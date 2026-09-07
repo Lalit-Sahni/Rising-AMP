@@ -295,6 +295,7 @@ export default function CommandPalette() {
         jobId: scopedJobId,
         scope,
         tradeList: tradeQuery.data || [],
+        jobLabel: scopeChip.label,
       });
       if (requestId !== askSeq.current) return;
       setAskView({ question, status: 'ready', items });
@@ -342,6 +343,7 @@ export default function CommandPalette() {
           return;
         }
         if (item.kind === 'none') {
+          const openPlan = Boolean(scopedJobId && (item.answer.known?.length || item.answer.affected || item.answer.working));
           out.push({
             id: item.answer.id,
             section: 'Answers',
@@ -350,7 +352,7 @@ export default function CommandPalette() {
             icon: Search,
             kind: 'none',
             answer: item.answer,
-            run: () => {},
+            run: openPlan ? () => setCurrentPage('cost-plan', scopedJobId as string) : () => {},
           });
           return;
         }
@@ -611,7 +613,13 @@ export default function CommandPalette() {
       row.run();
       return;
     }
-    if (row.kind === 'none') return;
+    if (row.kind === 'none') {
+      const answer = row.answer && row.answer.kind === 'none' ? row.answer : null;
+      if (!answer || (!answer.working && !answer.known?.length && !answer.affected)) return;
+      close();
+      row.run();
+      return;
+    }
     close();
     row.run();
   };
@@ -827,7 +835,22 @@ export default function CommandPalette() {
                           active ? 'bg-canvas' : ''
                         }`}
                       >
-                        <RefusalAnswerBody row={row.answer} />
+                        <RefusalAnswerBody
+                          row={row.answer}
+                          onCodeThem={row.answer.affected && scopedJobId
+                            ? (event) => {
+                              event.stopPropagation();
+                              close();
+                              setCurrentPage('cost-plan', scopedJobId);
+                            }
+                            : undefined}
+                          onOpenWorking={row.answer.working
+                            ? (event) => {
+                              event.stopPropagation();
+                              pick(row);
+                            }
+                            : undefined}
+                        />
                       </div>
                     ) : row.kind === 'spend' && row.answer ? (
                       <div
@@ -846,6 +869,10 @@ export default function CommandPalette() {
                               pick(row);
                             }
                             : undefined}
+                          onOpenWorking={(event) => {
+                            event.stopPropagation();
+                            pick(row);
+                          }}
                         />
                         {active ? <CornerDownLeft className="hidden h-4 w-4 shrink-0 text-slate-400 md:block" strokeWidth={1.7} /> : null}
                       </div>

@@ -9,8 +9,8 @@ import { filesDrawerMeta, isJobFileType, type FilesDrawerType } from '../../doma
 import { categoryKey } from '../../domain/ledgerRollup';
 import { formatCents } from '../../money';
 import type { CostPlan } from '../../domain/schemas';
-import type { JobMoneySnapshot, QueryFailure, QueryName, QueryScope, UncodedPool } from '../../queries/core';
-import { scopeFromMembership } from '../../queries/core';
+import type { JobMoneySnapshot, QueryFailure, QueryName, QueryProvenance, QueryScope, UncodedPool } from '../../queries/core';
+import { provenanceSchema, scopeFromMembership } from '../../queries/core';
 import type { FindExpensesResult } from '../../queries/expenses';
 import type { FindFilesResult } from '../../queries/files';
 import { invoicesByStatus, type InvoicesByStatusResult } from '../../queries/invoices';
@@ -26,6 +26,26 @@ export type TradeListRow = {
   status?: string;
 };
 
+export type AnswerWorking = {
+  query: QueryName;
+  call: string;
+  detail: string;
+  capped: boolean;
+};
+
+export type KnownFigure = {
+  label: string;
+  amount: string;
+};
+
+export type WorkingLabels = {
+  job?: string;
+  trade?: string;
+};
+
+export const INCOMPLETE_CAP_MESSAGE = 'This answer is incomplete. More than 1,000 expenses — spend is not shown.';
+export const REFUSAL_TITLE = "I can't answer that honestly.";
+
 export type SpendAnswer = {
   id: string;
   section: 'Answers';
@@ -37,6 +57,8 @@ export type SpendAnswer = {
   uncoded: UncodedPool;
   affected: boolean;
   warning?: string;
+  working?: AnswerWorking;
+  incomplete?: string;
 };
 
 export type PortfolioAnswer = {
@@ -46,6 +68,8 @@ export type PortfolioAnswer = {
   title: string;
   detail: string;
   amount: string;
+  working?: AnswerWorking;
+  incomplete?: string;
 };
 
 export type RefusalAnswer = {
@@ -54,6 +78,12 @@ export type RefusalAnswer = {
   kind: 'none';
   title: string;
   detail: string;
+  known?: KnownFigure[];
+  working?: AnswerWorking;
+  incomplete?: string;
+  uncoded?: UncodedPool;
+  affected?: boolean;
+  warning?: string;
 };
 
 export type PaletteAnswer = SpendAnswer | PortfolioAnswer | RefusalAnswer;
@@ -257,6 +287,69 @@ export function safeAskText(value: unknown): string | undefined {
   return text;
 }
 
+function rowNoun(query: QueryName, count: number): string {
+  if (query === 'findFiles') return count === 1 ? 'file' : 'files';
+  if (query === 'invoicesByStatus') return count === 1 ? 'invoice' : 'invoices';
+  if (query === 'quotesForTrade') return count === 1 ? 'quote' : 'quotes';
+  return count === 1 ? 'expense' : 'expenses';
+}
+
+function paramLabel(key: string): string {
+  if (key === 'jobId') return 'job';
+  if (key === 'tradeId') return 'trade';
+  if (key === 'partyId') return 'party';
+  return key;
+}
+
+/** Query name, params, rollup revision or row count. From provenance, not the model. */
+export function workingFromProvenance(
+  provenance: QueryProvenance,
+  labels?: WorkingLabels,
+): AnswerWorking {
+  const inner = Object.entries(provenance.params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .map(([key, value]) => {
+      const name = paramLabel(key);
+      const shown = name === 'job' && labels?.job
+        ? labels.job
+        : name === 'trade' && labels?.trade
+          ? labels.trade
+          : String(value);
+      return `${name}: ${shown}`;
+    })
+    .join(', ');
+  const call = `${provenance.query}(${inner})`;
+  const bits: string[] = [];
+  if (provenance.capped) {
+    bits.push('incomplete');
+  } else if (provenance.source === 'rollup' && provenance.revision != null) {
+    bits.push(`rollup rev ${provenance.revision}`);
+  } else if (provenance.source === 'ledger') {
+    bits.push('ledger');
+  } else if (provenance.source === 'files') {
+    bits.push('files');
+  } else if (provenance.source === 'mixed') {
+    bits.push('mixed');
+  } else if (provenance.source === 'rollup') {
+    bits.push('rollup');
+  }
+  if (!provenance.capped && provenance.rowCount > 0) {
+    bits.push(`see the ${provenance.rowCount} ${rowNoun(provenance.query, provenance.rowCount)}`);
+  }
+  return {
+    query: provenance.query,
+    call,
+    detail: bits.join(' · '),
+    capped: provenance.capped,
+  };
+}
+
+export function provenanceOf(result: unknown): QueryProvenance | null {
+  if (!result || typeof result !== 'object') return null;
+  const parsed = provenanceSchema.safeParse((result as { provenance?: unknown }).provenance);
+  return parsed.success ? parsed.data : null;
+}
+
 export function invoiceStatusesForQuery(query: string): string[] | null {
   const q = norm(query);
   if (!q) return null;
@@ -292,11 +385,13 @@ function expenseCountBit(count: number | null | undefined): string | null {
   return `${count} expense${count === 1 ? '' : 's'}`;
 }
 
-function uncodedWarning(tradeName: string, uncoded: UncodedPool, affected: boolean): string | undefined {
+function uncodedWarning(tradeName: string | undefined, uncoded: UncodedPool, affected: boolean): string | undefined {
   if (!affected || (uncoded.count === 0 && uncoded.cents === 0)) return undefined;
   const countBit = `${uncoded.count} expense${uncoded.count === 1 ? '' : 's'}`;
   const verb = uncoded.count === 1 ? 'is' : 'are';
-  return `${countBit} worth ${formatCents(uncoded.cents)} ${verb} not coded to any trade, so some of that could be ${tradeName.toLowerCase()} too.`;
+  const base = `${countBit} worth ${formatCents(uncoded.cents)} ${verb} not coded to any trade`;
+  if (!tradeName) return `${base}.`;
+  return `${base}, so some of that could be ${tradeName.toLowerCase()} too.`;
 }
 
 function spendTitleFromPlan(tradeName: string, planCents: number, actualCents: number): string {
@@ -363,7 +458,7 @@ export function spendAnswersForQuery(input: {
         ? formatCents(planResult.actualCents)
         : amount,
       detail: hidden
-        ? [amount, 'Spend hidden', where].join(' · ')
+        ? [where].filter(Boolean).join(' · ')
         : hasPlanLine && planResult && planResult.ok
           ? [
             `Estimated ${formatCents(planResult.planCents)}, spent ${formatCents(planResult.actualCents)} ${codedBit || ''}`.trim(),
@@ -374,6 +469,10 @@ export function spendAnswersForQuery(input: {
       uncoded,
       affected,
       warning,
+      working: workingFromProvenance(
+        hasPlanLine && planResult && planResult.ok ? planResult.provenance : result.provenance,
+      ),
+      incomplete: hidden ? INCOMPLETE_CAP_MESSAGE : undefined,
     });
   });
   return out;
@@ -399,8 +498,10 @@ export function portfolioAnswerForQuery(input: {
     title: 'Cost to date',
     amount,
     detail: result.totals.hidden
-      ? `${amount} · Spend hidden · Across jobs`
+      ? `${amount} · Across jobs`
       : `${amount} · ${result.totals.jobCount} job${result.totals.jobCount === 1 ? '' : 's'}`,
+    working: workingFromProvenance(result.provenance),
+    incomplete: result.totals.hidden ? INCOMPLETE_CAP_MESSAGE : undefined,
   };
 }
 
@@ -556,6 +657,7 @@ function spendItemFromResult(
   result: Extract<SpendResult, { ok: true }>,
   tradeList: TradeListRow[] | null | undefined,
   bucketKey?: string,
+  labels?: WorkingLabels,
 ): RoutedPaletteItem {
   const name = choice.query === 'spendByCategory'
     ? (bucketKey ? bucketKey.replace(/_/g, ' ') : 'Category spend')
@@ -580,12 +682,17 @@ function spendItemFromResult(
       title: safeAskText(choice.sentence) || name,
       amount,
       detail: hidden
-        ? [amount, 'Spend hidden', whereBit(choice.params.jobId)].join(' · ')
+        ? whereBit(choice.params.jobId)
         : [amount, countBit, whereBit(choice.params.jobId)].filter(Boolean).join(' · '),
       tradeId: String(choice.params.tradeId || bucketKey || ''),
       uncoded: result.uncoded,
       affected: result.affected,
       warning,
+      working: workingFromProvenance(result.provenance, {
+        job: labels?.job,
+        trade: choice.query === 'spendByTrade' ? name : labels?.trade,
+      }),
+      incomplete: hidden ? INCOMPLETE_CAP_MESSAGE : undefined,
     },
   };
 }
@@ -611,6 +718,11 @@ function isPlanOk(value: unknown): value is Extract<PlanVsActualResult, { ok: tr
   );
 }
 
+/** A none route may still show planVsActual when the job has a plan. */
+export function shouldUsePlanForNone(result: unknown): boolean {
+  return isPlanOk(result) && result.hasPlan;
+}
+
 function isPortfolioOk(value: unknown): value is Extract<PortfolioSummaryResult, { ok: true }> {
   return Boolean(
     value
@@ -622,6 +734,67 @@ function isPortfolioOk(value: unknown): value is Extract<PortfolioSummaryResult,
   );
 }
 
+function knownFiguresFromRelated(result: unknown): KnownFigure[] {
+  if (isPlanOk(result) && result.hasPlan) {
+    const estimated = result.provenance.capped
+      ? (result.targetCents != null ? formatCents(result.targetCents) : null)
+      : formatCents(result.planCents);
+    const spent = result.provenance.capped || result.actualCents == null
+      ? '—'
+      : formatCents(result.actualCents);
+    const figures: KnownFigure[] = [];
+    if (estimated) figures.push({ label: 'Estimated', amount: estimated });
+    figures.push({ label: 'Spent so far', amount: spent });
+    return figures;
+  }
+  const totals = isOkRecordWithTotals(result);
+  if (totals) {
+    return [{
+      label: 'Cost to date',
+      amount: totals.hidden ? '—' : formatCents(totals.costCents),
+    }];
+  }
+  return [];
+}
+
+function noneAnswer(
+  choice: RoutedAskChoice,
+  result: unknown,
+  labels?: WorkingLabels,
+): RoutedPaletteItem {
+  const reason = safeAskText(choice.reason);
+  const known = knownFiguresFromRelated(result);
+  const provenance = provenanceOf(result);
+  const hidden = Boolean(provenance?.capped) || Boolean(isOkRecordWithTotals(result)?.hidden);
+  const uncoded = isPlanOk(result) ? result.uncoded : undefined;
+  const affected = isPlanOk(result) ? result.affected : undefined;
+  const warning = isPlanOk(result)
+    ? uncodedWarning(undefined, result.uncoded, result.affected)
+    : undefined;
+  const detail = [
+    reason || (known.length
+      ? 'RisingAMP only stores what has actually happened.'
+      : 'RisingAMP only answers from the queries it already has.'),
+    known.length ? 'Here is what it does know.' : null,
+  ].filter(Boolean).join(' ');
+  return {
+    kind: 'none',
+    answer: {
+      id: 'ask:none',
+      section: 'Answers',
+      kind: 'none',
+      title: REFUSAL_TITLE,
+      detail,
+      known: known.length ? known : undefined,
+      working: provenance ? workingFromProvenance(provenance, labels) : undefined,
+      incomplete: hidden ? INCOMPLETE_CAP_MESSAGE : undefined,
+      uncoded,
+      affected,
+      warning,
+    },
+  };
+}
+
 /**
  * Turn one routed choice plus the query result into palette rows.
  * Amounts come from formatCents on the query. Model sentences with
@@ -631,14 +804,15 @@ export function itemsFromRoutedQuery(input: {
   choice: RoutedAskChoice;
   result?: unknown;
   tradeList?: TradeListRow[] | null;
+  jobLabel?: string;
 }): RoutedPaletteItem[] {
   const choice = input.choice;
+  const labels: WorkingLabels = {
+    job: input.jobLabel,
+    trade: choice.query === 'none' ? undefined : tradeLabel(choice, input.tradeList),
+  };
   if (choice.query === 'none') {
-    return [refusalItem(
-      'ask:none',
-      safeAskText(choice.reason) || 'That cannot be answered from the records.',
-      'RisingAMP only answers from the queries it already has.',
-    )];
+    return [noneAnswer(choice, input.result, { job: input.jobLabel })];
   }
 
   const failed = failedQueryItem(input.result);
@@ -651,7 +825,7 @@ export function itemsFromRoutedQuery(input: {
     const bucketKey = choice.query === 'spendByCategory' && choice.params.category
       ? categoryKey({ category: choice.params.category })
       : undefined;
-    return [spendItemFromResult(choice, input.result, input.tradeList, bucketKey)];
+    return [spendItemFromResult(choice, input.result, input.tradeList, bucketKey, labels)];
   }
 
   if (choice.query === 'planVsActual') {
@@ -679,7 +853,7 @@ export function itemsFromRoutedQuery(input: {
             : (safeAskText(choice.sentence) || name)),
         amount,
         detail: hidden
-          ? [amount, 'Spend hidden', whereBit(choice.params.jobId)].join(' · ')
+          ? whereBit(choice.params.jobId)
           : result.hasPlan
             ? [
               `Estimated ${formatCents(result.planCents)}, spent ${formatCents(result.actualCents)} ${codedBit || ''}`.trim(),
@@ -690,6 +864,8 @@ export function itemsFromRoutedQuery(input: {
         uncoded: result.uncoded,
         affected: result.affected,
         warning,
+        working: workingFromProvenance(result.provenance, { job: input.jobLabel, trade: name }),
+        incomplete: hidden ? INCOMPLETE_CAP_MESSAGE : undefined,
       },
     }];
   }
@@ -724,7 +900,18 @@ export function itemsFromRoutedQuery(input: {
       return [refusalItem('ask:expenses', 'Those expenses could not be loaded.', 'Nothing was added up.')];
     }
     if (result.provenance.capped && result.expenses.length === 0) {
-      return [refusalItem('ask:expenses:capped', 'Spend is hidden on this job.', 'The expense cap is on.')];
+      return [{
+        kind: 'none',
+        answer: {
+          id: 'ask:expenses:capped',
+          section: 'Answers',
+          kind: 'none',
+          title: REFUSAL_TITLE,
+          detail: 'Spend cannot be totalled on this job.',
+          working: workingFromProvenance(result.provenance, { job: input.jobLabel }),
+          incomplete: INCOMPLETE_CAP_MESSAGE,
+        },
+      }];
     }
     const rows = result.expenses.slice(0, 8);
     if (rows.length === 0) {
@@ -777,7 +964,16 @@ export function itemsFromRoutedQuery(input: {
     if (!totals) {
       return [refusalItem('ask:job', 'That job summary could not be loaded.', 'Nothing was added up.')];
     }
-    return [summaryItem('jobSummary', choice, totals.hidden, totals.costCents, totals.liveCount, undefined)];
+    return [summaryItem(
+      'jobSummary',
+      choice,
+      totals.hidden,
+      totals.costCents,
+      totals.liveCount,
+      undefined,
+      provenanceOf(input.result),
+      input.jobLabel,
+    )];
   }
 
   if (choice.query === 'portfolioSummary') {
@@ -791,6 +987,8 @@ export function itemsFromRoutedQuery(input: {
       input.result.totals.costCents,
       input.result.totals.liveCount,
       input.result.totals.jobCount,
+      input.result.provenance,
+      input.jobLabel,
     )];
   }
 
@@ -815,10 +1013,12 @@ function summaryItem(
   costCents: number,
   liveCount: number,
   jobCount: number | undefined,
+  provenance: QueryProvenance | null,
+  jobLabel?: string,
 ): RoutedPaletteItem {
   const amount = hidden ? '—' : formatCents(costCents);
   const detail = hidden
-    ? `${amount} · Spend hidden`
+    ? whereBit(choice.params.jobId)
     : jobCount != null
       ? `${amount} · ${jobCount} job${jobCount === 1 ? '' : 's'}`
       : `${amount} · ${liveCount} expense${liveCount === 1 ? '' : 's'}`;
@@ -831,6 +1031,8 @@ function summaryItem(
       title: safeAskText(choice.sentence) || 'Cost to date',
       amount,
       detail,
+      working: provenance ? workingFromProvenance(provenance, { job: jobLabel }) : undefined,
+      incomplete: hidden ? INCOMPLETE_CAP_MESSAGE : undefined,
     },
   };
 }

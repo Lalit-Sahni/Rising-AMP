@@ -4,7 +4,7 @@
  */
 import type { QueryScope } from '../../queries/core';
 import type { TradeListRow, RoutedAskChoice, RoutedAskParams, RoutedPaletteItem } from './answers';
-import { itemsFromRoutedQuery, matchTrades } from './answers';
+import { itemsFromRoutedQuery, matchTrades, shouldUsePlanForNone } from './answers';
 
 export type RunAskInput = {
   question: string;
@@ -12,6 +12,7 @@ export type RunAskInput = {
   jobId: string | null;
   scope: QueryScope;
   tradeList?: TradeListRow[] | null;
+  jobLabel?: string;
 };
 
 function allowedJob(scope: QueryScope, jobId: string | undefined): string | undefined {
@@ -135,6 +136,16 @@ async function runRoutedQuery(
   }
 }
 
+/** Safe related read for a none route: planVsActual when the job has a plan, else jobSummary. */
+async function loadRelatedForNone(scope: QueryScope, jobId: string | undefined): Promise<unknown> {
+  const allowed = allowedJob(scope, jobId);
+  if (!allowed) return null;
+  const fetchMod = await import('../../queries/fetch');
+  const plan = await fetchMod.fetchPlanVsActual({ scope, jobId: allowed });
+  if (shouldUsePlanForNone(plan)) return plan;
+  return fetchMod.fetchJobSummary({ scope, jobId: allowed });
+}
+
 export async function executeAskQuestion(input: RunAskInput): Promise<RoutedPaletteItem[]> {
   const { callAskRisingAmp } = await import('../../ask/askRisingAmp');
   const route = await callAskRisingAmp({
@@ -149,13 +160,16 @@ export async function executeAskQuestion(input: RunAskInput): Promise<RoutedPale
       : { query: raw.query, params: raw.params, sentence: raw.sentence };
     const params = resolveParams(choice, input.scope, input.jobId, input.tradeList);
     const resolved: RoutedAskChoice = choice.query === 'none'
-      ? choice
+      ? { ...choice, params: { jobId: params.jobId } }
       : { ...choice, params };
-    const result = await runRoutedQuery(resolved, params, input.scope);
+    const result = resolved.query === 'none'
+      ? await loadRelatedForNone(input.scope, params.jobId)
+      : await runRoutedQuery(resolved, params, input.scope);
     items.push(...itemsFromRoutedQuery({
       choice: resolved,
       result,
       tradeList: input.tradeList,
+      jobLabel: input.jobLabel,
     }));
   }
   return items;

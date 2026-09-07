@@ -1,6 +1,6 @@
 # Phase 14 — Ask (agent brief)
 
-**Status (7 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A and B done** on this branch (`askRisingAmp` on staging; production untouched). Part C is next. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
+**Status (7 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–C done** on this branch (`askRisingAmp` on staging; production untouched). Part D is next (question history). Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
 
 Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any code. That mockup is the spec.
 
@@ -81,6 +81,8 @@ Commit: `Render routed answers with the palette's own components.`
 2. **Uncoded spend is stated wherever it exists.** After the Part D amendment, any trade or category answer that has an uncoded pool behind it must say so, with a link to code them. This is the single most important honesty rule in the phase, because a variance that ignores uncoded spend looks precise and is not.
 3. **A capped ledger says so.** The 1,000-expense cap already hides spend rather than showing a partial total. An answer must inherit that, never paper over it.
 4. **Refusal has a design**, per the mockup: what it cannot answer, why, and the figures it does know. Never an apology with nothing attached.
+
+**Part C done.** Routed answers show a working line from query provenance (name, params, rollup revision or row count), not from the model. A non-zero uncoded pool still has Code them. A capped result is incomplete (`—`, not a partial total). `none` refuses honestly and, when the job has a plan, still shows estimated vs spent from `planVsActual` (or cost to date from `jobSummary`). A dollar amount that exists only in the model sentence is not shown. No question history. No eval set. No production deploy.
 
 Commit: `Show the working, the uncoded pool and an honest refusal.`
 

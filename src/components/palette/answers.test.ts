@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { computeLedgerRollup } from '../../domain/ledgerRollup';
 import { formatCents } from '../../money';
-import { spendAnswersForQuery, itemsFromRoutedQuery, looksLikeQuestion, matchTrades } from './answers';
+import { planVsActual } from '../../queries/plan';
+import {
+  spendAnswersForQuery,
+  itemsFromRoutedQuery,
+  looksLikeQuestion,
+  matchTrades,
+  workingFromProvenance,
+  INCOMPLETE_CAP_MESSAGE,
+  REFUSAL_TITLE,
+  shouldUsePlanForNone,
+} from './answers';
 
 /**
  * Every search returned the same three trades, whatever was typed.
@@ -210,7 +220,8 @@ describe('Ask routing onto query rows', () => {
         query: 'spendByTrade' as const,
         params: { jobId: 'job-1', tradeId: 'concreting' },
         source: 'rollup' as const,
-        rowCount: 1,
+        revision: 41,
+        rowCount: 7,
         capped: false,
       },
     };
@@ -228,15 +239,181 @@ describe('Ask routing onto query rows', () => {
     expect(items[0].answer.amount).toBe(formatCents(queried.cents));
     expect(items[0].answer.amount).not.toContain('99,999');
     expect(items[0].answer.title).toBe('Concreting');
+    expect(items[0].answer.working?.call).toBe('spendByTrade(job: job-1, trade: Concreting)');
+    expect(items[0].answer.working?.detail).toContain('rollup rev 41');
+    expect(items[0].answer.working?.detail).toContain('see the 7 expenses');
+    expect(items[0].answer.affected).toBe(true);
+    expect(items[0].answer.warning).toContain('not coded to any trade');
   });
 
-  it('a none route has no spend figure', () => {
+  it('a none route without a related query has no spend figure', () => {
     const items = itemsFromRoutedQuery({
       choice: { query: 'none', params: {}, reason: 'That cannot be answered from the queries.' },
     });
     expect(items[0].kind).toBe('none');
     if (items[0].kind !== 'none') return;
     expect(items[0].answer).not.toHaveProperty('amount');
+    expect(items[0].answer.known).toBeUndefined();
+    expect(items[0].answer.title).toBe(REFUSAL_TITLE);
+    expect(JSON.stringify(items[0])).not.toMatch(/\$[\d,]/);
+  });
+
+  it('names the working line from provenance, not from the model', () => {
+    const working = workingFromProvenance({
+      query: 'spendByTrade',
+      params: { jobId: 'job-1', tradeId: 'concreting' },
+      source: 'rollup',
+      revision: 41,
+      rowCount: 7,
+      capped: false,
+    }, { job: '72 Centenary Dr' });
+    expect(working.call).toBe('spendByTrade(job: 72 Centenary Dr, trade: concreting)');
+    expect(working.detail).toBe('rollup rev 41 · see the 7 expenses');
+  });
+
+  it('a capped query result is incomplete, not a fake full total', () => {
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'spendByTrade',
+        params: { jobId: 'job-1', tradeId: 'concreting' },
+        sentence: 'You have spent $99,999 on concreting.',
+      },
+      result: {
+        ok: true as const,
+        cents: null,
+        count: null,
+        buckets: [],
+        uncoded: { count: 0, cents: 0 },
+        affected: false,
+        provenance: {
+          query: 'spendByTrade' as const,
+          params: { jobId: 'job-1', tradeId: 'concreting' },
+          source: 'ledger' as const,
+          rowCount: 0,
+          capped: true,
+        },
+      },
+      tradeList: TRADE_LIST,
+    });
+    expect(items[0].kind).toBe('spend');
+    if (items[0].kind !== 'spend') return;
+    expect(items[0].answer.amount).toBe('—');
+    expect(items[0].answer.incomplete).toBe(INCOMPLETE_CAP_MESSAGE);
+    expect(items[0].answer.working?.detail).toContain('incomplete');
+    expect(`${items[0].answer.title} ${items[0].answer.detail} ${items[0].answer.amount}`).not.toContain('99,999');
+    expect(items[0].answer.amount).not.toMatch(/\$[\d,]/);
+  });
+
+  it('none plus a job with a plan shows estimated and spent from planVsActual, not the model', () => {
+    const plan = {
+      id: 'current',
+      jobId: 'job-1',
+      level: 'target' as const,
+      targetCents: 34_860_800,
+      baselineDate: '2026-01-01',
+      gstMode: 'inclusive' as const,
+      status: 'draft' as const,
+      sections: [],
+      createdBy: 'u1',
+    };
+    const job = {
+      jobId: 'job-1',
+      rollup: computeLedgerRollup([
+        { id: 'e1', total: 4656, category: 'trade', date: '2026-09-01', tradeId: 'concreting' },
+      ], 4),
+      expenses: [
+        { id: 'e1', total: 4656, category: 'trade', date: '2026-09-01', tradeId: 'concreting' },
+      ],
+      expensesCapped: false,
+      expensesLoaded: true,
+    };
+    const queried = planVsActual({
+      scope: SCOPE,
+      jobId: 'job-1',
+      plan,
+      job,
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+    expect(shouldUsePlanForNone(queried)).toBe(true);
+
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'none',
+        params: { jobId: 'job-1' },
+        reason: 'I forecast you will finish $99,999 under budget.',
+      },
+      result: queried,
+      jobLabel: 'Kelly Street',
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.title).toBe(REFUSAL_TITLE);
+    expect(items[0].answer).not.toHaveProperty('amount');
+    expect(items[0].answer.known).toEqual([
+      { label: 'Estimated', amount: formatCents(queried.planCents) },
+      { label: 'Spent so far', amount: formatCents(queried.actualCents) },
+    ]);
+    expect(items[0].answer.known?.[0].amount).toBe(formatCents(34_860_800));
+    expect(items[0].answer.known?.[1].amount).toBe(formatCents(465_600));
+    expect(items[0].answer.working?.call).toContain('planVsActual');
+    expect(items[0].answer.working?.call).toContain('Kelly Street');
+    expect(JSON.stringify(items[0])).not.toContain('99,999');
+    expect(items[0].answer.detail).not.toMatch(/[$£€¥0-9]/);
+  });
+
+  it('a none with a capped planVsActual is incomplete, not a fake full total', () => {
+    const plan = {
+      id: 'current',
+      jobId: 'job-1',
+      level: 'target' as const,
+      targetCents: 34_860_800,
+      baselineDate: '2026-01-01',
+      gstMode: 'inclusive' as const,
+      status: 'draft' as const,
+      sections: [],
+      createdBy: 'u1',
+    };
+    const queried = planVsActual({
+      scope: SCOPE,
+      jobId: 'job-1',
+      plan,
+      job: {
+        jobId: 'job-1',
+        expenses: [{ id: 'e1', total: 4656, category: 'trade', date: '2026-09-01' }],
+        expensesCapped: true,
+        expensesLoaded: true,
+      },
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+    expect(queried.provenance.capped).toBe(true);
+
+    const items = itemsFromRoutedQuery({
+      choice: { query: 'none', params: { jobId: 'job-1' }, reason: 'Will we finish $99,999 under.' },
+      result: queried,
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.incomplete).toBe(INCOMPLETE_CAP_MESSAGE);
+    expect(items[0].answer.known?.[0]).toEqual({ label: 'Estimated', amount: formatCents(34_860_800) });
+    expect(items[0].answer.known?.[1].amount).toBe('—');
+    expect(JSON.stringify(items[0])).not.toContain('99,999');
+    expect(items[0].answer.known?.[1].amount).not.toMatch(/\$[\d,]/);
+  });
+
+  it('a none refusal does not display a dollar amount that exists only in the model sentence', () => {
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'none',
+        params: {},
+        reason: 'You will save $99,999 if you finish early.',
+      },
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.known).toBeUndefined();
+    expect(JSON.stringify(items[0])).not.toContain('99,999');
     expect(JSON.stringify(items[0])).not.toMatch(/\$[\d,]/);
   });
 });

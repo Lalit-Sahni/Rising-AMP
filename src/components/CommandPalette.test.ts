@@ -3,8 +3,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { computeLedgerRollup } from '../domain/ledgerRollup';
 import { formatCents } from '../money';
+import { planVsActual } from '../queries/plan';
 import { spendByTrade } from '../queries/spend';
-import { defaultPaletteScope, itemsFromRoutedQuery, spendAnswersForQuery } from './palette/answers';
+import {
+  defaultPaletteScope,
+  itemsFromRoutedQuery,
+  INCOMPLETE_CAP_MESSAGE,
+  REFUSAL_TITLE,
+  spendAnswersForQuery,
+} from './palette/answers';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -201,6 +208,7 @@ describe('command palette answers', () => {
     expect(`${items[0].answer.title} ${items[0].answer.detail} ${items[0].answer.amount}`).toContain(money);
     expect(items[0].answer.affected).toBe(true);
     expect(items[0].answer.warning).toContain('not coded to any trade');
+    expect(items[0].answer.working?.call).toContain('spendByTrade');
   });
 
   test('a none route shows no spend figure', () => {
@@ -211,10 +219,89 @@ describe('command palette answers', () => {
     expect(items[0].kind).toBe('none');
     if (items[0].kind !== 'none') return;
     expect(items[0].answer).not.toHaveProperty('amount');
+    expect(items[0].answer.known).toBeUndefined();
+    expect(items[0].answer.title).toBe(REFUSAL_TITLE);
     expect(JSON.stringify(items[0])).not.toMatch(/\$[\d,]/);
     expect(JSON.stringify(items[0])).not.toContain('99,999');
     const rows = read('src/components/palette/ResultRows.tsx');
     expect(rows).toContain('RefusalAnswerBody');
     expect(rows).toContain("row.kind === 'none'");
+    expect(rows).toContain('Worked out by');
+    expect(rows).toContain('Code them');
+    const runAsk = read('src/components/palette/runAsk.ts');
+    expect(runAsk).toContain('loadRelatedForNone');
+    expect(runAsk).toContain('shouldUsePlanForNone');
+    expect(runAsk).toContain('fetchPlanVsActual');
+    expect(runAsk).toContain('fetchJobSummary');
+  });
+
+  test('none plus a plan still shows estimated and spent from planVsActual', () => {
+    const plan = {
+      id: 'current',
+      jobId: 'job-1',
+      level: 'target' as const,
+      targetCents: 34_860_800,
+      baselineDate: '2026-01-01',
+      gstMode: 'inclusive' as const,
+      status: 'draft' as const,
+      sections: [],
+      createdBy: 'u1',
+    };
+    const jobs = [{
+      jobId: 'job-1',
+      rollup: computeLedgerRollup(EXPENSES, 4),
+      expenses: EXPENSES,
+      expensesCapped: false,
+      expensesLoaded: true,
+    }];
+    const queried = planVsActual({
+      scope: SCOPE,
+      jobId: 'job-1',
+      plan,
+      job: jobs[0],
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'none',
+        params: { jobId: 'job-1' },
+        reason: 'I forecast $99,999 under budget.',
+      },
+      result: queried,
+      jobLabel: 'Kelly Street',
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.known?.[0].amount).toBe(formatCents(queried.planCents));
+    expect(items[0].answer.known?.[1].amount).toBe(formatCents(queried.actualCents));
+    expect(items[0].answer.working?.query).toBe('planVsActual');
+    expect(JSON.stringify(items[0])).not.toContain('99,999');
+  });
+
+  test('a capped routed spend answer is incomplete', () => {
+    const items = itemsFromRoutedQuery({
+      choice: { query: 'spendByTrade', params: { jobId: 'job-1', tradeId: 'concreting' } },
+      result: {
+        ok: true as const,
+        cents: null,
+        count: null,
+        buckets: [],
+        uncoded: { count: 0, cents: 0 },
+        affected: false,
+        provenance: {
+          query: 'spendByTrade' as const,
+          params: { jobId: 'job-1', tradeId: 'concreting' },
+          source: 'ledger' as const,
+          rowCount: 0,
+          capped: true,
+        },
+      },
+      tradeList: [{ id: 'concreting', name: 'Concreting', status: 'active' as const }],
+    });
+    expect(items[0].kind).toBe('spend');
+    if (items[0].kind !== 'spend') return;
+    expect(items[0].answer.amount).toBe('—');
+    expect(items[0].answer.incomplete).toBe(INCOMPLETE_CAP_MESSAGE);
   });
 });

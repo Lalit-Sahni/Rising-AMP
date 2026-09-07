@@ -1,11 +1,99 @@
 import React from 'react';
-import type { FileHit, InvoiceHit, PaletteAnswer, RefusalAnswer, SpendAnswer } from './answers';
+import type {
+  AnswerWorking,
+  FileHit,
+  InvoiceHit,
+  PaletteAnswer,
+  RefusalAnswer,
+  SpendAnswer,
+} from './answers';
 
-export function RefusalAnswerBody({ row }: { row: RefusalAnswer }) {
+export function WorkingLine({
+  working,
+  onOpenRows,
+}: {
+  working: AnswerWorking;
+  onOpenRows?: (event: React.MouseEvent) => void;
+}) {
+  const content = (
+    <>
+      <span>Worked out by</span>
+      {' '}
+      <code className="rounded-[4px] bg-canvas px-1.5 py-0.5 font-mono text-[11px] text-slate-600">
+        {working.call}
+      </code>
+      {working.detail ? <span> · {working.detail}</span> : null}
+    </>
+  );
+  const className = 'mt-3 flex w-full flex-wrap items-center gap-1.5 border-t border-hairline pt-2.5 text-left text-[11.5px] text-slate-400';
+  if (onOpenRows) {
+    return (
+      <button type="button" onClick={onOpenRows} className={`${className} cursor-pointer`}>
+        {content}
+      </button>
+    );
+  }
+  return <span className={className}>{content}</span>;
+}
+
+function IncompleteNote({ text }: { text?: string }) {
+  if (!text) return null;
+  return <span className="mt-1.5 block text-[12px] leading-snug text-slate-600">{text}</span>;
+}
+
+function UncodedNote({
+  warning,
+  onCodeThem,
+}: {
+  warning?: string;
+  onCodeThem?: (event: React.MouseEvent) => void;
+}) {
+  if (!warning) return null;
+  return (
+    <span className="mt-1.5 block text-[12px] leading-snug text-slate-600">
+      {warning}
+      {onCodeThem ? (
+        <>
+          {' '}
+          <button
+            type="button"
+            onClick={onCodeThem}
+            className="font-bold text-accent"
+          >
+            Code them
+          </button>
+        </>
+      ) : null}
+    </span>
+  );
+}
+
+export function RefusalAnswerBody({
+  row,
+  onCodeThem,
+  onOpenWorking,
+}: {
+  row: RefusalAnswer;
+  onCodeThem?: (event: React.MouseEvent) => void;
+  onOpenWorking?: (event: React.MouseEvent) => void;
+}) {
   return (
     <span className="min-w-0 flex-1">
       <span className="block text-[13.5px] font-extrabold text-ink">{row.title}</span>
       <span className="mt-0.5 block text-[12px] text-slate-500">{row.detail}</span>
+      {row.known && row.known.length > 0 ? (
+        <span className="mt-3 flex flex-wrap gap-5">
+          {row.known.map((fig) => (
+            <span key={fig.label}>
+              <span className="block tabular text-[21px] font-extrabold text-ink">{fig.amount}</span>
+              <span className="block text-[12px] text-slate-500">{fig.label}</span>
+            </span>
+          ))}
+        </span>
+      ) : null}
+      <IncompleteNote text={row.incomplete} />
+      <UncodedNote warning={row.warning} onCodeThem={onCodeThem} />
+      {row.working ? <WorkingLine working={row.working} onOpenRows={onOpenWorking} /> : null}
     </span>
   );
 }
@@ -13,42 +101,40 @@ export function RefusalAnswerBody({ row }: { row: RefusalAnswer }) {
 export function SpendAnswerBody({
   row,
   onCodeThem,
+  onOpenWorking,
 }: {
   row: PaletteAnswer;
   onCodeThem?: (event: React.MouseEvent) => void;
+  onOpenWorking?: (event: React.MouseEvent) => void;
 }) {
   if (row.kind === 'none') {
-    return <RefusalAnswerBody row={row} />;
+    return (
+      <RefusalAnswerBody
+        row={row}
+        onCodeThem={onCodeThem}
+        onOpenWorking={onOpenWorking}
+      />
+    );
   }
   const spend = row.kind === 'spend' ? row as SpendAnswer : null;
   const warning = spend?.warning;
+  const working = row.working;
+  const incomplete = row.incomplete;
   return (
-    <span className="flex min-w-0 flex-1 items-start justify-between gap-3">
-      <span className="min-w-0">
-        <span className="block text-[13.5px] font-extrabold text-ink">{row.title}</span>
-        <span className="mt-0.5 block text-[12px] text-slate-500">{row.detail}</span>
-        {warning ? (
-          <span className="mt-1.5 block text-[12px] leading-snug text-slate-600">
-            {warning}
-            {onCodeThem ? (
-              <>
-                {' '}
-                <button
-                  type="button"
-                  onClick={onCodeThem}
-                  className="font-bold text-accent"
-                >
-                  Code them
-                </button>
-              </>
-            ) : null}
-          </span>
-        ) : null}
+    <span className="flex min-w-0 flex-1 flex-col">
+      <span className="flex items-start justify-between gap-3">
+        <span className="min-w-0">
+          <span className="block text-[13.5px] font-extrabold text-ink">{row.title}</span>
+          <span className="mt-0.5 block text-[12px] text-slate-500">{row.detail}</span>
+          <IncompleteNote text={incomplete} />
+          <UncodedNote warning={warning} onCodeThem={onCodeThem} />
+        </span>
+        <span className="shrink-0 text-right">
+          <span className="block tabular text-[15px] font-extrabold text-ink">{row.amount}</span>
+          <span className="block text-[11px] text-slate-500">paid</span>
+        </span>
       </span>
-      <span className="shrink-0 text-right">
-        <span className="block tabular text-[15px] font-extrabold text-ink">{row.amount}</span>
-        <span className="block text-[11px] text-slate-500">paid</span>
-      </span>
+      {working ? <WorkingLine working={working} onOpenRows={onOpenWorking} /> : null}
     </span>
   );
 }
