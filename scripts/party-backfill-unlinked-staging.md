@@ -14,11 +14,22 @@ Staging Firestore rules deployed. Created **60** parties. Stamped **183** rows. 
 - Unlinked ledger rows: 19
 - Writes after apply: 0
 
-## Candidate merge groups
+## Merged on staging (owner yes, 7 Sep 2026)
 
-These look similar (`namesMatch`, or the Mark apostrophe case where dropping single-character tokens makes the canonicals equal) but their canonical names differ. **Do not merge them automatically.**
+`status: merged` + `mergedInto` only. Nobody deleted. Script: `scripts/merge-parties-staging.js`. Second dry-run: `0 write(s) planned`. Production was not touched.
 
-### Group 1 — service provider (namesMatch)
+| From | Canonical / kind | Created as (merged) | Survivor | Survivor id |
+| --- | --- | --- | --- | --- |
+| Lalit | `lalit` / worker | `gCXsTD8qspWEyvbkOTgG` | Lalit Sahni | `anabRwYbHvfQFxEEwdAj` |
+| Sydney Excavation and Demo | `sydney excavation and demo` / service provider | `QgbD83aiiUJOoWXFeiaj` | Sydney Excavation and Demolition | `QCKcfwLfOpI355VanO8M` |
+
+Stamped two 72 Centenary Dr expenses onto those survivors.
+
+## Still back to the owner — do not merge
+
+These look similar (`namesMatch`) but the owner has not named a survivor.
+
+### Metro Consulting vs Metro Consulting Group — service provider
 
 Canonical forms: `metro consulting`, `metro consulting group`
 
@@ -27,24 +38,6 @@ Canonical forms: `metro consulting`, `metro consulting group`
 | Metro Consulting | `metro consulting` | 72 Centenary Dr | expenses |
 | Metro Consulting | `metro consulting` | 72 Centenary Dr | expenses |
 | Metro Consulting Group | `metro consulting group` | 72 Centenary Dr | serviceProviders |
-
-### Group 2 — service provider (namesMatch)
-
-Canonical forms: `sydney excavation and demo`, `sydney excavation and demolition`
-
-| Display name | Canonical | Job | Collection |
-| --- | --- | --- | --- |
-| Sydney Excavation and Demo | `sydney excavation and demo` | 72 Centenary Dr | expenses |
-| Sydney Excavation and Demolition | `sydney excavation and demolition` | 72 Centenary Dr | serviceProviders |
-
-### Group 3 — worker (namesMatch)
-
-Canonical forms: `lalit`, `lalit sahni`
-
-| Display name | Canonical | Job | Collection |
-| --- | --- | --- | --- |
-| Lalit | `lalit` | 72 Centenary Dr | expenses |
-| Lalit Sahni | `lalit sahni` | 72 Centenary Dr | labour |
 
 Smith / Smithson Electrical and Mark's Joinery / Mark Joinery Pty Ltd were **not** in staging data, so they did not appear as groups. Tests still lock that bar.
 
@@ -59,8 +52,6 @@ Expenses, invoices and quotes whose typed name did not exact-match one party of 
 | Metro Consulting | service provider | expenses | 2 | 72 Centenary Dr | no exact canonical match |
 | ACME SCREW PILES | — | quotes | 1 | Kelly Street | no unique exact canonical match |
 | Client | supplier | expenses | 1 | 72 Centenary Dr | no exact canonical match |
-| Lalit | worker | expenses | 1 | 72 Centenary Dr | no exact canonical match |
-| Sydney Excavation and Demo | service provider | expenses | 1 | 72 Centenary Dr | no exact canonical match |
 
 ## Created / linked
 

@@ -38,7 +38,7 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 
 ### Look at this first
 
-`scripts/party-backfill-unlinked-staging.md` — merge or leave: **Lalit / Lalit Sahni**, **Metro Consulting / Metro Consulting Group**, **Sydney Excavation and Demo / Demolition**. Exact canonical bar held; they were listed, not merged.
+`scripts/party-backfill-unlinked-staging.md` — owner-named staging merges (7 Sep 2026): **Lalit → Lalit Sahni**, **Sydney Excavation and Demo → Sydney Excavation and Demolition**. Still back to the owner: **Metro Consulting / Metro Consulting Group**, plus nameless expenses, ACME SCREW PILES, and expense named Client.
 
 ## Fleet state
 
@@ -49,6 +49,7 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 - **Part D:** done `250508c`. Typed read-only query layer in `src/queries/` (no barrel). Overview totals rebuilt on `jobSummary` / `useJobSummary` (same `resolveExpenseTotals` helper; ledger still wins a disagreement). `findFiles` stays off the first-paint chunk. Typecheck, 276+40 tests, rules, build. Initial JS gzip **270.0 KB** (ceiling 275). Production untouched. No deploy.
 - **Part E:** done `68e1a64`. Command palette answers spend (tradeList → `spendByTrade`, rollup-first), file text (`findFiles` / Part C `content/text`), and invoice status (`invoicesByStatus`) with a visible job-scope chip (current job by default; clear for org-wide). No AI. `PaletteHost` still lazy-loads `CommandPalette`. `App.js` and `PaletteHost` have no query imports. JobFileViewer is lazy inside the palette. Typecheck, 279+40 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 275). Production untouched. No deploy. Matcher tests were positive-only; junk queries could still hit a trade via alias prefixes.
 - **Part D amendment:** uncoded pool on this commit. `planVsActual` / `spendByTrade` / `spendByCategory` return `uncoded: { count, cents }` and `affected`. Uncoded = live expenses with no stored `tradeId` (`expenseTradeId` only). Trade lines stay coded-only and carry the pool; job totals stay inclusive. Palette states a non-zero pool with Code them → Cost plan. Matcher negatives: `zzzzq` / `banana-xyz` / `xx` / `ing` / `air` return no spend answers. Typecheck, 294+40 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 275). Production untouched. No deploy.
+- **Owner-named staging merges:** Lalit → Lalit Sahni (`anabRwYbHvfQFxEEwdAj`); Sydney Excavation and Demo → Sydney Excavation and Demolition (`QCKcfwLfOpI355VanO8M`). Created merged aliases, stamped two expenses, second dry-run `0 write(s) planned`. Metro untouched. Production untouched.
 - **Not started:** Phase 14. Do not start it until named.
 - **Do not start Phase 14** until the owner names it. 400 KB is the held ceiling (270.1 KB). The build still fails on breach.
 - **Dependency rule:** root Vite `package.json` takes **no new packages**. Functions may add **one** PDF-text library (`unpdf@1.8.1`). It is not imported from `src/`. It does not change initial JS gzip. No OpenAI SDK.
