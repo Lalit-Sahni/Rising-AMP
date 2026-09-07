@@ -1,6 +1,6 @@
 # Phase 14 — Ask (agent brief)
 
-**Status (7 Sep 2026):** Branch `phase-14-ask` opened. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. Phase 13 blockers closed on staging (uncoded pool; Lalit + Sydney Excavation merges; re-extract). Metro Consulting and the cross-kind unlinked list remain the owner’s. Part A is **not started**. Production untouched. Localhost staging. Never `--force`. Model never calculates.
+**Status (7 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Part A done** on this commit (`askRisingAmp` on staging after deploy; production untouched). Part B is next. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
 
 Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any code. That mockup is the spec.
 
@@ -51,6 +51,8 @@ A new Cloud Function, `askRisingAmp`, that turns a question into a query choice.
 5. **It may return more than one choice** (up to three) when a question needs several answers. It may never return an instruction to combine them.
 6. **It may return `none`** with a short reason. That is a valid, expected outcome, not a failure.
 7. Deploy **by name**, no `--force`: `firebase deploy --project staging --only functions:askRisingAmp`.
+
+**Part A done.** Callable `askRisingAmp` in `functions/lib/askRisingAmp.js`: auth required, `OPENAI_API_KEY`, `us-central1`, `retry: false`. Input is the question, optional job id, optional org. The model (`gpt-4o-mini`, see `docs/adr-ask-model.md`) returns a schema-validated route of up to three choices (`QUERY_NAMES` or `none`). Figures in `sentence` / `reason` are stripped. Unknown query names are rejected. The function does **not** run `src/queries/`, does **not** read expenses, and does **not** compute spend. Staging deploy is by name after this commit. Production still has the original six functions. Typed parse `src/ask/askRoute.ts` is unused by `App.js` / `PaletteHost`.
 
 Commit: `Route a question to one of the read-only queries.`
 

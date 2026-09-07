@@ -2,7 +2,8 @@
  * Production functions are sendJobInviteEmail, readReceiptImage,
  * allocateInvoiceNumber, checkEstimateImport, readQuoteFile and
  * maintainLedgerRollup (Firestore trigger, Phase 11 Part E, live 5 Sep 2026).
- * Staging also has extractJobFileText (Phase 13 Part C; not production).
+ * Staging also has extractJobFileText (Phase 13 Part C; not production)
+ * and askRisingAmp (Phase 14 Part A; not production).
  * Deploy by name:
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
@@ -18,10 +19,12 @@
  *   firebase deploy --project staging --only functions:maintainLedgerRollup
  *   firebase deploy --project production --only functions:maintainLedgerRollup
  *   firebase deploy --project staging --only functions:extractJobFileText
+ *   firebase deploy --project staging --only functions:askRisingAmp
  *
  * No --force. --force suppresses the confirmation before deleting functions.
  * This repo never lets a functions deploy delete something.
- * extractJobFileText uses retry: false so a first create does not demand --force.
+ * extractJobFileText and askRisingAmp use retry: false so a first create
+ * does not demand --force. Do not deploy askRisingAmp to production until named.
  * Production maintainLedgerRollup create (5 Sep 2026) answered the retry prompt; no --force.
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):
@@ -54,6 +57,7 @@ const {
   parseQuoteReadContent,
   sanitizeQuoteReadInput,
 } = require('./lib/quoteRead');
+const { handleAskRisingAmp } = require('./lib/askRisingAmp');
 const resendApiKey = defineSecret('RESEND_API_KEY');
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
 
@@ -559,6 +563,27 @@ exports.maintainLedgerRollup = onDocumentWritten(
     await recomputeOrgLedgerRollup(db, orgId, {
       FieldValue: admin.firestore.FieldValue,
       FieldPath: admin.firestore.FieldPath,
+    });
+  }
+);
+
+exports.askRisingAmp = onCall(
+  {
+    region: 'us-central1',
+    secrets: [openaiApiKey],
+    cors: true,
+    maxInstances: 10,
+    timeoutSeconds: 30,
+    memory: '256MiB',
+    retry: false,
+  },
+  async (request) => {
+    return handleAskRisingAmp(request, {
+      db: admin.firestore(),
+      openaiApiKey,
+      familyOrgId: FAMILY_ORG_ID,
+      isEmailOnList,
+      normalizeEmail,
     });
   }
 );
