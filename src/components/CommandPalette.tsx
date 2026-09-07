@@ -42,6 +42,9 @@ import {
   type PaletteAnswer,
   type RoutedPaletteItem,
 } from './palette/answers';
+import type { AskHistoryRow } from '../domain/askHistory';
+import { HistoryList } from './palette/HistoryList';
+import { itemsFromAskHistory } from './palette/historyDisplay';
 import { FileAnswerBody, InvoiceAnswerBody, RefusalAnswerBody, SpendAnswerBody } from './palette/ResultRows';
 
 const JobFileViewer = lazy(() => import('./files/JobFileViewer'));
@@ -122,7 +125,10 @@ export default function CommandPalette() {
     status: 'loading' | 'ready' | 'error';
     items: RoutedPaletteItem[];
   } | null>(null);
+  const [historyRows, setHistoryRows] = useState<AskHistoryRow[]>([]);
   const askSeq = useRef(0);
+  const savedAskIds = useRef(new Set<number>());
+  const restoredQuestion = useRef<string | null>(null);
 
   const tradeQuery = useTradeList(orgId);
   const planQuery = useCostPlan(orgId, scopedJobId);
@@ -150,6 +156,7 @@ export default function CommandPalette() {
       setRemoteInvoiceHits(null);
       setViewing(null);
       setAskView(null);
+      restoredQuestion.current = null;
       askSeq.current += 1;
       const id = window.setTimeout(() => inputRef.current?.focus(), 20);
       return () => window.clearTimeout(id);
@@ -289,7 +296,7 @@ export default function CommandPalette() {
     setAskView({ question, status: 'loading', items: [] });
     try {
       const { executeAskQuestion } = await import('./palette/runAsk');
-      const items = await executeAskQuestion({
+      const ran = await executeAskQuestion({
         question,
         orgId,
         jobId: scopedJobId,
@@ -298,7 +305,26 @@ export default function CommandPalette() {
         jobLabel: scopeChip.label,
       });
       if (requestId !== askSeq.current) return;
-      setAskView({ question, status: 'ready', items });
+      setAskView({ question, status: 'ready', items: ran.items });
+      const uid = (authUser && authUser.uid) || '';
+      if (uid && !savedAskIds.current.has(requestId)) {
+        savedAskIds.current.add(requestId);
+        const scopeKey = scopedJobId || '';
+        void import('../firebase/askHistory').then(({ saveAskHistory }) => (
+          saveAskHistory({
+            orgId,
+            uid,
+            question,
+            jobId: scopedJobId,
+            jobLabel: scopedJobId ? scopeChip.label : '',
+            choices: ran.choices,
+          })
+        )).then((saved) => {
+          if (!saved || requestId !== askSeq.current) return;
+          if ((saved.jobId || '') !== scopeKey) return;
+          setHistoryRows((current) => [saved, ...current.filter((row) => row.id !== saved.id)].slice(0, 40));
+        }).catch(() => {});
+      }
     } catch {
       if (requestId !== askSeq.current) return;
       setAskView({
@@ -597,6 +623,10 @@ export default function CommandPalette() {
   }, [query, scopedJobId, askView]);
 
   useEffect(() => {
+    if (restoredQuestion.current !== null && query.trim() === restoredQuestion.current) {
+      return;
+    }
+    restoredQuestion.current = null;
     askSeq.current += 1;
     setAskView(null);
   }, [query, scopedJobId]);
@@ -605,6 +635,50 @@ export default function CommandPalette() {
     const node = listRef.current?.querySelector<HTMLElement>(`[data-index="${cursor}"]`);
     node?.scrollIntoView({ block: 'nearest' });
   }, [cursor]);
+
+  const historyUid = (authUser && authUser.uid) || '';
+
+  useEffect(() => {
+    if (!commandPaletteOpen || !orgId || !historyUid) {
+      setHistoryRows([]);
+      return undefined;
+    }
+    let cancelled = false;
+    import('../firebase/askHistory').then(({ listAskHistory }) => {
+      listAskHistory({ orgId, uid: historyUid, jobId: scopedJobId }).then((rows) => {
+        if (!cancelled) setHistoryRows(rows);
+      }).catch(() => {
+        if (!cancelled) setHistoryRows([]);
+      });
+    });
+    return () => { cancelled = true; };
+  }, [commandPaletteOpen, orgId, historyUid, scopedJobId]);
+
+  const openHistoryItem = (row: AskHistoryRow) => {
+    restoredQuestion.current = row.question;
+    setQuery(row.question);
+    setAskView({
+      question: row.question,
+      status: 'ready',
+      items: itemsFromAskHistory(row),
+    });
+  };
+
+  const removeHistoryItem = (id: string) => {
+    if (!orgId || !historyUid) return;
+    setHistoryRows((current) => current.filter((row) => row.id !== id));
+    void import('../firebase/askHistory').then(({ deleteAskHistory }) => {
+      return deleteAskHistory(orgId, historyUid, id);
+    }).catch(() => {});
+  };
+
+  const clearHistory = () => {
+    if (!orgId || !historyUid) return;
+    setHistoryRows([]);
+    void import('../firebase/askHistory').then(({ clearAskHistory }) => {
+      return clearAskHistory({ orgId, uid: historyUid, jobId: scopedJobId });
+    }).catch(() => {});
+  };
 
   if (!commandPaletteOpen) return null;
 
@@ -810,12 +884,21 @@ export default function CommandPalette() {
               <p className="px-4 py-8 text-center text-[13px] text-slate-400">
                 Checking the ledger…
               </p>
-            ) : rows.length === 0 ? (
+            ) : rows.length === 0 && (query.trim() || historyRows.length === 0) ? (
               <p className="px-4 py-8 text-center text-[13px] text-slate-400">
                 {query ? 'Nothing matches that.' : 'Type to search.'}
               </p>
             ) : (
-              rows.map((row, index) => {
+              <>
+                {!query.trim() ? (
+                  <HistoryList
+                    rows={historyRows}
+                    onOpen={openHistoryItem}
+                    onDelete={removeHistoryItem}
+                    onClearAll={clearHistory}
+                  />
+                ) : null}
+                {rows.map((row, index) => {
                 const Icon = row.icon;
                 const showHeader = row.section !== lastSection;
                 lastSection = row.section;
@@ -911,7 +994,8 @@ export default function CommandPalette() {
                     )}
                   </React.Fragment>
                 );
-              })
+              })}
+              </>
             )}
           </div>
           <div className="flex items-center justify-between border-t border-hairline px-4 py-2 text-[11px] text-slate-400">

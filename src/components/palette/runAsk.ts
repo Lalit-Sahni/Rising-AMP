@@ -2,6 +2,7 @@
  * Run one routed Ask choice through src/queries/. Palette chunk only.
  * Do not import from App.js or PaletteHost.
  */
+import { historyChoiceFromRoute, type AskHistoryChoice } from '../../domain/askHistory';
 import type { QueryScope } from '../../queries/core';
 import type { TradeListRow, RoutedAskChoice, RoutedAskParams, RoutedPaletteItem } from './answers';
 import { itemsFromRoutedQuery, matchTrades, shouldUsePlanForNone } from './answers';
@@ -146,7 +147,12 @@ async function loadRelatedForNone(scope: QueryScope, jobId: string | undefined):
   return fetchMod.fetchJobSummary({ scope, jobId: allowed });
 }
 
-export async function executeAskQuestion(input: RunAskInput): Promise<RoutedPaletteItem[]> {
+export type AskExecution = {
+  items: RoutedPaletteItem[];
+  choices: AskHistoryChoice[];
+};
+
+export async function executeAskQuestion(input: RunAskInput): Promise<AskExecution> {
   const { callAskRisingAmp } = await import('../../ask/askRisingAmp');
   const route = await callAskRisingAmp({
     question: input.question,
@@ -154,6 +160,7 @@ export async function executeAskQuestion(input: RunAskInput): Promise<RoutedPale
     jobId: input.jobId,
   });
   const items: RoutedPaletteItem[] = [];
+  const choices: AskHistoryChoice[] = [];
   for (const raw of route.choices) {
     const choice: RoutedAskChoice = raw.query === 'none'
       ? { query: 'none', params: {}, reason: raw.reason }
@@ -171,6 +178,7 @@ export async function executeAskQuestion(input: RunAskInput): Promise<RoutedPale
       tradeList: input.tradeList,
       jobLabel: input.jobLabel,
     }));
+    choices.push(historyChoiceFromRoute(resolved, result));
   }
-  return items;
+  return { items, choices };
 }

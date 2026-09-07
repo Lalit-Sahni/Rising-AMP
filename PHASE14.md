@@ -1,6 +1,6 @@
 # Phase 14 — Ask (agent brief)
 
-**Status (7 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–C done** on this branch (`askRisingAmp` on staging; production untouched). Part D is next (question history). Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
+**Status (8 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–D done** on this branch (`askRisingAmp` on staging; question history; production untouched). Part E is next (evals). Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
 
 Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any code. That mockup is the spec.
 
@@ -94,6 +94,8 @@ Commit: `Show the working, the uncoded pool and an honest refusal.`
 - Store the **routed choice and the provenance**, not just the text. An answer must be reproducible months later when somebody says "the app told me we'd spent X."
 - The user can delete a question or clear their history.
 - Do not store the model's prose. Store the question, the choice, and the result reference. Prose is regenerable; the choice is the evidence.
+
+**Part D done.** Per-user history at `organizations/{orgId}/askHistory/{uid}/items/{id}`. After a successful Ask (including `none` with code figures) the palette saves the question, the routed query + params, query provenance, and the snapshot cents/counts from `src/queries/`. Model `sentence` / `reason` are not stored. The palette lists recent questions, reopens one from that snapshot, deletes one, and clears all. Rules: own uid only; a second org member cannot read; cannot write another org; a chat `messages` blob is rejected. Own rows may be deleted. Staging Firestore rules after this commit. No production. No eval set.
 
 Commit: `Keep a question history that can be audited.`
 

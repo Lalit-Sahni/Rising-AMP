@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { computeLedgerRollup } from '../domain/ledgerRollup';
+import { historyChoiceFromRoute } from '../domain/askHistory';
 import { formatCents } from '../money';
 import { planVsActual } from '../queries/plan';
 import { spendByTrade } from '../queries/spend';
@@ -12,6 +13,7 @@ import {
   REFUSAL_TITLE,
   spendAnswersForQuery,
 } from './palette/answers';
+import { historySubtitle, itemsFromAskHistory } from './palette/historyDisplay';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -132,6 +134,10 @@ describe('command palette answers', () => {
       'src/components/CommandPalette.tsx',
       'src/components/palette/answers.ts',
       'src/components/palette/ResultRows.tsx',
+      'src/components/palette/HistoryList.tsx',
+      'src/components/palette/historyDisplay.ts',
+      'src/domain/askHistory.ts',
+      'src/firebase/askHistory.ts',
       'src/components/PaletteHost.tsx',
       'src/App.js',
     ];
@@ -147,6 +153,8 @@ describe('command palette answers', () => {
     expect(host).not.toContain('useTradeList');
     expect(host).not.toContain('askRisingAmp');
     expect(host).not.toContain('runAsk');
+    expect(host).not.toContain('askHistory');
+    expect(host).not.toContain('HistoryList');
     const app = read('src/App.js');
     expect(app).not.toContain('queries/');
     expect(app).not.toContain('JobFileViewer');
@@ -155,14 +163,19 @@ describe('command palette answers', () => {
     expect(app).not.toContain('askRisingAmp');
     expect(app).not.toContain("from './ask/");
     expect(app).not.toContain('runAsk');
+    expect(app).not.toContain('askHistory');
+    expect(app).not.toContain('HistoryList');
     const palette = read('src/components/CommandPalette.tsx');
     expect(palette).toContain("lazy(() => import('./files/JobFileViewer'))");
     expect(palette).toContain("import('../queries/fetch')");
     expect(palette).toContain("import('./palette/runAsk')");
+    expect(palette).toContain("import('../firebase/askHistory')");
+    expect(palette).toContain('HistoryList');
     expect(palette).toContain('Ask this job');
     expect(palette).not.toMatch(/^import .+ from ['\"]\.\.\/queries\/fetch['\"]/m);
     expect(palette).not.toMatch(/^import .+ from ['\"]\.\.\/ask\//m);
     expect(palette).not.toMatch(/^import .+ from ['\"]\.\/palette\/runAsk['\"]/m);
+    expect(palette).not.toMatch(/^import .+ from ['\"]\.\.\/firebase\/askHistory['\"]/m);
   });
 
   test('routed spendByTrade paints formatCents from the query, not a model sentence', () => {
@@ -303,5 +316,62 @@ describe('command palette answers', () => {
     if (items[0].kind !== 'spend') return;
     expect(items[0].answer.amount).toBe('—');
     expect(items[0].answer.incomplete).toBe(INCOMPLETE_CAP_MESSAGE);
+  });
+});
+
+describe('command palette question history', () => {
+  test('a saved item shows query name and cents from the snapshot, not a model sentence', () => {
+    const jobs = [{
+      jobId: 'job-1',
+      rollup: computeLedgerRollup(EXPENSES, 4),
+      expenses: EXPENSES,
+      expensesCapped: false,
+      expensesLoaded: true,
+    }];
+    const queried = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-1',
+      tradeId: 'concreting',
+      jobs,
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+    const routed = {
+      query: 'spendByTrade' as const,
+      params: { jobId: 'job-1', tradeId: 'concreting', trade: 'Concreting' },
+      sentence: 'You have spent $99,999 on concreting.',
+      reason: '$99,999',
+    };
+    const choice = historyChoiceFromRoute(routed, queried);
+    expect(choice.query).toBe('spendByTrade');
+    expect(choice.snapshot?.cents).toBe(queried.cents);
+    expect(choice.snapshot?.cents).toBe(4850);
+    expect(JSON.stringify(choice)).not.toContain('99,999');
+    expect(JSON.stringify(choice)).not.toContain('sentence');
+
+    const row = {
+      id: 'h1',
+      uid: 'u1',
+      orgId: 'opal-ss-constructions',
+      jobId: 'job-1',
+      jobLabel: '72 Centenary Dr',
+      question: 'spend on concreting',
+      askedAt: new Date('2026-09-08T02:00:00Z'),
+      choices: [choice],
+    };
+    const subtitle = historySubtitle(row, new Date('2026-09-08T12:00:00Z'));
+    expect(subtitle).toContain(formatCents(4850));
+    expect(subtitle).not.toContain('99,999');
+    const items = itemsFromAskHistory(row);
+    expect(items[0].kind).toBe('spend');
+    if (items[0].kind !== 'spend') return;
+    expect(items[0].answer.amount).toBe(formatCents(4850));
+    expect(items[0].answer.amount).toBe('$48.50');
+    expect(items[0].answer.working?.query).toBe('spendByTrade');
+    expect(`${items[0].answer.title} ${items[0].answer.detail} ${items[0].answer.amount}`).not.toContain('99,999');
+    const list = read('src/components/palette/HistoryList.tsx');
+    expect(list).toContain('Recent questions');
+    expect(list).toContain('Clear all');
+    expect(list).toContain('Remove question');
   });
 });

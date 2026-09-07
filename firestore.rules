@@ -593,6 +593,140 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      // Phase 14 Part D. Per-user Ask questions. Not a chat log.
+      // Path: organizations/{orgId}/askHistory/{uid}/items/{id}
+      match /askHistory/{historyUid} {
+        allow read, write: if false;
+
+        match /items/{questionId} {
+          function isOrgInvited() {
+            return signedIn()
+              && emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)).data.invitedEmails;
+          }
+
+          function askQueryNameOk(name) {
+            return name in [
+              'spendByTrade', 'spendByParty', 'spendByCategory', 'planVsActual',
+              'invoicesByStatus', 'jobSummary', 'portfolioSummary', 'findFiles',
+              'findExpenses', 'quotesForTrade', 'none'
+            ];
+          }
+
+          function provenanceQueryOk(name) {
+            return name in [
+              'spendByTrade', 'spendByParty', 'spendByCategory', 'planVsActual',
+              'invoicesByStatus', 'jobSummary', 'portfolioSummary', 'findFiles',
+              'findExpenses', 'quotesForTrade'
+            ];
+          }
+
+          function askParamsOk(params) {
+            return params.keys().hasOnly([
+              'jobId', 'tradeId', 'trade', 'partyId', 'party', 'category',
+              'status', 'type', 'text', 'from', 'to', 'period', 'olderThanDays'
+            ]);
+          }
+
+          function intOrNull(value) {
+            return value == null || value is int;
+          }
+
+          function snapshotOk(s) {
+            return s == null || (
+              s.keys().hasOnly([
+                'cents', 'count', 'planCents', 'actualCents',
+                'uncodedCents', 'uncodedCount', 'capped'
+              ])
+              && (!s.keys().hasAny(['cents']) || intOrNull(s.cents))
+              && (!s.keys().hasAny(['count']) || intOrNull(s.count))
+              && (!s.keys().hasAny(['planCents']) || intOrNull(s.planCents))
+              && (!s.keys().hasAny(['actualCents']) || intOrNull(s.actualCents))
+              && (!s.keys().hasAny(['uncodedCents']) || intOrNull(s.uncodedCents))
+              && (!s.keys().hasAny(['uncodedCount']) || intOrNull(s.uncodedCount))
+              && (!s.keys().hasAny(['capped']) || s.capped is bool)
+            );
+          }
+
+          function provenanceOk(p) {
+            return p == null || (
+              p.keys().hasOnly(['query', 'params', 'source', 'revision', 'rowCount', 'capped'])
+              && provenanceQueryOk(p.query)
+              && p.source in ['rollup', 'ledger', 'files', 'mixed']
+              && p.rowCount is int
+              && p.capped is bool
+              && (!p.keys().hasAny(['revision']) || p.revision is int)
+            );
+          }
+
+          function choiceOk(c) {
+            return c.keys().hasOnly(['query', 'params', 'provenance', 'snapshot'])
+              && askQueryNameOk(c.query)
+              && askParamsOk(c.params)
+              && (!c.keys().hasAny(['sentence', 'reason', 'messages', 'content', 'reply']))
+              && (!c.keys().hasAny(['provenance']) || provenanceOk(c.provenance))
+              && (!c.keys().hasAny(['snapshot']) || snapshotOk(c.snapshot));
+          }
+
+          function choicesOk() {
+            return request.resource.data.choices is list
+              && request.resource.data.choices.size() >= 1
+              && request.resource.data.choices.size() <= 3
+              && choiceOk(request.resource.data.choices[0])
+              && (
+                request.resource.data.choices.size() < 2
+                || choiceOk(request.resource.data.choices[1])
+              )
+              && (
+                request.resource.data.choices.size() < 3
+                || choiceOk(request.resource.data.choices[2])
+              );
+          }
+
+          function askJobOk(jobId) {
+            return jobId is string
+              && jobId.size() <= 80
+              && (
+                jobId.size() == 0
+                || emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)/projects/$(jobId)).data.invitedEmails
+              );
+          }
+
+          function askHistoryShapeOk() {
+            return request.resource.data.keys().hasAll([
+                'uid', 'orgId', 'jobId', 'jobLabel', 'question', 'askedAt', 'choices'
+              ])
+              && request.resource.data.keys().hasOnly([
+                'uid', 'orgId', 'jobId', 'jobLabel', 'question', 'askedAt', 'choices'
+              ])
+              && request.resource.data.uid == historyUid
+              && request.resource.data.uid == request.auth.uid
+              && request.resource.data.orgId == orgId
+              && request.resource.data.jobLabel is string
+              && request.resource.data.jobLabel.size() <= 120
+              && request.resource.data.question is string
+              && request.resource.data.question.size() > 0
+              && request.resource.data.question.size() <= 500
+              && request.resource.data.askedAt is timestamp
+              && askJobOk(request.resource.data.jobId)
+              && choicesOk();
+          }
+
+          allow read: if signedIn()
+            && request.auth.uid == historyUid
+            && resource.data.uid == request.auth.uid
+            && isOrgInvited()
+            && askJobOk(resource.data.jobId);
+          allow create: if isOrgInvited()
+            && request.auth.uid == historyUid
+            && askHistoryShapeOk();
+          allow update: if false;
+          allow delete: if signedIn()
+            && request.auth.uid == historyUid
+            && resource.data.uid == request.auth.uid
+            && isOrgInvited();
+        }
+      }
+
       match /{allPaths=**} {
         allow read, write: if false;
       }

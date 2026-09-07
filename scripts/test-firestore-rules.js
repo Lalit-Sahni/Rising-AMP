@@ -565,6 +565,106 @@ async function main() {
     await assertFails(owner.firestore().doc(textPath).delete());
     await assertFails(owner.firestore().doc(`${filePath}/content/other`).get());
 
+    const COWORKER = {
+      uid: 'coworker-1',
+      email: 'coworker@opal.test',
+    };
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await db.doc(`organizations/${ORG}`).update({
+        invitedEmails: [OWNER.email, COWORKER.email],
+      });
+      await db.doc(`organizations/${ORG}/projects/${JOB}`).update({
+        invitedEmails: [OWNER.email, COWORKER.email],
+      });
+    });
+    const coworker = testEnv.authenticatedContext(COWORKER.uid, {
+      email: COWORKER.email,
+      email_verified: true,
+    });
+
+    const askPath = `organizations/${ORG}/askHistory/${OWNER.uid}/items/q1`;
+    const validAsk = {
+      uid: OWNER.uid,
+      orgId: ORG,
+      jobId: JOB,
+      jobLabel: 'Test job',
+      question: 'how much on concreting',
+      askedAt: new Date(),
+      choices: [{
+        query: 'spendByTrade',
+        params: { jobId: JOB, tradeId: 'concreting' },
+        provenance: {
+          query: 'spendByTrade',
+          params: { jobId: JOB, tradeId: 'concreting' },
+          source: 'ledger',
+          rowCount: 1,
+          capped: false,
+        },
+        snapshot: {
+          cents: 4850,
+          count: 1,
+          capped: false,
+        },
+      }],
+    };
+    await assertSucceeds(owner.firestore().doc(askPath).set(validAsk));
+    await assertSucceeds(owner.firestore().doc(askPath).get());
+    await assertFails(coworker.firestore().doc(askPath).get());
+    await assertFails(stranger.firestore().doc(askPath).get());
+    await assertFails(coworker.firestore().collection(`organizations/${ORG}/askHistory/${OWNER.uid}/items`).get());
+    await assertFails(coworker.firestore().doc(askPath).set(validAsk));
+    await assertFails(coworker.firestore().doc(`organizations/${ORG}/askHistory/${COWORKER.uid}/items/stolen`).set({
+      ...validAsk,
+      uid: OWNER.uid,
+    }));
+    await assertSucceeds(coworker.firestore().doc(`organizations/${ORG}/askHistory/${COWORKER.uid}/items/q2`).set({
+      ...validAsk,
+      uid: COWORKER.uid,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG_B}/askHistory/${OWNER.uid}/items/q3`).set({
+      ...validAsk,
+      orgId: ORG_B,
+      jobId: JOB_B,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-prose`).set({
+      ...validAsk,
+      sentence: 'You spent $99,999',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-chat`).set({
+      ...validAsk,
+      messages: [{ role: 'assistant', content: 'You spent $99,999' }],
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-reason`).set({
+      ...validAsk,
+      choices: [{
+        ...validAsk.choices[0],
+        reason: 'Because $99,999',
+      }],
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-sentence`).set({
+      ...validAsk,
+      choices: [{
+        ...validAsk.choices[0],
+        sentence: 'You spent $99,999',
+      }],
+    }));
+    await assertFails(owner.firestore().doc(askPath).update({
+      question: 'changed',
+    }));
+    await assertFails(coworker.firestore().doc(askPath).delete());
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-org`).set({
+      ...validAsk,
+      jobId: '',
+      jobLabel: '',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-otherjob`).set({
+      ...validAsk,
+      jobId: JOB_B,
+    }));
+    await assertSucceeds(owner.firestore().doc(askPath).delete());
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-org`).delete());
+
     const storageRefPath = `files/${ORG}/${JOB}/f1/slab.pdf`;
     await assertSucceeds(
       owner.storage().ref(storageRefPath).put(Buffer.from('%PDF-1.4'), { contentType: 'application/pdf' }),
