@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RisingAMP — Ask (Phase 14 vision)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<style>
+:root{
+  --steel-900:#17181C;--steel-800:#1F2127;--ink:#1C1E23;
+  --slate-600:#565B64;--slate-500:#6B7079;--slate-400:#8A9099;
+  --hairline:#E7E9EC;--canvas:#F5F6F8;--surface:#FFFFFF;
+  --accent:#E85D1A;--accent-600:#C64E12;--accent-tint:#FCEEE4;
+  --pos:#2E7D57;--pos-tint:#E7F1EC;--warn:#B7862B;--warn-tint:#F7F0DF;--neg:#C0392B;
+  --t-concreting:#B5654A;--t-carpentry:#C08A3E;--t-plumbing:#4E8C82;
+  --t-electrical:#5E82A6;--t-kitchen:#7E9B63;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 2px rgba(23,24,28,.04),0 1px 3px rgba(23,24,28,.03);
+  --ui:'Manrope',system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--ui);background:var(--canvas);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.5}
+.tabular{font-variant-numeric:tabular-nums}
+.wrap{max-width:1060px;margin:0 auto;padding:0 24px}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--slate-400);margin:0 0 10px}
+h1,h2,h3{color:var(--steel-900);margin:0;letter-spacing:-.02em}
+h1{font-size:42px;font-weight:800;line-height:1.1}
+h2{font-size:27px;font-weight:800}
+h3{font-size:16px;font-weight:700}
+p{margin:0 0 14px;color:var(--slate-600);font-size:15px}
+.lede{font-size:18px;color:var(--slate-500);max-width:66ch}
+section{padding:60px 0;border-top:1px solid var(--hairline)}
+section.alt{background:var(--surface)}
+.card{background:var(--surface);border:1px solid var(--hairline);border-radius:var(--radius);box-shadow:var(--shadow)}
+.pad{padding:20px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:880px){.g2,.g3{grid-template-columns:1fr}}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 8px}
+header{background:var(--steel-900);color:#fff;padding:70px 0 60px}
+header h1{color:#fff}header p{color:#C9CDD4}
+.mark{font-family:'DM Serif Display',serif;font-size:20px;color:#fff}
+.mark span{color:var(--accent)}
+.chip{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);background:rgba(232,93,26,.14);padding:5px 10px;border-radius:999px}
+
+/* palette mock */
+.pal{max-width:640px;margin:0 auto;border:1px solid var(--hairline);border-radius:var(--radius);background:var(--surface);box-shadow:0 8px 28px rgba(23,24,28,.10);overflow:hidden}
+.pal-in{display:flex;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--hairline)}
+.pal-in .q{font-size:16px;color:var(--ink);font-weight:500;flex:1}
+.pal-in .cur{width:1.5px;height:18px;background:var(--accent);display:inline-block}
+.scopechip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--slate-600);border:1px solid var(--hairline);border-radius:999px;padding:4px 9px;white-space:nowrap}
+.sec{font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--slate-400);padding:13px 18px 7px}
+.ans{padding:4px 18px 16px}
+.ansbox{border:1px solid var(--hairline);border-left:2px solid var(--accent);border-radius:var(--radius-sm);padding:15px 16px;background:var(--surface)}
+.big{font-size:30px;font-weight:800;color:var(--steel-900);font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.1}
+.sub{font-size:13px;color:var(--slate-500);margin-top:5px}
+.working{display:flex;align-items:center;gap:7px;margin-top:12px;padding-top:11px;border-top:1px solid var(--hairline);font-size:11.5px;color:var(--slate-400)}
+.working code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--slate-600);background:var(--canvas);padding:2px 6px;border-radius:4px}
+.row{display:flex;align-items:center;gap:12px;padding:9px 18px}
+.row .nm{font-size:14px;font-weight:600;color:var(--steel-900)}
+.row .mt{font-size:12px;color:var(--slate-400)}
+.grow{flex:1;min-width:0}
+.amt{font-size:13.5px;font-weight:700;color:var(--steel-900);font-variant-numeric:tabular-nums}
+.bar{height:5px;border-radius:3px;background:var(--canvas);overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%}
+.pal-foot{border-top:1px solid var(--hairline);padding:10px 18px;font-size:11.5px;color:var(--slate-400);display:flex;justify-content:space-between}
+kbd{font-family:var(--ui);font-size:11px;font-weight:700;border:1px solid var(--hairline);border-bottom-width:2px;border-radius:5px;padding:2px 6px;color:var(--slate-600);background:var(--surface)}
+
+.flow{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:12px;align-items:center}
+@media(max-width:880px){.flow{grid-template-columns:1fr}.flow .arw{transform:rotate(90deg)}}
+.step{border:1px solid var(--hairline);border-radius:var(--radius-sm);padding:15px;background:var(--surface);text-align:center}
+.step .t{font-size:13.5px;font-weight:700;color:var(--steel-900);margin-bottom:5px}
+.step .d{font-size:12.5px;color:var(--slate-500)}
+.arw{color:var(--slate-400);font-size:18px;text-align:center}
+.no{border-left:2px solid var(--hairline);padding-left:15px;margin-bottom:15px}
+.no b{color:var(--steel-900)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--slate-400);padding:0 0 9px;border-bottom:1px solid var(--hairline)}
+td{padding:10px 0;border-bottom:1px solid var(--hairline);color:var(--slate-600);vertical-align:top}
+td code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--steel-900)}
+tr:last-child td{border-bottom:0}
+.callout{border:1px solid var(--hairline);border-left:2px solid var(--accent);border-radius:var(--radius-sm);padding:16px 18px;background:var(--accent-tint)}
+.callout p{color:#7A4620;margin:0}.callout b{color:#5E340F}
+.warnbox{border:1px solid var(--hairline);border-left:2px solid var(--warn);border-radius:var(--radius-sm);padding:15px 17px;background:var(--warn-tint)}
+.warnbox p{color:#6E5218;margin:0;font-size:14px}
+footer{background:var(--steel-900);color:#8A9099;padding:34px 0;font-size:13px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="mark" style="margin-bottom:26px">Rising<span>AMP</span></div>
+    <div class="chip" style="margin-bottom:16px">Phase 14 vision</div>
+    <h1>Ask</h1>
+    <p class="lede" style="margin-top:15px">One box that answers questions about a job in plain language. It never adds up a number itself. It decides which question to ask your own code, and your code does the maths.</p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">The problem</p>
+    <h2 style="max-width:20ch;margin-bottom:16px">You can see the totals. You cannot ask about them.</h2>
+    <p class="lede" style="margin-bottom:26px">RisingAMP will tell you a job is at 11.9% margin and that three invoices have no date. It cannot tell you what you have paid Metro Consulting this year, whether carpentry is running over the estimate, or what the contract says about retention. Those answers exist in your data. There is just no way to ask for them.</p>
+    <div class="grid g3">
+      <div class="card pad"><h3 style="font-size:15px;margin-bottom:7px">"What have we paid Metro?"</h3><p style="margin:0;font-size:14px">Open History. Filter. Scroll. Add it up in your head, or in a calculator, and hope.</p></div>
+      <div class="card pad"><h3 style="font-size:15px;margin-bottom:7px">"Are we over on carpentry?"</h3><p style="margin:0;font-size:14px">Cost Plan on one screen, History on another, and the comparison happens in your head.</p></div>
+      <div class="card pad"><h3 style="font-size:15px;margin-bottom:7px">"What did the contract say?"</h3><p style="margin:0;font-size:14px">Files, open the PDF, scroll, read. Assuming you remember which one it was in.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">Where it lives</p>
+    <h2 style="margin-bottom:10px">In the box you already have</h2>
+    <p class="lede" style="margin-bottom:30px">Not a chat bubble in the corner. Phase 13 already made the command palette answer spend questions with no AI at all. Phase 14 puts a model in front of the same queries so you can ask in your own words instead of guessing the keyword.</p>
+
+    <div class="pal">
+      <div class="pal-in">
+        <span style="color:var(--slate-400);font-size:15px">Ask</span>
+        <span class="q">how much have we spent on concreting<span class="cur"></span></span>
+        <span class="scopechip"><span class="dot" style="background:var(--accent)"></span>72 Centenary Dr ×</span>
+      </div>
+
+      <div class="sec">Answer</div>
+      <div class="ans">
+        <div class="ansbox">
+          <div class="big tabular">$37,372.91</div>
+          <div class="sub">Concreting on 72 Centenary Dr · 7 expenses · estimate was $37,372.91</div>
+          <div class="bar"><i style="width:100%;background:var(--t-concreting)"></i></div>
+          <div class="sub" style="margin-top:8px;color:var(--pos);font-weight:600">On the estimate, to the dollar.</div>
+          <div class="working">
+            <span>Worked out by</span> <code>spendByTrade(job: 72 Centenary Dr, trade: concreting)</code> <span>· rollup rev 41 · see the 7 expenses</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">Expenses behind it</div>
+      <div class="row"><span class="dot" style="background:var(--t-concreting)"></span><div class="grow"><div class="nm">Concrete Slab</div><div class="mt">167.22 SQM · 12 Mar</div></div><span class="amt tabular">$24,322.91</span></div>
+      <div class="row"><span class="dot" style="background:var(--t-concreting)"></span><div class="grow"><div class="nm">Piering</div><div class="mt">60 LM · 4 Mar</div></div><span class="amt tabular">$5,400.00</span></div>
+      <div class="row"><span class="dot" style="background:var(--t-concreting)"></span><div class="grow"><div class="nm">Excavation</div><div class="mt">5 loads · 28 Feb</div></div><span class="amt tabular">$3,250.00</span></div>
+
+      <div class="pal-foot"><span>Enter to open · Tab for the trade board</span><span><kbd>⌘K</kbd> anywhere</span></div>
+    </div>
+
+    <div class="callout" style="max-width:640px;margin:22px auto 0">
+      <p><b>Read the small grey line.</b> Every answer names the query it ran and links to the rows underneath. You can check it in one tap. That line is not decoration; it is the reason you are allowed to trust the number.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">How it works</p>
+    <h2 style="max-width:24ch;margin-bottom:16px">The model picks the question. Your code finds the answer.</h2>
+    <p class="lede" style="margin-bottom:28px">This is the whole design, and it is the opposite of how most of these are built. The AI never reads your ledger and never adds anything up.</p>
+
+    <div class="flow" style="margin-bottom:26px">
+      <div class="step"><div class="t">You ask</div><div class="d">"are we over on carpentry"</div></div>
+      <div class="arw">→</div>
+      <div class="step" style="border-color:var(--accent)"><div class="t">Model routes</div><div class="d">picks <code style="font-size:11px">planVsActual</code>, fills job and trade</div></div>
+      <div class="arw">→</div>
+      <div class="step"><div class="t">Your code answers</div><div class="d">the same function the Cost Plan screen uses</div></div>
+    </div>
+
+    <div class="grid g2">
+      <div class="card pad">
+        <h3 style="margin-bottom:9px;color:var(--neg)">The messy library</h3>
+        <p style="margin:0 0 10px;font-size:14px"><b style="color:var(--steel-900)">Embed everything, retrieve chunks, let the model summarise.</b> This is what most AI features do.</p>
+        <p style="margin:0;font-size:14px">It throws away the structure you spent five phases building, then tries to rebuild it by guesswork. The model adds up numbers from fragments. It gets one wrong. Nobody notices. Ask again tomorrow and the answer is different.</p>
+      </div>
+      <div class="card pad" style="border-color:var(--accent)">
+        <h3 style="margin-bottom:9px;color:var(--pos)">The tidy workplace</h3>
+        <p style="margin:0 0 10px;font-size:14px"><b style="color:var(--steel-900)">The model chooses one of about ten precise queries and fills the blanks.</b> Phase 13 built those queries.</p>
+        <p style="margin:0;font-size:14px">The number comes from the same code that draws your Overview, so the assistant and the dashboard cannot disagree. Same question, same answer, every time. And every answer can show its working.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">What it can answer</p>
+    <h2 style="margin-bottom:10px">Ten questions, asked any way you like</h2>
+    <p class="lede" style="margin-bottom:26px">The queries already exist and are already read-only. Phase 14 only adds the routing, so the surface it can touch is fixed and small by design.</p>
+    <div class="card pad">
+      <table>
+        <tr><th style="width:30%">You might say</th><th style="width:26%">It runs</th><th>What comes back</th></tr>
+        <tr><td>"spend on concreting"</td><td><code>spendByTrade</code></td><td>A figure, the expense count, and the rows</td></tr>
+        <tr><td>"what have we paid Metro Consulting"</td><td><code>spendByParty</code></td><td>Total for that supplier across jobs or on one</td></tr>
+        <tr><td>"are we over on carpentry"</td><td><code>planVsActual</code></td><td>Estimate against actual, with the gap named</td></tr>
+        <tr><td>"what's unpaid"</td><td><code>invoicesByStatus</code></td><td>Real invoice rows you can open</td></tr>
+        <tr><td>"anything overdue past 30 days"</td><td><code>invoicesByStatus</code></td><td>Same, filtered by age</td></tr>
+        <tr><td>"how's 72 Centenary going"</td><td><code>jobSummary</code></td><td>Cost, invoiced, margin, verdict line</td></tr>
+        <tr><td>"how are we doing overall"</td><td><code>portfolioSummary</code></td><td>Every active job, rolled up</td></tr>
+        <tr><td>"find the slab certificate"</td><td><code>findFiles</code></td><td>The document, opened in the viewer</td></tr>
+        <tr><td>"what does the contract say about retention"</td><td><code>findFiles</code> + text</td><td>The passage, quoted, with the file</td></tr>
+        <tr><td>"who quoted on tiling"</td><td><code>quotesForTrade</code></td><td>The quotes, with amounts and files</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">When it does not know</p>
+    <h2 style="max-width:22ch;margin-bottom:16px">It says so. It does not have a guess.</h2>
+    <div class="grid g2" style="align-items:start">
+      <div class="pal" style="max-width:none;box-shadow:var(--shadow)">
+        <div class="pal-in">
+          <span style="color:var(--slate-400);font-size:15px">Ask</span>
+          <span class="q">will we finish under budget<span class="cur"></span></span>
+          <span class="scopechip"><span class="dot" style="background:var(--accent)"></span>Kelly Street ×</span>
+        </div>
+        <div class="sec">Answer</div>
+        <div class="ans">
+          <div class="ansbox" style="border-left-color:var(--slate-400)">
+            <div style="font-size:15px;font-weight:700;color:var(--steel-900);margin-bottom:6px">I can't answer that honestly.</div>
+            <div class="sub" style="margin-top:0">That needs a forecast, and RisingAMP only stores what has actually happened. Here is what it does know:</div>
+            <div style="margin-top:12px;display:flex;gap:22px">
+              <div><div class="big tabular" style="font-size:21px">$348,608</div><div class="sub">Estimated</div></div>
+              <div><div class="big tabular" style="font-size:21px">$4,656</div><div class="sub">Spent so far</div></div>
+            </div>
+            <div class="working"><span>Worked out by</span> <code>planVsActual(job: Kelly Street)</code></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="no"><b>No invented figures, ever.</b> The same rule the Overview already follows: if the data to compute something honestly does not exist, say so and show what does. A dash beats a fake zero.</div>
+        <div class="no"><b>No arithmetic on document text.</b> It can quote what a contract says. It will never add up numbers it read out of a PDF, because that is exactly where a confident wrong answer comes from.</div>
+        <div class="no"><b>It shows the shape of what it can do.</b> When a question is outside the ten, it offers the closest one it can actually answer rather than improvising.</div>
+        <div class="no"><b>It never writes.</b> No creating an expense, no voiding an invoice, no editing anything. Answering is the whole job.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <p class="eyebrow">On a phone</p>
+    <h2 style="margin-bottom:26px">Answers are the app's own screens, not a wall of text</h2>
+    <div class="grid g2" style="align-items:start">
+      <div>
+        <div class="no"><b>A number in prose cannot be tapped.</b> Ask about unpaid invoices and you get real invoice rows that open. Ask about a trade and you get the trade board. Ask for a document and it opens in the viewer Phase 9 built.</div>
+        <div class="no"><b>It knows where you are.</b> Inside a job it answers about that job, with a chip you can clear to go company-wide. Most of the ambiguity is gone before the model sees the question.</div>
+        <div class="no"><b>Built for one hand and one bar.</b> Same tap targets and safe areas as Phase 7. It streams, so you see it thinking rather than staring at a spinner.</div>
+        <div class="no"><b>Two to four seconds, honestly.</b> A model call plus a round trip to a database that is not in this country. It says "checking the ledger" rather than pretending to be instant.</div>
+      </div>
+      <div class="card pad">
+        <p class="eyebrow" style="margin-bottom:12px">Recent questions</p>
+        <div class="row" style="padding:9px 0;border-bottom:1px solid var(--hairline)"><div class="grow"><div class="nm">what's unpaid</div><div class="mt">Today · 3 invoices · $187,500</div></div></div>
+        <div class="row" style="padding:9px 0;border-bottom:1px solid var(--hairline)"><div class="grow"><div class="nm">spend on carpentry</div><div class="mt">Yesterday · 72 Centenary Dr · $53,372.99</div></div></div>
+        <div class="row" style="padding:9px 0"><div class="grow"><div class="nm">termite certificate</div><div class="mt">Mon · not on file</div></div></div>
+        <p style="margin:14px 0 0;font-size:13px">Your questions, kept per person, deletable, and gated by the same job membership as everything else. They are business data, not chat history.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Deliberately not building</p>
+    <h2 style="margin-bottom:22px">Named so it does not arrive by accident</h2>
+    <div class="grid g3">
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Writing anything</h3><p style="margin:0;font-size:13.5px">No creating, editing, voiding or deleting. A different risk class, and it needs a confirmation flow nobody has designed.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Doing its own maths</h3><p style="margin:0;font-size:13.5px">Every figure comes from the query layer. If a number needs a new calculation, that is a new query, reviewed and tested.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Embedding your ledger</h3><p style="margin:0;font-size:13.5px">No vector store over expenses or invoices. Retrieval is only for words inside documents.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Advice</h3><p style="margin:0;font-size:13.5px">It reports what happened. It does not tell you whether to take a job or what to charge.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Reading images</h3><p style="margin:0;font-size:13.5px">Receipt OCR stays narrow and separate. No general image reading.</p></div>
+      <div class="card pad"><h3 style="font-size:14px;margin-bottom:6px">Answering everything</h3><p style="margin:0;font-size:13.5px">Ten questions, done properly. Unbounded scope is how this becomes a project that never ships.</p></div>
+    </div>
+    <div class="warnbox" style="margin-top:24px">
+      <p><b>The one rule that cannot bend.</b> This is a tool people put their money records into. One visibly wrong figure and they stop believing all of them. So the assistant may phrase a number, link to it and explain it, but it may never be the thing that calculated it.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="mark" style="margin-bottom:9px;font-size:17px">Rising<span>AMP</span></div>
+    Phase 14 vision · Ask · built on the Phase 13 query layer · brief to follow in <b style="color:#C9CDD4">PHASE14.md</b>
+  </div>
+</footer>
+
+</body>
+</html>
