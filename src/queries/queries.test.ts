@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { computeLedgerRollup, resolveExpenseTotals } from '../domain/ledgerRollup';
+import { formatCents } from '../money';
 import { findExpenses } from './expenses';
 import { contentKey, findFiles } from './files';
 import { invoicesByStatus } from './invoices';
@@ -91,6 +92,26 @@ describe('query layer schemas and membership', () => {
 });
 
 describe('rollup-first spend', () => {
+  test('painted cents stay byte-identical to the query helper', () => {
+    const result = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-a',
+      tradeId: 'concreting',
+      jobs: [jobSnap('job-a')],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(Object.is(result.cents, 1000)).toBe(true);
+    const helperCents = JSON.stringify(result.cents);
+    const expectedCents = JSON.stringify(1000);
+    expect(helperCents).toBe(expectedCents);
+    expect(Buffer.from(helperCents).equals(Buffer.from(expectedCents))).toBe(true);
+    const painted = formatCents(result.cents);
+    expect(painted).toBe(formatCents(1000));
+    expect(Buffer.from(painted).equals(Buffer.from(formatCents(1000)))).toBe(true);
+    expect(painted).not.toBe('$9,000,000.00');
+  });
+
   test('spendByTrade reads byTrade from the rollup, including unassigned', () => {
     const result = spendByTrade({
       scope: SCOPE,

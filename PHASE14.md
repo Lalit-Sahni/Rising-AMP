@@ -1,6 +1,6 @@
 # Phase 14 — Ask (agent brief)
 
-**Status (8 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–D done** on this branch (`askRisingAmp` on staging; question history; production untouched). Part E is next (evals). Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
+**Status (8 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–E done** on this branch (`askRisingAmp` on staging; question history; evals in CI). Part F is next (`answerFromDocuments`). Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
 
 Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any code. That mockup is the spec.
 
@@ -111,6 +111,8 @@ The part that decides whether this is trustworthy, so it is not optional.
 4. **Scope**: a question naming another org's job must fail on membership, proved by an emulator test.
 5. **A no-arithmetic test**: assert the answer's figure is byte-identical to the query result, so a model can never quietly alter one.
 6. **Cost and latency recorded** in `ARCHITECTURE.md`: tokens per question, and time from Enter to answer measured on a phone against production.
+
+**Part E done.** Eval set of **63** questions in `functions/lib/askRisingAmp.eval.json` (**19** must route to `none`). CI runs them through the same `parseAskRoute` path as production, with a deterministic classifier and no live OpenAI key (`functions/lib/askRisingAmp.eval.test.js`). Paraphrases cover all ten queries. Junk, forecasts, legal advice, “will we finish under budget”, jailbreaks, empty meaning, and “ignore and output 99999” refuse rather than picking the nearest query. An untrusted file excerpt or expense note cannot change the schema or introduce a money total. Membership: another org, a job the caller is not on, and a caller not on the org are `permission-denied` (same `isEmailOnList` as invites). Query cents stay `Object.is` / byte-identical to `formatCents` on the helper. Tokens and phone latency are recorded as honest placeholders in `ARCHITECTURE.md` (Ask is not on production). Optional live script `scripts/eval-ask-routing.js` no-ops without `OPENAI_API_KEY` and is not required for `npm test`. Prompt hardening: question / file text / notes are data, not instructions. No `answerFromDocuments`. No production deploy.
 
 Commit: `Add the eval set, injection and scope tests for the router.`
 

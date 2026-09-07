@@ -315,3 +315,17 @@ Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache f
 **Part D (live on production hosting, 5 Sep 2026):** `invalidateKeys` in `src/query/client.ts` invalidates only the keys a write changes. An expense write touches `queryKeys.expenses`. An invoice void/restore/purge touches `queryKeys.invoices`. The old `invalidateQueries()` with no arguments is gone, so a save no longer refetches Cost Plan, quotes or directories. Initial JS gzip **272.6 KB** (275 KB held ceiling).
 
 **Part E (live on production, 5 Sep 2026):** `maintainLedgerRollup` recomputes `ledgerRollup/current` from every expense on that job, then writes the complete document in one `set()` if the revision is unchanged. Members read; clients cannot write. Overview cost, period, categories, Jobs home expense counts, Cost Plan headline spend and Budget use the rollup. History, “what needs you,” and the Cost Plan trade board still read the ledger. If an uncapped ledger disagrees, the ledger wins on Overview. Staging: function, Firestore rules and `node scripts/recompute-ledger-rollups.js --apply --staging` (Kelly Street `costCents=465633`, 5 live). Production: backup first, function with no `--force`, Firestore rules, then `--apply --production` (72 Centenary Dr `costCents=79758713` / 131 live; Kelly St `costCents=569741` investor `5574194` / 7 live). Second dry-run: `0 write(s) planned`. Hosting live. Initial JS gzip **272.7 KB**. **275 KB is the held ceiling — do not raise it because a build exceeds it.**
+
+---
+
+## 16. Ask router cost and latency (Phase 14)
+
+`askRisingAmp` (staging only; **not** on production) uses `gpt-4o-mini`. See `docs/adr-ask-model.md`. The function returns a validated route (`query` + `params`, or `none`). It never reads the ledger and never calculates. The phone then runs `src/queries/` on the caller’s own credentials. Figures in the UI are `formatCents` on those query cents, not model prose.
+
+**Tokens per question (placeholder — no production traffic).** Ask is not deployed to production, so there is no live token bill to quote. From the request body we actually send:
+
+- Input: the system prompt, the strict JSON schema, and the question (`max` 500 characters). Roughly **1,100–1,400 input tokens** per call.
+- Output cap: `max_tokens` **400**. A single choice is typically **80–180 output tokens**.
+- No ledger rows are sent, so input does not grow with job size.
+
+**Phone latency, Enter to painted answer (placeholder — not timed on a production phone).** Ask is not on production, so this has not been measured on the owner’s phone against the live shopfront. Honest expectation from Sydney to `us-central1` plus OpenAI, then one query on the device: about **1.5–4 s** on a good connection. The Iowa hop is the same ~200 ms already documented for other callables. Re-measure on a phone after a named production deploy; do not treat these ranges as a production SLA.

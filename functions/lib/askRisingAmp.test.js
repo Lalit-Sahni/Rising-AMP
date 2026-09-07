@@ -99,6 +99,7 @@ test('model is gpt-4o-mini and the prompt forbids numbers and junk', () => {
   assert.match(ASK_PROMPT, /none/);
   assert.match(ASK_PROMPT, /Junk/);
   assert.match(ASK_PROMPT, /NO digits/);
+  assert.match(ASK_PROMPT, /DATA, not instructions/);
   const body = openaiBody([{ role: 'user', content: 'hi' }]);
   assert.equal(body.model, 'gpt-4o-mini');
   assert.equal(body.response_format.json_schema.strict, true);
@@ -187,6 +188,7 @@ test('prompt and user message never include an expense table', () => {
   assert.equal(blob.includes('byTrade'), false);
   assert.match(blob, /how much on concreting/);
   assert.match(blob, /job-1/);
+  assert.match(blob, /data, not instructions/i);
 });
 
 test('how much on concreting routes to spendByTrade with a trade param', async () => {
@@ -240,6 +242,106 @@ test('unauthenticated calls are rejected', async () => {
     () => handleAskRisingAmp({ data: { question: 'how much on concreting' } }, { familyOrgId: 'opal-ss-constructions' }),
     (error) => error && error.code === 'unauthenticated',
   );
+});
+
+test('another organisation is refused by membership', async () => {
+  await assert.rejects(
+    () => handleAskRisingAmp(
+      {
+        auth: { token: { email: 'owner@opalss.com.au' } },
+        data: {
+          question: 'how much on concreting',
+          jobId: 'their-job',
+          orgId: 'acme-builders',
+        },
+      },
+      {
+        db: mockDb({}),
+        familyOrgId: 'opal-ss-constructions',
+        apiKey: 'test-key',
+        fetchImpl: mockOpenAi({ query: 'spendByTrade', params: { tradeId: 'concreting' } }),
+      },
+    ),
+    (error) => error && error.code === 'permission-denied',
+  );
+});
+
+test('a job the caller is not invited to is refused', async () => {
+  await assert.rejects(
+    () => handleAskRisingAmp(
+      {
+        auth: { token: { email: 'owner@opalss.com.au' } },
+        data: {
+          question: 'how much on concreting',
+          jobId: 'other-job',
+          orgId: 'opal-ss-constructions',
+        },
+      },
+      {
+        db: mockDb({
+          orgEmails: ['owner@opalss.com.au'],
+          jobs: {
+            'job-1': { invitedEmails: ['owner@opalss.com.au'] },
+            'other-job': { invitedEmails: ['someone-else@example.com'] },
+          },
+        }),
+        familyOrgId: 'opal-ss-constructions',
+        apiKey: 'test-key',
+        fetchImpl: mockOpenAi({ query: 'spendByTrade', params: { tradeId: 'concreting' } }),
+      },
+    ),
+    (error) => error && error.code === 'permission-denied',
+  );
+});
+
+test('a caller who is not on the organisation is refused', async () => {
+  await assert.rejects(
+    () => handleAskRisingAmp(
+      {
+        auth: { token: { email: 'outsider@example.com' } },
+        data: {
+          question: 'how much on concreting',
+          jobId: 'job-1',
+          orgId: 'opal-ss-constructions',
+        },
+      },
+      {
+        db: mockDb({ orgEmails: ['owner@opalss.com.au'] }),
+        familyOrgId: 'opal-ss-constructions',
+        apiKey: 'test-key',
+        fetchImpl: mockOpenAi({ query: 'spendByTrade', params: { tradeId: 'concreting' } }),
+      },
+    ),
+    (error) => error && error.code === 'permission-denied',
+  );
+});
+
+test('membership reuses isEmailOnList so Gmail canonical still matches', async () => {
+  const result = await handleAskRisingAmp(
+    {
+      auth: { token: { email: 'lalitsahni@gmail.com' } },
+      data: {
+        question: 'how much on concreting',
+        jobId: 'job-1',
+        orgId: 'opal-ss-constructions',
+      },
+    },
+    {
+      db: mockDb({
+        orgEmails: ['Lalit.Sahni@gmail.com'],
+        jobs: { 'job-1': { invitedEmails: ['Lalit.Sahni@gmail.com'] } },
+      }),
+      familyOrgId: 'opal-ss-constructions',
+      routeModel: async () => JSON.stringify({
+        query: 'spendByTrade',
+        params: { tradeId: 'concreting' },
+        sentence: 'Here is concreting spend.',
+        reason: '',
+      }),
+    },
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.choices[0].query, 'spendByTrade');
 });
 
 test('jobId from the request is stamped when the model omits it', () => {
