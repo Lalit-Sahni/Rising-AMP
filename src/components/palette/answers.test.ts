@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { computeLedgerRollup } from '../../domain/ledgerRollup';
 import { formatCents } from '../../money';
-import { spendAnswersForQuery, matchTrades } from './answers';
+import { spendAnswersForQuery, itemsFromRoutedQuery, looksLikeQuestion, matchTrades } from './answers';
 
 /**
  * Every search returned the same three trades, whatever was typed.
@@ -188,5 +188,55 @@ describe('spend answers', () => {
     expect(answers[0].affected).toBe(false);
     expect(answers[0].uncoded).toEqual({ count: 0, cents: 0 });
     expect(answers[0].warning).toBeUndefined();
+  });
+});
+
+describe('Ask routing onto query rows', () => {
+  it('treats a concreting question as Ask, not a keyword', () => {
+    expect(looksLikeQuestion('concreting')).toBe(false);
+    expect(looksLikeQuestion('how much have we spent on concreting')).toBe(true);
+    expect(looksLikeQuestion('will we finish under budget')).toBe(true);
+  });
+
+  it('uses spendByTrade cents and ignores a model sentence with a fake total', () => {
+    const queried = {
+      ok: true as const,
+      cents: 3_952_291,
+      count: 1,
+      buckets: [{ key: 'concreting', cents: 3_952_291, count: 1 }],
+      uncoded: { count: 2, cents: 15_000 },
+      affected: true,
+      provenance: {
+        query: 'spendByTrade' as const,
+        params: { jobId: 'job-1', tradeId: 'concreting' },
+        source: 'rollup' as const,
+        rowCount: 1,
+        capped: false,
+      },
+    };
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'spendByTrade',
+        params: { jobId: 'job-1', tradeId: 'concreting' },
+        sentence: 'You have spent $99,999 on concreting.',
+      },
+      result: queried,
+      tradeList: TRADE_LIST,
+    });
+    expect(items[0].kind).toBe('spend');
+    if (items[0].kind !== 'spend') return;
+    expect(items[0].answer.amount).toBe(formatCents(queried.cents));
+    expect(items[0].answer.amount).not.toContain('99,999');
+    expect(items[0].answer.title).toBe('Concreting');
+  });
+
+  it('a none route has no spend figure', () => {
+    const items = itemsFromRoutedQuery({
+      choice: { query: 'none', params: {}, reason: 'That cannot be answered from the queries.' },
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer).not.toHaveProperty('amount');
+    expect(JSON.stringify(items[0])).not.toMatch(/\$[\d,]/);
   });
 });

@@ -1,18 +1,23 @@
 /**
  * Palette answers from the Part D query layer. Numbers come from
  * spendByTrade / invoicesByStatus / portfolioSummary, never a model.
+ * Ask (Part B) maps a routed choice onto these same rows after the
+ * client runs src/queries/.
  */
 import { parseCalendarDate } from '../../dates';
 import { filesDrawerMeta, isJobFileType, type FilesDrawerType } from '../../domain/jobFiles';
+import { categoryKey } from '../../domain/ledgerRollup';
 import { formatCents } from '../../money';
 import type { CostPlan } from '../../domain/schemas';
-import type { JobMoneySnapshot, QueryFailure, QueryScope, UncodedPool } from '../../queries/core';
+import type { JobMoneySnapshot, QueryFailure, QueryName, QueryScope, UncodedPool } from '../../queries/core';
 import { scopeFromMembership } from '../../queries/core';
+import type { FindExpensesResult } from '../../queries/expenses';
 import type { FindFilesResult } from '../../queries/files';
 import { invoicesByStatus, type InvoicesByStatusResult } from '../../queries/invoices';
-import { planVsActual } from '../../queries/plan';
-import { spendByTrade } from '../../queries/spend';
-import { portfolioSummary } from '../../queries/summary';
+import { planVsActual, type PlanVsActualResult } from '../../queries/plan';
+import { spendByTrade, type SpendResult } from '../../queries/spend';
+import { portfolioSummary, type PortfolioSummaryResult } from '../../queries/summary';
+import type { QuotesForTradeResult } from '../../queries/quotes';
 import { getInvoiceTotalCents, isInvoiceOverdue } from '../../utils/jobMetrics';
 
 export type TradeListRow = {
@@ -43,7 +48,15 @@ export type PortfolioAnswer = {
   amount: string;
 };
 
-export type PaletteAnswer = SpendAnswer | PortfolioAnswer;
+export type RefusalAnswer = {
+  id: string;
+  section: 'Answers';
+  kind: 'none';
+  title: string;
+  detail: string;
+};
+
+export type PaletteAnswer = SpendAnswer | PortfolioAnswer | RefusalAnswer;
 
 export type InvoiceHit = {
   id: string;
@@ -79,7 +92,60 @@ export type PaletteScope = {
   orgWide: boolean;
 };
 
+export type ExpenseHit = {
+  id: string;
+  jobId: string;
+  title: string;
+  category: string;
+  cents: number;
+  amount: string;
+  detail: string;
+};
+
+export type QuoteHit = {
+  id: string;
+  jobId: string;
+  party: string;
+  status: string;
+  cents: number;
+  amount: string;
+  detail: string;
+};
+
+export type RoutedAskParams = {
+  jobId?: string;
+  tradeId?: string;
+  trade?: string;
+  partyId?: string;
+  party?: string;
+  category?: string;
+  status?: string;
+  type?: string;
+  text?: string;
+  from?: string;
+  to?: string;
+  period?: 'week' | 'month' | 'quarter';
+  olderThanDays?: number;
+};
+
+export type RoutedAskChoice = {
+  query: QueryName | 'none';
+  params: RoutedAskParams;
+  sentence?: string;
+  reason?: string;
+};
+
+export type RoutedPaletteItem =
+  | { kind: 'spend'; answer: SpendAnswer }
+  | { kind: 'portfolio'; answer: PortfolioAnswer }
+  | { kind: 'none'; answer: RefusalAnswer }
+  | { kind: 'invoice'; invoice: InvoiceHit }
+  | { kind: 'file'; file: FileHit }
+  | { kind: 'expense'; expense: ExpenseHit }
+  | { kind: 'quote'; quote: QuoteHit };
+
 const DAY = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+const FIGURE_IN_TEXT = /[$£€¥0-9]/;
 
 const TRADE_ALIASES: Record<string, string[]> = {
   concreting: ['concrete', 'concreter'],
@@ -171,6 +237,24 @@ export function matchTrades(tradeList: TradeListRow[] | null | undefined, query:
 export function isPortfolioQuery(query: string): boolean {
   const q = norm(query);
   return q === '' || q === 'spend' || q === 'cost' || q === 'total' || q === 'cost to date';
+}
+
+/** Typed search stays on keywords. Ask runs when this is a real question. */
+export function looksLikeQuestion(query: string): boolean {
+  const q = norm(query);
+  if (q.length < 6) return false;
+  if (q.includes('?')) return true;
+  if (/^(how|what|who|where|when|why|are|is|am|will|did|does|do|can|could|find|show|tell|list)\b/.test(q)) {
+    return true;
+  }
+  return /\b(how much|spent on|spend on|over on|paid to|have we|quoted on|contract say|anything overdue)\b/.test(q);
+}
+
+/** Model prose may sit above an answer. Digits mean we throw the line away. */
+export function safeAskText(value: unknown): string | undefined {
+  const text = String(value ?? '').replace(/\s+/g, ' ').trim();
+  if (!text || FIGURE_IN_TEXT.test(text)) return undefined;
+  return text;
 }
 
 export function invoiceStatusesForQuery(query: string): string[] | null {
@@ -401,6 +485,15 @@ export function fileHitsFromResult(result: FindFilesResult): FileHit[] {
   });
 }
 
+export function invoiceHitsFromStatusResult(
+  result: InvoicesByStatusResult,
+  clientNameById?: Record<string, string>,
+): InvoiceHit[] {
+  const out: InvoiceHit[] = [];
+  pushInvoiceHits(result, out, new Set(), clientNameById);
+  return out;
+}
+
 export function invoiceHitFromRecord(
   invoice: Record<string, unknown>,
   jobId: string,
@@ -423,5 +516,321 @@ export function invoiceHitFromRecord(
     overdue,
     issuedLabel: formatInvoiceDay(invoice.invoiceDate),
     dueLabel: formatInvoiceDay(invoice.dueDate),
+  };
+}
+
+function refusalItem(id: string, title: string, detail: string): RoutedPaletteItem {
+  return {
+    kind: 'none',
+    answer: {
+      id,
+      section: 'Answers',
+      kind: 'none',
+      title: safeAskText(title) || 'That cannot be answered from the records.',
+      detail: safeAskText(detail) || 'Nothing was added up.',
+    },
+  };
+}
+
+function failedQueryItem(result: unknown): RoutedPaletteItem | null {
+  if (!result || typeof result !== 'object' || (result as { ok?: unknown }).ok !== false) return null;
+  const message = String((result as QueryFailure).error?.message || 'That could not be answered.');
+  return refusalItem('ask:error', message, 'Nothing was added up.');
+}
+
+function tradeLabel(choice: RoutedAskChoice, tradeList: TradeListRow[] | null | undefined): string {
+  const id = String(choice.params.tradeId || choice.params.trade || '').trim();
+  const hit = (tradeList || []).find((row) => row.id === id || norm(row.name) === norm(id));
+  if (hit?.name) return hit.name;
+  if (choice.params.trade) return String(choice.params.trade);
+  if (!id) return 'Spend';
+  return id.replace(/-/g, ' ').replace(/\b[a-z]/g, (char) => char.toUpperCase());
+}
+
+function whereBit(jobId: string | undefined): string {
+  return jobId ? 'On this job' : 'Across jobs';
+}
+
+function spendItemFromResult(
+  choice: RoutedAskChoice,
+  result: Extract<SpendResult, { ok: true }>,
+  tradeList: TradeListRow[] | null | undefined,
+  bucketKey?: string,
+): RoutedPaletteItem {
+  const name = choice.query === 'spendByCategory'
+    ? (bucketKey ? bucketKey.replace(/_/g, ' ') : 'Category spend')
+    : choice.query === 'spendByParty'
+      ? (choice.params.party || 'Supplier')
+      : tradeLabel(choice, tradeList);
+  const bucket = bucketKey ? result.buckets.find((row) => row.key === bucketKey) : undefined;
+  const hidden = result.cents == null || result.provenance.capped;
+  const cents = hidden ? null : (bucketKey ? (bucket ? bucket.cents : 0) : result.cents);
+  const count = hidden ? null : (bucketKey ? (bucket ? bucket.count : 0) : result.count);
+  const amount = hidden ? '—' : formatCents(cents);
+  const countBit = expenseCountBit(count);
+  const warning = choice.query === 'spendByParty'
+    ? undefined
+    : uncodedWarning(name, result.uncoded, result.affected);
+  return {
+    kind: 'spend',
+    answer: {
+      id: `ask:${choice.query}:${bucketKey || choice.params.tradeId || choice.params.partyId || 'row'}`,
+      section: 'Answers',
+      kind: 'spend',
+      title: safeAskText(choice.sentence) || name,
+      amount,
+      detail: hidden
+        ? [amount, 'Spend hidden', whereBit(choice.params.jobId)].join(' · ')
+        : [amount, countBit, whereBit(choice.params.jobId)].filter(Boolean).join(' · '),
+      tradeId: String(choice.params.tradeId || bucketKey || ''),
+      uncoded: result.uncoded,
+      affected: result.affected,
+      warning,
+    },
+  };
+}
+
+function isSpendOk(value: unknown): value is Extract<SpendResult, { ok: true }> {
+  return Boolean(
+    value
+    && typeof value === 'object'
+    && (value as SpendResult).ok === true
+    && 'cents' in (value as object)
+    && 'buckets' in (value as object)
+    && 'uncoded' in (value as object),
+  );
+}
+
+function isPlanOk(value: unknown): value is Extract<PlanVsActualResult, { ok: true }> {
+  return Boolean(
+    value
+    && typeof value === 'object'
+    && (value as PlanVsActualResult).ok === true
+    && 'actualCents' in (value as object)
+    && 'planCents' in (value as object),
+  );
+}
+
+function isPortfolioOk(value: unknown): value is Extract<PortfolioSummaryResult, { ok: true }> {
+  return Boolean(
+    value
+    && typeof value === 'object'
+    && (value as PortfolioSummaryResult).ok === true
+    && (value as PortfolioSummaryResult).ok
+    && 'totals' in (value as object)
+    && 'jobCount' in ((value as { totals?: { jobCount?: unknown } }).totals || {}),
+  );
+}
+
+/**
+ * Turn one routed choice plus the query result into palette rows.
+ * Amounts come from formatCents on the query. Model sentences with
+ * digits are dropped, never shown as money.
+ */
+export function itemsFromRoutedQuery(input: {
+  choice: RoutedAskChoice;
+  result?: unknown;
+  tradeList?: TradeListRow[] | null;
+}): RoutedPaletteItem[] {
+  const choice = input.choice;
+  if (choice.query === 'none') {
+    return [refusalItem(
+      'ask:none',
+      safeAskText(choice.reason) || 'That cannot be answered from the records.',
+      'RisingAMP only answers from the queries it already has.',
+    )];
+  }
+
+  const failed = failedQueryItem(input.result);
+  if (failed) return [failed];
+
+  if (choice.query === 'spendByTrade' || choice.query === 'spendByParty' || choice.query === 'spendByCategory') {
+    if (!isSpendOk(input.result)) {
+      return [refusalItem('ask:spend', 'That spend question could not be answered.', 'Nothing was added up.')];
+    }
+    const bucketKey = choice.query === 'spendByCategory' && choice.params.category
+      ? categoryKey({ category: choice.params.category })
+      : undefined;
+    return [spendItemFromResult(choice, input.result, input.tradeList, bucketKey)];
+  }
+
+  if (choice.query === 'planVsActual') {
+    if (!isPlanOk(input.result)) {
+      return [refusalItem('ask:plan', 'That plan question could not be answered.', 'Nothing was added up.')];
+    }
+    const result = input.result;
+    const name = tradeLabel(choice, input.tradeList);
+    const hidden = result.actualCents == null || result.provenance.capped;
+    const amount = hidden ? '—' : formatCents(result.actualCents);
+    const codedBit = result.trades[0]
+      ? `across ${result.trades[0].count} coded expense${result.trades[0].count === 1 ? '' : 's'}`
+      : null;
+    const warning = uncodedWarning(name, result.uncoded, result.affected);
+    return [{
+      kind: 'spend',
+      answer: {
+        id: `ask:planVsActual:${choice.params.tradeId || 'job'}`,
+        section: 'Answers',
+        kind: 'spend',
+        title: hidden
+          ? (safeAskText(choice.sentence) || name)
+          : (result.hasPlan
+            ? spendTitleFromPlan(name, result.planCents, result.actualCents || 0)
+            : (safeAskText(choice.sentence) || name)),
+        amount,
+        detail: hidden
+          ? [amount, 'Spend hidden', whereBit(choice.params.jobId)].join(' · ')
+          : result.hasPlan
+            ? [
+              `Estimated ${formatCents(result.planCents)}, spent ${formatCents(result.actualCents)} ${codedBit || ''}`.trim(),
+              whereBit(choice.params.jobId),
+            ].filter(Boolean).join(' · ')
+            : [amount, whereBit(choice.params.jobId)].filter(Boolean).join(' · '),
+        tradeId: String(choice.params.tradeId || ''),
+        uncoded: result.uncoded,
+        affected: result.affected,
+        warning,
+      },
+    }];
+  }
+
+  if (choice.query === 'invoicesByStatus') {
+    const result = input.result as InvoicesByStatusResult | undefined;
+    if (!result || !result.ok) {
+      return [refusalItem('ask:invoices', 'Those invoices could not be loaded.', 'Nothing was added up.')];
+    }
+    const hits = invoiceHitsFromStatusResult(result).slice(0, 8);
+    if (hits.length === 0) {
+      return [refusalItem('ask:invoices:empty', 'No matching invoices.', 'Nothing was added up.')];
+    }
+    return hits.map((invoice) => ({ kind: 'invoice' as const, invoice }));
+  }
+
+  if (choice.query === 'findFiles') {
+    const result = input.result as FindFilesResult | undefined;
+    if (!result || !result.ok) {
+      return [refusalItem('ask:files', 'Those files could not be loaded.', 'Nothing was added up.')];
+    }
+    const hits = fileHitsFromResult(result);
+    if (hits.length === 0) {
+      return [refusalItem('ask:files:empty', 'No matching files.', 'Nothing was added up.')];
+    }
+    return hits.map((file) => ({ kind: 'file' as const, file }));
+  }
+
+  if (choice.query === 'findExpenses') {
+    const result = input.result as FindExpensesResult | undefined;
+    if (!result || !result.ok) {
+      return [refusalItem('ask:expenses', 'Those expenses could not be loaded.', 'Nothing was added up.')];
+    }
+    if (result.provenance.capped && result.expenses.length === 0) {
+      return [refusalItem('ask:expenses:capped', 'Spend is hidden on this job.', 'The expense cap is on.')];
+    }
+    const rows = result.expenses.slice(0, 8);
+    if (rows.length === 0) {
+      return [refusalItem('ask:expenses:empty', 'No matching expenses.', 'Nothing was added up.')];
+    }
+    return rows.map((row) => {
+      const amount = formatCents(row.cents);
+      return {
+        kind: 'expense' as const,
+        expense: {
+          id: row.id,
+          jobId: row.jobId,
+          title: row.description,
+          category: row.category,
+          cents: row.cents,
+          amount,
+          detail: [amount, row.date || '—'].join(' · '),
+        },
+      };
+    });
+  }
+
+  if (choice.query === 'quotesForTrade') {
+    const result = input.result as QuotesForTradeResult | undefined;
+    if (!result || !result.ok) {
+      return [refusalItem('ask:quotes', 'Those quotes could not be loaded.', 'Nothing was added up.')];
+    }
+    if (result.quotes.length === 0) {
+      return [refusalItem('ask:quotes:empty', 'No quotes on that trade.', 'Nothing was added up.')];
+    }
+    return result.quotes.slice(0, 8).map((row) => {
+      const amount = formatCents(row.tradeCents);
+      return {
+        kind: 'quote' as const,
+        quote: {
+          id: row.id,
+          jobId: row.jobId,
+          party: row.party,
+          status: row.status,
+          cents: row.tradeCents,
+          amount,
+          detail: `${amount} · ${row.status}`,
+        },
+      };
+    });
+  }
+
+  if (choice.query === 'jobSummary') {
+    const totals = isOkRecordWithTotals(input.result);
+    if (!totals) {
+      return [refusalItem('ask:job', 'That job summary could not be loaded.', 'Nothing was added up.')];
+    }
+    return [summaryItem('jobSummary', choice, totals.hidden, totals.costCents, totals.liveCount, undefined)];
+  }
+
+  if (choice.query === 'portfolioSummary') {
+    if (!isPortfolioOk(input.result)) {
+      return [refusalItem('ask:portfolio', 'That company total could not be loaded.', 'Nothing was added up.')];
+    }
+    return [summaryItem(
+      'portfolioSummary',
+      choice,
+      input.result.totals.hidden,
+      input.result.totals.costCents,
+      input.result.totals.liveCount,
+      input.result.totals.jobCount,
+    )];
+  }
+
+  return [refusalItem('ask:unknown', 'That cannot be answered from the records.', 'Nothing was added up.')];
+}
+
+function isOkRecordWithTotals(value: unknown): { hidden: boolean; costCents: number; liveCount: number } | null {
+  if (!value || typeof value !== 'object' || (value as { ok?: unknown }).ok !== true) return null;
+  const totals = (value as { totals?: { hidden?: unknown; costCents?: unknown; liveCount?: unknown } }).totals;
+  if (!totals || typeof totals !== 'object') return null;
+  return {
+    hidden: Boolean(totals.hidden),
+    costCents: Number(totals.costCents) || 0,
+    liveCount: Number(totals.liveCount) || 0,
+  };
+}
+
+function summaryItem(
+  query: 'jobSummary' | 'portfolioSummary',
+  choice: RoutedAskChoice,
+  hidden: boolean,
+  costCents: number,
+  liveCount: number,
+  jobCount: number | undefined,
+): RoutedPaletteItem {
+  const amount = hidden ? '—' : formatCents(costCents);
+  const detail = hidden
+    ? `${amount} · Spend hidden`
+    : jobCount != null
+      ? `${amount} · ${jobCount} job${jobCount === 1 ? '' : 's'}`
+      : `${amount} · ${liveCount} expense${liveCount === 1 ? '' : 's'}`;
+  return {
+    kind: 'portfolio',
+    answer: {
+      id: `ask:${query}`,
+      section: 'Answers',
+      kind: 'portfolio',
+      title: safeAskText(choice.sentence) || 'Cost to date',
+      amount,
+      detail,
+    },
   };
 }

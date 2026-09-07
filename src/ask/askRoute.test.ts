@@ -47,6 +47,9 @@ test('App.js and PaletteHost do not import the Ask helper', () => {
   const host = fs.readFileSync(path.join(root, 'src/components/PaletteHost.tsx'), 'utf8');
   expect(app).not.toContain('ask/askRoute');
   expect(app).not.toContain('askRisingAmp');
+  expect(app).not.toContain('runAsk');
   expect(host).not.toContain('ask/askRoute');
   expect(host).not.toContain('askRisingAmp');
+  expect(host).not.toContain('runAsk');
+  expect(host).toContain("lazy(() => import('./CommandPalette'))");
 });

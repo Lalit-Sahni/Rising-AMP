@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { computeLedgerRollup } from '../domain/ledgerRollup';
 import { formatCents } from '../money';
 import { spendByTrade } from '../queries/spend';
-import { defaultPaletteScope, spendAnswersForQuery } from './palette/answers';
+import { defaultPaletteScope, itemsFromRoutedQuery, spendAnswersForQuery } from './palette/answers';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -138,14 +138,83 @@ describe('command palette answers', () => {
     expect(host).not.toContain('queries/');
     expect(host).not.toContain('JobFileViewer');
     expect(host).not.toContain('useTradeList');
+    expect(host).not.toContain('askRisingAmp');
+    expect(host).not.toContain('runAsk');
     const app = read('src/App.js');
     expect(app).not.toContain('queries/');
     expect(app).not.toContain('JobFileViewer');
     expect(app).not.toContain('useTradeList');
     expect(app).not.toContain('spendByTrade');
+    expect(app).not.toContain('askRisingAmp');
+    expect(app).not.toContain("from './ask/");
+    expect(app).not.toContain('runAsk');
     const palette = read('src/components/CommandPalette.tsx');
     expect(palette).toContain("lazy(() => import('./files/JobFileViewer'))");
     expect(palette).toContain("import('../queries/fetch')");
+    expect(palette).toContain("import('./palette/runAsk')");
+    expect(palette).toContain('Ask this job');
     expect(palette).not.toMatch(/^import .+ from ['\"]\.\.\/queries\/fetch['\"]/m);
+    expect(palette).not.toMatch(/^import .+ from ['\"]\.\.\/ask\//m);
+    expect(palette).not.toMatch(/^import .+ from ['\"]\.\/palette\/runAsk['\"]/m);
+  });
+
+  test('routed spendByTrade paints formatCents from the query, not a model sentence', () => {
+    const tradeList = [{
+      id: 'concreting',
+      name: 'Concreting',
+      status: 'active' as const,
+    }];
+    const jobs = [{
+      jobId: 'job-1',
+      rollup: computeLedgerRollup(EXPENSES, 4),
+      expenses: EXPENSES,
+      expensesCapped: false,
+      expensesLoaded: true,
+    }];
+    const queried = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-1',
+      tradeId: 'concreting',
+      jobs,
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'spendByTrade',
+        params: { jobId: 'job-1', tradeId: 'concreting' },
+        sentence: 'You have spent $99,999 on concreting.',
+      },
+      result: queried,
+      tradeList,
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe('spend');
+    if (items[0].kind !== 'spend') return;
+    const money = formatCents(queried.cents);
+    expect(money).toBe('$48.50');
+    expect(items[0].answer.amount).toBe(money);
+    expect(items[0].answer.amount).not.toContain('99,999');
+    expect(items[0].answer.title).toBe('Concreting');
+    expect(`${items[0].answer.title} ${items[0].answer.detail} ${items[0].answer.amount}`).not.toContain('99,999');
+    expect(`${items[0].answer.title} ${items[0].answer.detail} ${items[0].answer.amount}`).toContain(money);
+    expect(items[0].answer.affected).toBe(true);
+    expect(items[0].answer.warning).toContain('not coded to any trade');
+  });
+
+  test('a none route shows no spend figure', () => {
+    const items = itemsFromRoutedQuery({
+      choice: { query: 'none', params: {}, reason: 'That cannot be answered from the queries.' },
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer).not.toHaveProperty('amount');
+    expect(JSON.stringify(items[0])).not.toMatch(/\$[\d,]/);
+    expect(JSON.stringify(items[0])).not.toContain('99,999');
+    const rows = read('src/components/palette/ResultRows.tsx');
+    expect(rows).toContain('RefusalAnswerBody');
+    expect(rows).toContain("row.kind === 'none'");
   });
 });

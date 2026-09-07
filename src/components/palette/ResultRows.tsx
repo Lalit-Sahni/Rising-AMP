@@ -1,5 +1,14 @@
 import React from 'react';
-import type { FileHit, InvoiceHit, PaletteAnswer, SpendAnswer } from './answers';
+import type { FileHit, InvoiceHit, PaletteAnswer, RefusalAnswer, SpendAnswer } from './answers';
+
+export function RefusalAnswerBody({ row }: { row: RefusalAnswer }) {
+  return (
+    <span className="min-w-0 flex-1">
+      <span className="block text-[13.5px] font-extrabold text-ink">{row.title}</span>
+      <span className="mt-0.5 block text-[12px] text-slate-500">{row.detail}</span>
+    </span>
+  );
+}
 
 export function SpendAnswerBody({
   row,
@@ -8,6 +17,9 @@ export function SpendAnswerBody({
   row: PaletteAnswer;
   onCodeThem?: (event: React.MouseEvent) => void;
 }) {
+  if (row.kind === 'none') {
+    return <RefusalAnswerBody row={row} />;
+  }
   const spend = row.kind === 'spend' ? row as SpendAnswer : null;
   const warning = spend?.warning;
   return (

@@ -1,6 +1,6 @@
 # Phase 14 — Ask (agent brief)
 
-**Status (7 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Part A done** on this commit (`askRisingAmp` on staging after deploy; production untouched). Part B is next. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
+**Status (7 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A and B done** on this branch (`askRisingAmp` on staging; production untouched). Part C is next. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
 
 Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any code. That mockup is the spec.
 
@@ -68,6 +68,8 @@ The palette already renders spend answers, invoice rows and file rows. Phase 14 
 - **No answer is a paragraph of prose containing a number.** A number in prose cannot be tapped, checked, or acted on.
 
 The model may write the one-line sentence above an answer. It may not write the number inside it.
+
+**Part B done.** The command palette (`⌘K`, prompt “Ask”, job-scope chip kept) calls `askRisingAmp` from its own async chunk, runs the chosen `src/queries/` function with membership `scope` from `allowedJobs`, and paints the existing answer / invoice / file rows. Figures come from `formatCents` on the query result. A model sentence with digits is ignored. `none` is a refusal row with no spend figure. Uncoded pools still use the Code them warning. `PaletteHost` still lazy-loads `CommandPalette`. `App.js` does not import ask or queries. No production deploy. No question history. No eval set.
 
 Commit: `Render routed answers with the palette's own components.`
 

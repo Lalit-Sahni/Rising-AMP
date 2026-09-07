@@ -327,7 +327,7 @@ Firestore is a good database for this product **if** list screens read small doc
 
 - Do not hard-delete live user records. Void first (Recently deleted). Permanent delete is only allowed on already-voided expenses and invoices.
 - Do not run production schema or data writes without a backup, a staging run, and an explicit yes.
-- Do not `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile` and `maintainLedgerRollup`. Staging also has `extractJobFileText` (Phase 13 Part C; not production) and `askRisingAmp` (Phase 14 Part A; not production). `askRisingAmp` returns a query route only — it does not read expenses or compute spend. Deploy **by name**.
+- Do not `firebase deploy --only functions` unless you intend to publish every exported function. Production functions are `sendJobInviteEmail`, `readReceiptImage`, `allocateInvoiceNumber`, `checkEstimateImport`, `readQuoteFile` and `maintainLedgerRollup`. Staging also has `extractJobFileText` (Phase 13 Part C; not production) and `askRisingAmp` (Phase 14 Part A; not production). `askRisingAmp` returns a query route only — it does not read expenses or compute spend. The client runs `src/queries/` and paints palette rows from those results. Deploy **by name**.
 - Do not accept a pasted API key.
 - Do not “fix” localhost receipts by pointing `.env.local` at production.
 - If chat and this file disagree, this file plus `CLAUDE.md` / `PROGRESS.md` win.

@@ -32,6 +32,7 @@ import {
   invoiceHitFromRecord,
   invoiceHitsFromStatusQuery,
   invoiceStatusesForQuery,
+  looksLikeQuestion,
   membershipScope,
   norm,
   portfolioAnswerForQuery,
@@ -39,12 +40,13 @@ import {
   type FileHit,
   type InvoiceHit,
   type PaletteAnswer,
+  type RoutedPaletteItem,
 } from './palette/answers';
-import { FileAnswerBody, InvoiceAnswerBody, SpendAnswerBody } from './palette/ResultRows';
+import { FileAnswerBody, InvoiceAnswerBody, RefusalAnswerBody, SpendAnswerBody } from './palette/ResultRows';
 
 const JobFileViewer = lazy(() => import('./files/JobFileViewer'));
 
-type RowKind = 'default' | 'spend' | 'invoice' | 'file';
+type RowKind = 'default' | 'spend' | 'invoice' | 'file' | 'none';
 
 type Row = {
   id: string;
@@ -83,7 +85,8 @@ function matches(haystack: string, needle: string): boolean {
 
 /**
  * One box that finds a job, a screen, an expense or an invoice, and answers
- * spend / file / invoice-status questions from the query layer.
+ * spend / file / invoice-status questions from the query layer. Ask routes
+ * a question, then this same box runs src/queries/ and paints those rows.
  */
 export default function CommandPalette() {
   const {
@@ -114,6 +117,12 @@ export default function CommandPalette() {
   const [remoteInvoiceHits, setRemoteInvoiceHits] = useState<InvoiceHit[] | null>(null);
   const [viewing, setViewing] = useState<{ jobId: string; item: FileBrowserItem } | null>(null);
   const [viewerBusy, setViewerBusy] = useState(false);
+  const [askView, setAskView] = useState<{
+    question: string;
+    status: 'loading' | 'ready' | 'error';
+    items: RoutedPaletteItem[];
+  } | null>(null);
+  const askSeq = useRef(0);
 
   const tradeQuery = useTradeList(orgId);
   const planQuery = useCostPlan(orgId, scopedJobId);
@@ -140,6 +149,8 @@ export default function CommandPalette() {
       setRemoteJobs(null);
       setRemoteInvoiceHits(null);
       setViewing(null);
+      setAskView(null);
+      askSeq.current += 1;
       const id = window.setTimeout(() => inputRef.current?.focus(), 20);
       return () => window.clearTimeout(id);
     }
@@ -271,12 +282,132 @@ export default function CommandPalette() {
     }
   };
 
+  const submitAsk = async () => {
+    const question = query.trim();
+    if (!question || !scope || !orgId) return;
+    const requestId = ++askSeq.current;
+    setAskView({ question, status: 'loading', items: [] });
+    try {
+      const { executeAskQuestion } = await import('./palette/runAsk');
+      const items = await executeAskQuestion({
+        question,
+        orgId,
+        jobId: scopedJobId,
+        scope,
+        tradeList: tradeQuery.data || [],
+      });
+      if (requestId !== askSeq.current) return;
+      setAskView({ question, status: 'ready', items });
+    } catch {
+      if (requestId !== askSeq.current) return;
+      setAskView({
+        question,
+        status: 'error',
+        items: [{
+          kind: 'none',
+          answer: {
+            id: 'ask:error',
+            section: 'Answers',
+            kind: 'none',
+            title: 'Could not route that question.',
+            detail: 'Nothing was added up. Try again, or search by name.',
+          },
+        }],
+      });
+    }
+  };
+
   const rows = useMemo<Row[]>(() => {
     const q = norm(query);
     const out: Row[] = [];
     const jobs: AnyRecord[] = Array.isArray(allowedJobs) ? allowedJobs : [];
+    const askActive = Boolean(askView && askView.question === query.trim() && askView.status !== 'loading');
 
-    if (scope && moneyJobs.length > 0) {
+    if (askActive && askView) {
+      askView.items.forEach((item) => {
+        if (item.kind === 'spend' || item.kind === 'portfolio') {
+          out.push({
+            id: item.answer.id,
+            section: 'Answers',
+            title: item.answer.title,
+            detail: item.answer.detail,
+            icon: BarChart3,
+            kind: 'spend',
+            answer: item.answer,
+            run: () => {
+              if (scopedJobId) setCurrentPage('cost-plan', scopedJobId);
+              else setCurrentPage('jobs');
+            },
+          });
+          return;
+        }
+        if (item.kind === 'none') {
+          out.push({
+            id: item.answer.id,
+            section: 'Answers',
+            title: item.answer.title,
+            detail: item.answer.detail,
+            icon: Search,
+            kind: 'none',
+            answer: item.answer,
+            run: () => {},
+          });
+          return;
+        }
+        if (item.kind === 'invoice') {
+          out.push({
+            id: `invoice:${item.invoice.jobId}:${item.invoice.id}`,
+            section: 'Invoices',
+            title: item.invoice.invoiceNumber || 'Draft',
+            detail: [item.invoice.clientName, item.invoice.statusLabel, item.invoice.amount].filter(Boolean).join(' · '),
+            icon: FileText,
+            kind: 'invoice',
+            invoice: item.invoice,
+            run: () => setCurrentPage('new-invoice', item.invoice.jobId),
+          });
+          return;
+        }
+        if (item.kind === 'file') {
+          out.push({
+            id: `file:${item.file.jobId}:${item.file.id}`,
+            section: 'Files',
+            title: item.file.name,
+            detail: item.file.detail,
+            icon: Files,
+            kind: 'file',
+            file: item.file,
+            run: () => {
+              void openFileHit(item.file.jobId, item.file.id);
+            },
+          });
+          return;
+        }
+        if (item.kind === 'expense') {
+          const style = getCategoryStyle(item.expense.category);
+          out.push({
+            id: `expense:${item.expense.jobId}:${item.expense.id}`,
+            section: 'Expenses',
+            title: item.expense.title,
+            detail: item.expense.detail,
+            icon: Receipt,
+            dot: style.hex,
+            kind: 'default',
+            run: () => navigate(`/jobs/${item.expense.jobId}/history`, { state: { openExpenseId: item.expense.id } }),
+          });
+          return;
+        }
+        if (item.kind !== 'quote') return;
+        out.push({
+          id: `quote:${item.quote.jobId}:${item.quote.id}`,
+          section: 'Answers',
+          title: item.quote.party,
+          detail: item.quote.detail,
+          icon: FileCheck,
+          kind: 'default',
+          run: () => setCurrentPage('cost-plan', item.quote.jobId),
+        });
+      });
+    } else if (scope && moneyJobs.length > 0) {
       const answers: PaletteAnswer[] = [];
       const portfolio = portfolioAnswerForQuery({
         query,
@@ -342,6 +473,7 @@ export default function CommandPalette() {
         });
       });
 
+    if (!askActive) {
     fileHits.forEach((hit) => {
       out.push({
         id: `file:${hit.jobId}:${hit.id}`,
@@ -434,6 +566,7 @@ export default function CommandPalette() {
         run: () => setCurrentPage('new-invoice', hit.jobId),
       });
     });
+    }
 
     return out;
   }, [
@@ -454,10 +587,16 @@ export default function CommandPalette() {
     fileHits,
     remoteInvoiceHits,
     openFileHit,
+    askView,
   ]);
 
   useEffect(() => {
     setCursor(0);
+  }, [query, scopedJobId, askView]);
+
+  useEffect(() => {
+    askSeq.current += 1;
+    setAskView(null);
   }, [query, scopedJobId]);
 
   useEffect(() => {
@@ -472,6 +611,7 @@ export default function CommandPalette() {
       row.run();
       return;
     }
+    if (row.kind === 'none') return;
     close();
     row.run();
   };
@@ -497,9 +637,13 @@ export default function CommandPalette() {
       setCursor((value) => Math.max(0, value - 1));
       return;
     }
-    if (event.key === 'Enter' && rows[cursor]) {
+    if (event.key === 'Enter') {
       event.preventDefault();
-      pick(rows[cursor]);
+      if (looksLikeQuestion(query) && askView?.status !== 'loading') {
+        void submitAsk();
+        return;
+      }
+      if (rows[cursor]) pick(rows[cursor]);
     }
   };
 
@@ -591,25 +735,37 @@ export default function CommandPalette() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Search"
+          aria-label="Ask"
           className="w-full max-w-xl overflow-hidden rounded-ot border border-hairline bg-surface shadow-[0_24px_64px_rgba(23,24,28,0.28)]"
           onKeyDown={onKeyDown}
         >
-          <label className="flex items-center gap-3 border-b border-hairline px-4 py-3">
+          <div className="flex items-center gap-3 border-b border-hairline px-4 py-3">
             <Search className="h-[18px] w-[18px] shrink-0 text-slate-400" strokeWidth={1.8} />
             <input
               ref={inputRef}
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={scopedJobId ? 'Search this job…' : 'Search all jobs…'}
+              placeholder={scopedJobId ? 'Ask this job…' : 'Ask all jobs…'}
+              aria-label="Ask"
               className="flex-1 border-0 bg-transparent text-[16px] text-ink outline-none placeholder:text-slate-400"
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
             />
+            {query.trim() ? (
+              <button
+                type="button"
+                onClick={() => { void submitAsk(); }}
+                onKeyDown={(event) => event.stopPropagation()}
+                disabled={askView?.status === 'loading'}
+                className="shrink-0 text-[13px] font-bold text-accent disabled:text-slate-400"
+              >
+                Ask
+              </button>
+            ) : null}
             <kbd className="hidden md:inline-block rounded-ot-sm border border-hairline px-1.5 py-0.5 text-[11px] font-semibold text-slate-400">Esc</kbd>
-          </label>
+          </div>
 
           <div className="flex items-center gap-2 border-b border-hairline px-4 py-2">
             {scopedJobId ? (
@@ -642,7 +798,11 @@ export default function CommandPalette() {
           </div>
 
           <div ref={listRef} className="max-h-[min(62vh,480px)] overflow-y-auto py-1.5">
-            {rows.length === 0 ? (
+            {askView?.status === 'loading' && askView.question === query.trim() ? (
+              <p className="px-4 py-8 text-center text-[13px] text-slate-400">
+                Checking the ledger…
+              </p>
+            ) : rows.length === 0 ? (
               <p className="px-4 py-8 text-center text-[13px] text-slate-400">
                 {query ? 'Nothing matches that.' : 'Type to search.'}
               </p>
@@ -659,7 +819,17 @@ export default function CommandPalette() {
                         {row.section}
                       </div>
                     ) : null}
-                    {row.kind === 'spend' && row.answer ? (
+                    {row.kind === 'none' && row.answer && row.answer.kind === 'none' ? (
+                      <div
+                        data-index={index}
+                        onMouseEnter={() => setCursor(index)}
+                        className={`flex w-full items-center gap-3 px-4 py-2.5 text-left ${
+                          active ? 'bg-canvas' : ''
+                        }`}
+                      >
+                        <RefusalAnswerBody row={row.answer} />
+                      </div>
+                    ) : row.kind === 'spend' && row.answer ? (
                       <div
                         data-index={index}
                         onMouseEnter={() => setCursor(index)}
@@ -716,6 +886,10 @@ export default function CommandPalette() {
                 );
               })
             )}
+          </div>
+          <div className="flex items-center justify-between border-t border-hairline px-4 py-2 text-[11px] text-slate-400">
+            <span>{looksLikeQuestion(query) ? 'Enter to ask' : 'Enter to open'}</span>
+            <span><kbd className="rounded-ot-sm border border-hairline px-1.5 py-0.5 text-[11px] font-semibold">⌘K</kbd> anywhere</span>
           </div>
         </div>
       )}
