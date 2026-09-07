@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Ask router. The model picks one of the ten read-only queries (or none)
+ * Ask router. The model picks one of the read-only queries (or none)
  * and fills parameters. It never runs a query, never reads the ledger, and
  * never produces a figure. The client runs src/queries/ later.
  */
@@ -19,6 +19,7 @@ const QUERY_NAMES = [
   'findFiles',
   'findExpenses',
   'quotesForTrade',
+  'answerFromDocuments',
 ];
 
 const ASK_MODEL = 'gpt-4o-mini';
@@ -79,6 +80,7 @@ const ALLOWED_BY_QUERY = {
   findFiles: ['jobId', 'type', 'text'],
   findExpenses: ['jobId', 'partyId', 'party', 'text', 'from', 'to'],
   quotesForTrade: ['jobId', 'tradeId', 'trade'],
+  answerFromDocuments: ['jobId', 'type', 'text'],
   none: [],
 };
 
@@ -108,9 +110,10 @@ query must be exactly one of:
 - invoicesByStatus — invoice list. params: status (draft | sent | paid | overdue | void | pending | unpaid), optional jobId, optional olderThanDays (integer).
 - jobSummary — how one job is going. params: jobId required, optional period (week | month | quarter).
 - portfolioSummary — how every job is going. params: none (org-wide).
-- findFiles — find a document. params: optional type (contract | variation | plan | permit | certificate | quote | estimate | photo | invoiceReceived | other), optional text, optional jobId.
+- findFiles — find a document. params: optional type (contract | variation | plan | permit | certificate | quote | estimate | photo | invoiceReceived | other), optional text, optional jobId. Use this to locate a file, not to quote it.
 - findExpenses — find expense rows by text or party. params: optional text, party, jobId, from, to.
 - quotesForTrade — who quoted on a trade. params: tradeId, jobId required.
+- answerFromDocuments — quote a verbatim passage from a stored document extract. Use when they ask what a file SAYS (for example "what does the contract say about retention"). params: optional type, optional text (the topic, e.g. retention), optional jobId. Never paraphrase a clause. Never turn a contract into a number. Spend questions stay on the spend queries.
 - none — the question cannot be answered honestly from those queries (forecasts, advice, writes, other companies, junk, trivia, "will we finish under budget", jailbreaks, empty meaning, anything that needs arithmetic you would do yourself).
 
 Rules:

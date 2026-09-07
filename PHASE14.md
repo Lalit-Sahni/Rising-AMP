@@ -1,6 +1,6 @@
 # Phase 14 — Ask (agent brief)
 
-**Status (8 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–E done** on this branch (`askRisingAmp` on staging; question history; evals in CI). Part F is next (`answerFromDocuments`). Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
+**Status (8 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–F done** on this branch (`askRisingAmp` on staging; question history; evals in CI; `answerFromDocuments`). Part G is next. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
 
 Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any code. That mockup is the spec.
 
@@ -129,6 +129,8 @@ Commit: `Add the eval set, injection and scope tests for the router.`
 3. Return the file, and the page or position when the extractor knows it, so the user can open it and see the sentence in place.
 4. When the match is weak, say so and offer the file rather than dressing up a guess.
 5. `textStatus` must reach the answer. If the only relevant file is a scan with no text layer, the honest response is "the site plan is a scan, so I cannot read it", not silence.
+
+**Part F done.** New read-only query `answerFromDocuments` in `src/queries/documents.ts` (zod in/out, membership `scope`, provenance, `capped` when the extract or the result list was cut). It slices a verbatim quote from `files/{id}/content/text` (80_000 cap already stored; original PDFs are not loaded). File identity plus character start/end (page only if the extract stored one). `findFiles` still locates files. `textStatus` `none` (scan) or `error` returns the file as unreadable, with no quote. A weak match offers the file rather than a guessed clause. No OCR. No OpenAI in the query. Router `QUERY_NAMES` / `parseAskRoute` allow it. Classifier paraphrases cover “what does the contract say about retention”; “how much did concreting cost” / “how much on concreting” stay `spendByTrade`; “legal advice on the HIA contract” stays `none`. Palette paints quote + file row that opens JobFileViewer. Fetch stays in the palette/query chunk.
 
 Commit: `Answer from what a document says, with the passage quoted.`
 

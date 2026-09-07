@@ -42,6 +42,12 @@
     "expectedParams": { "tradeId": "plumbing" }
   },
   {
+    "id": "spend-trade-08",
+    "question": "how much did concreting cost",
+    "expectedQuery": "spendByTrade",
+    "expectedParams": { "tradeId": "concreting" }
+  },
+  {
     "id": "plan-01",
     "question": "are we over on concreting",
     "expectedQuery": "planVsActual",
@@ -198,10 +204,22 @@
     "expectedParams": { "text": "retention" }
   },
   {
-    "id": "files-05",
+    "id": "docs-01",
     "question": "what does the contract say about retention",
-    "expectedQuery": "findFiles",
-    "expectedParams": { "type": "contract" }
+    "expectedQuery": "answerFromDocuments",
+    "expectedParams": { "type": "contract", "text": "retention" }
+  },
+  {
+    "id": "docs-02",
+    "question": "what did the contract say about defects",
+    "expectedQuery": "answerFromDocuments",
+    "expectedParams": { "type": "contract", "text": "defects" }
+  },
+  {
+    "id": "docs-03",
+    "question": "what does the site plan say",
+    "expectedQuery": "answerFromDocuments",
+    "expectedParams": { "type": "plan" }
   },
   {
     "id": "exp-01",

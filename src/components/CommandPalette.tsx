@@ -395,10 +395,10 @@ export default function CommandPalette() {
           });
           return;
         }
-        if (item.kind === 'file') {
+        if (item.kind === 'file' || item.kind === 'document') {
           out.push({
-            id: `file:${item.file.jobId}:${item.file.id}`,
-            section: 'Files',
+            id: `${item.kind}:${item.file.jobId}:${item.file.id}`,
+            section: item.kind === 'document' ? 'Answers' : 'Files',
             title: item.file.name,
             detail: item.file.detail,
             icon: Files,

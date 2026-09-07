@@ -58,6 +58,7 @@ async function runRoutedQuery(
   choice: RoutedAskChoice,
   params: RoutedAskParams,
   scope: QueryScope,
+  question: string,
 ): Promise<unknown> {
   if (choice.query === 'none') return null;
   if (needsJob(choice.query) && !params.jobId) {
@@ -117,6 +118,14 @@ async function runRoutedQuery(
         type: params.type,
         text: params.text,
       });
+    case 'answerFromDocuments':
+      return fetchMod.fetchAnswerFromDocuments({
+        scope,
+        jobId: params.jobId,
+        type: params.type,
+        text: params.text,
+        question,
+      });
     case 'findExpenses':
       return fetchMod.fetchFindExpenses({
         scope,
@@ -171,7 +180,7 @@ export async function executeAskQuestion(input: RunAskInput): Promise<AskExecuti
       : { ...choice, params };
     const result = resolved.query === 'none'
       ? await loadRelatedForNone(input.scope, params.jobId)
-      : await runRoutedQuery(resolved, params, input.scope);
+      : await runRoutedQuery(resolved, params, input.scope, input.question);
     items.push(...itemsFromRoutedQuery({
       choice: resolved,
       result,

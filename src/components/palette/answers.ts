@@ -13,6 +13,7 @@ import type { JobMoneySnapshot, QueryFailure, QueryName, QueryProvenance, QueryS
 import { provenanceSchema, scopeFromMembership } from '../../queries/core';
 import type { FindExpensesResult } from '../../queries/expenses';
 import type { FindFilesResult } from '../../queries/files';
+import type { AnswerFromDocumentsResult, DocumentPassage } from '../../queries/documents';
 import { invoicesByStatus, type InvoicesByStatusResult } from '../../queries/invoices';
 import { planVsActual, type PlanVsActualResult } from '../../queries/plan';
 import { spendByTrade, type SpendResult } from '../../queries/spend';
@@ -44,6 +45,7 @@ export type WorkingLabels = {
 };
 
 export const INCOMPLETE_CAP_MESSAGE = 'This answer is incomplete. More than 1,000 expenses — spend is not shown.';
+export const DOCUMENT_INCOMPLETE_MESSAGE = 'This extract was cut at the stored limit, so a later passage may be missing.';
 export const REFUSAL_TITLE = "I can't answer that honestly.";
 
 export type SpendAnswer = {
@@ -114,6 +116,14 @@ export type FileHit = {
   matchedOn: string;
   snippet?: string;
   detail: string;
+  quote?: string;
+  quoteStart?: number;
+  quoteEnd?: number;
+  page?: number;
+  textStatus?: string;
+  match?: 'quoted' | 'weak' | 'unreadable';
+  unreadableDetail?: string;
+  working?: AnswerWorking;
 };
 
 export type PaletteScope = {
@@ -171,6 +181,7 @@ export type RoutedPaletteItem =
   | { kind: 'none'; answer: RefusalAnswer }
   | { kind: 'invoice'; invoice: InvoiceHit }
   | { kind: 'file'; file: FileHit }
+  | { kind: 'document'; file: FileHit }
   | { kind: 'expense'; expense: ExpenseHit }
   | { kind: 'quote'; quote: QuoteHit };
 
@@ -289,6 +300,7 @@ export function safeAskText(value: unknown): string | undefined {
 
 function rowNoun(query: QueryName, count: number): string {
   if (query === 'findFiles') return count === 1 ? 'file' : 'files';
+  if (query === 'answerFromDocuments') return count === 1 ? 'passage' : 'passages';
   if (query === 'invoicesByStatus') return count === 1 ? 'invoice' : 'invoices';
   if (query === 'quotesForTrade') return count === 1 ? 'quote' : 'quotes';
   return count === 1 ? 'expense' : 'expenses';
@@ -582,6 +594,60 @@ export function fileHitsFromResult(result: FindFilesResult): FileHit[] {
       matchedOn: file.matchedOn,
       snippet: file.snippet,
       detail: [meta.label, where].filter(Boolean).join(' · '),
+    };
+  });
+}
+
+function unreadableDetail(passage: DocumentPassage): string {
+  if (passage.textStatus === 'none') {
+    return 'This file is a scan, so it cannot be read.';
+  }
+  return 'This file cannot be read.';
+}
+
+function documentPosition(passage: DocumentPassage): string | undefined {
+  if (passage.page != null) return `page ${passage.page}`;
+  if (passage.start != null && passage.end != null) {
+    return `characters ${passage.start + 1}–${passage.end}`;
+  }
+  return undefined;
+}
+
+export function fileHitsFromDocuments(
+  result: AnswerFromDocumentsResult,
+  working?: AnswerWorking,
+): FileHit[] {
+  if (!result.ok) return [];
+  return result.passages.map((passage) => {
+    const type = isJobFileType(passage.type) ? passage.type : 'other';
+    const meta = filesDrawerMeta(type as FilesDrawerType);
+    const position = documentPosition(passage);
+    const incomplete = passage.textStatus === 'truncated' ? DOCUMENT_INCOMPLETE_MESSAGE : undefined;
+    let detail: string;
+    if (passage.match === 'quoted') {
+      detail = [meta.label, 'Quoted from the file', position].filter(Boolean).join(' · ');
+    } else if (passage.match === 'unreadable') {
+      detail = [meta.label, unreadableDetail(passage)].join(' · ');
+    } else {
+      detail = [meta.label, 'No matching passage — open the file.'].join(' · ');
+    }
+    return {
+      id: passage.id,
+      jobId: passage.jobId,
+      name: passage.name,
+      type: passage.type,
+      typeLabel: meta.label,
+      typeColor: meta.color,
+      matchedOn: passage.match,
+      quote: passage.quote,
+      quoteStart: passage.start,
+      quoteEnd: passage.end,
+      page: passage.page,
+      textStatus: passage.textStatus,
+      match: passage.match,
+      unreadableDetail: passage.match === 'unreadable' ? unreadableDetail(passage) : undefined,
+      detail: incomplete ? `${detail} · ${incomplete}` : detail,
+      working,
     };
   });
 }
@@ -892,6 +958,19 @@ export function itemsFromRoutedQuery(input: {
       return [refusalItem('ask:files:empty', 'No matching files.', 'Nothing was added up.')];
     }
     return hits.map((file) => ({ kind: 'file' as const, file }));
+  }
+
+  if (choice.query === 'answerFromDocuments') {
+    const result = input.result as AnswerFromDocumentsResult | undefined;
+    if (!result || !result.ok) {
+      return [refusalItem('ask:documents', 'Those files could not be loaded.', 'Nothing was added up.')];
+    }
+    const working = workingFromProvenance(result.provenance, { job: input.jobLabel });
+    const hits = fileHitsFromDocuments(result, working);
+    if (hits.length === 0) {
+      return [refusalItem('ask:documents:empty', 'No matching passage in the files.', 'Nothing was added up.')];
+    }
+    return hits.map((file) => ({ kind: 'document' as const, file }));
   }
 
   if (choice.query === 'findExpenses') {

@@ -78,7 +78,7 @@ function mockOpenAi(payload) {
   };
 }
 
-test('QUERY_NAMES matches the ten read-only queries', () => {
+test('QUERY_NAMES matches the read-only queries', () => {
   assert.deepEqual(QUERY_NAMES, [
     'spendByTrade',
     'spendByParty',
@@ -90,6 +90,7 @@ test('QUERY_NAMES matches the ten read-only queries', () => {
     'findFiles',
     'findExpenses',
     'quotesForTrade',
+    'answerFromDocuments',
   ]);
 });
 
@@ -124,6 +125,16 @@ test('valid spendByTrade route parses', () => {
   assert.equal(result.choices[0].query, 'spendByTrade');
   assert.deepEqual(result.choices[0].params, { tradeId: 'concreting', jobId: 'job-1' });
   assert.equal(result.choices[0].sentence, 'Here is concreting spend for this job.');
+});
+
+test('answerFromDocuments is an allowed query', () => {
+  const result = parseAskRoute(JSON.stringify({
+    query: 'answerFromDocuments',
+    params: { type: 'contract', text: 'retention', jobId: 'job-1' },
+    sentence: 'Here is the passage from that document.',
+  }));
+  assert.equal(result.choices[0].query, 'answerFromDocuments');
+  assert.deepEqual(result.choices[0].params, { type: 'contract', text: 'retention', jobId: 'job-1' });
 });
 
 test('unknown query name is rejected', () => {

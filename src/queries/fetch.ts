@@ -20,6 +20,7 @@ import {
 } from '../domain/ledgerRollupMeta';
 import { costPlanQuoteSchema, costPlanSchema, jobFileSchema, parseAtBoundary } from '../domain/schemas';
 import { resolveTargetJobIds, type JobMoneySnapshot, type QueryScope } from './core';
+import { answerFromDocuments } from './documents';
 import { contentKey, findFiles, type FileRecordSnapshot, type FileTextSnapshot } from './files';
 import { findExpenses } from './expenses';
 import { invoicesByStatus, type InvoiceSnapshot } from './invoices';
@@ -103,9 +104,11 @@ async function loadFileText(
   const snap = await getDoc(doc(jobDoc(scope, jobId), 'files', fileId, 'content', 'text'));
   if (!snap.exists()) return undefined;
   const data = asRecord(snap.data());
+  const page = data.page;
   return {
     text: typeof data.text === 'string' ? data.text : '',
     textStatus: typeof data.textStatus === 'string' ? data.textStatus : '',
+    page: typeof page === 'number' && Number.isInteger(page) && page > 0 ? page : undefined,
   };
 }
 
@@ -201,4 +204,21 @@ export async function fetchFindFiles(input: { scope: QueryScope; jobId?: string;
     }));
   }
   return findFiles({ ...input, files, content });
+}
+
+export async function fetchAnswerFromDocuments(input: {
+  scope: QueryScope;
+  jobId?: string;
+  question?: string;
+  text?: string;
+  type?: string;
+} & Record<string, unknown>) {
+  const access = resolveTargetJobIds(input.scope, input.jobId);
+  if (!access.ok) return access;
+  const files = (await Promise.all(access.jobIds.map((jobId) => loadJobFiles(input.scope, jobId)))).flat();
+  const content: Record<string, FileTextSnapshot | undefined> = {};
+  await Promise.all(files.map(async (file) => {
+    content[contentKey(file.jobId, file.id)] = await loadFileText(input.scope, file.jobId, file.id);
+  }));
+  return answerFromDocuments({ ...input, files, content });
 }

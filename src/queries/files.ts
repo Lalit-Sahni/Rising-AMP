@@ -28,6 +28,7 @@ export type FileRecordSnapshot = {
 export type FileTextSnapshot = {
   text?: string;
   textStatus?: string;
+  page?: number;
 };
 
 const SEARCHABLE_TEXT = new Set(['ok', 'truncated']);

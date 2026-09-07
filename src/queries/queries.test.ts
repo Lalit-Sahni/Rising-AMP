@@ -5,6 +5,7 @@ import { computeLedgerRollup, resolveExpenseTotals } from '../domain/ledgerRollu
 import { formatCents } from '../money';
 import { findExpenses } from './expenses';
 import { contentKey, findFiles } from './files';
+import { answerFromDocuments } from './documents';
 import { invoicesByStatus } from './invoices';
 import { planVsActual } from './plan';
 import { quotesForTrade } from './quotes';
@@ -535,6 +536,119 @@ describe('findFiles and findExpenses', () => {
   });
 });
 
+describe('answerFromDocuments', () => {
+  const contractText = 'Progress claims may deduct 5% retention on each claim until practical completion.';
+  const files = [{
+    id: 'f1',
+    jobId: 'job-a',
+    name: 'HIA contract.pdf',
+    type: 'contract' as const,
+    status: 'active',
+  }];
+
+  test('the quote is an exact substring of the stored extract', () => {
+    const result = answerFromDocuments({
+      scope: SCOPE,
+      jobId: 'job-a',
+      question: 'what does the contract say about retention',
+      type: 'contract',
+      text: 'retention',
+      files,
+      content: {
+        [contentKey('job-a', 'f1')]: { text: contractText, textStatus: 'ok' },
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passages).toHaveLength(1);
+    const passage = result.passages[0];
+    expect(passage.match).toBe('quoted');
+    expect(passage.quote).toBeTruthy();
+    expect(contractText.includes(passage.quote as string)).toBe(true);
+    expect(passage.quote).toContain('5% retention on each claim');
+    expect(contractText.slice(passage.start as number, passage.end as number)).toBe(passage.quote);
+    expect(result.provenance.query).toBe('answerFromDocuments');
+    expect(result.provenance.source).toBe('files');
+    expect(result.provenance.capped).toBe(false);
+  });
+
+  test('a scan with textStatus none does not invent a quote', () => {
+    const result = answerFromDocuments({
+      scope: SCOPE,
+      jobId: 'job-a',
+      question: 'what does the site plan say about setback',
+      type: 'plan',
+      files: [{
+        id: 'scan',
+        jobId: 'job-a',
+        name: 'site-plan.pdf',
+        type: 'plan',
+        status: 'active',
+      }],
+      content: {
+        [contentKey('job-a', 'scan')]: { text: 'setback 3 metres from the boundary', textStatus: 'none' },
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passages).toHaveLength(1);
+    expect(result.passages[0].match).toBe('unreadable');
+    expect(result.passages[0].textStatus).toBe('none');
+    expect(result.passages[0].quote).toBeUndefined();
+    expect(JSON.stringify(result.passages[0])).not.toContain('setback 3 metres');
+  });
+
+  test('textStatus error does not invent a quote', () => {
+    const result = answerFromDocuments({
+      scope: SCOPE,
+      jobId: 'job-a',
+      question: 'what does the contract say about retention',
+      type: 'contract',
+      files,
+      content: {
+        [contentKey('job-a', 'f1')]: { text: '5% retention', textStatus: 'error' },
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passages[0].match).toBe('unreadable');
+    expect(result.passages[0].quote).toBeUndefined();
+  });
+
+  test('a weak match offers the file without dressing up a guess', () => {
+    const stored = 'This agreement is made between the builder and the owner.';
+    const result = answerFromDocuments({
+      scope: SCOPE,
+      jobId: 'job-a',
+      question: 'what does the contract say about retention',
+      type: 'contract',
+      text: 'retention',
+      files,
+      content: {
+        [contentKey('job-a', 'f1')]: { text: stored, textStatus: 'ok' },
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.passages[0].match).toBe('weak');
+    expect(result.passages[0].quote).toBeUndefined();
+    expect(JSON.stringify(result.passages[0])).not.toMatch(/5% retention|deduct/);
+  });
+
+  test('rejects a job that is not on the invited list', () => {
+    const result = answerFromDocuments({
+      scope: SCOPE,
+      jobId: 'phase8-isolation',
+      question: 'what does the contract say about retention',
+      files,
+      content: {},
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('job_not_allowed');
+  });
+});
+
 describe('query layer stays read-only and off the Dashboard barrel', () => {
   test('query modules never write', () => {
     const dir = path.join(root, 'src/queries');
@@ -559,5 +673,12 @@ describe('query layer stays read-only and off the Dashboard barrel', () => {
     expect(fetch).toContain('getDoc');
     expect(fetch).toContain('getDocs');
     expect(fetch).not.toContain('setDoc');
+    expect(fetch).toContain('fetchAnswerFromDocuments');
+    expect(fetch).toContain('answerFromDocuments');
+    const documents = read('src/queries/documents.ts');
+    expect(documents).not.toMatch(/openai/i);
+    expect(documents).not.toContain('unpdf');
+    expect(documents).not.toContain('storage');
+    expect(documents).toContain('answerFromDocuments');
   });
 });

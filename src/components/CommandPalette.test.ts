@@ -246,6 +246,8 @@ describe('command palette answers', () => {
     expect(runAsk).toContain('shouldUsePlanForNone');
     expect(runAsk).toContain('fetchPlanVsActual');
     expect(runAsk).toContain('fetchJobSummary');
+    expect(runAsk).toContain('fetchAnswerFromDocuments');
+    expect(runAsk).toContain('answerFromDocuments');
   });
 
   test('none plus a plan still shows estimated and spent from planVsActual', () => {

@@ -17,6 +17,7 @@ export const QUERY_NAMES = [
   'findFiles',
   'findExpenses',
   'quotesForTrade',
+  'answerFromDocuments',
 ] as const;
 
 export type QueryName = (typeof QUERY_NAMES)[number];

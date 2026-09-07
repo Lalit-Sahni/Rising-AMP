@@ -173,13 +173,26 @@ export function InvoiceAnswerBody({ hit }: { hit: InvoiceHit }) {
 }
 
 export function FileAnswerBody({ hit }: { hit: FileHit }) {
+  const quote = hit.quote;
+  const unreadable = hit.match === 'unreadable' ? hit.unreadableDetail : undefined;
+  const weak = hit.match === 'weak';
   return (
     <span className="min-w-0 flex-1">
+      {quote ? (
+        <span className="mb-2 block border-l-2 border-hairline pl-3 text-[13.5px] leading-snug text-ink whitespace-pre-wrap">
+          {quote}
+        </span>
+      ) : unreadable ? (
+        <span className="mb-1 block text-[13.5px] font-extrabold text-ink">{unreadable}</span>
+      ) : weak ? (
+        <span className="mb-1 block text-[13.5px] font-extrabold text-ink">No matching passage in this file.</span>
+      ) : null}
       <span className="flex items-center gap-2 text-[13.5px] font-semibold text-ink">
         <span className="h-[7px] w-[7px] shrink-0 rounded-full" style={{ backgroundColor: hit.typeColor }} />
         <span className="truncate">{hit.name}</span>
       </span>
       <span className="block truncate text-[12px] text-slate-400">{hit.detail}</span>
+      {hit.working ? <WorkingLine working={hit.working} /> : null}
     </span>
   );
 }

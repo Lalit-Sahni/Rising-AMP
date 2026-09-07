@@ -416,4 +416,79 @@ describe('Ask routing onto query rows', () => {
     expect(JSON.stringify(items[0])).not.toContain('99,999');
     expect(JSON.stringify(items[0])).not.toMatch(/\$[\d,]/);
   });
+
+  it('answerFromDocuments paints the stored quote, not a invented clause', () => {
+    const stored = 'Progress claims may deduct 5% retention on each claim until practical completion.';
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'answerFromDocuments',
+        params: { jobId: 'job-1', type: 'contract', text: 'retention' },
+        sentence: 'The contract secretly waives retention entirely.',
+      },
+      result: {
+        ok: true as const,
+        passages: [{
+          id: 'f1',
+          jobId: 'job-1',
+          name: 'HIA contract.pdf',
+          type: 'contract',
+          textStatus: 'ok' as const,
+          match: 'quoted' as const,
+          quote: 'Progress claims may deduct 5% retention on each claim until practical completion.',
+          start: 0,
+          end: stored.length,
+        }],
+        provenance: {
+          query: 'answerFromDocuments' as const,
+          params: { jobId: 'job-1', type: 'contract', text: 'retention' },
+          source: 'files' as const,
+          rowCount: 1,
+          capped: false,
+        },
+      },
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0].kind).toBe('document');
+    if (items[0].kind !== 'document') return;
+    expect(stored.includes(items[0].file.quote as string)).toBe(true);
+    expect(items[0].file.quote).toBe(stored);
+    expect(items[0].file.name).toBe('HIA contract.pdf');
+    expect(items[0].file.match).toBe('quoted');
+    expect(`${items[0].file.quote} ${items[0].file.detail}`).not.toContain('waives retention');
+  });
+
+  it('a scan from answerFromDocuments is marked unreadable, with no quote', () => {
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'answerFromDocuments',
+        params: { jobId: 'job-1', type: 'plan' },
+        sentence: 'The site plan requires a three metre setback.',
+      },
+      result: {
+        ok: true as const,
+        passages: [{
+          id: 'scan',
+          jobId: 'job-1',
+          name: 'site-plan.pdf',
+          type: 'plan',
+          textStatus: 'none' as const,
+          match: 'unreadable' as const,
+        }],
+        provenance: {
+          query: 'answerFromDocuments' as const,
+          params: { jobId: 'job-1', type: 'plan' },
+          source: 'files' as const,
+          rowCount: 1,
+          capped: false,
+        },
+      },
+    });
+    expect(items[0].kind).toBe('document');
+    if (items[0].kind !== 'document') return;
+    expect(items[0].file.quote).toBeUndefined();
+    expect(items[0].file.match).toBe('unreadable');
+    expect(items[0].file.unreadableDetail).toContain('scan');
+    expect(JSON.stringify(items[0])).not.toContain('three metre');
+    expect(JSON.stringify(items[0])).not.toContain('setback');
+  });
 });

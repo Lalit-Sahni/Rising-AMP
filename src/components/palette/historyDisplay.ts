@@ -20,7 +20,11 @@ import {
 
 function countLabel(query: AskHistoryQuery, count: number): string {
   if (query === 'invoicesByStatus') return `${count} invoice${count === 1 ? '' : 's'}`;
-  if (query === 'findFiles') return `${count} file${count === 1 ? '' : 's'}`;
+  if (query === 'findFiles' || query === 'answerFromDocuments') {
+    return query === 'answerFromDocuments'
+      ? `${count} passage${count === 1 ? '' : 's'}`
+      : `${count} file${count === 1 ? '' : 's'}`;
+  }
   if (query === 'findExpenses') return `${count} expense${count === 1 ? '' : 's'}`;
   if (query === 'quotesForTrade') return `${count} quote${count === 1 ? '' : 's'}`;
   return `${count}`;
@@ -43,6 +47,9 @@ export function historyFigure(snapshot: AskHistorySnapshot | undefined, query: A
   if (snapshot.capped) return 'incomplete';
   if (typeof snapshot.cents === 'number') return formatCents(snapshot.cents);
   if (query === 'findFiles' && (snapshot.count === 0 || snapshot.count == null)) return 'not on file';
+  if (query === 'answerFromDocuments' && (snapshot.count === 0 || snapshot.count == null)) {
+    return 'no passage';
+  }
   if (typeof snapshot.count === 'number') return countLabel(query, snapshot.count);
   return null;
 }
@@ -61,7 +68,7 @@ function choiceTitle(choice: AskHistoryChoice): string {
     || choice.params.party
     || choice.params.category
     || choice.params.status
-    || (choice.query === 'findFiles' ? 'Files' : 'Cost to date');
+    || (choice.query === 'findFiles' ? 'Files' : choice.query === 'answerFromDocuments' ? 'Document' : 'Cost to date');
 }
 
 function knownFromSnapshot(snapshot: AskHistorySnapshot | undefined): KnownFigure[] | undefined {
@@ -117,6 +124,7 @@ function itemFromHistoryChoice(
   if (
     choice.query === 'invoicesByStatus'
     || choice.query === 'findFiles'
+    || choice.query === 'answerFromDocuments'
     || choice.query === 'findExpenses'
     || choice.query === 'quotesForTrade'
   ) {

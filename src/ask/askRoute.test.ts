@@ -42,6 +42,19 @@ test('none is accepted', () => {
   expect(result.choices[0].query).toBe('none');
 });
 
+test('answerFromDocuments is an allowed query name', () => {
+  const result = parseAskCallableResponse({
+    ok: true,
+    model: 'gpt-4o-mini',
+    choices: [{
+      query: 'answerFromDocuments',
+      params: { jobId: 'job-1', type: 'contract', text: 'retention' },
+      sentence: 'Here is the passage from that document.',
+    }],
+  });
+  expect(result.choices[0].query).toBe('answerFromDocuments');
+});
+
 test('App.js and PaletteHost do not import the Ask helper', () => {
   const app = fs.readFileSync(path.join(root, 'src/App.js'), 'utf8');
   const host = fs.readFileSync(path.join(root, 'src/components/PaletteHost.tsx'), 'utf8');

@@ -132,6 +132,20 @@ function afterKeyword(q, keyword) {
   return clipText(match || '').replace(/[.?!]+$/, '');
 }
 
+function topicAfterAbout(q) {
+  const match = String(q).match(/\babout\s+(.+)$/i);
+  return clipText(match ? match[1] : '').replace(/[.?!]+$/, '');
+}
+
+function isDocumentAnswer(q) {
+  if (/\bwhat (does|did|do)\b[\s\S]{0,80}\bsay\b/i.test(q)) return true;
+  if (/\bsay(s)? about\b/i.test(q) && /\b(contract|variation|permit|certificate|plan|document)\b/i.test(q)) {
+    return true;
+  }
+  if (/\baccording to the (contract|variation|permit|certificate|site plan)\b/i.test(q)) return true;
+  return false;
+}
+
 function spendSignal(q) {
   return /\b(spend|spent|cost|costs|how much)\b/i.test(q);
 }
@@ -173,6 +187,20 @@ function matchQuery(q) {
     }
   }
 
+  if (isDocumentAnswer(q)) {
+    const type = pickFileType(q);
+    const about = topicAfterAbout(q);
+    const params = {};
+    if (type) params.type = type;
+    if (about) params.text = about;
+    return {
+      query: 'answerFromDocuments',
+      params,
+      sentence: 'Here is the passage from that document.',
+      reason: '',
+    };
+  }
+
   if (/\bfiles mentioning\b/i.test(q)) {
     const text = afterKeyword(q, 'files mentioning');
     const params = {};
@@ -186,8 +214,8 @@ function matchQuery(q) {
   }
 
   if (
-    /\b(where is the |find the |show the |what does the )/i.test(q)
-    || /\b(contract|site plan|permit|certificate|variation)\b/i.test(q)
+    /\b(where is the |find the |show the )/i.test(q)
+    || (/\b(contract|site plan|permit|certificate|variation)\b/i.test(q) && !/\bsay\b/i.test(q))
   ) {
     const type = pickFileType(q);
     if (type) {
