@@ -1,5 +1,7 @@
 # Phase 14 — Ask (agent brief)
 
+**Status (7 Sep 2026):** Branch `phase-14-ask` opened. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. Phase 13 blockers closed on staging (uncoded pool; Lalit + Sydney Excavation merges; re-extract). Metro Consulting and the cross-kind unlinked list remain the owner’s. Part A is **not started**. Production untouched. Localhost staging. Never `--force`. Model never calculates.
+
 Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any code. That mockup is the spec.
 
 Branch: **`phase-14-ask`** from the merged Phase 13 branch. Tag `pre-phase14-2026-09-XX` first. One part per session, one commit per part.

@@ -1,8 +1,14 @@
 # Progress
 
+## Fleet (7 Sep 2026)
+
+Latest branch **`phase-14-ask`**. Restore tag **`pre-phase14-2026-09-07`** (`0dfcb51`, last Phase 13 blocker). Phase 14 Part A is **not started**. Production is **untouched**. Localhost stays on staging. Never `--force`. The model never calculates. Gzip ceiling **400 KB** (current **270.1 KB**).
+
+Phase 13 blockers **closed on staging**: uncoded pool; Lalit + Sydney Excavation merges; re-extract. Still the owner’s: **Metro Consulting** and the cross-kind unlinked list (`scripts/party-backfill-unlinked-staging.md`).
+
 ## Morning report (7 Sep 2026)
 
-Phase 13 is **done on `phase-13-query-layer`**, plus a **Part D amendment** on this commit. Production is **untouched**. Do not start Phase 14 until named. Restore tag `pre-phase13-2026-09-06`.
+Phase 13 is **done on `phase-13-query-layer`**, plus a **Part D amendment**. Production is **untouched**. Phase 14 is named and open on `phase-14-ask`; Part A is **not started**. Restore tag `pre-phase14-2026-09-07` (before Phase 14). Older: `pre-phase13-2026-09-06`.
 
 ### Parts committed, and gzip
 
@@ -42,6 +48,7 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 
 ## Fleet state
 
+- **Phase 14:** open on `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` (`0dfcb51`). **Part A not started.** Production untouched. No functions written. No deploy.
 - **Part A1:** committed `5e78dd7`. Initial JS gzip **268.3 KB**.
 - **Part A2:** accepted. `cabc330` + docs-only apply record `b031ee3`. Independent proof: typecheck/test/test:rules/build, gzip **268.3 KB**, staging dry-run `0 write(s) planned`. Two-commit nit noted, not a reject.
 - **Part B:** accepted `649a518`. Independent proof: typecheck, 255+40 tests, rules, build, gzip **268.3 KB**. Staging: function `maintainLedgerRollup` updated, Firestore rules released, recompute **5** writes (3 job repairs + 2 org creates). Second dry-run: `0 write(s) planned`. Schema v1. Production untouched; the recompute script refuses `--production`.
@@ -51,15 +58,14 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 - **Part D amendment:** uncoded pool on this commit. `planVsActual` / `spendByTrade` / `spendByCategory` return `uncoded: { count, cents }` and `affected`. Uncoded = live expenses with no stored `tradeId` (`expenseTradeId` only). Trade lines stay coded-only and carry the pool; job totals stay inclusive. Palette states a non-zero pool with Code them → Cost plan. Matcher negatives: `zzzzq` / `banana-xyz` / `xx` / `ing` / `air` return no spend answers. Typecheck, 294+40 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 275). Production untouched. No deploy.
 - **Owner-named staging merges:** Lalit → Lalit Sahni (`anabRwYbHvfQFxEEwdAj`); Sydney Excavation and Demo → Sydney Excavation and Demolition (`QCKcfwLfOpI355VanO8M`). Created merged aliases, stamped two expenses, second dry-run `0 write(s) planned`. Metro untouched. Production untouched.
 - **Staging job-file re-extract:** 8 scanned, 2 image skipped, 2 unsupported skipped, 4 PDFs written (3 `ok`, 1 `error` on `RisingAMP-test-permit.pdf` which is not a valid PDF). The three successes plan 0 on a second dry-run. No OCR. No OpenAI. Production untouched.
-- **Not started:** Phase 14. Do not start it until named.
-- **Do not start Phase 14** until the owner names it. 400 KB is the held ceiling (270.1 KB). The build still fails on breach.
+- **Phase 14 Part A not started.** Do not start it in a docs-only session. 400 KB is the held ceiling (270.1 KB). The build still fails on breach.
 - **Dependency rule:** root Vite `package.json` takes **no new packages**. Functions may add **one** PDF-text library (`unpdf@1.8.1`). It is not imported from `src/`. It does not change initial JS gzip. No OpenAI SDK.
 
 ## Current branch
 
-`phase-13-query-layer` — Phase 13 query layer, **done on this branch**, **not on production**. Parts A1–E plus the Part D uncoded-pool amendment. Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE13.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-14-ask` — Phase 14 Ask, **opened, Part A not started**, **not on production**. Parent: `phase-13-query-layer` (Parts A1–E plus blockers closed on staging). Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE14.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
-Restore tags: `pre-phase13-2026-09-06` (this phase, before code), `pre-phase12-2026-09-05`, `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
+Restore tags: `pre-phase14-2026-09-07` (this phase, before code; SHA `0dfcb51`), `pre-phase13-2026-09-06`, `pre-phase12-2026-09-05`, `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
 Production: `rising-amp-467702-b5` — https://risingamp.com.au (same app as https://rising-amp-467702-b5.web.app)  
 Staging: `rising-amp-staging` — localhost / `.env.local`  
@@ -69,7 +75,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 **Phase 12 is closed and live on production hosting (6 Sep 2026).** `firebase deploy --project production --only hosting`. No functions, Firestore rules or Storage. Branch `phase-12-fables-upgrade`. Scan a receipt on Add expense is a white `--surface` card (was `steel-900`); verified on localhost as Lalit, 72 Centenary Dr, `rgb(255, 255, 255)`. Typecheck, 254 tests, build **267.9 KB** gzip (ceiling 275). Front-end only: no rules, functions, schema or data writes. Full detail: `PHASE12.md`. Ultrareview PRs #1–#4 were closed unused; the empty-base branches are gone.
 
-**Next:** Phase 13 is done on the branch. Owner reviews the morning report and `scripts/party-backfill-unlinked-staging.md`. Do not start Phase 14 until named. Do not deploy Phase 13 to production until he names the project and surface. Optional leftover: force-close the home-screen app twice so the Phase 12 worker is in.
+**Next:** Phase 14 is open on `phase-14-ask`. Part A is **not started**. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Do not deploy Phase 13 or 14 to production until he names the project and surface. Optional leftover: force-close the home-screen app twice so the Phase 12 worker is in.
 
 **Phase 11 Parts A–E are live on production (5 Sep 2026).** Function `maintainLedgerRollup`, Part E Firestore rules, `ledgerRollup/current` for both production jobs, and hosting (`index-BTUZ3uws.js` on https://risingamp.com.au). Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview.
 
