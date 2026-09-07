@@ -77,6 +77,7 @@ export function RefusalAnswerBody({
   onCodeThem?: (event: React.MouseEvent) => void;
   onOpenWorking?: (event: React.MouseEvent) => void;
 }) {
+  const showCodeThem = Boolean(onCodeThem && (row.refusalReason === 'nothing_coded' || row.affected));
   return (
     <span className="min-w-0 flex-1">
       <span className="block text-[13.5px] font-extrabold text-ink">{row.title}</span>
@@ -92,7 +93,21 @@ export function RefusalAnswerBody({
         </span>
       ) : null}
       <IncompleteNote text={row.incomplete} />
-      <UncodedNote warning={row.warning} onCodeThem={onCodeThem} />
+      <UncodedNote warning={row.warning} onCodeThem={showCodeThem && row.warning ? onCodeThem : undefined} />
+      {showCodeThem && !row.warning ? (
+        <span className="mt-1.5 block text-[12px] leading-snug text-slate-600">
+          <button
+            type="button"
+            onClick={onCodeThem}
+            className="font-bold text-accent"
+          >
+            Code them
+          </button>
+        </span>
+      ) : null}
+      {row.actionNote && row.refusalReason === 'fact_missing' ? (
+        <span className="mt-1.5 block text-[12px] leading-snug text-slate-600">{row.actionNote}</span>
+      ) : null}
       {row.working ? <WorkingLine working={row.working} onOpenRows={onOpenWorking} /> : null}
     </span>
   );

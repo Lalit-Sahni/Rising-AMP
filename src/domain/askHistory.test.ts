@@ -100,6 +100,36 @@ describe('ask history schema', () => {
     }).success).toBe(false);
     expect(historyHasModelProse({ ...base, sentence: 'hi' })).toBe(true);
     expect(historyHasModelProse(base)).toBe(false);
+    expect(historyHasModelProse({ ...base, choices: [{ ...choice, reason: 'fact_missing' }] })).toBe(true);
+  });
+
+  test('stores refusalReason and still rejects model reason', () => {
+    const choice = historyChoiceFromRoute({
+      query: 'none',
+      params: { jobId: 'job-1' },
+      refusalReason: 'fact_missing',
+    }, null);
+    expect(choice.refusalReason).toBe('fact_missing');
+    expect(JSON.stringify(choice)).not.toContain('sentence');
+    expect(JSON.stringify(choice)).not.toContain('"reason"');
+    const row = askHistorySchema.parse({
+      uid: 'u1',
+      orgId: 'opal-ss-constructions',
+      jobId: 'job-1',
+      jobLabel: '72 Centenary Dr',
+      question: 'how many square metres is the house',
+      askedAt: new Date('2026-09-08T02:00:00Z'),
+      choices: [choice],
+    });
+    expect(row.choices[0].refusalReason).toBe('fact_missing');
+    expect(askHistorySchema.safeParse({
+      ...row,
+      choices: [{ ...choice, reason: 'Because $99,999' }],
+    }).success).toBe(false);
+    expect(askHistorySchema.safeParse({
+      ...row,
+      choices: [{ ...choice, refusalReason: 'guess' }],
+    }).success).toBe(false);
   });
 
   test('snapshotFromQueryResult reads cents from the query, not from prose', () => {

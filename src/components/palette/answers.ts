@@ -20,6 +20,12 @@ import { spendByTrade, type SpendResult } from '../../queries/spend';
 import { portfolioSummary, type PortfolioSummaryResult } from '../../queries/summary';
 import type { QuotesForTradeResult } from '../../queries/quotes';
 import { getInvoiceTotalCents, isInvoiceOverdue } from '../../utils/jobMetrics';
+import {
+  assignRefusalReason,
+  copyForRefusal,
+  firstUnreadablePassage,
+  type RefusalReason,
+} from '../../domain/askRefusal';
 
 export type TradeListRow = {
   id: string;
@@ -86,6 +92,8 @@ export type RefusalAnswer = {
   uncoded?: UncodedPool;
   affected?: boolean;
   warning?: string;
+  refusalReason?: RefusalReason;
+  actionNote?: string;
 };
 
 export type PaletteAnswer = SpendAnswer | PortfolioAnswer | RefusalAnswer;
@@ -173,6 +181,7 @@ export type RoutedAskChoice = {
   params: RoutedAskParams;
   sentence?: string;
   reason?: string;
+  refusalReason?: RefusalReason;
 };
 
 export type RoutedPaletteItem =
@@ -686,7 +695,12 @@ export function invoiceHitFromRecord(
   };
 }
 
-function refusalItem(id: string, title: string, detail: string): RoutedPaletteItem {
+function refusalItem(
+  id: string,
+  title: string,
+  detail: string,
+  extra?: Partial<RefusalAnswer>,
+): RoutedPaletteItem {
   return {
     kind: 'none',
     answer: {
@@ -695,6 +709,7 @@ function refusalItem(id: string, title: string, detail: string): RoutedPaletteIt
       kind: 'none',
       title: safeAskText(title) || 'That cannot be answered from the records.',
       detail: safeAskText(detail) || 'Nothing was added up.',
+      ...extra,
     },
   };
 }
@@ -823,12 +838,63 @@ function knownFiguresFromRelated(result: unknown): KnownFigure[] {
   return [];
 }
 
+function teachingRefusal(
+  id: string,
+  reason: RefusalReason,
+  input: {
+    question?: string;
+    tradeName?: string;
+    fileName?: string;
+    fileType?: string;
+    textStatus?: string;
+    known?: KnownFigure[];
+    working?: AnswerWorking;
+    incomplete?: string;
+    uncoded?: UncodedPool;
+    affected?: boolean;
+    warning?: string;
+  },
+): RoutedPaletteItem {
+  const copy = copyForRefusal({
+    reason,
+    question: input.question,
+    tradeName: input.tradeName,
+    fileName: input.fileName,
+    fileType: input.fileType,
+    textStatus: input.textStatus,
+    hasKnownFigures: Boolean(input.known?.length),
+  });
+  return {
+    kind: 'none',
+    answer: {
+      id,
+      section: 'Answers',
+      kind: 'none',
+      title: safeAskText(copy.title) || REFUSAL_TITLE,
+      detail: safeAskText(copy.detail) || nearestFallback(),
+      refusalReason: reason,
+      actionNote: copy.actionNote ? safeAskText(copy.actionNote) : undefined,
+      known: input.known,
+      working: input.working,
+      incomplete: input.incomplete,
+      uncoded: input.uncoded,
+      affected: input.affected || reason === 'nothing_coded',
+      warning: input.warning,
+    },
+  };
+}
+
+function nearestFallback(): string {
+  return 'You can ask about spend, estimated against spent, files, or invoices.';
+}
+
 function noneAnswer(
   choice: RoutedAskChoice,
   result: unknown,
   labels?: WorkingLabels,
+  question?: string,
+  refusalReason?: RefusalReason,
 ): RoutedPaletteItem {
-  const reason = safeAskText(choice.reason);
   const known = knownFiguresFromRelated(result);
   const provenance = provenanceOf(result);
   const hidden = Boolean(provenance?.capped) || Boolean(isOkRecordWithTotals(result)?.hidden);
@@ -837,28 +903,23 @@ function noneAnswer(
   const warning = isPlanOk(result)
     ? uncodedWarning(undefined, result.uncoded, result.affected)
     : undefined;
-  const detail = [
-    reason || (known.length
-      ? 'RisingAMP only stores what has actually happened.'
-      : 'RisingAMP only answers from the queries it already has.'),
-    known.length ? 'Here is what it does know.' : null,
-  ].filter(Boolean).join(' ');
-  return {
-    kind: 'none',
-    answer: {
-      id: 'ask:none',
-      section: 'Answers',
-      kind: 'none',
-      title: REFUSAL_TITLE,
-      detail,
-      known: known.length ? known : undefined,
-      working: provenance ? workingFromProvenance(provenance, labels) : undefined,
-      incomplete: hidden ? INCOMPLETE_CAP_MESSAGE : undefined,
-      uncoded,
-      affected,
-      warning,
-    },
-  };
+  const reason = refusalReason
+    || assignRefusalReason({
+      query: choice.query,
+      params: choice.params,
+      result,
+      question,
+    })
+    || 'out_of_scope';
+  return teachingRefusal('ask:none', reason, {
+    question,
+    known: known.length ? known : undefined,
+    working: provenance ? workingFromProvenance(provenance, labels) : undefined,
+    incomplete: hidden ? INCOMPLETE_CAP_MESSAGE : undefined,
+    uncoded,
+    affected,
+    warning,
+  });
 }
 
 /**
@@ -871,14 +932,21 @@ export function itemsFromRoutedQuery(input: {
   result?: unknown;
   tradeList?: TradeListRow[] | null;
   jobLabel?: string;
+  question?: string;
 }): RoutedPaletteItem[] {
   const choice = input.choice;
   const labels: WorkingLabels = {
     job: input.jobLabel,
     trade: choice.query === 'none' ? undefined : tradeLabel(choice, input.tradeList),
   };
+  const refusalReason = input.choice.refusalReason || assignRefusalReason({
+    query: choice.query,
+    params: choice.params,
+    result: input.result,
+    question: input.question,
+  });
   if (choice.query === 'none') {
-    return [noneAnswer(choice, input.result, { job: input.jobLabel })];
+    return [noneAnswer(choice, input.result, { job: input.jobLabel }, input.question, refusalReason)];
   }
 
   const failed = failedQueryItem(input.result);
@@ -887,6 +955,24 @@ export function itemsFromRoutedQuery(input: {
   if (choice.query === 'spendByTrade' || choice.query === 'spendByParty' || choice.query === 'spendByCategory') {
     if (!isSpendOk(input.result)) {
       return [refusalItem('ask:spend', 'That spend question could not be answered.', 'Nothing was added up.')];
+    }
+    if (refusalReason === 'nothing_coded') {
+      const name = tradeLabel(choice, input.tradeList);
+      const warning = choice.query === 'spendByParty'
+        ? undefined
+        : uncodedWarning(name, input.result.uncoded, input.result.affected);
+      return [teachingRefusal('ask:nothing-coded', 'nothing_coded', {
+        question: input.question,
+        tradeName: name,
+        working: workingFromProvenance(input.result.provenance, {
+          job: input.jobLabel,
+          trade: choice.query === 'spendByTrade' ? name : labels.trade,
+        }),
+        incomplete: input.result.provenance.capped ? INCOMPLETE_CAP_MESSAGE : undefined,
+        uncoded: input.result.uncoded,
+        affected: true,
+        warning,
+      })];
     }
     const bucketKey = choice.query === 'spendByCategory' && choice.params.category
       ? categoryKey({ category: choice.params.category })
@@ -900,12 +986,27 @@ export function itemsFromRoutedQuery(input: {
     }
     const result = input.result;
     const name = tradeLabel(choice, input.tradeList);
+    const warning = uncodedWarning(name, result.uncoded, result.affected);
+    if (refusalReason === 'nothing_coded') {
+      const known: KnownFigure[] = result.hasPlan && !result.provenance.capped
+        ? [{ label: 'Estimated', amount: formatCents(result.planCents) }]
+        : [];
+      return [teachingRefusal('ask:nothing-coded', 'nothing_coded', {
+        question: input.question,
+        tradeName: name,
+        known: known.length ? known : undefined,
+        working: workingFromProvenance(result.provenance, { job: input.jobLabel, trade: name }),
+        incomplete: result.provenance.capped ? INCOMPLETE_CAP_MESSAGE : undefined,
+        uncoded: result.uncoded,
+        affected: true,
+        warning,
+      })];
+    }
     const hidden = result.actualCents == null || result.provenance.capped;
     const amount = hidden ? '—' : formatCents(result.actualCents);
     const codedBit = result.trades[0]
       ? `across ${result.trades[0].count} coded expense${result.trades[0].count === 1 ? '' : 's'}`
       : null;
-    const warning = uncodedWarning(name, result.uncoded, result.affected);
     return [{
       kind: 'spend',
       answer: {
@@ -969,6 +1070,20 @@ export function itemsFromRoutedQuery(input: {
     const hits = fileHitsFromDocuments(result, working);
     if (hits.length === 0) {
       return [refusalItem('ask:documents:empty', 'No matching passage in the files.', 'Nothing was added up.')];
+    }
+    if (refusalReason === 'unreadable_file') {
+      const passage = firstUnreadablePassage(result);
+      const file = hits[0];
+      return [
+        teachingRefusal('ask:unreadable', 'unreadable_file', {
+          question: input.question,
+          fileName: file.name,
+          fileType: file.type,
+          textStatus: String(passage?.textStatus || file.textStatus || ''),
+          working,
+        }),
+        ...hits.map((hit) => ({ kind: 'document' as const, file: hit })),
+      ];
     }
     return hits.map((file) => ({ kind: 'document' as const, file }));
   }

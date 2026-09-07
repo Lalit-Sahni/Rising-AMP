@@ -81,6 +81,10 @@ test('CI evals do not call OpenAI or read a live key', () => {
   assert.equal(evalLib.includes('process.env'), false);
   assert.equal(evalLib.includes('api.openai.com'), false);
   assert.equal(evalLib.includes('Authorization'), false);
+  const classifyStart = evalLib.indexOf('function classifyAskQuestion');
+  const classifyEnd = evalLib.indexOf('function toModelJson');
+  assert.ok(classifyStart >= 0 && classifyEnd > classifyStart);
+  assert.equal(evalLib.slice(classifyStart, classifyEnd).includes('expectedQuery'), false);
 });
 
 test('the prompt treats file text, notes and paste as data', () => {
@@ -164,6 +168,9 @@ test('spend questions and legal advice do not become answerFromDocuments', () =>
     assert.notEqual(classified.query, 'answerFromDocuments');
   });
   assert.equal(classifyAskQuestion('legal advice on the HIA contract').query, 'none');
+  assert.equal(classifyAskQuestion('how many square metres is the house').query, 'none');
+  assert.equal(classifyAskQuestion('what is the floor area').query, 'none');
+  assert.notEqual(classifyAskQuestion('how many square metres is the house').query, 'answerFromDocuments');
 });
 
 test('an untrusted blob cannot change the schema or introduce a money total', () => {

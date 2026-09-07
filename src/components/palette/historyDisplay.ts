@@ -9,6 +9,7 @@ import {
   type AskHistoryRow,
   type AskHistorySnapshot,
 } from '../../domain/askHistory';
+import { copyForRefusal } from '../../domain/askRefusal';
 import { formatCents } from '../../money';
 import {
   INCOMPLETE_CAP_MESSAGE,
@@ -104,6 +105,43 @@ function itemFromHistoryChoice(
   const hidden = Boolean(choice.snapshot?.capped) || typeof choice.snapshot?.cents !== 'number';
   const amount = hidden ? '—' : formatCents(choice.snapshot?.cents as number);
   const incomplete = choice.snapshot?.capped ? INCOMPLETE_CAP_MESSAGE : undefined;
+
+  if (choice.refusalReason) {
+    const copy = copyForRefusal({
+      reason: choice.refusalReason,
+      question: row.question,
+      tradeName: choice.params.trade || choice.params.tradeId,
+      fileType: choice.params.type,
+      hasKnownFigures: Boolean(knownFromSnapshot(choice.snapshot)?.length)
+        && choice.refusalReason === 'out_of_scope',
+    });
+    const known = choice.refusalReason === 'out_of_scope'
+      ? knownFromSnapshot(choice.snapshot)
+      : choice.refusalReason === 'nothing_coded' && typeof choice.snapshot?.planCents === 'number'
+        ? [{ label: 'Estimated', amount: formatCents(choice.snapshot.planCents) }]
+        : undefined;
+    return {
+      kind: 'none',
+      answer: {
+        id,
+        section: 'Answers',
+        kind: 'none',
+        title: copy.title,
+        detail: copy.detail,
+        refusalReason: choice.refusalReason,
+        actionNote: copy.actionNote,
+        known,
+        working,
+        incomplete,
+        uncoded: {
+          count: choice.snapshot?.uncodedCount || 0,
+          cents: choice.snapshot?.uncodedCents || 0,
+        },
+        affected: choice.refusalReason === 'nothing_coded'
+          || Boolean((choice.snapshot?.uncodedCents || 0) > 0 || (choice.snapshot?.uncodedCount || 0) > 0),
+      },
+    };
+  }
 
   if (choice.query === 'none') {
     return {

@@ -1,7 +1,8 @@
 /**
  * Ask question history. Business data, not a chat log.
  * Stores the question, the routed query + params, query provenance,
- * and code-computed cents/counts. Never model sentence or reason.
+ * snapshot cents/counts, and a code-assigned refusalReason.
+ * Never model sentence or reason.
  */
 import { z } from 'zod';
 import {
@@ -9,6 +10,7 @@ import {
   provenanceSchema,
   type QueryName,
 } from '../queries/core';
+import { refusalReasonSchema, type RefusalReason } from './askRefusal';
 
 export const ASK_HISTORY_QUERIES = [...QUERY_NAMES, 'none'] as const;
 export type AskHistoryQuery = (typeof ASK_HISTORY_QUERIES)[number];
@@ -62,6 +64,7 @@ export const askHistoryChoiceSchema = z
     params: askHistoryParamsSchema,
     provenance: askHistoryProvenanceSchema.optional(),
     snapshot: askHistorySnapshotSchema.optional(),
+    refusalReason: refusalReasonSchema.optional(),
   })
   .strict();
 
@@ -84,6 +87,7 @@ export type AskHistoryParams = z.infer<typeof askHistoryParamsSchema>;
 export type AskHistorySnapshot = z.infer<typeof askHistorySnapshotSchema>;
 export type AskHistoryChoice = z.infer<typeof askHistoryChoiceSchema>;
 export type AskHistoryRow = z.infer<typeof askHistorySchema>;
+export type { RefusalReason };
 
 const MODEL_PROSE_KEYS = [
   'sentence',
@@ -238,20 +242,26 @@ export function storedProvenanceFrom(result: unknown): AskHistoryChoice['provena
   return stored.success ? stored.data : undefined;
 }
 
-/** Drop model sentence/reason. Keep query name, params, provenance, snapshot. */
+/** Drop model sentence/reason. Keep query name, params, provenance, snapshot, refusalReason. */
 export function historyChoiceFromRoute(
-  choice: { query: QueryName | 'none'; params: Record<string, unknown> },
+  choice: {
+    query: QueryName | 'none';
+    params: Record<string, unknown>;
+    refusalReason?: RefusalReason;
+  },
   result: unknown,
 ): AskHistoryChoice {
   const params = askHistoryParamsSchema.safeParse(choice.params || {});
   const provenance = storedProvenanceFrom(result);
   const snapshot = snapshotFromQueryResult(result);
+  const reason = refusalReasonSchema.safeParse(choice.refusalReason);
   const row: AskHistoryChoice = {
     query: choice.query,
     params: params.success ? params.data : {},
   };
   if (provenance) row.provenance = provenance;
   if (snapshot) row.snapshot = snapshot;
+  if (reason.success) row.refusalReason = reason.data;
   const parsed = askHistoryChoiceSchema.safeParse(row);
   return parsed.success ? parsed.data : { query: choice.query, params: {} };
 }

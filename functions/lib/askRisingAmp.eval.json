@@ -369,5 +369,15 @@
     "id": "none-19",
     "question": "xx",
     "expectedQuery": "none"
+  },
+  {
+    "id": "none-20",
+    "question": "how many square metres is the house",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-21",
+    "question": "what is the floor area",
+    "expectedQuery": "none"
   }
 ]

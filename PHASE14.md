@@ -1,6 +1,6 @@
 # Phase 14 — Ask (agent brief)
 
-**Status (8 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–F done** on this branch (`askRisingAmp` on staging; question history; evals in CI; `answerFromDocuments`). Part G is next. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
+**Status (8 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–G done** on this branch (`askRisingAmp` on staging; question history; evals in CI; `answerFromDocuments`; teaching refusals). Phase 14 DoD / merge is next. Do not start Phase 15 until this branch is merged. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
 
 Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any code. That mockup is the spec.
 
@@ -146,6 +146,8 @@ A refusal that only apologises is a dead end. Every refusal should name what is 
 - Outside scope: name the nearest question it can actually answer.
 
 Every refusal returns a machine-readable reason (`fact_missing`, `nothing_coded`, `unreadable_file`, `out_of_scope`) so the UI renders the right action and the question history records why.
+
+**Part G done.** After `src/queries/` runs, **code** assigns `refusalReason` (the model never invents the enum; `choice.reason` is ignored). `nothing_coded` when `spendByTrade` / `planVsActual` for a named trade has zero coded expenses — teaching copy and Code them → Cost Plan, not a `$0.00` success. `unreadable_file` when `answerFromDocuments` passages are `match: 'unreadable'` — no quote, file row kept. `fact_missing` when the route is `none` and the wording is a job fact (floor area / sqm / storeys / …) — copy names the gap; Ask does not write; no `facts/current`. `out_of_scope` names the nearest honest question (spend, plan vs actual, files, invoices). History stores the enum; copy is derived in code. Firestore rules allow `answerFromDocuments` on the choice and `refusalReason` as one of the four enums; model `reason` / `sentence` still rejected. Staging Firestore rules after this commit. No production. No Phase 15/16.
 
 Commit: `Make a refusal name what is missing and how to fix it.`
 

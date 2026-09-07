@@ -649,6 +649,36 @@ async function main() {
         sentence: 'You spent $99,999',
       }],
     }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-refusal`).set({
+      ...validAsk,
+      choices: [{
+        ...validAsk.choices[0],
+        refusalReason: 'nothing_coded',
+      }],
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-refusal-bad`).set({
+      ...validAsk,
+      choices: [{
+        ...validAsk.choices[0],
+        refusalReason: 'guess',
+      }],
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-docs`).set({
+      ...validAsk,
+      question: 'what does the contract say about retention',
+      choices: [{
+        query: 'answerFromDocuments',
+        params: { jobId: JOB, type: 'contract', text: 'retention' },
+        provenance: {
+          query: 'answerFromDocuments',
+          params: { jobId: JOB, type: 'contract', text: 'retention' },
+          source: 'files',
+          rowCount: 1,
+          capped: false,
+        },
+        snapshot: { count: 1, capped: false },
+      }],
+    }));
     await assertFails(owner.firestore().doc(askPath).update({
       question: 'changed',
     }));

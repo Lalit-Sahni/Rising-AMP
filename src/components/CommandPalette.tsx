@@ -369,7 +369,12 @@ export default function CommandPalette() {
           return;
         }
         if (item.kind === 'none') {
-          const openPlan = Boolean(scopedJobId && (item.answer.known?.length || item.answer.affected || item.answer.working));
+          const openPlan = Boolean(scopedJobId && (
+            item.answer.known?.length
+            || item.answer.affected
+            || item.answer.working
+            || item.answer.refusalReason === 'nothing_coded'
+          ));
           out.push({
             id: item.answer.id,
             section: 'Answers',
@@ -689,7 +694,12 @@ export default function CommandPalette() {
     }
     if (row.kind === 'none') {
       const answer = row.answer && row.answer.kind === 'none' ? row.answer : null;
-      if (!answer || (!answer.working && !answer.known?.length && !answer.affected)) return;
+      if (!answer || (
+        !answer.working
+        && !answer.known?.length
+        && !answer.affected
+        && answer.refusalReason !== 'nothing_coded'
+      )) return;
       close();
       row.run();
       return;
@@ -920,7 +930,7 @@ export default function CommandPalette() {
                       >
                         <RefusalAnswerBody
                           row={row.answer}
-                          onCodeThem={row.answer.affected && scopedJobId
+                          onCodeThem={(row.answer.affected || row.answer.refusalReason === 'nothing_coded') && scopedJobId
                             ? (event) => {
                               event.stopPropagation();
                               close();

@@ -608,7 +608,7 @@ service cloud.firestore {
             return name in [
               'spendByTrade', 'spendByParty', 'spendByCategory', 'planVsActual',
               'invoicesByStatus', 'jobSummary', 'portfolioSummary', 'findFiles',
-              'findExpenses', 'quotesForTrade', 'none'
+              'findExpenses', 'quotesForTrade', 'answerFromDocuments', 'none'
             ];
           }
 
@@ -616,7 +616,7 @@ service cloud.firestore {
             return name in [
               'spendByTrade', 'spendByParty', 'spendByCategory', 'planVsActual',
               'invoicesByStatus', 'jobSummary', 'portfolioSummary', 'findFiles',
-              'findExpenses', 'quotesForTrade'
+              'findExpenses', 'quotesForTrade', 'answerFromDocuments'
             ];
           }
 
@@ -659,10 +659,13 @@ service cloud.firestore {
           }
 
           function choiceOk(c) {
-            return c.keys().hasOnly(['query', 'params', 'provenance', 'snapshot'])
+            return c.keys().hasOnly(['query', 'params', 'provenance', 'snapshot', 'refusalReason'])
               && askQueryNameOk(c.query)
               && askParamsOk(c.params)
               && (!c.keys().hasAny(['sentence', 'reason', 'messages', 'content', 'reply']))
+              && (!c.keys().hasAny(['refusalReason']) || c.refusalReason in [
+                'fact_missing', 'nothing_coded', 'unreadable_file', 'out_of_scope'
+              ])
               && (!c.keys().hasAny(['provenance']) || provenanceOk(c.provenance))
               && (!c.keys().hasAny(['snapshot']) || snapshotOk(c.snapshot));
           }

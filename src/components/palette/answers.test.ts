@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { computeLedgerRollup } from '../../domain/ledgerRollup';
 import { formatCents } from '../../money';
 import { planVsActual } from '../../queries/plan';
+import { spendByTrade } from '../../queries/spend';
+import { answerFromDocuments } from '../../queries/documents';
+import { contentKey } from '../../queries/files';
 import {
   spendAnswersForQuery,
   itemsFromRoutedQuery,
@@ -458,37 +461,204 @@ describe('Ask routing onto query rows', () => {
   });
 
   it('a scan from answerFromDocuments is marked unreadable, with no quote', () => {
+    const leftover = 'setback 3 metres from the boundary';
+    const queried = answerFromDocuments({
+      scope: SCOPE,
+      jobId: 'job-1',
+      question: 'what does the site plan say',
+      type: 'plan',
+      files: [{
+        id: 'scan',
+        jobId: 'job-1',
+        name: 'site-plan.pdf',
+        type: 'plan',
+        status: 'active',
+      }],
+      content: {
+        [contentKey('job-1', 'scan')]: { text: leftover, textStatus: 'none' },
+      },
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
     const items = itemsFromRoutedQuery({
       choice: {
         query: 'answerFromDocuments',
         params: { jobId: 'job-1', type: 'plan' },
         sentence: 'The site plan requires a three metre setback.',
       },
-      result: {
-        ok: true as const,
-        passages: [{
-          id: 'scan',
-          jobId: 'job-1',
-          name: 'site-plan.pdf',
-          type: 'plan',
-          textStatus: 'none' as const,
-          match: 'unreadable' as const,
-        }],
-        provenance: {
-          query: 'answerFromDocuments' as const,
-          params: { jobId: 'job-1', type: 'plan' },
-          source: 'files' as const,
-          rowCount: 1,
-          capped: false,
-        },
+      result: queried,
+      question: 'what does the site plan say',
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.refusalReason).toBe('unreadable_file');
+    expect(items[0].answer.title).toContain('scan');
+    expect(items[0].answer.title).toContain('no text layer');
+    const fileRow = items.find((item) => item.kind === 'document');
+    expect(fileRow?.kind).toBe('document');
+    if (fileRow?.kind !== 'document') return;
+    expect(fileRow.file.quote).toBeUndefined();
+    expect(fileRow.file.match).toBe('unreadable');
+    expect(JSON.stringify(items)).not.toContain('three metre');
+    expect(JSON.stringify(items)).not.toContain(leftover);
+  });
+
+  it('nothing_coded teaches and does not paint $0.00 spent as a success', () => {
+    const empty = {
+      jobId: 'job-1',
+      rollup: computeLedgerRollup([
+        { id: 'e2', total: 100, category: 'purchase', date: '2026-09-02' },
+      ], 4),
+      expenses: [
+        { id: 'e2', total: 100, category: 'purchase', date: '2026-09-02' },
+      ],
+      expensesCapped: false,
+      expensesLoaded: true,
+    };
+    const queried = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-1',
+      tradeId: 'concreting',
+      jobs: [empty],
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+    expect(queried.count).toBe(0);
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'spendByTrade',
+        params: { jobId: 'job-1', tradeId: 'concreting' },
+        sentence: 'You have spent $0.00 on concreting.',
+      },
+      result: queried,
+      tradeList: TRADE_LIST,
+      question: 'how much have we spent on concreting',
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.refusalReason).toBe('nothing_coded');
+    expect(items[0].answer.title.toLowerCase()).toContain('concreting');
+    expect(items[0].answer.title).toContain('nothing to compare');
+    expect(items[0].answer.detail).toMatch(/Code them/i);
+    expect(items[0].answer.affected).toBe(true);
+    expect(JSON.stringify(items[0])).not.toContain('$0.00');
+    expect(items[0].answer).not.toHaveProperty('amount');
+  });
+
+  it('planVsActual with zero coded expenses is nothing_coded, not a $0 success', () => {
+    const plan = {
+      id: 'current',
+      jobId: 'job-1',
+      level: 'trades' as const,
+      targetCents: 3737291,
+      baselineDate: '2026-01-01',
+      gstMode: 'inclusive' as const,
+      status: 'draft' as const,
+      sections: [{
+        id: 's1',
+        tradeId: 'concreting',
+        name: 'Concreting',
+        order: 0,
+        amountCents: 3737291,
+      }],
+      createdBy: 'u1',
+    };
+    const queried = planVsActual({
+      scope: SCOPE,
+      jobId: 'job-1',
+      tradeId: 'concreting',
+      plan,
+      job: {
+        jobId: 'job-1',
+        rollup: computeLedgerRollup([], 1),
+        expenses: [],
+        expensesCapped: false,
+        expensesLoaded: true,
       },
     });
-    expect(items[0].kind).toBe('document');
-    if (items[0].kind !== 'document') return;
-    expect(items[0].file.quote).toBeUndefined();
-    expect(items[0].file.match).toBe('unreadable');
-    expect(items[0].file.unreadableDetail).toContain('scan');
-    expect(JSON.stringify(items[0])).not.toContain('three metre');
-    expect(JSON.stringify(items[0])).not.toContain('setback');
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'planVsActual',
+        params: { jobId: 'job-1', tradeId: 'concreting' },
+      },
+      result: queried,
+      tradeList: TRADE_LIST,
+      question: 'are we over on concreting',
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.refusalReason).toBe('nothing_coded');
+    expect(items[0].answer.known?.[0]).toEqual({
+      label: 'Estimated',
+      amount: formatCents(3737291),
+    });
+    expect(JSON.stringify(items[0].answer.title + items[0].answer.detail)).not.toMatch(/\$0\.00/);
+  });
+
+  it('coded spend on a named trade stays a spend answer', () => {
+    const queried = spendByTrade({
+      scope: SCOPE,
+      jobId: 'job-1',
+      tradeId: 'concreting',
+      jobs: [UNCODED_JOB],
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+    const items = itemsFromRoutedQuery({
+      choice: { query: 'spendByTrade', params: { jobId: 'job-1', tradeId: 'concreting' } },
+      result: queried,
+      tradeList: TRADE_LIST,
+      question: 'how much on concreting',
+    });
+    expect(items[0].kind).toBe('spend');
+    if (items[0].kind !== 'spend') return;
+    expect(items[0].answer.amount).toBe(formatCents(queried.cents));
+  });
+
+  it('a floor-area question on none is fact_missing and does not steal documents', () => {
+    const items = itemsFromRoutedQuery({
+      choice: { query: 'none', params: {}, reason: 'fact_missing' },
+      question: 'how many square metres is the house',
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.refusalReason).toBe('fact_missing');
+    expect(items[0].answer.title).toContain('floor area');
+    expect(items[0].answer.detail).toContain('Ask does not write it');
+    expect(JSON.stringify(items)).not.toContain('facts/current');
+    const docs = itemsFromRoutedQuery({
+      choice: { query: 'none', params: {} },
+      question: 'what does the contract say about retention',
+    });
+    expect(docs[0].kind).toBe('none');
+    if (docs[0].kind !== 'none') return;
+    expect(docs[0].answer.refusalReason).toBe('out_of_scope');
+  });
+
+  it('out_of_scope names the nearest honest question and strips model money', () => {
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'none',
+        params: {},
+        reason: 'You will save $99,999 if you finish early.',
+      },
+      question: 'will we finish under budget',
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.refusalReason).toBe('out_of_scope');
+    expect(items[0].answer.detail.toLowerCase()).toMatch(/estimated|spent/);
+    expect(JSON.stringify(items[0])).not.toContain('99,999');
+    expect(JSON.stringify(items[0])).not.toMatch(/\$[\d,]/);
+    const legal = itemsFromRoutedQuery({
+      choice: { query: 'none', params: {} },
+      question: 'legal advice on the HIA contract',
+    });
+    expect(legal[0].kind).toBe('none');
+    if (legal[0].kind !== 'none') return;
+    expect(legal[0].answer.refusalReason).toBe('out_of_scope');
+    expect(legal[0].answer.detail.toLowerCase()).toContain('contract');
   });
 });

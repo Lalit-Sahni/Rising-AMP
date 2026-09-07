@@ -137,6 +137,7 @@ describe('command palette answers', () => {
       'src/components/palette/HistoryList.tsx',
       'src/components/palette/historyDisplay.ts',
       'src/domain/askHistory.ts',
+      'src/domain/askRefusal.ts',
       'src/firebase/askHistory.ts',
       'src/components/PaletteHost.tsx',
       'src/App.js',
@@ -155,6 +156,7 @@ describe('command palette answers', () => {
     expect(host).not.toContain('runAsk');
     expect(host).not.toContain('askHistory');
     expect(host).not.toContain('HistoryList');
+    expect(host).not.toContain('askRefusal');
     const app = read('src/App.js');
     expect(app).not.toContain('queries/');
     expect(app).not.toContain('JobFileViewer');
@@ -165,6 +167,7 @@ describe('command palette answers', () => {
     expect(app).not.toContain('runAsk');
     expect(app).not.toContain('askHistory');
     expect(app).not.toContain('HistoryList');
+    expect(app).not.toContain('askRefusal');
     const palette = read('src/components/CommandPalette.tsx');
     expect(palette).toContain("lazy(() => import('./files/JobFileViewer'))");
     expect(palette).toContain("import('../queries/fetch')");
@@ -248,6 +251,10 @@ describe('command palette answers', () => {
     expect(runAsk).toContain('fetchJobSummary');
     expect(runAsk).toContain('fetchAnswerFromDocuments');
     expect(runAsk).toContain('answerFromDocuments');
+    expect(runAsk).toContain('assignRefusalReason');
+    expect(rows).toContain('nothing_coded');
+    expect(rows).not.toContain('facts/current');
+    expect(rows).not.toMatch(/\bsetDoc\b/);
   });
 
   test('none plus a plan still shows estimated and spent from planVsActual', () => {
@@ -375,5 +382,29 @@ describe('command palette question history', () => {
     expect(list).toContain('Recent questions');
     expect(list).toContain('Clear all');
     expect(list).toContain('Remove question');
+  });
+
+  test('a stored refusalReason round-trips into teaching copy', () => {
+    const choice = historyChoiceFromRoute({
+      query: 'none',
+      params: { jobId: 'job-1' },
+      refusalReason: 'out_of_scope',
+    }, null);
+    expect(choice.refusalReason).toBe('out_of_scope');
+    const items = itemsFromAskHistory({
+      id: 'h2',
+      uid: 'u1',
+      orgId: 'opal-ss-constructions',
+      jobId: 'job-1',
+      jobLabel: 'Kelly Street',
+      question: 'will we finish under budget',
+      askedAt: new Date('2026-09-08T02:00:00Z'),
+      choices: [choice],
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.refusalReason).toBe('out_of_scope');
+    expect(items[0].answer.detail.toLowerCase()).toMatch(/estimated|spent/);
+    expect(JSON.stringify(items[0])).not.toContain('99,999');
   });
 });

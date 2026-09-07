@@ -3,6 +3,7 @@
  * Do not import from App.js or PaletteHost.
  */
 import { historyChoiceFromRoute, type AskHistoryChoice } from '../../domain/askHistory';
+import { assignRefusalReason } from '../../domain/askRefusal';
 import type { QueryScope } from '../../queries/core';
 import type { TradeListRow, RoutedAskChoice, RoutedAskParams, RoutedPaletteItem } from './answers';
 import { itemsFromRoutedQuery, matchTrades, shouldUsePlanForNone } from './answers';
@@ -181,13 +182,21 @@ export async function executeAskQuestion(input: RunAskInput): Promise<AskExecuti
     const result = resolved.query === 'none'
       ? await loadRelatedForNone(input.scope, params.jobId)
       : await runRoutedQuery(resolved, params, input.scope, input.question);
+    const refusalReason = assignRefusalReason({
+      query: resolved.query,
+      params: resolved.params,
+      result,
+      question: input.question,
+    });
+    const stored = refusalReason ? { ...resolved, refusalReason } : resolved;
     items.push(...itemsFromRoutedQuery({
-      choice: resolved,
+      choice: stored,
       result,
       tradeList: input.tradeList,
       jobLabel: input.jobLabel,
+      question: input.question,
     }));
-    choices.push(historyChoiceFromRoute(resolved, result));
+    choices.push(historyChoiceFromRoute(stored, result));
   }
   return { items, choices };
 }

@@ -2,13 +2,13 @@
 
 ## Fleet (7 Sep 2026)
 
-Latest branch **`phase-14-ask`**. Restore tag **`pre-phase14-2026-09-07`** (`0dfcb51`, last Phase 13 blocker). Phase 14 **Parts A–F are done** (`askRisingAmp` router; palette runs `src/queries/`, paints rows, shows working / uncoded / incomplete / honest refusal; question history; CI evals with honest `none` refusals; `answerFromDocuments` quotes stored extracts). Part G is next. Production is **untouched** (original six functions; no `askRisingAmp`). Localhost stays on staging. Never `--force`. The model never calculates. Gzip ceiling **400 KB** (current **270.1 KB**).
+Latest branch **`phase-14-ask`**. Restore tag **`pre-phase14-2026-09-07`** (`0dfcb51`, last Phase 13 blocker). Phase 14 **Parts A–G are done** (`askRisingAmp` router; palette runs `src/queries/`, paints rows, shows working / uncoded / incomplete / teaching refusals; question history; CI evals; `answerFromDocuments` quotes stored extracts). Next is **Phase 14 DoD / merge**. Do not start Phase 15 until this branch is merged. Production is **untouched** (original six functions; no `askRisingAmp`). Localhost stays on staging. Never `--force`. The model never calculates. Gzip ceiling **400 KB** (current **270.1 KB**).
 
 Phase 13 blockers **closed on staging**: uncoded pool; Lalit + Sydney Excavation merges; re-extract. Still the owner’s: **Metro Consulting** and the cross-kind unlinked list (`scripts/party-backfill-unlinked-staging.md`).
 
 ## Morning report (7 Sep 2026)
 
-Phase 13 is **done on `phase-13-query-layer`**, plus a **Part D amendment**. Production is **untouched**. Phase 14 Parts A–F are **done** on `phase-14-ask`; Part G is next. Restore tag `pre-phase14-2026-09-07` (before Phase 14). Older: `pre-phase13-2026-09-06`.
+Phase 13 is **done on `phase-13-query-layer`**, plus a **Part D amendment**. Production is **untouched**. Phase 14 Parts A–G are **done** on `phase-14-ask`; next is Phase 14 DoD / merge (do not start 15 until merged). Restore tag `pre-phase14-2026-09-07` (before Phase 14). Older: `pre-phase13-2026-09-06`.
 
 ### Parts committed, and gzip
 
@@ -27,11 +27,12 @@ Phase 13 is **done on `phase-13-query-layer`**, plus a **Part D amendment**. Pro
 | 14C working line, uncoded, honest refusal | this commit | **270.1 KB** |
 | 14D question history | this commit | **270.1 KB** |
 | 14E evals, injection, scope | this commit | **270.1 KB** |
-| 14F answer from documents | this commit | **270.1 KB** |
+| 14F answer from documents | `b8da998` | **270.1 KB** |
+| 14G teaching refusals | this commit | **270.1 KB** |
 
 Ceiling **400 KB** (owner, 7 Sep 2026), held. Current **270.1 KB**. The build still fails on breach. Prefer smaller when free. Independent typecheck / test / test:rules / build on every accepted part.
 
-**Staging (named):** party backfill 60 created / 183 stamped / 19 unlinked, second dry-run `0 write(s) planned`; job+org rollups recomputed (`0 write(s)` after); Firestore rules for parties, org rollup, `files/.../content/text`; `extractJobFileText` created with `retry: false`. Production functions still the original six. No production hosting, rules, functions, or data writes.
+**Staging (named):** party backfill 60 created / 183 stamped / 19 unlinked, second dry-run `0 write(s) planned`; job+org rollups recomputed (`0 write(s)` after); Firestore rules for parties, org rollup, `files/.../content/text`, askHistory `answerFromDocuments` + `refusalReason`; `extractJobFileText` created with `retry: false`. Production functions still the original six. No production hosting, rules, functions, or data writes.
 
 ### Rejected from a worker
 
@@ -54,7 +55,7 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 
 ## Fleet state
 
-- **Phase 14:** open on `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` (`0dfcb51`). **Parts A–F done.** Router callable `askRisingAmp` (`retry: false`; `gpt-4o-mini`; ADR `docs/adr-ask-model.md`) returns a route only. The palette calls it, runs `src/queries/` with membership scope, paints existing rows from `formatCents`, and shows a working line from provenance. A `none` route refuses honestly and may still show `planVsActual` / `jobSummary` figures the code already knows. Question history is `organizations/{orgId}/askHistory/{uid}/items/{id}` (question, routed choice, provenance, snapshot cents; no model prose). CI evals: 66 cases, 19 `none`, no live OpenAI key. `answerFromDocuments` quotes a verbatim slice of `files/{id}/content/text` (scan/`none` and `error` are unreadable; weak match offers the file). Production untouched (no `askRisingAmp`). No hosting. Part G is next.
+- **Phase 14:** open on `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` (`0dfcb51`). **Parts A–G done.** Router callable `askRisingAmp` (`retry: false`; `gpt-4o-mini`; ADR `docs/adr-ask-model.md`) returns a route only. The palette calls it, runs `src/queries/` with membership scope, paints existing rows from `formatCents`, and shows a working line from provenance. A `none` route refuses honestly and may still show `planVsActual` / `jobSummary` figures the code already knows. Question history is `organizations/{orgId}/askHistory/{uid}/items/{id}` (question, routed choice, provenance, snapshot cents, code-assigned `refusalReason`; no model prose). CI evals: 68 cases, 21 `none`, no live OpenAI key. `answerFromDocuments` quotes a verbatim slice of `files/{id}/content/text` (scan/`none` and `error` are unreadable; weak match offers the file). Teaching refusals: `nothing_coded` / `unreadable_file` / `fact_missing` / `out_of_scope` assigned in code after the query. Staging Firestore rules allow `answerFromDocuments` history and `refusalReason`. Production untouched (no `askRisingAmp`). No hosting. Next is Phase 14 DoD / merge. Do not start Phase 15 until merged.
 - **Part A1:** committed `5e78dd7`. Initial JS gzip **268.3 KB**.
 - **Part A2:** accepted. `cabc330` + docs-only apply record `b031ee3`. Independent proof: typecheck/test/test:rules/build, gzip **268.3 KB**, staging dry-run `0 write(s) planned`. Two-commit nit noted, not a reject.
 - **Part B:** accepted `649a518`. Independent proof: typecheck, 255+40 tests, rules, build, gzip **268.3 KB**. Staging: function `maintainLedgerRollup` updated, Firestore rules released, recompute **5** writes (3 job repairs + 2 org creates). Second dry-run: `0 write(s) planned`. Schema v1. Production untouched; the recompute script refuses `--production`.
@@ -69,12 +70,13 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 - **Phase 14 Part C done.** Working line from query provenance (query, params, rollup revision or row count). Uncoded pool still has Code them. Capped results say incomplete (`—`, not a partial total). `none` names the limit and, with a job and a plan, still shows estimated vs spent from `planVsActual`. Model digits in the reason are ignored. No 40 evals. No production.
 - **Phase 14 Part D done.** Per-user Ask history at `organizations/{orgId}/askHistory/{uid}/items/{id}`. Saves after a successful Ask (including `none`). Stores question, routed query+params, provenance, snapshot cents from `src/queries/`. Does not store model `sentence` / `reason`. Palette: list, reopen from snapshot, delete one, clear all. Rules: own uid; a second member cannot read; chat blobs rejected; own delete allowed. Staging Firestore rules after this commit. No production. No evals.
 - **Phase 14 Part E done.** 63 routing evals in CI (19 `none`), injection and membership tests, byte-identical cents, tokens/latency placeholders in `ARCHITECTURE.md`. Prompt: question/file/notes are data. No live key for `npm test`. No `answerFromDocuments`. No production.
-- **Phase 14 Part F done.** `answerFromDocuments` quotes stored `content/text` verbatim (file identity + character position). Scans/`none` and `error` are unreadable, not guessed. Weak match offers the file. Palette quote + file row opens JobFileViewer. Classifier: contract-say questions route here; “how much did concreting cost” / “how much on concreting” stay `spendByTrade`; “legal advice on the HIA contract” stays `none` (19 none still). Fetch stays in the query chunk. Typecheck, 325+143 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 400). Staging `askRisingAmp` allow-list updated (deploy by name after this commit). No production. Part G not started.
+- **Phase 14 Part F done.** `answerFromDocuments` quotes stored `content/text` verbatim (file identity + character position). Scans/`none` and `error` are unreadable, not guessed. Weak match offers the file. Palette quote + file row opens JobFileViewer. Classifier: contract-say questions route here; “how much did concreting cost” / “how much on concreting” stay `spendByTrade`; “legal advice on the HIA contract” stays `none`. Fetch stays in the query chunk. Typecheck, 325+143 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 400). Staging `askRisingAmp` allow-list updated (deploy by name after this commit). No production.
+- **Phase 14 Part G done.** Teaching refusals with a code-assigned `refusalReason` (`fact_missing`, `nothing_coded`, `unreadable_file`, `out_of_scope`). The model still only routes. Zero coded spend/plan is not a `$0.00` success. Unreadable scans keep the file row and invent no quote. Job-fact wording on `none` names the gap and does not write. Out of scope names the nearest honest question; `planVsActual` estimated/spent from code still show; model `$99,999` is stripped. History stores the enum; copy is derived in code; `reason` / `sentence` still rejected. Firestore rules allow `answerFromDocuments` on the choice. Staging Firestore rules after this commit. Typecheck, 338+145 tests, rules, build. Initial JS gzip **270.1 KB** (ceiling 400). No functions deploy. No production. No Phase 15/16.
 - **Dependency rule:** root Vite `package.json` takes **no new packages**. Functions may add **one** PDF-text library (`unpdf@1.8.1`). It is not imported from `src/`. It does not change initial JS gzip. No OpenAI SDK.
 
 ## Current branch
 
-`phase-14-ask` — Phase 14 Ask, **Parts A–F done, Part G not started**, **not on production**. Parent: `phase-13-query-layer` (Parts A1–E plus blockers closed on staging). Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE14.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-14-ask` — Phase 14 Ask, **Parts A–G done**, **not on production**. Parent: `phase-13-query-layer` (Parts A1–E plus blockers closed on staging). Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE14.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase14-2026-09-07` (this phase, before code; SHA `0dfcb51`), `pre-phase13-2026-09-06`, `pre-phase12-2026-09-05`, `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -86,7 +88,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 **Phase 12 is closed and live on production hosting (6 Sep 2026).** `firebase deploy --project production --only hosting`. No functions, Firestore rules or Storage. Branch `phase-12-fables-upgrade`. Scan a receipt on Add expense is a white `--surface` card (was `steel-900`); verified on localhost as Lalit, 72 Centenary Dr, `rgb(255, 255, 255)`. Typecheck, 254 tests, build **267.9 KB** gzip (ceiling 275). Front-end only: no rules, functions, schema or data writes. Full detail: `PHASE12.md`. Ultrareview PRs #1–#4 were closed unused; the empty-base branches are gone.
 
-**Next:** Phase 14 Part G on `phase-14-ask` (refusal reason codes). Parts A–F are **done**. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Do not deploy Phase 13 or 14 to production until he names the project and surface. Optional leftover: force-close the home-screen app twice so the Phase 12 worker is in.
+**Next:** Phase 14 DoD / merge on `phase-14-ask`. Parts A–G are **done**. Do not start Phase 15 until this branch is merged. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Do not deploy Phase 13 or 14 to production until he names the project and surface. Optional leftover: force-close the home-screen app twice so the Phase 12 worker is in.
 
 **Phase 11 Parts A–E are live on production (5 Sep 2026).** Function `maintainLedgerRollup`, Part E Firestore rules, `ledgerRollup/current` for both production jobs, and hosting (`index-BTUZ3uws.js` on https://risingamp.com.au). Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview.
 
@@ -108,7 +110,7 @@ Serial round trips from sign-in to a painted Jobs list: nine down to three on tw
 
 Part E initial JS gzip **272.7 KB**. That phase held **275 KB** (moved 250 → 275 in Part B because IndexedDB persistence cannot be split out of `firebase/firestore`). Owner raised the held ceiling to **400 KB** on 7 Sep 2026; the build still fails on breach. Part D was **272.6 KB**. Part C was **272.5 KB**. Part B was **270.0 KB**.
 
-**Not done, and next:** Phase 14 Part G (a refusal that names what is missing). Parts A–F are done. 400 KB remains the held ceiling. The build still fails on breach. Optional: phone force-close twice for the Phase 12 worker; Overview vs History on a known job.
+**Not done, and next:** Phase 14 DoD / merge. Parts A–G are done. Do not start Phase 15 until merged. 400 KB remains the held ceiling. The build still fails on breach. Optional: phone force-close twice for the Phase 12 worker; Overview vs History on a known job.
 
 **Geography, for context:** Firestore and Cloud Functions are `us-central1`. Production has six functions, including `maintainLedgerRollup`. Sydney to Iowa is ~200 ms per round trip against ~10 ms for `australia-southeast1`. A Firestore location is permanent, so moving it is a new project plus a live-data migration and is out of scope. Moving the functions alone would make the database-heavy ones slower. The only lever is fewer round trips and better caching.
 
@@ -200,6 +202,7 @@ a pasted API key.
 3. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; money-field migration; dismantle remaining AppContext ledger/directory blob.
 4. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
 5. Offline queue / queued writes — still its own phase. The Part A worker caches the shell only.
+6. **Phase 14 DoD / merge** — Parts A–G are done on `phase-14-ask`. Do not start Phase 15 until merged. Production still the original six functions.
 
 ## Next
 
@@ -252,7 +255,8 @@ a pasted API key.
 - [x] Phase 14 Part C — working line, uncoded pool, honest refusal
 - [x] Phase 14 Part D — question history
 - [x] Phase 14 Part E — evals and guardrails
-- [ ] Phase 14 Part F — answer from a document
+- [x] Phase 14 Part F — answer from a document
+- [x] Phase 14 Part G — a refusal that names what is missing
 
 ## What shipped (localhost / staging)
 
