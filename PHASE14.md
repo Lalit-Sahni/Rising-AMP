@@ -114,6 +114,35 @@ Commit: `Add the eval set, injection and scope tests for the router.`
 
 ---
 
+---
+
+## Part F — Answer from a document, not just find it
+
+**Added 8 Sep 2026 after the owner used it.** `findFiles` returns `{ name, note, matchedOn, snippet }`. So even when the text exists, Ask hands over the document and a 160-character snippet and leaves the reading to the user. No query anywhere reads a document and returns an answer from it, which is why "what does the contract say about retention" does not work despite being in the vision mockup.
+
+1. A new read-only query, `answerFromDocuments(jobId?, question)`. It retrieves the passages that match, and returns **quoted text with the file it came from**, never a paraphrase.
+2. **The quote is verbatim.** The model may choose which passage answers the question and write one sentence around it. It may not rewrite the passage, summarise a figure out of it, or do any arithmetic on it. Same rule as everywhere else: the model routes and phrases, it never computes.
+3. Return the file, and the page or position when the extractor knows it, so the user can open it and see the sentence in place.
+4. When the match is weak, say so and offer the file rather than dressing up a guess.
+5. `textStatus` must reach the answer. If the only relevant file is a scan with no text layer, the honest response is "the site plan is a scan, so I cannot read it", not silence.
+
+Commit: `Answer from what a document says, with the passage quoted.`
+
+---
+
+## Part G — A refusal that teaches
+
+A refusal that only apologises is a dead end. Every refusal should name what is missing and offer the way to fix it.
+
+- Fact not recorded: *"I do not know the floor area. It is not recorded on this job."* with an action to add it once. After Phase 16 that action writes to the job facts record.
+- Nothing coded: *"No expenses are coded to concreting yet, so there is nothing to compare against the estimate."* with a link to code them.
+- File unreadable: *"The site plan is a scan with no text layer, so I cannot read it."* with the file.
+- Outside scope: name the nearest question it can actually answer.
+
+Every refusal returns a machine-readable reason (`fact_missing`, `nothing_coded`, `unreadable_file`, `out_of_scope`) so the UI renders the right action and the question history records why.
+
+Commit: `Make a refusal name what is missing and how to fix it.`
+
 ## Decisions to bring to the owner, not take alone
 
 - **The bundle ceiling.** 400 KB is the held ceiling (owner, 7 Sep 2026; currently 270.1 KB). This phase adds UI. Prefer smaller when free. The build still fails on breach.
