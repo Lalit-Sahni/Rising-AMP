@@ -500,8 +500,8 @@ describe('runAction registry', () => {
     expect(store.expenseWriteCount).toBe(0);
   });
 
-  test('runnable names are codeExpense, createExpense and undoAction', () => {
-    expect(ACTION_NAMES).toEqual(['codeExpense', 'createExpense', 'undoAction']);
+  test('runnable names are codeExpense, createExpense, codeExpenseBatch and undoAction', () => {
+    expect(ACTION_NAMES).toEqual(['codeExpense', 'createExpense', 'codeExpenseBatch', 'undoAction']);
   });
 });
 
@@ -536,6 +536,14 @@ describe('action layer stays off first paint and never talks to OpenAI', () => {
     expect(host).not.toContain("from './actions");
     expect(host).not.toContain("from '../actions");
     expect(host).not.toContain('assistantReceipts');
+  });
+
+  test('Cost Plan lazy-loads the sort-to-plan sheet', () => {
+    const page = read('src/components/pages/CostPlanPage.tsx');
+    expect(page).not.toMatch(/from ['"][^'"]*actions/);
+    expect(page).not.toContain('codeExpenseBatch');
+    expect(page).toContain("lazy(() => import('../costPlan/ProposeTradesSheet'))");
+    expect(page).toContain("searchParams.get('code')");
   });
 
   test('Add expense lazy-loads the file-this flow', () => {

@@ -80,6 +80,8 @@ A bulk coding pass over uncoded expenses on a job.
 
 Party history is the strongest signal here and it only exists because Phase 13 gave parties stable ids. It is worth saying why that matters: coding by supplier history is evidence, coding by keyword in a description is a guess.
 
+**Part C done.** Uncoded expenses on a job get a reviewable trade proposal from evidence, never a model: party history on this org (unique leader, count ≥ 2 → `record` / confident), then a cost-plan section as a whole word or listed alias (`concrete` → Concreting; `inferred` / uncertain), then a `trade` category whose `tradeName` exact-matches the trade list (`inferred` / uncertain). No 6-character prefix match (`electronic lock` is not Electrical). No evidence stays uncoded. Already-coded rows are omitted. The Cost Plan sheet shows the whole set (ready to accept / uncertain / still uncoded) before any write. Accept all is the confident set only. Writes go through `codeExpense` per row plus a parent `codeExpenseBatch` receipt; Undo-all restores every child `tradeId`. Palette “Code them” opens the sheet (`?code=1`). Lazy-loaded off first paint. `ASK_PROMPT` still does not emit this action. Schema in the repo; not deployed. Production untouched.
+
 Commit: `Propose trades for uncoded expenses, in one reviewable pass.`
 
 ---

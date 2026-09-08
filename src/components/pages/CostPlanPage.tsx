@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, Paperclip, Pencil, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useCostPlan, useCostPlanQuotes, useTradeList } from '../../hooks/useCostPlan';
@@ -8,6 +9,7 @@ import {
   deriveCostPlanBoard,
   deriveCostPlanProgressFromSpent,
   hasActiveCostPlan,
+  listUncodedExpenses,
   planHasTrades,
   quotesForTrade,
   tradeStatusLabel,
@@ -28,6 +30,8 @@ import type { CostPlanQuote, JobFile } from '../../domain/schemas';
 import { expenseDisplayName, formatExpenseDay } from '../../domain/expenseDisplay';
 import { quoteFileIds } from '../../domain/quoteFiles';
 import { getExpenseTotalCents } from '../../utils/jobMetrics';
+
+const ProposeTradesSheet = lazy(() => import('../costPlan/ProposeTradesSheet'));
 
 function formatBaselineDate(value: string) {
   const date = ymdToLocalDate(value);
@@ -73,7 +77,9 @@ export default function CostPlanPage() {
     expensesLoaded,
     showToast,
     codeExpenseTrade,
+    allowedJobs,
   } = useApp();
+  const [searchParams, setSearchParams] = useSearchParams();
   const planQuery = useCostPlan(orgId, jobId);
   const tradeQuery = useTradeList(orgId);
   const quotesQuery = useCostPlanQuotes(orgId, jobId, planHasTrades(planQuery.data));
@@ -87,6 +93,7 @@ export default function CostPlanPage() {
   const [editingQuote, setEditingQuote] = useState<CostPlanQuote | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [jobFiles, setJobFiles] = useState<JobFile[]>([]);
+  const [codeSheetOpen, setCodeSheetOpen] = useState(false);
 
   useEffect(() => {
     setJobFiles([]);
@@ -94,6 +101,20 @@ export default function CostPlanPage() {
 
   const plan = planQuery.data;
   const trades = useMemo(() => activeTrades(tradeQuery.data || []), [tradeQuery.data]);
+  const uncodedCount = useMemo(() => listUncodedExpenses(expenses || []).length, [expenses]);
+  const sections = useMemo(
+    () => (plan?.sections || []).map((section) => ({ id: section.tradeId, name: section.name })),
+    [plan],
+  );
+
+  useEffect(() => {
+    if (searchParams.get('code') !== '1') return;
+    if (uncodedCount <= 0) return;
+    setCodeSheetOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('code');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, uncodedCount, setSearchParams]);
   const quotes = quotesQuery.data || [];
   const totals = useMemo(
     () => resolveExpenseTotals({
@@ -132,6 +153,22 @@ export default function CostPlanPage() {
     setQuoteOpen(true);
   };
 
+  const codeSheet = jobId && codeSheetOpen ? (
+    <Suspense fallback={null}>
+      <ProposeTradesSheet
+        open={codeSheetOpen}
+        orgId={orgId || ''}
+        jobId={jobId}
+        allowedJobs={allowedJobs}
+        expenses={expenses || []}
+        trades={trades.map((trade) => ({ id: trade.id, name: trade.name }))}
+        sections={sections}
+        onClose={() => setCodeSheetOpen(false)}
+        showToast={showToast}
+      />
+    </Suspense>
+  ) : null;
+
   if (!jobId) {
     return (
       <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
@@ -146,6 +183,7 @@ export default function CostPlanPage() {
         <div className="max-w-7xl mx-auto">
           <LoadingSkeleton type="job" lines={4} />
         </div>
+        {codeSheet}
       </div>
     );
   }
@@ -157,6 +195,7 @@ export default function CostPlanPage() {
         <div className="max-w-7xl mx-auto">
           <EmptyState title="Cost plan unavailable" body={message} actionLabel="Try again" onAction={() => planQuery.refetch()} />
         </div>
+        {codeSheet}
       </div>
     );
   }
@@ -185,6 +224,15 @@ export default function CostPlanPage() {
             >
               Import a bill of quantities
             </button>
+            {uncodedCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setCodeSheetOpen(true)}
+                className="inline-flex min-h-[44px] items-center justify-center px-3.5 py-2 rounded-ot-sm bg-surface border border-hairline text-[13px] font-bold"
+              >
+                Sort to cost plan
+              </button>
+            ) : null}
           </div>
         </div>
         <SetTargetCostSheet
@@ -209,6 +257,7 @@ export default function CostPlanPage() {
           onSaved={() => setImportOpen(false)}
           showToast={showToast}
         />
+        {codeSheet}
       </div>
     );
   }
@@ -253,6 +302,15 @@ export default function CostPlanPage() {
               <button type="button" onClick={() => setCategoriesOpen(true)} className="inline-flex min-h-[44px] items-center justify-center gap-2 px-3.5 py-2 rounded-ot-sm bg-surface border border-hairline text-[13px] font-bold">
                 <Pencil className="w-4 h-4" strokeWidth={1.7} />
                 Edit categories
+              </button>
+            ) : null}
+            {uncodedCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setCodeSheetOpen(true)}
+                className="inline-flex min-h-[44px] items-center justify-center px-3.5 py-2 rounded-ot-sm bg-surface border border-hairline text-[13px] font-bold"
+              >
+                Sort to cost plan
               </button>
             ) : null}
             {plan.status === 'draft' && planHasTrades(plan) ? (
@@ -429,9 +487,20 @@ export default function CostPlanPage() {
 
             {board.uncoded.count > 0 ? (
               <div className="border border-dashed border-[#D8A15A] rounded-ot px-4 py-3 bg-[#FBF6EE]">
-                <div className="font-extrabold text-[14px]">Uncoded</div>
-                <div className="text-[12px] text-slate-600 mt-0.5">
-                  {board.uncoded.count} expense{board.uncoded.count === 1 ? '' : 's'} · {formatCents(board.uncoded.spentCents, { whole: true })}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-extrabold text-[14px]">Uncoded</div>
+                    <div className="text-[12px] text-slate-600 mt-0.5">
+                      {board.uncoded.count} expense{board.uncoded.count === 1 ? '' : 's'} · {formatCents(board.uncoded.spentCents, { whole: true })}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCodeSheetOpen(true)}
+                    className="shrink-0 inline-flex min-h-[36px] items-center justify-center px-3 py-1.5 rounded-ot-sm bg-surface border border-hairline text-[12.5px] font-bold"
+                  >
+                    Sort to cost plan
+                  </button>
                 </div>
                 <div className="mt-3 space-y-2">
                   {board.uncoded.expenses.map((expense) => (
@@ -574,6 +643,7 @@ export default function CostPlanPage() {
         onClose={() => setCategoriesOpen(false)}
         showToast={showToast}
       />
+      {codeSheet}
     </div>
   );
 }

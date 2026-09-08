@@ -80,6 +80,10 @@ const PAGE_ROWS: Array<{ key: string; label: string; icon: typeof Clock; needsJo
   { key: 'profile', label: 'Your profile', icon: User, needsJob: false },
 ];
 
+function costPlanCodePath(jobId: string): string {
+  return `/jobs/${encodeURIComponent(jobId)}/cost-plan?code=1`;
+}
+
 function matches(haystack: string, needle: string): boolean {
   if (!needle) return true;
   const words = needle.split(/\s+/).filter(Boolean);
@@ -934,7 +938,7 @@ export default function CommandPalette() {
                             ? (event) => {
                               event.stopPropagation();
                               close();
-                              setCurrentPage('cost-plan', scopedJobId);
+                              navigate(costPlanCodePath(scopedJobId));
                             }
                             : undefined}
                           onOpenWorking={row.answer.working
@@ -956,10 +960,11 @@ export default function CommandPalette() {
                       >
                         <SpendAnswerBody
                           row={row.answer}
-                          onCodeThem={row.answer.kind === 'spend' && row.answer.affected
+                          onCodeThem={row.answer.kind === 'spend' && row.answer.affected && scopedJobId
                             ? (event) => {
                               event.stopPropagation();
-                              pick(row);
+                              close();
+                              navigate(costPlanCodePath(scopedJobId));
                             }
                             : undefined}
                           onOpenWorking={(event) => {

@@ -148,6 +148,7 @@ test('figures are still stripped from an action sentence', () => {
 test('action names are not query names', () => {
   expect(QUERY_NAMES).not.toContain('codeExpense');
   expect(QUERY_NAMES).not.toContain('createExpense');
+  expect(QUERY_NAMES).not.toContain('codeExpenseBatch');
   expect(QUERY_NAMES).not.toContain('undoAction');
 });
 

@@ -1,6 +1,7 @@
 /**
  * Undo an applied action from its receipt. Restores the previous tradeId
- * (including null), or voids a created expense. Never hard-deletes.
+ * (including null), or every child in a batch, or voids a created expense.
+ * Never hard-deletes.
  */
 import { z } from 'zod';
 import { resolveTargetJobIds } from '../queries/core';
@@ -47,6 +48,22 @@ export async function undoAction(input: unknown, store: ActionStore): Promise<Ac
       clearAssistantStamp: true,
       updatedAt: new Date(),
     });
+  }
+
+  if (receipt.status === 'applied' && receipt.undo.kind === 'restoreTradeIdBatch') {
+    for (const item of receipt.undo.items) {
+      const child = await undoAction({
+        scope,
+        receiptId: item.receiptId,
+        clientKey: `undo-${item.receiptId}`.slice(0, 128).padEnd(8, 'x'),
+      }, store);
+      if (child.ok) continue;
+      await store.updateExpense(scope.orgId, receipt.jobId, item.expenseId, {
+        tradeId: item.previousTradeId,
+        clearAssistantStamp: true,
+        updatedAt: new Date(),
+      });
+    }
   }
 
   if (receipt.status === 'applied' && receipt.undo.kind === 'voidExpense') {

@@ -10,7 +10,7 @@ import {
   type QueryScope,
 } from '../queries/core';
 
-export const ACTION_NAMES = ['codeExpense', 'createExpense', 'undoAction'] as const;
+export const ACTION_NAMES = ['codeExpense', 'createExpense', 'codeExpenseBatch', 'undoAction'] as const;
 export type ActionName = (typeof ACTION_NAMES)[number];
 
 export const NEVER_ACTIONS = [
@@ -58,6 +58,16 @@ export const undoPayloadSchema = z.discriminatedUnion('kind', [
     previousTradeId: z.string().min(1).max(80).nullable(),
   }),
   z.object({
+    kind: z.literal('restoreTradeIdBatch'),
+    items: z.array(
+      z.object({
+        expenseId: z.string().min(1).max(128),
+        previousTradeId: z.string().min(1).max(80).nullable(),
+        receiptId: z.string().min(1).max(128),
+      }).strict(),
+    ).max(80),
+  }),
+  z.object({
     kind: z.literal('voidExpense'),
     expenseId: z.string().min(1).max(128),
   }),
@@ -71,6 +81,8 @@ export const documentIdsSchema = z
   .object({
     expenseId: z.string().min(1).max(128).optional(),
     receiptId: z.string().min(1).max(128).optional(),
+    expenseIds: z.array(z.string().min(1).max(128)).max(80).optional(),
+    receiptIds: z.array(z.string().min(1).max(128)).max(80).optional(),
   })
   .strict();
 

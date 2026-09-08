@@ -244,7 +244,10 @@ describe('command palette answers', () => {
     expect(rows).toContain("row.kind === 'none'");
     expect(rows).toContain('Worked out by');
     expect(rows).toContain('Code them');
+    expect(read('src/components/CommandPalette.tsx')).toContain('cost-plan?code=1');
     const runAsk = read('src/components/palette/runAsk.ts');
+    expect(runAsk).toContain("if ('action' in raw)");
+    expect(runAsk).toContain("query: 'none'");
     expect(runAsk).toContain('loadRelatedForNone');
     expect(runAsk).toContain('shouldUsePlanForNone');
     expect(runAsk).toContain('fetchPlanVsActual');

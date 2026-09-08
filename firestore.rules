@@ -775,7 +775,7 @@ service cloud.firestore {
         function evidenceOk(e) {
           return e.keys().hasOnly([
               'tradeId', 'expenseId', 'receiptId', 'jobId',
-              'date', 'amount', 'party', 'gst'
+              'date', 'amount', 'party', 'gst', 'batch'
             ])
             && (!e.keys().hasAny(['tradeId']) || fieldEvidenceOk(e.tradeId))
             && (!e.keys().hasAny(['expenseId']) || fieldEvidenceOk(e.expenseId))
@@ -784,23 +784,42 @@ service cloud.firestore {
             && (!e.keys().hasAny(['date']) || fieldEvidenceOk(e.date))
             && (!e.keys().hasAny(['amount']) || fieldEvidenceOk(e.amount))
             && (!e.keys().hasAny(['party']) || fieldEvidenceOk(e.party))
-            && (!e.keys().hasAny(['gst']) || fieldEvidenceOk(e.gst));
+            && (!e.keys().hasAny(['gst']) || fieldEvidenceOk(e.gst))
+            && (!e.keys().hasAny(['batch']) || fieldEvidenceOk(e.batch));
+        }
+
+        function stringIdList(value, maxItems, maxLen) {
+          return value is list
+            && value.size() <= maxItems
+            && (value.size() == 0 || stringId(value[0], maxLen));
         }
 
         function documentIdsOk(d) {
-          return d.keys().hasOnly(['expenseId', 'receiptId'])
+          return d.keys().hasOnly(['expenseId', 'receiptId', 'expenseIds', 'receiptIds'])
             && (!d.keys().hasAny(['expenseId']) || stringId(d.expenseId, 128))
-            && (!d.keys().hasAny(['receiptId']) || stringId(d.receiptId, 128));
+            && (!d.keys().hasAny(['receiptId']) || stringId(d.receiptId, 128))
+            && (!d.keys().hasAny(['expenseIds']) || stringIdList(d.expenseIds, 80, 128))
+            && (!d.keys().hasAny(['receiptIds']) || stringIdList(d.receiptIds, 80, 128));
         }
 
         function undoOk(u) {
-          return u.keys().hasOnly(['kind', 'expenseId', 'previousTradeId'])
-            && u.kind in ['restoreTradeId', 'voidExpense', 'none']
-            && (!u.keys().hasAny(['expenseId']) || stringId(u.expenseId, 128))
+          return u.kind in ['restoreTradeId', 'voidExpense', 'none', 'restoreTradeIdBatch']
             && (
-              !u.keys().hasAny(['previousTradeId'])
-              || u.previousTradeId == null
-              || (u.previousTradeId is string && u.previousTradeId.size() <= 80)
+              u.kind == 'restoreTradeIdBatch'
+                ? (
+                  u.keys().hasOnly(['kind', 'items'])
+                  && u.items is list
+                  && u.items.size() <= 80
+                )
+                : (
+                  u.keys().hasOnly(['kind', 'expenseId', 'previousTradeId'])
+                  && (!u.keys().hasAny(['expenseId']) || stringId(u.expenseId, 128))
+                  && (
+                    !u.keys().hasAny(['previousTradeId'])
+                    || u.previousTradeId == null
+                    || (u.previousTradeId is string && u.previousTradeId.size() <= 80)
+                  )
+                )
             );
         }
 
@@ -825,7 +844,7 @@ service cloud.firestore {
             && request.resource.data.orgId == orgId
             && stringId(request.resource.data.jobId, 128)
             && request.resource.data.source == 'assistant'
-            && request.resource.data.action in ['codeExpense', 'createExpense', 'undoAction']
+            && request.resource.data.action in ['codeExpense', 'createExpense', 'codeExpenseBatch', 'undoAction']
             && request.resource.data.tier in ['do', 'propose', 'refuse']
             && request.resource.data.status in ['applied', 'proposed', 'refused', 'undone']
             && request.resource.data.clientKey is string

@@ -810,6 +810,37 @@ async function main() {
       undoneAt: new Date(),
     }));
 
+    const batchPath = `organizations/${ORG}/assistantReceipts/r-batch`;
+    await assertSucceeds(owner.firestore().doc(batchPath).set({
+      id: 'r-batch',
+      orgId: ORG,
+      jobId: JOB,
+      action: 'codeExpenseBatch',
+      source: 'assistant',
+      clientKey: 'client-key-batch-1',
+      tier: 'do',
+      status: 'applied',
+      evidence: {
+        batch: { source: 'record', value: '2' },
+      },
+      documentIds: {
+        expenseIds: ['e1', 'e3'],
+        receiptIds: ['r-child-1', 'r-child-2'],
+      },
+      undo: {
+        kind: 'restoreTradeIdBatch',
+        items: [
+          { expenseId: 'e1', previousTradeId: null, receiptId: 'r-child-1' },
+          { expenseId: 'e3', previousTradeId: null, receiptId: 'r-child-2' },
+        ],
+      },
+      createdAt: new Date(),
+    }));
+    await assertSucceeds(owner.firestore().doc(batchPath).update({
+      status: 'undone',
+      undoneAt: new Date(),
+    }));
+
     const storageRefPath = `files/${ORG}/${JOB}/f1/slab.pdf`;
     await assertSucceeds(
       owner.storage().ref(storageRefPath).put(Buffer.from('%PDF-1.4'), { contentType: 'application/pdf' }),
