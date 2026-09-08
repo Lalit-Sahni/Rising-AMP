@@ -254,6 +254,20 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
   }, [isOpen, expenseId, jobId]);
 
   useEffect(() => {
+    if (!isOpen || !expenseId || !jobId) return undefined;
+    if (String(initialData?.source || '') !== 'assistant') return undefined;
+    if (initialData?.assistantConfirmed === true) return undefined;
+    let cancelled = false;
+    import('../firebase/expenseTrade').then(({ setExpenseAssistantConfirmed }) => {
+      if (cancelled) return;
+      return setExpenseAssistantConfirmed(jobId, expenseId);
+    }).catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, expenseId, jobId, initialData?.source, initialData?.assistantConfirmed]);
+
+  useEffect(() => {
     if (!isOpen) return undefined;
     const root = dialogRef.current;
     if (!root) return undefined;
@@ -605,6 +619,13 @@ const ExpenseModal = ({ isOpen, onClose, category: categoryProp, initialData, ex
         expenseData.tradeId = INVESTOR_TRADE_ID;
       } else if (showTradeCoding) {
         expenseData.tradeId = tradeId || null;
+      }
+      if (isEditMode && initialData && initialData.source === 'assistant') {
+        expenseData.assistantConfirmed = true;
+        if (initialData.assistantReceiptId) {
+          expenseData.assistantReceiptId = initialData.assistantReceiptId;
+        }
+        expenseData.source = 'assistant';
       }
 
       if (isEditMode && expenseHasReceipt(initialData) && !receiptFile) {

@@ -95,6 +95,8 @@ Autonomy without a record is unacceptable on a live business ledger.
 - **A daily line in "what needs you today"**: "The assistant added 4 expenses and coded 11 yesterday. 2 need a look."
 - **Undo works after a reload, on any device, days later.** It is a stored receipt, not a client-side buffer.
 
+**Part D done.** Activity view at `/assistant-activity` (lazy): newest-first list of org `assistantReceipts` (applied / proposed / undone), with action, job, evidence summary, status, and Undo on applied. Undo calls `undoAction` with the stored receipt id through the Firestore store, so it still works after a reload. Reachable from Profile, the sidebar footer, and a daily line in what needs you. History marks an assistant-touched live row with a quiet “Check” until `assistantConfirmed` is true (opening or saving in ExpenseModal). Daily line: “The assistant added N expenses and coded M yesterday. K need a look.” from receipts (`createdAt` yesterday, local calendar) plus unconfirmed scans; omitted when yesterday’s counts are zero (the Part B unconfirmed-scan line stays). List is `getDocs` then sort in memory — no `orderBy`, no composite index. Palette does not execute writes. Schema in the repo; not deployed. Production untouched.
+
 Commit: `Show everything the assistant did, with undo.`
 
 ---

@@ -31,6 +31,11 @@ describe('pathForPage', () => {
     expect(pageFromPath('/jobs/job-kelly/budget')).toBe('cost-plan');
     expect(pathForPage('budget-tracking', 'job-kelly')).toBe('/');
   });
+
+  test('assistant activity is an org page, not inside a job', () => {
+    expect(pathForPage('assistant-activity', 'job-kelly')).toBe('/assistant-activity');
+    expect(pageFromPath('/assistant-activity')).toBe('assistant-activity');
+  });
 });
 
 describe('showsJobTabBar', () => {
@@ -39,6 +44,7 @@ describe('showsJobTabBar', () => {
     expect(showsJobTabBar('history', 'job-kelly')).toBe(true);
     expect(showsJobTabBar('jobs', 'job-kelly')).toBe(false);
     expect(showsJobTabBar('profile', 'job-kelly')).toBe(false);
+    expect(showsJobTabBar('assistant-activity', 'job-kelly')).toBe(false);
     expect(showsJobTabBar('not-found', 'job-kelly')).toBe(false);
     expect(showsJobTabBar('dashboard', null)).toBe(false);
   });

@@ -19,6 +19,21 @@ export async function setExpenseTradeId(
   );
 }
 
+export async function setExpenseAssistantConfirmed(
+  jobId: string,
+  expenseId: string,
+): Promise<void> {
+  if (!jobId) throw new Error('Missing job');
+  if (!expenseId) throw new Error('Missing expense');
+  await updateDoc(
+    doc(db, 'organizations', getActiveOrgId(), 'projects', jobId, 'expenses', expenseId),
+    {
+      assistantConfirmed: true,
+      updatedAt: serverTimestamp(),
+    },
+  );
+}
+
 export async function setExpenseCategory(
   jobId: string,
   expenseId: string,

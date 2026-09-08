@@ -33,6 +33,7 @@ import { expenseDisplayName } from '../../domain/expenseDisplay';
 import { useCostPlan, useTradeList } from '../../hooks/useCostPlan';
 import { activeTrades, canCodeExpenses } from '../../domain/costPlan';
 import { parseCalendarDate } from '../../dates';
+import { assistantHistoryMarker } from '../../domain/assistantActivity';
 
 const DAY = new Intl.DateTimeFormat('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 
@@ -460,6 +461,7 @@ export default function HistoryPage() {
                 {rows.map((expense) => {
                   const style = getCategoryStyle(expense.category);
                   const name = expenseDisplayName(expense);
+                  const marker = assistantHistoryMarker(expense);
                   return (
                     <li key={expense.id} className="px-4 py-3">
                       <button
@@ -473,6 +475,9 @@ export default function HistoryPage() {
                               <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: style.hex }} />
                               <span className="text-[14px] font-bold text-ink truncate">{name}</span>
                               {expenseHasReceipt(expense) ? <Image className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : null}
+                              {marker.show ? (
+                                <span className="text-[11px] font-medium text-slate-400 shrink-0">{marker.label}</span>
+                              ) : null}
                             </div>
                             <div className="text-[12px] text-slate-400 mt-0.5 truncate">
                               {style.label} · {formatDay(expenseDate(expense))}
@@ -537,6 +542,7 @@ export default function HistoryPage() {
                     {rows.map((expense) => {
                       const open = expandedExpense === expense.id;
                       const colSpan = showTradeCoding && !showRecentlyDeleted ? 6 : 5;
+                      const marker = assistantHistoryMarker(expense);
                       return (
                         <React.Fragment key={expense.id}>
                           <tr
@@ -570,6 +576,9 @@ export default function HistoryPage() {
                                   >
                                     <Image className="w-3.5 h-3.5" />
                                   </button>
+                                ) : null}
+                                {marker.show ? (
+                                  <span className="text-[11px] font-medium text-slate-400 shrink-0">{marker.label}</span>
                                 ) : null}
                               </div>
                               {expense.paidBy ? <div className="text-xs text-slate-400 mt-0.5">Paid by {expense.paidBy}</div> : null}

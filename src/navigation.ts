@@ -1,6 +1,7 @@
 export const PAGE_PATHS = {
   jobs: '/',
   profile: '/profile',
+  'assistant-activity': '/assistant-activity',
 } as const;
 
 export function pathForPage(page: string, jobId: string | null | undefined): string {
@@ -9,6 +10,8 @@ export function pathForPage(page: string, jobId: string | null | undefined): str
       return '/';
     case 'profile':
       return '/profile';
+    case 'assistant-activity':
+      return '/assistant-activity';
     case 'dashboard':
       return jobId ? `/jobs/${jobId}` : '/';
     case 'add-expense':
@@ -34,6 +37,7 @@ export function pageFromPath(pathname: string): string {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === '/') return 'jobs';
   if (path === '/profile') return 'profile';
+  if (path === '/assistant-activity') return 'assistant-activity';
   // Pre-Phase 12 link. The route redirects onto the open job.
   if (path === '/clients') return 'client-manager';
   const match = path.match(/^\/jobs\/([^/]+)(?:\/(.*))?$/);
@@ -57,10 +61,10 @@ export function jobIdFromPath(pathname: string): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-/** Phone tab bar shows inside a job, never on Jobs home, Profile or a dead link. */
+/** Phone tab bar shows inside a job, never on Jobs home, Profile, activity or a dead link. */
 export function showsJobTabBar(page: string, jobId: string | null | undefined): boolean {
   if (!jobId) return false;
-  return page !== 'jobs' && page !== 'profile' && page !== 'not-found';
+  return page !== 'jobs' && page !== 'profile' && page !== 'assistant-activity' && page !== 'not-found';
 }
 
 export const JOB_TAB_BAR_ITEMS = [

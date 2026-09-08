@@ -70,6 +70,22 @@ function firestoreSafe<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+/**
+ * Family org: read the collection with getDocs, then sort createdAt in
+ * memory (newest 50). A composite index is not required.
+ */
+export async function listAssistantReceipts(orgId: string): Promise<ActionReceipt[]> {
+  const id = String(orgId || '').trim();
+  if (!id) return [];
+  const snap = await getDocs(receiptsCol(id));
+  const rows: ActionReceipt[] = [];
+  snap.docs.forEach((row) => {
+    const parsed = parseStoredReceipt(row.id, row.data() as Record<string, unknown>);
+    if (parsed) rows.push(parsed);
+  });
+  return rows;
+}
+
 export function parseStoredReceipt(id: string, data: Record<string, unknown>): ActionReceipt | null {
   const parsed = actionReceiptSchema.safeParse({
     ...data,

@@ -305,6 +305,48 @@ describe('undoAction', () => {
     expect(expense?.tradeId).toBe('concreting');
     expect(expense?.source).toBe('assistant');
   });
+
+  test('undo still works from a stored receipt shape after reload', async () => {
+    const store = seededStore();
+    const coded = await codeExpense({
+      scope: SCOPE,
+      jobId: 'job-a',
+      expenseId: 'exp-1',
+      tradeId: 'concreting',
+      clientKey: 'client-key-stored-undo',
+      evidence: { tradeId: { source: 'user', value: 'concreting' } },
+    }, store);
+    expect(coded.ok).toBe(true);
+    if (!coded.ok) return;
+    const serialized = JSON.parse(JSON.stringify({
+      ...coded.receipt,
+      createdAt: coded.receipt.createdAt.toISOString(),
+    }));
+    const afterReload = createMemoryActionStore();
+    afterReload.seedExpense(SCOPE.orgId, {
+      id: 'exp-1',
+      jobId: 'job-a',
+      tradeId: 'concreting',
+      source: 'assistant',
+      assistantReceiptId: serialized.id,
+    });
+    await afterReload.putReceipt({
+      ...serialized,
+      createdAt: new Date(serialized.createdAt),
+    });
+    const undone = await undoAction({
+      scope: SCOPE,
+      receiptId: serialized.id,
+      clientKey: 'undo-after-reload-1',
+    }, afterReload);
+    expect(undone.ok).toBe(true);
+    if (!undone.ok) return;
+    expect(undone.receipt.status).toBe('undone');
+    const expense = await afterReload.getExpense(SCOPE.orgId, 'job-a', 'exp-1');
+    expect(expense?.tradeId).toBe(null);
+    expect(expense?.source).toBeUndefined();
+    expect(expense?.assistantReceiptId).toBeUndefined();
+  });
 });
 
 describe('createExpense', () => {
@@ -552,6 +594,32 @@ describe('action layer stays off first paint and never talks to OpenAI', () => {
     expect(page).toContain("import('../../actions/fileThis')");
     const main = read('src/components/MainContent.js');
     expect(main).toContain("lazy(() => import('./pages/AddExpensePage'))");
+  });
+
+  test('activity view is lazy and lists receipts without orderBy', () => {
+    const main = read('src/components/MainContent.js');
+    expect(main).toContain("lazy(() => import('./pages/AssistantActivityPage'))");
+    expect(main).toContain('/assistant-activity');
+    const page = read('src/components/pages/AssistantActivityPage.tsx');
+    expect(page).toContain("import('../../actions/undoStored')");
+    expect(page).toContain("import('../../firebase/assistantReceipts')");
+    expect(page).not.toMatch(/from ['"][^'"]*undoStored/);
+    const adapter = read('src/firebase/assistantReceipts.ts');
+    expect(adapter).toContain('listAssistantReceipts');
+    expect(adapter).toContain('getDocs(receiptsCol(id))');
+    expect(adapter).not.toMatch(/orderBy\(/);
+    const dashboard = read('src/components/pages/DashboardPage.js');
+    expect(dashboard).toContain("import('../../firebase/assistantReceipts')");
+    expect(dashboard).not.toMatch(/from ['"][^'"]*actions/);
+    const history = read('src/components/pages/HistoryPage.js');
+    expect(history).toContain('assistantHistoryMarker');
+    const modal = read('src/components/ExpenseModal.jsx');
+    expect(modal).toContain('assistantConfirmed = true');
+    expect(modal).toContain('setExpenseAssistantConfirmed');
+    const sidebar = read('src/components/Sidebar.js');
+    expect(sidebar).toContain('assistant-activity');
+    const profile = read('src/components/pages/ProfilePage.js');
+    expect(profile).toContain('assistant-activity');
   });
 
   test('Toaster undo is optional', () => {

@@ -189,7 +189,19 @@ export default function Sidebar({ user, projectName, onLogout }) {
           })}
         </nav>
 
-        <div className={`mt-auto mx-3 mb-3 pt-3 border-t border-steel-700 flex items-center gap-1 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>
+        <div className={`mt-auto mx-3 mb-3 pt-3 border-t border-steel-700 ${isDesktopCollapsed ? 'md:hidden' : ''}`}>
+          <button
+            type="button"
+            onClick={() => handleNavClick('assistant-activity', false)}
+            className={`flex items-center w-full px-2 py-1.5 mb-1 rounded-ot-sm text-[12px] font-medium text-left transition-transform active:scale-[0.98]
+              ${currentPage === 'assistant-activity'
+                ? 'bg-steel-800 text-white'
+                : 'text-[#B4B9C1] hover:bg-steel-800 hover:text-[#EDEFF2]'
+              }`}
+          >
+            What the assistant did
+          </button>
+          <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => handleNavClick('profile', false)}
@@ -217,6 +229,7 @@ export default function Sidebar({ user, projectName, onLogout }) {
           >
             <LogOut className="w-4 h-4" strokeWidth={1.7} />
           </button>
+          </div>
         </div>
         </div>
       </aside>

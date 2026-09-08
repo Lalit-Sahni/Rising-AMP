@@ -15,6 +15,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const FilesPage = lazy(() => import('./pages/FilesPage'));
 const CostPlanPage = lazy(() => import('./pages/CostPlanPage'));
+const AssistantActivityPage = lazy(() => import('./pages/AssistantActivityPage'));
 
 function PageFallback() {
   return (
@@ -56,6 +57,7 @@ export default function MainContent() {
             <Route path="/jobs/:jobId/clients" element={<ClientManagerPage />} />
             <Route path="/clients" element={<LegacyClientsRedirect />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/assistant-activity" element={<AssistantActivityPage />} />
             <Route path="/privacy" element={<Navigate to="/privacy.html" replace />} />
             <Route path="/terms" element={<Navigate to="/terms.html" replace />} />
             <Route path="*" element={<NotFoundPage />} />

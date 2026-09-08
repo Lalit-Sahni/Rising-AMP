@@ -78,6 +78,7 @@ const PAGE_ROWS: Array<{ key: string; label: string; icon: typeof Clock; needsJo
   { key: 'hia-contract', label: 'HIA contracts', icon: FileCheck, needsJob: true },
   { key: 'jobs', label: 'All jobs', icon: Briefcase, needsJob: false },
   { key: 'profile', label: 'Your profile', icon: User, needsJob: false },
+  { key: 'assistant-activity', label: 'What the assistant did', icon: Clock, needsJob: false },
 ];
 
 function costPlanCodePath(jobId: string): string {

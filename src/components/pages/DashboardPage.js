@@ -16,6 +16,7 @@ import JobPeople from '../JobPeople';
 import EmptyState from '../EmptyState';
 import { fetchJobFiles } from '../../firebase/jobFiles';
 import { withFileAttention } from '../../domain/jobFileAttention';
+import { withAssistantDailyLine } from '../../domain/assistantActivity';
 import { withCostPlanAttention, deriveCostPlanProgressFromSpent, hasActiveCostPlan, planHasTrades } from '../../domain/costPlan';
 import { overlayExpenseTotals } from '../../domain/ledgerRollup';
 import { useCostPlan, useCostPlanQuotes } from '../../hooks/useCostPlan';
@@ -70,6 +71,7 @@ export default function DashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [showExport, setShowExport] = useState(false);
   const [jobFiles, setJobFiles] = useState([]);
+  const [assistantReceipts, setAssistantReceipts] = useState([]);
   const [targetSheetOpen, setTargetSheetOpen] = useState(false);
   const [costPlanSetupDismissed, setCostPlanSetupDismissed] = useState(false);
   const attentionRef = useRef(null);
@@ -110,6 +112,24 @@ export default function DashboardPage() {
     };
   }, [jobId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!orgId) {
+      setAssistantReceipts([]);
+      return undefined;
+    }
+    import('../../firebase/assistantReceipts').then(({ listAssistantReceipts }) => (
+      listAssistantReceipts(orgId)
+    )).then((rows) => {
+      if (!cancelled) setAssistantReceipts(rows || []);
+    }).catch(() => {
+      if (!cancelled) setAssistantReceipts([]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [orgId]);
+
   const metrics = useMemo(
     () => {
       const base = withFileAttention(
@@ -122,9 +142,12 @@ export default function DashboardPage() {
         quotes: quotesQuery.data || [],
         expensesCapped,
       });
-      return overlayExpenseTotals(withAttention, totals);
+      return withAssistantDailyLine(
+        overlayExpenseTotals(withAttention, totals),
+        { receipts: assistantReceipts, jobId, expenses },
+      );
     },
-    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped, jobKind, costPlanQuery.data, quotesQuery.data, totals]
+    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped, jobKind, costPlanQuery.data, quotesQuery.data, totals, assistantReceipts, jobId]
   );
   const planProgress = useMemo(
     () => (
@@ -458,7 +481,7 @@ export default function DashboardPage() {
                       <CalendarDays className="w-4 h-4" strokeWidth={1.7} />
                     ) : item.id === 'expenses-no-receipt' ? (
                       <Camera className="w-4 h-4" strokeWidth={1.7} />
-                    ) : item.id.startsWith('files') ? (
+                    ) : item.id.startsWith('files') || item.id === 'assistant-yesterday' ? (
                       <FileText className="w-4 h-4" strokeWidth={1.7} />
                     ) : (
                       <AlertTriangle className="w-4 h-4" strokeWidth={1.7} />
