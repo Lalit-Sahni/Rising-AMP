@@ -4,6 +4,7 @@
  */
 import { actionFailure, isNeverAction, type ActionResult } from './core';
 import { codeExpense } from './codeExpense';
+import { createExpense } from './createExpense';
 import type { ActionStore } from './store';
 import { undoAction } from './undo';
 
@@ -20,6 +21,7 @@ export async function runAction(
     return actionFailure('never_action', 'The assistant cannot do that.');
   }
   if (action === 'codeExpense') return codeExpense(input, store);
+  if (action === 'createExpense') return createExpense(input, store);
   if (action === 'undoAction') return undoAction(input, store);
   return actionFailure('unknown_action', 'That action is not on the list.');
 }

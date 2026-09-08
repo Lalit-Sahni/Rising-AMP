@@ -337,6 +337,23 @@ export function deriveAttentionItems({ expenses = [], invoices = [] } = {}, now 
     }
   }
 
+  const unconfirmedScan = liveExpenses.filter(
+    (expense) => expense.source === 'assistant' && expense.assistantConfirmed === false,
+  );
+  if (unconfirmedScan.length > 0) {
+    items.push({
+      id: 'expenses-assistant-unconfirmed',
+      page: 'history',
+      title:
+        unconfirmedScan.length === 1
+          ? '1 expense added by scan, not yet checked'
+          : `${unconfirmedScan.length} expenses added by scan, not yet checked`,
+      detail: 'Filed from a receipt. Open History and check the details.',
+      action: 'Review',
+      tone: 'neutral',
+    });
+  }
+
   const trend = deriveCategoryTrend(liveExpenses, now);
   if (trend) {
     items.push({

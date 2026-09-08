@@ -9,9 +9,16 @@ export type StoredExpense = {
   id: string;
   jobId: string;
   tradeId: string | null;
+  status?: string;
+  category?: string;
+  total?: number;
   source?: string;
   assistantReceiptId?: string;
+  assistantConfirmed?: boolean;
+  gstCents?: number;
+  partyId?: string;
   updatedAt?: Date;
+  [key: string]: unknown;
 };
 
 export type ExpenseWrite = {
@@ -21,6 +28,27 @@ export type ExpenseWrite = {
   /** Undo: drop source / assistantReceiptId rather than leaving a stale stamp. */
   clearAssistantStamp?: boolean;
   updatedAt: Date;
+};
+
+export type CreatedExpenseWrite = {
+  id: string;
+  jobId: string;
+  category: string;
+  source: 'assistant';
+  assistantReceiptId: string;
+  assistantConfirmed: false;
+  partyId?: string;
+  gstCents?: number;
+  receiptImagePath?: string;
+  receiptImageUrl?: string;
+  receiptUploadedAt?: string;
+  fields: Record<string, unknown>;
+};
+
+export type LinkedFile = {
+  id: string;
+  jobId: string;
+  linkedTo?: { kind: 'expense'; id: string };
 };
 
 export type ReceiptPatch = {
@@ -37,6 +65,14 @@ export type ActionStore = {
     expenseId: string,
     patch: ExpenseWrite,
   ): Promise<void>;
+  createExpense(orgId: string, jobId: string, expense: CreatedExpenseWrite): Promise<void>;
+  voidExpense(orgId: string, jobId: string, expenseId: string): Promise<void>;
+  linkFileToExpense?(
+    orgId: string,
+    jobId: string,
+    fileId: string,
+    expenseId: string,
+  ): Promise<void>;
   getReceipt(orgId: string, receiptId: string): Promise<ActionReceipt | null>;
   getReceiptByClientKey(orgId: string, clientKey: string): Promise<ActionReceipt | null>;
   putReceipt(receipt: ActionReceipt): Promise<void>;
@@ -47,6 +83,7 @@ export type MemoryActionStore = ActionStore & {
   expenseWriteCount: number;
   receiptWriteCount: number;
   receiptPatchCount: number;
+  fileLinkCount: number;
   seedExpense(orgId: string, expense: StoredExpense): void;
 };
 
@@ -62,10 +99,15 @@ function receiptKey(orgId: string, receiptId: string): string {
   return `${orgId}::${receiptId}`;
 }
 
+function fileKey(orgId: string, jobId: string, fileId: string): string {
+  return `${orgId}::${jobId}::file::${fileId}`;
+}
+
 export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org-1'): MemoryActionStore {
   const expenses = new Map<string, StoredExpense>();
   const receipts = new Map<string, ActionReceipt>();
   const byClientKey = new Map<string, string>();
+  const files = new Map<string, LinkedFile>();
   seed.forEach((row) => {
     expenses.set(expenseKey(orgId, row.jobId, row.id), { ...row });
   });
@@ -74,6 +116,7 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
     expenseWriteCount: 0,
     receiptWriteCount: 0,
     receiptPatchCount: 0,
+    fileLinkCount: 0,
     seedExpense(nextOrgId, expense) {
       expenses.set(expenseKey(nextOrgId, expense.jobId, expense.id), { ...expense });
     },
@@ -101,6 +144,50 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
       }
       expenses.set(key, next);
       store.expenseWriteCount += 1;
+    },
+    async createExpense(nextOrgId, jobId, expense) {
+      const key = expenseKey(nextOrgId, jobId, expense.id);
+      if (expenses.has(key)) return;
+      const row: StoredExpense = {
+        ...expense.fields,
+        id: expense.id,
+        jobId,
+        category: expense.category,
+        tradeId: null,
+        source: expense.source,
+        assistantReceiptId: expense.assistantReceiptId,
+        assistantConfirmed: expense.assistantConfirmed,
+      };
+      if (expense.partyId) row.partyId = expense.partyId;
+      if (expense.gstCents != null) row.gstCents = expense.gstCents;
+      if (expense.receiptImagePath) row.receiptImagePath = expense.receiptImagePath;
+      if (expense.receiptImageUrl) row.receiptImageUrl = expense.receiptImageUrl;
+      if (expense.receiptUploadedAt) row.receiptUploadedAt = expense.receiptUploadedAt;
+      expenses.set(key, row);
+      store.expenseWriteCount += 1;
+    },
+    async voidExpense(nextOrgId, jobId, expenseId) {
+      const key = expenseKey(nextOrgId, jobId, expenseId);
+      const current = expenses.get(key);
+      if (!current) throw new Error('expense_not_found');
+      if (String(current.status || '').toLowerCase() === 'void') return;
+      const statusBeforeVoid = String(current.status || 'active');
+      expenses.set(key, {
+        ...current,
+        status: 'void',
+        statusBeforeVoid,
+        voidedAt: new Date(),
+        updatedAt: new Date(),
+      });
+      store.expenseWriteCount += 1;
+    },
+    async linkFileToExpense(nextOrgId, jobId, fileId, expenseId) {
+      files.set(fileKey(nextOrgId, jobId, fileId), {
+        id: fileId,
+        jobId,
+        linkedTo: { kind: 'expense', id: expenseId },
+      });
+      store.fileLinkCount += 1;
     },
     async getReceipt(nextOrgId, receiptId) {
       const row = receipts.get(receiptKey(nextOrgId, receiptId));

@@ -42,6 +42,10 @@ export const expenseSchema = z
     reviewed: z.boolean().optional(),
     tradeId: z.string().min(1).max(80).nullable().optional(),
     partyId: z.string().max(80).nullable().optional(),
+    source: z.literal('assistant').optional(),
+    assistantReceiptId: z.string().max(128).optional(),
+    assistantConfirmed: z.boolean().optional(),
+    gstCents: z.number().int().nonnegative().optional(),
   })
   .passthrough();
 

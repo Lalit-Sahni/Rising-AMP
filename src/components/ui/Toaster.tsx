@@ -3,10 +3,16 @@ import { AlertTriangle, Check, Info, X } from 'lucide-react';
 
 export type ToastKind = 'success' | 'error' | 'warning' | 'info';
 
+export type ToastAction = {
+  label: string;
+  onClick: () => void;
+};
+
 export type Toast = {
   id: number;
   message: string;
   kind: ToastKind;
+  action?: ToastAction;
 };
 
 type ToasterProps = {
@@ -47,6 +53,19 @@ export default function Toaster({ toasts, onDismiss }: ToasterProps) {
               <Icon className="h-4 w-4" strokeWidth={2} />
             </span>
             <p className="min-w-0 flex-1 pt-[3px] text-[13px] font-semibold leading-snug text-ink">{toast.message}</p>
+            {toast.action ? (
+              <button
+                type="button"
+                onClick={() => {
+                  toast.action?.onClick();
+                  onDismiss(toast.id);
+                }}
+                className="-mt-0.5 shrink-0 rounded-ot-sm px-2.5 py-1.5 text-[12.5px] font-bold text-accent hover:bg-canvas"
+                style={{ minHeight: 32 }}
+              >
+                {toast.action.label}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => onDismiss(toast.id)}

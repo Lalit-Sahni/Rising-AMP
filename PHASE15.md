@@ -59,6 +59,8 @@ The pieces already exist. `readReceiptImage` reads it. `ExpenseModal` writes one
 
 **GST, and this is the one to get right.** If the invoice states GST, use the stated figure. Never divide by 11 to derive it. A derived tax figure that reaches an accountant is exactly the quietly-wrong number this product exists to prevent.
 
+**Part B done.** Dropped image receipts on Add expense run OCR, then `decideFileExpense` (Check-this flags, line-item reconcile, exact party match, stated GST only). `createExpense` is the only assistant write path for a new expense: uncoded (`tradeId` omitted), live, `source: 'assistant'`, `assistantConfirmed: false`, no `reviewed`. A toast Undo voids the row. Unknown vendor, thin OCR, or inferred GST propose — ExpenseModal opens with Check this. Stated `tax` stores `gstCents`; empty tax is omitted; derived GST is never stored and never divided by 11. PDF drops file as `invoiceReceived` and are not OCR’d. Palette still does not execute writes. `ASK_PROMPT` does not emit `createExpense`. Schema in the repo; not deployed. Production untouched.
+
 Commit: `Turn a dropped invoice into an expense, with a receipt and an undo.`
 
 ---

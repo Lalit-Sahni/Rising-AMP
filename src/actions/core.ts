@@ -10,7 +10,7 @@ import {
   type QueryScope,
 } from '../queries/core';
 
-export const ACTION_NAMES = ['codeExpense', 'undoAction'] as const;
+export const ACTION_NAMES = ['codeExpense', 'createExpense', 'undoAction'] as const;
 export type ActionName = (typeof ACTION_NAMES)[number];
 
 export const NEVER_ACTIONS = [

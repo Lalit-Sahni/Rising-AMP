@@ -6,6 +6,7 @@ import Toaster from '../components/ui/Toaster';
 const UIContext = createContext(null);
 
 const TOAST_MS = { success: 3200, info: 3600, warning: 5000, error: 6000 };
+const TOAST_ACTION_MS = 8000;
 const MAX_TOASTS = 3;
 
 export function UIProvider({ children, jobId }) {
@@ -38,17 +39,23 @@ export function UIProvider({ children, jobId }) {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const showToast = useCallback((message, type = 'info') => {
+  const showToast = useCallback((message, type = 'info', extras) => {
     const text = String(message || '').trim();
     if (!text) return;
     const kind = ['success', 'error', 'warning', 'info'].includes(type) ? type : 'info';
     const id = nextToastId.current++;
+    const action = extras && extras.action && typeof extras.action.onClick === 'function'
+      ? { label: String(extras.action.label || 'Undo'), onClick: extras.action.onClick }
+      : undefined;
     setToasts((current) => {
       // Same message twice in a row is one toast, not a stack of them.
       const withoutDuplicate = current.filter((toast) => toast.message !== text);
-      return [...withoutDuplicate, { id, message: text, kind }].slice(-MAX_TOASTS);
+      const next = { id, message: text, kind };
+      if (action) next.action = action;
+      return [...withoutDuplicate, next].slice(-MAX_TOASTS);
     });
-    const timer = setTimeout(() => dismissToast(id), TOAST_MS[kind]);
+    const ms = action ? TOAST_ACTION_MS : TOAST_MS[kind];
+    const timer = setTimeout(() => dismissToast(id), ms);
     timers.current.set(id, timer);
   }, [dismissToast]);
 

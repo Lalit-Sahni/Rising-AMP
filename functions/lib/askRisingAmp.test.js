@@ -412,9 +412,11 @@ test('unknown and never action names are rejected, not coerced to a query', () =
 
 test('prompt and schema still do not teach the model to emit actions', () => {
   assert.equal(ASK_PROMPT.includes('codeExpense'), false);
+  assert.equal(ASK_PROMPT.includes('createExpense'), false);
   assert.equal(ASK_PROMPT.includes('undoAction'), false);
   assert.match(ASK_PROMPT, /writes/);
   assert.equal(JSON.stringify(ASK_JSON_SCHEMA).includes('codeExpense'), false);
+  assert.equal(JSON.stringify(ASK_JSON_SCHEMA).includes('createExpense'), false);
   assert.equal(QUERY_NAMES.includes('codeExpense'), false);
 });
 

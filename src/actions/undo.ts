@@ -1,6 +1,6 @@
 /**
  * Undo an applied action from its receipt. Restores the previous tradeId
- * (including null). Never hard-deletes the expense or the receipt.
+ * (including null), or voids a created expense. Never hard-deletes.
  */
 import { z } from 'zod';
 import { resolveTargetJobIds } from '../queries/core';
@@ -47,6 +47,10 @@ export async function undoAction(input: unknown, store: ActionStore): Promise<Ac
       clearAssistantStamp: true,
       updatedAt: new Date(),
     });
+  }
+
+  if (receipt.status === 'applied' && receipt.undo.kind === 'voidExpense') {
+    await store.voidExpense(scope.orgId, receipt.jobId, receipt.undo.expenseId);
   }
 
   const undoneAt = new Date();

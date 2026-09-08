@@ -767,6 +767,48 @@ async function main() {
       total: 12,
       source: 'model',
     }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-scan`).set({
+      category: 'purchase',
+      total: 124.5,
+      supplier: 'Bunnings',
+      source: 'assistant',
+      assistantReceiptId: 'r-create',
+      assistantConfirmed: false,
+      gstCents: 1245,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-gst-bad`).set({
+      category: 'purchase',
+      total: 12,
+      gstCents: 12.45,
+    }));
+
+    const createReceiptPath = `organizations/${ORG}/assistantReceipts/r-create`;
+    await assertSucceeds(owner.firestore().doc(createReceiptPath).set({
+      id: 'r-create',
+      orgId: ORG,
+      jobId: JOB,
+      action: 'createExpense',
+      source: 'assistant',
+      clientKey: 'client-key-create-1',
+      tier: 'do',
+      status: 'applied',
+      evidence: {
+        date: { source: 'ocr', value: '2026-08-14' },
+        amount: { source: 'ocr', value: '12450' },
+        party: { source: 'record', value: 'party-1' },
+        gst: { source: 'ocr', value: '1245' },
+      },
+      documentIds: { expenseId: 'e-scan' },
+      undo: {
+        kind: 'voidExpense',
+        expenseId: 'e-scan',
+      },
+      createdAt: new Date(),
+    }));
+    await assertSucceeds(owner.firestore().doc(createReceiptPath).update({
+      status: 'undone',
+      undoneAt: new Date(),
+    }));
 
     const storageRefPath = `files/${ORG}/${JOB}/f1/slab.pdf`;
     await assertSucceeds(

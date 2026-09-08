@@ -332,6 +332,6 @@ Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache f
 
 ---
 
-## 17. Action layer (Phase 15 Part A — not on production)
+## 17. Action layer (Phase 15 — not on production)
 
-Phase 15 Part A adds a client action layer in `src/actions/`, beside the read-only query layer. The model still does not calculate. Tiers (`do` / `propose` / `refuse`) are decided in code from evidence; an inferred field never reaches do. Writes are receipted at `organizations/{orgId}/assistantReceipts/{id}` and undoable (restore the previous `tradeId`, never hard-delete). The one primitive is coding a single existing expense. NEVER actions (email, invoice numbers, invite, archive, delete, settings, spend) refuse. Not imported from `App.js` or `PaletteHost`. Schema is in the repo; staging and production are unchanged.
+Phase 15 adds a client action layer in `src/actions/`, beside the read-only query layer. The model still does not calculate. Tiers (`do` / `propose` / `refuse`) are decided in code from evidence; an inferred field never reaches do. Writes are receipted at `organizations/{orgId}/assistantReceipts/{id}` and undoable (restore the previous `tradeId`, or void a created expense — never hard-delete). Part A coded an existing expense. Part B creates an uncoded expense from a scanned receipt when supplier, amount and date are clean and a party matches exactly. GST is stored only when the invoice stated it (`gstCents`); it is never derived by dividing by 11. Palette does not execute writes. Not imported from `App.js` or `PaletteHost`. Schema is in the repo; staging and production are unchanged.

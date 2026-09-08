@@ -13,7 +13,7 @@ const CATEGORIES = [
   { key: 'investor', label: 'Investor',  icon: Landmark,  description: 'Land, legal and finance' },
 ];
 
-const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
+const OCRScanner = ({ onScanComplete, onClose, isOpen, initialFile }) => {
   const [isScanning, setIsScanning]     = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [error, setError]               = useState(null);
@@ -33,8 +33,15 @@ const OCRScanner = ({ onScanComplete, onClose, isOpen }) => {
   const ocrService = ocrServiceRef.current;
 
   useEffect(() => {
-    if (!isOpen) resetAll();
-  }, [isOpen]);
+    if (!isOpen) {
+      resetAll();
+      return undefined;
+    }
+    if (initialFile && String(initialFile.type || '').startsWith('image/')) {
+      processImage(initialFile);
+    }
+    return undefined;
+  }, [isOpen, initialFile]);
 
   useEffect(() => {
     if (!useCamera) return undefined;

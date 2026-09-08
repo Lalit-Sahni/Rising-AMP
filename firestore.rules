@@ -121,6 +121,15 @@ service cloud.firestore {
               && request.resource.data.assistantReceiptId.size() > 0
               && request.resource.data.assistantReceiptId.size() <= 128
             )
+          ) && (
+            !request.resource.data.keys().hasAny(['gstCents'])
+            || (
+              request.resource.data.gstCents is int
+              && request.resource.data.gstCents >= 0
+            )
+          ) && (
+            !request.resource.data.keys().hasAny(['assistantConfirmed'])
+            || request.resource.data.assistantConfirmed is bool
           );
         }
 
@@ -755,15 +764,27 @@ service cloud.firestore {
         function fieldEvidenceOk(field) {
           return field.keys().hasOnly(['source', 'value'])
             && field.source in ['user', 'record', 'ocr', 'inferred']
-            && (field.value == null || field.value is string);
+            && (
+              field.value == null
+              || field.value is string
+              || field.value is int
+              || field.value is float
+            );
         }
 
         function evidenceOk(e) {
-          return e.keys().hasOnly(['tradeId', 'expenseId', 'receiptId', 'jobId'])
+          return e.keys().hasOnly([
+              'tradeId', 'expenseId', 'receiptId', 'jobId',
+              'date', 'amount', 'party', 'gst'
+            ])
             && (!e.keys().hasAny(['tradeId']) || fieldEvidenceOk(e.tradeId))
             && (!e.keys().hasAny(['expenseId']) || fieldEvidenceOk(e.expenseId))
             && (!e.keys().hasAny(['receiptId']) || fieldEvidenceOk(e.receiptId))
-            && (!e.keys().hasAny(['jobId']) || fieldEvidenceOk(e.jobId));
+            && (!e.keys().hasAny(['jobId']) || fieldEvidenceOk(e.jobId))
+            && (!e.keys().hasAny(['date']) || fieldEvidenceOk(e.date))
+            && (!e.keys().hasAny(['amount']) || fieldEvidenceOk(e.amount))
+            && (!e.keys().hasAny(['party']) || fieldEvidenceOk(e.party))
+            && (!e.keys().hasAny(['gst']) || fieldEvidenceOk(e.gst));
         }
 
         function documentIdsOk(d) {
@@ -804,7 +825,7 @@ service cloud.firestore {
             && request.resource.data.orgId == orgId
             && stringId(request.resource.data.jobId, 128)
             && request.resource.data.source == 'assistant'
-            && request.resource.data.action in ['codeExpense', 'undoAction']
+            && request.resource.data.action in ['codeExpense', 'createExpense', 'undoAction']
             && request.resource.data.tier in ['do', 'propose', 'refuse']
             && request.resource.data.status in ['applied', 'proposed', 'refused', 'undone']
             && request.resource.data.clientKey is string

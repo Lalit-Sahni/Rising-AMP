@@ -21,7 +21,13 @@ import {
   asTradeId,
   type ActionReceipt,
 } from '../actions/core';
-import type { ActionStore, ExpenseWrite, ReceiptPatch, StoredExpense } from '../actions/store';
+import type {
+  ActionStore,
+  CreatedExpenseWrite,
+  ExpenseWrite,
+  ReceiptPatch,
+  StoredExpense,
+} from '../actions/store';
 import { db } from './config';
 
 export const ASSISTANT_RECEIPTS_COLLECTION = 'assistantReceipts';
@@ -36,6 +42,18 @@ function receiptRef(orgId: string, receiptId: string) {
 
 function expenseRef(orgId: string, jobId: string, expenseId: string) {
   return doc(db, 'organizations', orgId, 'projects', jobId, 'expenses', expenseId);
+}
+
+function fileRef(orgId: string, jobId: string, fileId: string) {
+  return doc(db, 'organizations', orgId, 'projects', jobId, 'files', fileId);
+}
+
+function definedFields(data: Record<string, unknown>) {
+  const out: Record<string, unknown> = {};
+  Object.entries(data || {}).forEach(([key, value]) => {
+    if (value !== undefined) out[key] = value;
+  });
+  return out;
 }
 
 function asDate(value: unknown): Date {
@@ -73,8 +91,13 @@ export function createFirestoreActionStore(): ActionStore {
         jobId,
         tradeId: asTradeId(data.tradeId),
       };
+      if (typeof data.status === 'string') row.status = data.status;
+      if (typeof data.category === 'string') row.category = data.category;
       if (typeof data.source === 'string') row.source = data.source;
       if (typeof data.assistantReceiptId === 'string') row.assistantReceiptId = data.assistantReceiptId;
+      if (typeof data.assistantConfirmed === 'boolean') row.assistantConfirmed = data.assistantConfirmed;
+      if (typeof data.gstCents === 'number') row.gstCents = data.gstCents;
+      if (typeof data.partyId === 'string') row.partyId = data.partyId;
       return row;
     },
     async updateExpense(orgId, jobId, expenseId, patch: ExpenseWrite) {
@@ -87,6 +110,41 @@ export function createFirestoreActionStore(): ActionStore {
             ...(patch.source ? { source: patch.source } : {}),
             ...(patch.assistantReceiptId ? { assistantReceiptId: patch.assistantReceiptId } : {}),
           }),
+      });
+    },
+    async createExpense(orgId, jobId, expense: CreatedExpenseWrite) {
+      await setDoc(expenseRef(orgId, jobId, expense.id), definedFields({
+        ...expense.fields,
+        id: expense.id,
+        jobId,
+        category: expense.category,
+        source: expense.source,
+        assistantReceiptId: expense.assistantReceiptId,
+        assistantConfirmed: expense.assistantConfirmed,
+        partyId: expense.partyId,
+        gstCents: expense.gstCents,
+        receiptImagePath: expense.receiptImagePath,
+        receiptImageUrl: expense.receiptImageUrl,
+        receiptUploadedAt: expense.receiptUploadedAt,
+        timestamp: serverTimestamp(),
+      }));
+    },
+    async voidExpense(orgId, jobId, expenseId) {
+      const snap = await getDoc(expenseRef(orgId, jobId, expenseId));
+      if (!snap.exists()) throw new Error('expense_not_found');
+      const current = String(snap.data()?.status || 'active');
+      if (current.toLowerCase() === 'void') return;
+      await updateDoc(expenseRef(orgId, jobId, expenseId), {
+        status: 'void',
+        statusBeforeVoid: current,
+        voidedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+    },
+    async linkFileToExpense(orgId, jobId, fileId, expenseId) {
+      await updateDoc(fileRef(orgId, jobId, fileId), {
+        linkedTo: { kind: 'expense', id: expenseId },
+        updatedAt: serverTimestamp(),
       });
     },
     async getReceipt(orgId, receiptId) {

@@ -171,6 +171,41 @@ describe('attention items', () => {
     expect(deriveAttentionItems({ expenses: used, invoices: [] }, now).some((item) => item.id === 'expenses-unreviewed')).toBe(true);
   });
 
+  test('flags unconfirmed assistant scan expenses without using reviewed', () => {
+    const oldPlusScan = [
+      { total: 10, category: 'purchase' },
+      {
+        total: 124.5,
+        category: 'purchase',
+        source: 'assistant',
+        assistantConfirmed: false,
+        assistantReceiptId: 'r1',
+      },
+    ];
+    expect(reviewedFieldInUse(oldPlusScan)).toBe(false);
+    const items = deriveAttentionItems({ expenses: oldPlusScan, invoices: [] }, now);
+    expect(items.some((item) => item.id === 'expenses-unreviewed')).toBe(false);
+    expect(items.find((item) => item.id === 'expenses-assistant-unconfirmed').title).toMatch(/1 expense added by scan/);
+
+    const codedByAssistant = [
+      { total: 10, category: 'trade', source: 'assistant', assistantReceiptId: 'r-code' },
+    ];
+    expect(deriveAttentionItems({ expenses: codedByAssistant, invoices: [] }, now)
+      .some((item) => item.id === 'expenses-assistant-unconfirmed')).toBe(false);
+
+    const voidedScan = [
+      {
+        total: 20,
+        category: 'purchase',
+        source: 'assistant',
+        assistantConfirmed: false,
+        status: 'void',
+      },
+    ];
+    expect(deriveAttentionItems({ expenses: voidedScan, invoices: [] }, now)
+      .some((item) => item.id === 'expenses-assistant-unconfirmed')).toBe(false);
+  });
+
   test('skips category trend when the sample is too small', () => {
     const expenses = [
       { category: 'purchase', total: 100, date: '2026-08-02' },

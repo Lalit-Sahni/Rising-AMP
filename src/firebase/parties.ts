@@ -181,7 +181,7 @@ function asPartyRecord(id: string, data: Record<string, unknown>): PartyRecord |
   };
 }
 
-async function listParties(): Promise<PartyRecord[]> {
+export async function listParties(): Promise<PartyRecord[]> {
   const snap = await getDocs(partiesCol());
   return snap.docs
     .map((row) => asPartyRecord(row.id, row.data() as Record<string, unknown>))

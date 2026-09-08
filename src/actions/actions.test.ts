@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ACTION_NAMES, NEVER_ACTIONS, assignTier } from './core';
 import { codeExpense } from './codeExpense';
+import { createExpense } from './createExpense';
 import { runAction } from './registry';
 import { createMemoryActionStore } from './store';
 import { undoAction } from './undo';
@@ -306,6 +307,163 @@ describe('undoAction', () => {
   });
 });
 
+describe('createExpense', () => {
+  const CREATE_KEY = 'client-key-create-1';
+
+  function createInput(overrides: Record<string, unknown> = {}) {
+    return {
+      scope: SCOPE,
+      jobId: 'job-a',
+      clientKey: CREATE_KEY,
+      id: 'exp-new',
+      category: 'purchase',
+      date: '2026-08-14',
+      supplier: 'Bunnings',
+      unitCost: 124.5,
+      quantity: 1,
+      total: 124.5,
+      partyId: 'party-bunnings',
+      evidence: {
+        date: { source: 'ocr', value: '2026-08-14' },
+        amount: { source: 'ocr', value: '12450' },
+        party: { source: 'record', value: 'party-bunnings' },
+      },
+      ...overrides,
+    };
+  }
+
+  test('a job that is not on the invited list does not write', async () => {
+    const store = createMemoryActionStore();
+    const result = await createExpense(createInput({ jobId: 'phase8-isolation' }), store);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('job_not_allowed');
+    expect(store.expenseWriteCount).toBe(0);
+    expect(store.receiptWriteCount).toBe(0);
+  });
+
+  test('direct OCR plus an exact party writes an uncoded live expense', async () => {
+    const store = createMemoryActionStore();
+    const result = await createExpense(createInput({ gstCents: 1245, evidence: {
+      date: { source: 'ocr', value: '2026-08-14' },
+      amount: { source: 'ocr', value: '12450' },
+      party: { source: 'record', value: 'party-bunnings' },
+      gst: { source: 'ocr', value: '1245' },
+    } }), store);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.tier).toBe('do');
+    expect(result.receipt.status).toBe('applied');
+    expect(result.receipt.action).toBe('createExpense');
+    expect(result.receipt.undo).toEqual({ kind: 'voidExpense', expenseId: 'exp-new' });
+    const expense = await store.getExpense(SCOPE.orgId, 'job-a', 'exp-new');
+    expect(expense?.tradeId).toBe(null);
+    expect(expense?.source).toBe('assistant');
+    expect(expense?.assistantConfirmed).toBe(false);
+    expect(expense?.assistantReceiptId).toBe(result.receipt.id);
+    expect(expense?.gstCents).toBe(1245);
+    expect(expense?.partyId).toBe('party-bunnings');
+    expect(expense?.reviewed).toBeUndefined();
+    expect(expense?.status).not.toBe('void');
+  });
+
+  test('unstated GST is omitted', async () => {
+    const store = createMemoryActionStore();
+    const result = await createExpense(createInput(), store);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.tier).toBe('do');
+    const expense = await store.getExpense(SCOPE.orgId, 'job-a', 'exp-new');
+    expect(expense?.gstCents).toBeUndefined();
+  });
+
+  test('inferred GST is not stored', async () => {
+    const store = createMemoryActionStore();
+    const result = await createExpense(createInput({
+      gstCents: 1000,
+      evidence: {
+        date: { source: 'ocr', value: '2026-08-14' },
+        amount: { source: 'ocr', value: '11000' },
+        party: { source: 'record', value: 'party-bunnings' },
+        gst: { source: 'inferred', value: '1000' },
+      },
+    }), store);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.tier).toBe('propose');
+    expect(store.expenseWriteCount).toBe(0);
+    expect(await store.getExpense(SCOPE.orgId, 'job-a', 'exp-new')).toBe(null);
+  });
+
+  test('unknown vendor proposes and does not write the ledger', async () => {
+    const store = createMemoryActionStore();
+    const result = await createExpense(createInput({
+      partyId: undefined,
+      evidence: {
+        date: { source: 'ocr', value: '2026-08-14' },
+        amount: { source: 'ocr', value: '12450' },
+        party: { source: 'inferred', value: 'create' },
+      },
+    }), store);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.receipt.tier).toBe('propose');
+    expect(result.receipt.undo.kind).toBe('none');
+    expect(store.expenseWriteCount).toBe(0);
+  });
+
+  test('the same clientKey writes once', async () => {
+    const store = createMemoryActionStore();
+    const first = await createExpense(createInput(), store);
+    const second = await createExpense(createInput({
+      supplier: 'Someone else',
+      unitCost: 50,
+    }), store);
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+    if (!first.ok || !second.ok) return;
+    expect(second.receipt.id).toBe(first.receipt.id);
+    expect(store.expenseWriteCount).toBe(1);
+    expect(store.receiptWriteCount).toBe(1);
+  });
+
+  test('rejects a tradeId on the input', async () => {
+    const store = createMemoryActionStore();
+    const result = await createExpense(createInput({ tradeId: 'concreting' }), store);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('invalid_input');
+    expect(store.expenseWriteCount).toBe(0);
+  });
+
+  test('undo voids the expense, and a second undo is a no-op', async () => {
+    const store = createMemoryActionStore();
+    const created = await createExpense(createInput(), store);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const first = await undoAction({
+      scope: SCOPE,
+      receiptId: created.receipt.id,
+      clientKey: 'undo-create-1xx',
+    }, store);
+    expect(first.ok).toBe(true);
+    if (!first.ok) return;
+    expect(first.receipt.status).toBe('undone');
+    const voided = await store.getExpense(SCOPE.orgId, 'job-a', 'exp-new');
+    expect(voided?.status).toBe('void');
+    expect(voided?.source).toBe('assistant');
+    const writes = store.expenseWriteCount;
+    const second = await undoAction({
+      scope: SCOPE,
+      receiptId: created.receipt.id,
+      clientKey: 'undo-create-2xx',
+    }, store);
+    expect(second.ok).toBe(true);
+    expect(store.expenseWriteCount).toBe(writes);
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-new'))?.status).toBe('void');
+  });
+});
+
 describe('runAction registry', () => {
   test('NEVER actions refuse with no write', async () => {
     const store = seededStore();
@@ -342,8 +500,8 @@ describe('runAction registry', () => {
     expect(store.expenseWriteCount).toBe(0);
   });
 
-  test('runnable names are only codeExpense and undoAction', () => {
-    expect(ACTION_NAMES).toEqual(['codeExpense', 'undoAction']);
+  test('runnable names are codeExpense, createExpense and undoAction', () => {
+    expect(ACTION_NAMES).toEqual(['codeExpense', 'createExpense', 'undoAction']);
   });
 });
 
@@ -378,5 +536,32 @@ describe('action layer stays off first paint and never talks to OpenAI', () => {
     expect(host).not.toContain("from './actions");
     expect(host).not.toContain("from '../actions");
     expect(host).not.toContain('assistantReceipts');
+  });
+
+  test('Add expense lazy-loads the file-this flow', () => {
+    const page = read('src/components/pages/AddExpensePage.js');
+    expect(page).not.toMatch(/from ['"][^'"]*actions/);
+    expect(page).toContain("import('../../actions/fileThis')");
+    const main = read('src/components/MainContent.js');
+    expect(main).toContain("lazy(() => import('./pages/AddExpensePage'))");
+  });
+
+  test('Toaster undo is optional', () => {
+    const toaster = read('src/components/ui/Toaster.tsx');
+    expect(toaster).toContain('action?:');
+    const ui = read('src/context/UIContext.jsx');
+    expect(ui).toContain("showToast = useCallback((message, type = 'info'");
+    expect(ui).toContain('extras');
+  });
+
+  test('queries still never write', () => {
+    const dir = path.join(root, 'src/queries');
+    fs.readdirSync(dir).forEach((name) => {
+      if (!name.endsWith('.ts') || name.endsWith('.test.ts')) return;
+      const source = fs.readFileSync(path.join(dir, name), 'utf8');
+      expect(source).not.toMatch(/\bsetDoc\b/);
+      expect(source).not.toMatch(/\bupdateDoc\b/);
+      expect(source).not.toMatch(/\bcreateExpense\b/);
+    });
   });
 });
