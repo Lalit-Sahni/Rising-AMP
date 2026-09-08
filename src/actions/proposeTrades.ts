@@ -6,6 +6,7 @@
 import { INVESTOR_TRADE_ID, NOT_IN_ESTIMATE_TRADE_ID, expenseTradeId } from '../domain/costPlan';
 import { isInvestorExpense } from '../domain/costPlanCore';
 import { isVoidExpense } from '../utils/jobMetrics';
+import { stripInstructionClauses } from './instructionText';
 
 export type TradeRef = { id: string; name: string };
 
@@ -84,16 +85,16 @@ function sectionNameMatches(haystack: string, section: TradeRef): boolean {
 }
 
 function expenseHaystack(expense: Record<string, unknown>): string {
-  return [
+  const raw = [
     expense.description,
     expense.itemName,
-    expense.supplier,
     expense.tradeName,
     expense.notes,
   ]
     .map((value) => String(value || '').trim().toLowerCase())
     .filter(Boolean)
     .join(' ');
+  return stripInstructionClauses(raw);
 }
 
 function tradeNameById(trades: TradeRef[], tradeId: string): string {

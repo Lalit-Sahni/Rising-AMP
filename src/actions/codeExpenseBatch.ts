@@ -22,6 +22,7 @@ import {
   type EvidenceSource,
 } from './core';
 import type { ActionStore } from './store';
+import { refuseIfAssistantWritesDisabled } from './writesGate';
 
 const batchRowSchema = z
   .object({
@@ -74,6 +75,9 @@ export async function codeExpenseBatch(input: unknown, store: ActionStore): Prom
 
   const replay = await store.getReceiptByClientKey(scope.orgId, clientKey);
   if (replay) return { ok: true, receipt: replay };
+
+  const blocked = await refuseIfAssistantWritesDisabled(scope.orgId, store);
+  if (blocked) return blocked;
 
   const seen = new Set<string>();
   for (const row of rows) {

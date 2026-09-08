@@ -77,6 +77,11 @@ export type ActionStore = {
   getReceiptByClientKey(orgId: string, clientKey: string): Promise<ActionReceipt | null>;
   putReceipt(receipt: ActionReceipt): Promise<void>;
   patchReceipt(orgId: string, receiptId: string, patch: ReceiptPatch): Promise<void>;
+  /**
+   * Live/Firestore: missing or not true is off.
+   * In-memory tests: missing is on, so Part A–D cases stay green.
+   */
+  assistantWritesEnabled(orgId: string): Promise<boolean>;
 };
 
 export type MemoryActionStore = ActionStore & {
@@ -85,6 +90,7 @@ export type MemoryActionStore = ActionStore & {
   receiptPatchCount: number;
   fileLinkCount: number;
   seedExpense(orgId: string, expense: StoredExpense): void;
+  setAssistantWritesEnabled(orgId: string, enabled: boolean): void;
 };
 
 function expenseKey(orgId: string, jobId: string, expenseId: string): string {
@@ -108,6 +114,7 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
   const receipts = new Map<string, ActionReceipt>();
   const byClientKey = new Map<string, string>();
   const files = new Map<string, LinkedFile>();
+  const writeFlags = new Map<string, boolean>();
   seed.forEach((row) => {
     expenses.set(expenseKey(orgId, row.jobId, row.id), { ...row });
   });
@@ -119,6 +126,13 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
     fileLinkCount: 0,
     seedExpense(nextOrgId, expense) {
       expenses.set(expenseKey(nextOrgId, expense.jobId, expense.id), { ...expense });
+    },
+    setAssistantWritesEnabled(nextOrgId, enabled) {
+      writeFlags.set(nextOrgId, enabled === true);
+    },
+    async assistantWritesEnabled(nextOrgId) {
+      if (writeFlags.has(nextOrgId)) return writeFlags.get(nextOrgId) === true;
+      return true;
     },
     async getExpense(nextOrgId, jobId, expenseId) {
       const row = expenses.get(expenseKey(nextOrgId, jobId, expenseId));

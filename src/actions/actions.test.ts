@@ -620,6 +620,15 @@ describe('action layer stays off first paint and never talks to OpenAI', () => {
     expect(sidebar).toContain('assistant-activity');
     const profile = read('src/components/pages/ProfilePage.js');
     expect(profile).toContain('assistant-activity');
+    expect(profile).toContain('Allow the assistant to write');
+    expect(profile).toContain("import('../../firebase/assistantWrites')");
+    expect(profile).toContain("membership.role === 'owner'");
+    expect(profile).not.toMatch(/from ['"][^'"]*actions/);
+    expect(read('src/components/Header.js')).not.toContain('assistantWritesEnabled');
+    expect(read('src/App.js')).not.toContain('assistantWritesEnabled');
+    expect(read('src/App.js')).not.toContain('neverRequest');
+    expect(read('src/components/PaletteHost.tsx')).not.toContain('neverRequest');
+    expect(read('src/firebase/assistantWrites.ts')).not.toMatch(/from ['"][^'"]*actions/);
   });
 
   test('Toaster undo is optional', () => {

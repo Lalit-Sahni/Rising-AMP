@@ -116,6 +116,17 @@ describe('proposeTrades', () => {
     expect(rows.every((row) => row.status === 'none' && row.proposedTradeId == null)).toBe(true);
   });
 
+  test('a supplier named concrete pump is not section-match evidence', () => {
+    const [row] = proposeTrades({
+      uncoded: [{ id: 'e-sup', supplier: 'concrete pump' }],
+      orgCoded: [],
+      trades: TRADES,
+      sections: SECTIONS,
+    });
+    expect(row.status).toBe('none');
+    expect(row.proposedTradeId).toBeNull();
+  });
+
   test('concrete pump matching the Concreting section is uncertain inferred', () => {
     const [row] = proposeTrades({
       uncoded: [{

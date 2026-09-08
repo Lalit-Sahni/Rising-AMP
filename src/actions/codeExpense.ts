@@ -18,6 +18,7 @@ import {
   type ActionResult,
 } from './core';
 import type { ActionStore } from './store';
+import { refuseIfAssistantWritesDisabled } from './writesGate';
 
 export const codeExpenseInputSchema = z
   .object({
@@ -53,6 +54,9 @@ export async function codeExpense(input: unknown, store: ActionStore): Promise<A
 
   const replay = await store.getReceiptByClientKey(scope.orgId, clientKey);
   if (replay) return { ok: true, receipt: replay };
+
+  const blocked = await refuseIfAssistantWritesDisabled(scope.orgId, store);
+  if (blocked) return blocked;
 
   const expense = await store.getExpense(scope.orgId, jobId, expenseId);
   if (!expense) return invalidActionInput('That expense was not found.');

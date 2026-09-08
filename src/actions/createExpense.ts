@@ -28,6 +28,7 @@ import {
   type FieldEvidence,
 } from './core';
 import type { ActionStore } from './store';
+import { refuseIfAssistantWritesDisabled } from './writesGate';
 
 const moneyField = z.union([z.number(), z.string()]).optional();
 const dateField = z.union([z.string(), z.date()]).optional();
@@ -162,6 +163,9 @@ export async function createExpense(input: unknown, store: ActionStore): Promise
 
   const replay = await store.getReceiptByClientKey(data.scope.orgId, data.clientKey);
   if (replay) return { ok: true, receipt: replay };
+
+  const blocked = await refuseIfAssistantWritesDisabled(data.scope.orgId, store);
+  if (blocked) return blocked;
 
   const category = normalizeExpenseCategory(data.category);
   if (!category) return invalidActionInput('Choose a category.');

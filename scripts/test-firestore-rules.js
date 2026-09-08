@@ -728,6 +728,19 @@ async function main() {
       orgId: ORG_B,
       jobId: JOB_B,
     }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG_B}/projects/${JOB_B}/expenses/e-assistant-cross`).set({
+      category: 'purchase',
+      total: 12,
+      source: 'assistant',
+      assistantReceiptId: 'r-cross',
+      assistantConfirmed: false,
+    }));
+    await assertFails(coworker.firestore().doc(`organizations/${ORG_B}/projects/${JOB_B}/expenses/e-assistant-cross-2`).set({
+      category: 'purchase',
+      total: 12,
+      source: 'assistant',
+      assistantReceiptId: 'r-cross-2',
+    }));
     await assertFails(owner.firestore().doc(`organizations/${ORG}/assistantReceipts/r-prose`).set({
       ...validReceipt,
       id: 'r-prose',
@@ -839,6 +852,26 @@ async function main() {
     await assertSucceeds(owner.firestore().doc(batchPath).update({
       status: 'undone',
       undoneAt: new Date(),
+    }));
+
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}`).update({
+      assistantWritesEnabled: true,
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}`).update({
+      assistantWritesEnabled: false,
+    }));
+    await assertFails(coworker.firestore().doc(`organizations/${ORG}`).update({
+      assistantWritesEnabled: true,
+    }));
+    await assertFails(stranger.firestore().doc(`organizations/${ORG}`).update({
+      assistantWritesEnabled: true,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}`).update({
+      assistantWritesEnabled: 'yes',
+    }));
+    await assertSucceeds(coworker.firestore().doc(`organizations/${ORG}`).update({
+      legacyWorkspaceNames: { pin: 'Kelly St' },
+      updatedAt: new Date(),
     }));
 
     const storageRefPath = `files/${ORG}/${JOB}/f1/slab.pdf`;

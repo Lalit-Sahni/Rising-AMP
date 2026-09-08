@@ -29,6 +29,7 @@ import type {
   StoredExpense,
 } from '../actions/store';
 import { db } from './config';
+import { readAssistantWritesEnabled } from './assistantWrites';
 
 export const ASSISTANT_RECEIPTS_COLLECTION = 'assistantReceipts';
 
@@ -189,6 +190,9 @@ export function createFirestoreActionStore(): ActionStore {
         undoneAt: serverTimestamp(),
         ...(patch.undoReceiptId ? { undoReceiptId: patch.undoReceiptId } : {}),
       });
+    },
+    async assistantWritesEnabled(orgId) {
+      return readAssistantWritesEnabled(orgId);
     },
   };
 }

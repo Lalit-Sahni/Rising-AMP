@@ -6,8 +6,10 @@ import { actionFailure, isNeverAction, type ActionResult } from './core';
 import { codeExpense } from './codeExpense';
 import { codeExpenseBatch } from './codeExpenseBatch';
 import { createExpense } from './createExpense';
+import { neverActionMessage } from './neverRequest';
 import type { ActionStore } from './store';
 import { undoAction } from './undo';
+import { refuseMutatingActionIfDisabled } from './writesGate';
 
 export async function runAction(
   name: unknown,
@@ -19,8 +21,10 @@ export async function runAction(
   }
   const action = name.trim();
   if (isNeverAction(action)) {
-    return actionFailure('never_action', 'The assistant cannot do that.');
+    return actionFailure('never_action', neverActionMessage(action));
   }
+  const blocked = await refuseMutatingActionIfDisabled(action, input, store);
+  if (blocked) return blocked;
   if (action === 'codeExpense') return codeExpense(input, store);
   if (action === 'createExpense') return createExpense(input, store);
   if (action === 'codeExpenseBatch') return codeExpenseBatch(input, store);

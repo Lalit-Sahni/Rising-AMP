@@ -10,6 +10,7 @@ import {
   type ActionTier,
   type FieldEvidence,
 } from './core';
+import { looksLikeInstruction } from './instructionText';
 
 export type PartyMatch = 'use' | 'create' | 'unset' | 'none';
 
@@ -21,11 +22,14 @@ export type FileExpenseOcrItem = {
 
 export type FileExpenseOcr = {
   vendor?: unknown;
+  name?: unknown;
   date?: unknown;
   totalAmount?: unknown;
   tax?: unknown;
   items?: FileExpenseOcrItem[];
   category?: unknown;
+  text?: unknown;
+  notes?: unknown;
 };
 
 export type DecideFileExpenseInput = {
@@ -139,8 +143,10 @@ export function decideFileExpense(input: DecideFileExpenseInput): DecideFileExpe
     value: amountCents == null ? null : String(amountCents),
   };
 
+  const vendorName = String(extracted.vendor || extracted.name || '');
+  const instructionNamed = looksLikeInstruction(vendorName);
   const partyId = String(input.partyId || '').trim();
-  const partyOk = input.partyMatch === 'use' && Boolean(partyId);
+  const partyOk = input.partyMatch === 'use' && Boolean(partyId) && !instructionNamed;
   const party: FieldEvidence = {
     source: partyOk ? 'record' : 'inferred',
     value: partyOk ? partyId : input.partyMatch,

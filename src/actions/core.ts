@@ -126,6 +126,7 @@ export const actionErrorCodeSchema = z.enum([
   'org_required',
   'unknown_action',
   'never_action',
+  'assistant_writes_disabled',
 ]);
 export type ActionErrorCode = z.infer<typeof actionErrorCodeSchema>;
 

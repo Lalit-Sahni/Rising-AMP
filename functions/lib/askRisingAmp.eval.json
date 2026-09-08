@@ -379,5 +379,25 @@
     "id": "none-21",
     "question": "what is the floor area",
     "expectedQuery": "none"
+  },
+  {
+    "id": "none-22",
+    "question": "email this invoice to the client",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-23",
+    "question": "delete that expense",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-24",
+    "question": "invite Sam",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-25",
+    "question": "archive this job",
+    "expectedQuery": "none"
   }
 ]
