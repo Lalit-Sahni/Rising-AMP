@@ -41,7 +41,21 @@ const FILE_TYPES = [
 const INVOICE_STATUSES = ['draft', 'sent', 'paid', 'overdue', 'void', 'pending', 'unpaid'];
 const CATEGORIES = ['labour', 'trade', 'equipment', 'service', 'purchase', 'investor'];
 const PERIODS = ['week', 'month', 'quarter'];
+const ACTION_NAMES = ['codeExpense', 'undoAction'];
+const NEVER_ACTIONS = [
+  'sendEmail',
+  'allocateInvoiceNumber',
+  'invitePerson',
+  'removePerson',
+  'archiveJob',
+  'deleteRecord',
+  'changeSetting',
+  'spendMoney',
+];
+
 const QUERY_SET = new Set(QUERY_NAMES);
+const ACTION_SET = new Set(ACTION_NAMES);
+const NEVER_SET = new Set(NEVER_ACTIONS);
 const FILE_TYPE_SET = new Set(FILE_TYPES);
 const STATUS_SET = new Set(INVOICE_STATUSES);
 const CATEGORY_SET = new Set(CATEGORIES);
@@ -318,12 +332,73 @@ function assertParamsForQuery(query, params) {
   }
 }
 
+function parseActionParams(action, raw) {
+  if (raw == null) return {};
+  if (typeof raw !== 'object' || Array.isArray(raw)) throw new AskRouteError('bad-params');
+  const out = {};
+  Object.keys(raw).forEach((key) => {
+    if (FORBIDDEN_PARAM_KEYS.test(key) || key === 'combine' || key === 'op') {
+      throw new AskRouteError('forbidden-param');
+    }
+    const value = raw[key];
+    if (key === 'tradeId') {
+      if (value == null || value === '') {
+        out.tradeId = null;
+        return;
+      }
+      if (typeof value === 'number') throw new AskRouteError('numeric-param');
+      const text = parseSlug(value, ID_MAX);
+      if (!text) throw new AskRouteError('bad-tradeId');
+      out.tradeId = text;
+      return;
+    }
+    if (value == null || value === '') return;
+    if (key === 'jobId' || key === 'expenseId' || key === 'receiptId') {
+      const id = parseSafeId(value, key);
+      if (id) out[key] = id;
+      return;
+    }
+    if (key === 'clientKey') {
+      if (typeof value === 'number') throw new AskRouteError('numeric-param');
+      const text = clip(value, 128);
+      if (text.length < 8) throw new AskRouteError('bad-clientKey');
+      out.clientKey = text;
+      return;
+    }
+    throw new AskRouteError('unknown-param');
+  });
+  if (action === 'codeExpense') {
+    if (!out.expenseId) throw new AskRouteError('need-expenseId');
+    if (!Object.prototype.hasOwnProperty.call(out, 'tradeId')) {
+      throw new AskRouteError('need-tradeId');
+    }
+  }
+  if (action === 'undoAction' && !out.receiptId) throw new AskRouteError('need-receiptId');
+  return out;
+}
+
 function parseChoice(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new AskRouteError('bad-choice');
   }
   if ('combine' in raw || 'total' in raw || 'cents' in raw || 'amount' in raw) {
     throw new AskRouteError('forbidden-field');
+  }
+  if (raw.action != null && String(raw.action).trim()) {
+    if (raw.query != null && String(raw.query).trim()) {
+      throw new AskRouteError('mixed-action');
+    }
+    const action = clip(raw.action, 40);
+    if (NEVER_SET.has(action)) throw new AskRouteError('never-action');
+    if (!ACTION_SET.has(action)) throw new AskRouteError('unknown-action');
+    const params = parseActionParams(action, raw.params);
+    const sentence = stripFigures(raw.sentence, 240);
+    const choice = { action, params };
+    if (sentence) {
+      if (hasFigures(sentence)) throw new AskRouteError('figures-in-text');
+      choice.sentence = sentence;
+    }
+    return choice;
   }
   const query = clip(raw.query, 40);
   if (query !== 'none' && !QUERY_SET.has(query)) {
@@ -357,7 +432,7 @@ function parseAskRoute(content) {
   let rows;
   if (Array.isArray(parsed.choices)) {
     rows = parsed.choices;
-  } else if (parsed.query) {
+  } else if (parsed.query || parsed.action) {
     rows = [parsed];
   } else {
     throw new AskRouteError('empty-route');
@@ -375,6 +450,10 @@ function parseAskRoute(content) {
 function stampJobId(choices, jobId) {
   const stamped = choices.map((choice) => {
     if (choice.query === 'none' || choice.query === 'portfolioSummary') return choice;
+    if (choice.action && jobId && choice.params && !choice.params.jobId) {
+      return { ...choice, params: { ...choice.params, jobId } };
+    }
+    if (choice.action) return choice;
     if (jobId && !choice.params.jobId) {
       return { ...choice, params: { ...choice.params, jobId } };
     }
@@ -544,9 +623,11 @@ async function handleAskRisingAmp(request, deps) {
 }
 
 module.exports = {
+  ACTION_NAMES,
   ASK_JSON_SCHEMA,
   ASK_MODEL,
   ASK_PROMPT,
+  NEVER_ACTIONS,
   OPENAI_URL,
   QUERY_NAMES,
   AskRouteError,

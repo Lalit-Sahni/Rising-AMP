@@ -695,6 +695,79 @@ async function main() {
     await assertSucceeds(owner.firestore().doc(askPath).delete());
     await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-org`).delete());
 
+    const receiptPath = `organizations/${ORG}/assistantReceipts/r1`;
+    const validReceipt = {
+      id: 'r1',
+      orgId: ORG,
+      jobId: JOB,
+      action: 'codeExpense',
+      source: 'assistant',
+      clientKey: 'client-key-1',
+      tier: 'do',
+      status: 'applied',
+      evidence: {
+        tradeId: { source: 'user', value: 'concreting' },
+      },
+      documentIds: { expenseId: 'exp-1' },
+      changed: { tradeId: { from: null, to: 'concreting' } },
+      undo: {
+        kind: 'restoreTradeId',
+        expenseId: 'exp-1',
+        previousTradeId: null,
+      },
+      createdAt: new Date(),
+    };
+    await assertSucceeds(owner.firestore().doc(receiptPath).set(validReceipt));
+    await assertSucceeds(owner.firestore().doc(receiptPath).get());
+    await assertSucceeds(coworker.firestore().doc(receiptPath).get());
+    await assertFails(stranger.firestore().doc(receiptPath).get());
+    await assertFails(stranger.firestore().doc(receiptPath).set(validReceipt));
+    await assertFails(owner.firestore().doc(`organizations/${ORG_B}/assistantReceipts/r-b`).set({
+      ...validReceipt,
+      id: 'r-b',
+      orgId: ORG_B,
+      jobId: JOB_B,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/assistantReceipts/r-prose`).set({
+      ...validReceipt,
+      id: 'r-prose',
+      sentence: 'Coded $99 to concreting.',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/assistantReceipts/r-chat`).set({
+      ...validReceipt,
+      id: 'r-chat',
+      messages: [{ role: 'assistant', content: 'done' }],
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/assistantReceipts/r-email`).set({
+      ...validReceipt,
+      id: 'r-email',
+      action: 'sendEmail',
+    }));
+    await assertFails(owner.firestore().doc(receiptPath).update({
+      clientKey: 'changed-key-1',
+    }));
+    await assertFails(owner.firestore().doc(receiptPath).update({
+      action: 'undoAction',
+    }));
+    await assertSucceeds(owner.firestore().doc(receiptPath).update({
+      status: 'undone',
+      undoneAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(receiptPath).delete());
+    await assertFails(coworker.firestore().doc(receiptPath).delete());
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-assistant`).set({
+      category: 'purchase',
+      total: 12,
+      tradeId: 'concreting',
+      source: 'assistant',
+      assistantReceiptId: 'r1',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-source-bad`).set({
+      category: 'purchase',
+      total: 12,
+      source: 'model',
+    }));
+
     const storageRefPath = `files/${ORG}/${JOB}/f1/slab.pdf`;
     await assertSucceeds(
       owner.storage().ref(storageRefPath).put(Buffer.from('%PDF-1.4'), { contentType: 'application/pdf' }),

@@ -72,6 +72,9 @@ function isHardRefuse(q) {
   if (/\b(create an expense|void (this |the )?invoice|delete this|code this trade)\b/.test(s)) {
     return true;
   }
+  if (/\b(email (this |the |that )?invoice|send (this |the |that )?invoice to|invite (sam|a person|them)|archive (this |the )?job|delete (that |the )?(expense|invoice|record))\b/.test(s)) {
+    return true;
+  }
   if (/\badd\b.+\band\b.+\btogether\b/.test(s)) return true;
   if (/\b(weather|recipe|football|colour should we paint|color should we paint)\b/.test(s)) {
     return true;

@@ -329,3 +329,9 @@ Serial round trips for *data* are unchanged by Part A (still Iowa). Boot cache f
 - No ledger rows are sent, so input does not grow with job size.
 
 **Phone latency, Enter to painted answer (placeholder — not timed on a production phone).** Ask is not on production, so this has not been measured on the owner’s phone against the live shopfront. Honest expectation from Sydney to `us-central1` plus OpenAI, then one query on the device: about **1.5–4 s** on a good connection. The Iowa hop is the same ~200 ms already documented for other callables. Re-measure on a phone after a named production deploy; do not treat these ranges as a production SLA.
+
+---
+
+## 17. Action layer (Phase 15 Part A — not on production)
+
+Phase 15 Part A adds a client action layer in `src/actions/`, beside the read-only query layer. The model still does not calculate. Tiers (`do` / `propose` / `refuse`) are decided in code from evidence; an inferred field never reaches do. Writes are receipted at `organizations/{orgId}/assistantReceipts/{id}` and undoable (restore the previous `tradeId`, never hard-delete). The one primitive is coding a single existing expense. NEVER actions (email, invoice numbers, invite, archive, delete, settings, spend) refuse. Not imported from `App.js` or `PaletteHost`. Schema is in the repo; staging and production are unchanged.

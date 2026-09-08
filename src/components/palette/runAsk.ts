@@ -2,11 +2,22 @@
  * Run one routed Ask choice through src/queries/. Palette chunk only.
  * Do not import from App.js or PaletteHost.
  */
+import type { AskChoice } from '../../ask/askRoute';
 import { historyChoiceFromRoute, type AskHistoryChoice } from '../../domain/askHistory';
 import { assignRefusalReason } from '../../domain/askRefusal';
 import type { QueryScope } from '../../queries/core';
 import type { TradeListRow, RoutedAskChoice, RoutedAskParams, RoutedPaletteItem } from './answers';
 import { itemsFromRoutedQuery, matchTrades, shouldUsePlanForNone } from './answers';
+
+function routedFromAskChoice(raw: AskChoice): RoutedAskChoice {
+  if ('action' in raw) {
+    return { query: 'none', params: {}, reason: 'That cannot be answered from the queries.' };
+  }
+  if (raw.query === 'none') {
+    return { query: 'none', params: {}, reason: raw.reason };
+  }
+  return { query: raw.query, params: raw.params, sentence: raw.sentence };
+}
 
 export type RunAskInput = {
   question: string;
@@ -172,9 +183,7 @@ export async function executeAskQuestion(input: RunAskInput): Promise<AskExecuti
   const items: RoutedPaletteItem[] = [];
   const choices: AskHistoryChoice[] = [];
   for (const raw of route.choices) {
-    const choice: RoutedAskChoice = raw.query === 'none'
-      ? { query: 'none', params: {}, reason: raw.reason }
-      : { query: raw.query, params: raw.params, sentence: raw.sentence };
+    const choice: RoutedAskChoice = routedFromAskChoice(raw);
     const params = resolveParams(choice, input.scope, input.jobId, input.tradeList);
     const resolved: RoutedAskChoice = choice.query === 'none'
       ? { ...choice, params: { jobId: params.jobId } }

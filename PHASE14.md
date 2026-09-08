@@ -1,8 +1,10 @@
 # Phase 14 — Ask (agent brief)
 
-**Status (8 Sep 2026):** Branch `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` at `0dfcb51`. **Parts A–G done** on this branch (`askRisingAmp` on staging; question history; evals in CI; `answerFromDocuments`; teaching refusals). Phase 14 DoD / merge is next. Do not start Phase 15 until this branch is merged. Phase 13 blockers closed on staging. Metro Consulting and the cross-kind unlinked list remain the owner’s. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
+**Status (8 Sep 2026):** Parts A–G done on `phase-14-ask` (`176002f`). Phase 15 is **open** on `phase-15-actions` (restore tag `pre-phase15-2026-09-08`). Production is untouched. Localhost staging. Never `--force`. Model never calculates. ADR: `docs/adr-ask-model.md` (`gpt-4o-mini`).
 
-Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any code. That mockup is the spec.
+**Phase 15 lifts the write ban below.** Phase 14 shipped read-only Ask. Phase 15 may apply reversible, internal writes through `src/actions/` (receipt, undo, `source: 'assistant'`). The model still never calculates and still does not choose the tier. Irreversible / “leaves the building” stays refused. See `PHASE15.md`. Do not re-impose “no writes of any kind” while that branch is open.
+
+Read `CLAUDE.md` then `PROGRESS.md` then `PHASE13.md` then this file. Open `design/risingamp-ask-vision.html` in a browser before writing any Ask code. That mockup is the spec.
 
 Branch: **`phase-14-ask`** from the merged Phase 13 branch. Tag `pre-phase14-2026-09-XX` first. One part per session, one commit per part.
 

@@ -5,6 +5,7 @@ const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
+  ASK_JSON_SCHEMA,
   ASK_MODEL,
   ASK_PROMPT,
   OPENAI_URL,
@@ -365,6 +366,56 @@ test('jobId from the request is stamped when the model omits it', () => {
   );
   assert.equal(stamped[0].params.jobId, 'job-1');
   assert.equal(stamped[0].params.tradeId, 'concreting');
+});
+
+test('a codeExpense action choice parses and figures are stripped', () => {
+  const result = parseAskRoute(JSON.stringify({
+    action: 'codeExpense',
+    params: { jobId: 'job-1', expenseId: 'exp-1', tradeId: 'concreting' },
+    sentence: 'Coded $12,450 to concreting.',
+  }));
+  assert.equal(result.choices[0].action, 'codeExpense');
+  assert.equal(result.choices[0].query, undefined);
+  assert.deepEqual(result.choices[0].params, {
+    jobId: 'job-1',
+    expenseId: 'exp-1',
+    tradeId: 'concreting',
+  });
+  assert.equal(hasNoFigures(result.choices[0].sentence), true);
+  assert.equal(result.choices[0].sentence.includes('12'), false);
+});
+
+test('unknown and never action names are rejected, not coerced to a query', () => {
+  assert.throws(
+    () => parseAskRoute(JSON.stringify({
+      action: 'inventedWrite',
+      params: { expenseId: 'exp-1', tradeId: 'concreting' },
+    })),
+    (error) => error instanceof AskRouteError && error.message === 'unknown-action',
+  );
+  assert.throws(
+    () => parseAskRoute(JSON.stringify({
+      action: 'sendEmail',
+      params: { expenseId: 'exp-1', tradeId: 'concreting' },
+    })),
+    (error) => error instanceof AskRouteError && error.message === 'never-action',
+  );
+  assert.throws(
+    () => parseAskRoute(JSON.stringify({
+      query: 'spendByTrade',
+      action: 'codeExpense',
+      params: { tradeId: 'concreting' },
+    })),
+    (error) => error instanceof AskRouteError && error.message === 'mixed-action',
+  );
+});
+
+test('prompt and schema still do not teach the model to emit actions', () => {
+  assert.equal(ASK_PROMPT.includes('codeExpense'), false);
+  assert.equal(ASK_PROMPT.includes('undoAction'), false);
+  assert.match(ASK_PROMPT, /writes/);
+  assert.equal(JSON.stringify(ASK_JSON_SCHEMA).includes('codeExpense'), false);
+  assert.equal(QUERY_NAMES.includes('codeExpense'), false);
 });
 
 test('stripFigures removes money-like digits', () => {

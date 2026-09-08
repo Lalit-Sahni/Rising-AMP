@@ -1,7 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseAskCallableResponse } from './askRoute';
+import { QUERY_NAMES } from '../queries/core';
+import {
+  AskRouteError,
+  parseActionChoice,
+  parseAskCallableResponse,
+} from './askRoute';
+import { parseAskClientResponse, stripAskFigures } from './askRisingAmp';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -15,10 +21,10 @@ test('parses a spendByTrade route with no figures', () => {
       sentence: 'Here is concreting spend for this job.',
     }],
   });
-  expect(result.choices[0].query).toBe('spendByTrade');
-  if (result.choices[0].query !== 'none') {
-    expect(result.choices[0].params.tradeId).toBe('concreting');
-  }
+  const choice = result.choices[0];
+  expect('query' in choice && choice.query).toBe('spendByTrade');
+  if (!('query' in choice) || choice.query === 'none') return;
+  expect(choice.params.tradeId).toBe('concreting');
 });
 
 test('rejects a sentence that still contains a dollar amount', () => {
@@ -39,7 +45,8 @@ test('none is accepted', () => {
     model: 'gpt-4o-mini',
     choices: [{ query: 'none', params: {}, reason: 'That cannot be answered from the queries.' }],
   });
-  expect(result.choices[0].query).toBe('none');
+  const choice = result.choices[0];
+  expect('query' in choice && choice.query).toBe('none');
 });
 
 test('answerFromDocuments is an allowed query name', () => {
@@ -52,7 +59,95 @@ test('answerFromDocuments is an allowed query name', () => {
       sentence: 'Here is the passage from that document.',
     }],
   });
-  expect(result.choices[0].query).toBe('answerFromDocuments');
+  const choice = result.choices[0];
+  expect('query' in choice && choice.query).toBe('answerFromDocuments');
+});
+
+test('a codeExpense action choice is accepted', () => {
+  const result = parseAskCallableResponse({
+    ok: true,
+    model: 'gpt-4o-mini',
+    choices: [{
+      action: 'codeExpense',
+      params: { jobId: 'job-1', expenseId: 'exp-1', tradeId: 'concreting' },
+      sentence: 'That expense will be coded to concreting.',
+    }],
+  });
+  const choice = result.choices[0];
+  expect('action' in choice && choice.action).toBe('codeExpense');
+  if (!('action' in choice) || choice.action !== 'codeExpense') return;
+  expect(choice.params.expenseId).toBe('exp-1');
+  expect(choice.params.tradeId).toBe('concreting');
+});
+
+test('parseActionChoice accepts codeExpense and rejects unknown and never names', () => {
+  const parsed = parseActionChoice({
+    action: 'codeExpense',
+    params: { expenseId: 'exp-1', tradeId: null, clientKey: 'client-key-1' },
+  });
+  expect(parsed.action).toBe('codeExpense');
+  if (parsed.action !== 'codeExpense') return;
+  expect(parsed.params.tradeId).toBe(null);
+  expect(() => parseActionChoice({
+    action: 'inventedWrite',
+    params: { expenseId: 'exp-1', tradeId: 'concreting' },
+  })).toThrow(AskRouteError);
+  try {
+    parseActionChoice({ action: 'inventedWrite', params: { expenseId: 'exp-1', tradeId: 'x' } });
+  } catch (error) {
+    expect(error).toBeInstanceOf(AskRouteError);
+    expect((error as AskRouteError).message).toBe('unknown-action');
+  }
+  try {
+    parseActionChoice({ action: 'sendEmail', params: { expenseId: 'exp-1', tradeId: 'x' } });
+  } catch (error) {
+    expect(error).toBeInstanceOf(AskRouteError);
+    expect((error as AskRouteError).message).toBe('never-action');
+  }
+});
+
+test('an unknown action is rejected and not coerced to a query', () => {
+  expect(() => parseAskCallableResponse({
+    ok: true,
+    model: 'gpt-4o-mini',
+    choices: [{
+      action: 'inventedWrite',
+      params: { expenseId: 'exp-1', tradeId: 'concreting' },
+      sentence: 'Coded to concreting.',
+    }],
+  })).toThrow();
+  expect(() => parseAskCallableResponse({
+    ok: true,
+    model: 'gpt-4o-mini',
+    choices: [{
+      query: 'spendByTrade',
+      action: 'codeExpense',
+      params: { tradeId: 'concreting' },
+      sentence: 'Here is concreting spend for this job.',
+    }],
+  })).toThrow();
+});
+
+test('figures are still stripped from an action sentence', () => {
+  const stripped = stripAskFigures({
+    ok: true,
+    model: 'gpt-4o-mini',
+    choices: [{
+      action: 'codeExpense',
+      params: { expenseId: 'exp-1', tradeId: 'concreting' },
+      sentence: 'Coded $12,450 to concreting.',
+    }],
+  });
+  const parsed = parseAskClientResponse(stripped);
+  const choice = parsed.choices[0];
+  expect('action' in choice && choice.action).toBe('codeExpense');
+  if (!('action' in choice)) return;
+  expect(choice.sentence).toBeUndefined();
+});
+
+test('action names are not query names', () => {
+  expect(QUERY_NAMES).not.toContain('codeExpense');
+  expect(QUERY_NAMES).not.toContain('undoAction');
 });
 
 test('App.js and PaletteHost do not import the Ask helper', () => {

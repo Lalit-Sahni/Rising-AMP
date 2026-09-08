@@ -111,6 +111,16 @@ service cloud.firestore {
               && request.resource.data.partyId.size() > 0
               && request.resource.data.partyId.size() <= 80
             )
+          ) && (
+            !request.resource.data.keys().hasAny(['source'])
+            || request.resource.data.source == 'assistant'
+          ) && (
+            !request.resource.data.keys().hasAny(['assistantReceiptId'])
+            || (
+              request.resource.data.assistantReceiptId is string
+              && request.resource.data.assistantReceiptId.size() > 0
+              && request.resource.data.assistantReceiptId.size() <= 128
+            )
           );
         }
 
@@ -728,6 +738,120 @@ service cloud.firestore {
             && resource.data.uid == request.auth.uid
             && isOrgInvited();
         }
+      }
+
+      // Phase 15 Part A. Receipts for assistant writes. Not a chat log.
+      // Path: organizations/{orgId}/assistantReceipts/{receiptId}
+      match /assistantReceipts/{receiptId} {
+        function isOrgInvited() {
+          return signedIn()
+            && emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)).data.invitedEmails;
+        }
+
+        function stringId(value, max) {
+          return value is string && value.size() > 0 && value.size() <= max;
+        }
+
+        function fieldEvidenceOk(field) {
+          return field.keys().hasOnly(['source', 'value'])
+            && field.source in ['user', 'record', 'ocr', 'inferred']
+            && (field.value == null || field.value is string);
+        }
+
+        function evidenceOk(e) {
+          return e.keys().hasOnly(['tradeId', 'expenseId', 'receiptId', 'jobId'])
+            && (!e.keys().hasAny(['tradeId']) || fieldEvidenceOk(e.tradeId))
+            && (!e.keys().hasAny(['expenseId']) || fieldEvidenceOk(e.expenseId))
+            && (!e.keys().hasAny(['receiptId']) || fieldEvidenceOk(e.receiptId))
+            && (!e.keys().hasAny(['jobId']) || fieldEvidenceOk(e.jobId));
+        }
+
+        function documentIdsOk(d) {
+          return d.keys().hasOnly(['expenseId', 'receiptId'])
+            && (!d.keys().hasAny(['expenseId']) || stringId(d.expenseId, 128))
+            && (!d.keys().hasAny(['receiptId']) || stringId(d.receiptId, 128));
+        }
+
+        function undoOk(u) {
+          return u.keys().hasOnly(['kind', 'expenseId', 'previousTradeId'])
+            && u.kind in ['restoreTradeId', 'voidExpense', 'none']
+            && (!u.keys().hasAny(['expenseId']) || stringId(u.expenseId, 128))
+            && (
+              !u.keys().hasAny(['previousTradeId'])
+              || u.previousTradeId == null
+              || (u.previousTradeId is string && u.previousTradeId.size() <= 80)
+            );
+        }
+
+        function changedOk(c) {
+          return c.keys().hasOnly(['tradeId'])
+            && c.tradeId.keys().hasOnly(['from', 'to'])
+            && (c.tradeId.from == null || (c.tradeId.from is string && c.tradeId.from.size() <= 80))
+            && (c.tradeId.to == null || (c.tradeId.to is string && c.tradeId.to.size() <= 80));
+        }
+
+        function receiptShapeOk() {
+          return request.resource.data.keys().hasAll([
+              'id', 'orgId', 'jobId', 'action', 'source', 'clientKey',
+              'tier', 'status', 'evidence', 'documentIds', 'undo', 'createdAt'
+            ])
+            && request.resource.data.keys().hasOnly([
+              'id', 'orgId', 'jobId', 'action', 'source', 'clientKey',
+              'tier', 'status', 'evidence', 'documentIds', 'undo', 'createdAt',
+              'changed', 'undoneAt', 'undoReceiptId'
+            ])
+            && request.resource.data.id == receiptId
+            && request.resource.data.orgId == orgId
+            && stringId(request.resource.data.jobId, 128)
+            && request.resource.data.source == 'assistant'
+            && request.resource.data.action in ['codeExpense', 'undoAction']
+            && request.resource.data.tier in ['do', 'propose', 'refuse']
+            && request.resource.data.status in ['applied', 'proposed', 'refused', 'undone']
+            && request.resource.data.clientKey is string
+            && request.resource.data.clientKey.size() >= 8
+            && request.resource.data.clientKey.size() <= 128
+            && request.resource.data.createdAt is timestamp
+            && evidenceOk(request.resource.data.evidence)
+            && documentIdsOk(request.resource.data.documentIds)
+            && undoOk(request.resource.data.undo)
+            && (
+              !request.resource.data.keys().hasAny(['changed'])
+              || changedOk(request.resource.data.changed)
+            )
+            && (
+              !request.resource.data.keys().hasAny(['undoneAt'])
+              || request.resource.data.undoneAt is timestamp
+            )
+            && (
+              !request.resource.data.keys().hasAny(['undoReceiptId'])
+              || stringId(request.resource.data.undoReceiptId, 128)
+            )
+            && !request.resource.data.keys().hasAny(['sentence', 'reason', 'messages', 'content', 'reply']);
+        }
+
+        allow read: if isOrgInvited();
+        allow create: if isOrgInvited() && receiptShapeOk();
+        allow update: if isOrgInvited()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'undoneAt', 'undoReceiptId'])
+          && request.resource.data.status == 'undone'
+          && resource.data.status in ['applied', 'proposed', 'refused', 'undone']
+          && request.resource.data.clientKey == resource.data.clientKey
+          && request.resource.data.action == resource.data.action
+          && request.resource.data.orgId == resource.data.orgId
+          && request.resource.data.jobId == resource.data.jobId
+          && request.resource.data.evidence == resource.data.evidence
+          && request.resource.data.documentIds == resource.data.documentIds
+          && request.resource.data.source == 'assistant'
+          && (
+            !request.resource.data.keys().hasAny(['undoneAt'])
+            || request.resource.data.undoneAt is timestamp
+          )
+          && (
+            !request.resource.data.keys().hasAny(['undoReceiptId'])
+            || stringId(request.resource.data.undoReceiptId, 128)
+          );
+        allow delete: if false;
       }
 
       match /{allPaths=**} {

@@ -1,8 +1,8 @@
 # Phase 15 — Ask does things (agent brief)
 
-Read `CLAUDE.md`, `PROGRESS.md`, `PHASE13.md`, `PHASE14.md`, then this. Branch **`phase-15-actions`** from the merged Phase 14 branch. Tag a restore point first. One part per session, one commit per part.
+Read `CLAUDE.md`, `PROGRESS.md`, `PHASE13.md`, `PHASE14.md`, then this. Branch **`phase-15-actions`** from `phase-14-ask` (`176002f`). Restore tag `pre-phase15-2026-09-08`. One part per session, one commit per part. Production untouched. Localhost staging. Never `--force`. Model never calculates.
 
-Phase 14 said "read-only, no writes of any kind." **This phase deliberately lifts that**, under the rule below. Update `PHASE14.md` and `CLAUDE.md` when this branch opens so a later session does not re-impose the ban mid-phase.
+Phase 14 said "read-only, no writes of any kind." **This phase deliberately lifts that**, under the rule below. `PHASE14.md` and `CLAUDE.md` on this branch say so, so a later session does not re-impose the ban mid-phase.
 
 ## The rule that replaces "no writes"
 
@@ -36,6 +36,8 @@ The model may say how sure it is. **It does not choose its own tier.** A field i
 4. Every action is **undoable by its receipt**, and undo is a normal product operation (void, recode), never a hard delete.
 5. The router returns an action choice exactly as it returns a query choice. **Validated with zod before anything runs.** An unknown action, a job the caller cannot see, or a malformed field is rejected, never repaired.
 6. Every action write carries `source: 'assistant'` and the receipt id, so any row the assistant touched can be found later. This is not optional; it is how you audit a bad night.
+
+**Part A done.** Client action layer in `src/actions/` (`codeExpense`, `undoAction`): zod in/out, membership from `queryScopeSchema`, receipts with evidence, tier, `clientKey` idempotency and undo. Inferred evidence proposes and does not write the expense. NEVER names refuse with no write. Unknown names are rejected. Persistence is an in-memory Map in tests and `organizations/{orgId}/assistantReceipts/{id}` in Firestore (adapter in `src/firebase/assistantReceipts.ts`; not imported from `App.js` / `PaletteHost`). Undo restores the previous `tradeId` and clears `source` / `assistantReceiptId`. The Ask parser can accept a `codeExpense` choice; `ASK_PROMPT` and `ASK_JSON_SCHEMA` are unchanged so the live function still routes writes to `none`. Queries stay read-only. Nothing deployed. Production is untouched.
 
 Commit: `Add a receipted, undoable action layer.`
 

@@ -10,9 +10,10 @@ test('drops a model sentence that still contains a dollar amount', () => {
       sentence: 'You have spent $99,999 on concreting.',
     }],
   });
-  expect(parsed.choices[0].query).toBe('spendByTrade');
-  if (parsed.choices[0].query === 'none') return;
-  expect(parsed.choices[0].sentence).toBeUndefined();
+  expect('query' in parsed.choices[0] && parsed.choices[0].query).toBe('spendByTrade');
+  const choice = parsed.choices[0];
+  if (!('query' in choice) || choice.query === 'none') return;
+  expect(choice.sentence).toBeUndefined();
 });
 
 test('none with digits in the reason keeps a figure-free reason', () => {
@@ -22,7 +23,8 @@ test('none with digits in the reason keeps a figure-free reason', () => {
     choices: [{ query: 'none', params: {}, reason: 'I guessed $12,000.' }],
   });
   const parsed = parseAskClientResponse(stripped);
-  expect(parsed.choices[0].query).toBe('none');
-  if (parsed.choices[0].query !== 'none') return;
-  expect(parsed.choices[0].reason).not.toMatch(/[$£€¥0-9]/);
+  expect('query' in parsed.choices[0] && parsed.choices[0].query).toBe('none');
+  const choice = parsed.choices[0];
+  if (!('query' in choice) || choice.query !== 'none') return;
+  expect(choice.reason).not.toMatch(/[$£€¥0-9]/);
 });
