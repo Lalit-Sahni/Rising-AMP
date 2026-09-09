@@ -18,9 +18,16 @@ import {
   LEDGER_ROLLUP_COLLECTION,
   LEDGER_ROLLUP_DOC_ID,
 } from '../domain/ledgerRollupMeta';
+import {
+  JOB_FACTS_COLLECTION,
+  JOB_FACTS_DOC_ID,
+  parseJobFacts,
+  type JobFacts,
+} from '../domain/jobFacts';
 import { costPlanQuoteSchema, costPlanSchema, jobFileSchema, parseAtBoundary } from '../domain/schemas';
 import { resolveTargetJobIds, type JobMoneySnapshot, type QueryScope } from './core';
 import { answerFromDocuments } from './documents';
+import { jobFacts } from './facts';
 import { contentKey, findFiles, type FileRecordSnapshot, type FileTextSnapshot } from './files';
 import { findExpenses } from './expenses';
 import { invoicesByStatus, type InvoiceSnapshot } from './invoices';
@@ -127,6 +134,26 @@ async function loadQuotes(scope: QueryScope, jobId: string) {
   });
 }
 
+function isPermissionDenied(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const code = String((error as { code?: unknown }).code || '');
+  const message = String((error as { message?: unknown }).message || '');
+  return code === 'permission-denied' || /permission-denied|insufficient permissions/i.test(message);
+}
+
+/** getDoc only. Do not import the write adapter. Missing / 403 → null. */
+async function loadJobFacts(scope: QueryScope, jobId: string): Promise<JobFacts | null> {
+  try {
+    const snap = await getDoc(doc(jobDoc(scope, jobId), JOB_FACTS_COLLECTION, JOB_FACTS_DOC_ID));
+    if (!snap.exists()) return null;
+    const parsed = parseJobFacts({ id: snap.id, ...snap.data() });
+    return parsed.ok ? parsed.data : null;
+  } catch (error) {
+    if (isPermissionDenied(error)) return null;
+    throw error;
+  }
+}
+
 export async function fetchSpendByTrade(input: { scope: QueryScope; jobId?: string } & Record<string, unknown>) {
   const access = resolveTargetJobIds(input.scope, input.jobId);
   if (!access.ok) return access;
@@ -221,4 +248,15 @@ export async function fetchAnswerFromDocuments(input: {
     content[contentKey(file.jobId, file.id)] = await loadFileText(input.scope, file.jobId, file.id);
   }));
   return answerFromDocuments({ ...input, files, content });
+}
+
+export async function fetchJobFacts(input: {
+  scope: QueryScope;
+  jobId: string;
+  field?: string;
+} & Record<string, unknown>) {
+  const access = resolveTargetJobIds(input.scope, input.jobId);
+  if (!access.ok) return access;
+  const facts = await loadJobFacts(input.scope, input.jobId);
+  return jobFacts({ ...input, facts });
 }

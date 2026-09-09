@@ -373,12 +373,32 @@
   {
     "id": "none-20",
     "question": "how many square metres is the house",
-    "expectedQuery": "none"
+    "expectedQuery": "jobFacts",
+    "expectedParams": { "field": "floorArea" }
   },
   {
     "id": "none-21",
     "question": "what is the floor area",
-    "expectedQuery": "none"
+    "expectedQuery": "jobFacts",
+    "expectedParams": { "field": "floorArea" }
+  },
+  {
+    "id": "facts-01",
+    "question": "what is the address",
+    "expectedQuery": "jobFacts",
+    "expectedParams": { "field": "address" }
+  },
+  {
+    "id": "facts-02",
+    "question": "what is the contract value",
+    "expectedQuery": "jobFacts",
+    "expectedParams": { "field": "contractValueCents" }
+  },
+  {
+    "id": "facts-03",
+    "question": "when is PC",
+    "expectedQuery": "jobFacts",
+    "expectedParams": { "field": "practicalCompletionTarget" }
   },
   {
     "id": "none-22",
@@ -398,6 +418,51 @@
   {
     "id": "none-25",
     "question": "archive this job",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-spend-council",
+    "question": "how much have we spent on council",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-spend-cdc",
+    "question": "how much on the CDC",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-spend-bedrooms",
+    "question": "how much on bedrooms",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-rate-sqm",
+    "question": "what is the cost per sqm",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-rate-metre",
+    "question": "how much per square metre",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-rate-sqm-rate",
+    "question": "what is the sqm rate",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-rate-floor-area-rate",
+    "question": "what is the floor area rate",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-rate-floor-area-cost",
+    "question": "floor area cost",
+    "expectedQuery": "none"
+  },
+  {
+    "id": "none-rate-for-floor-area",
+    "question": "what is the rate for the floor area",
     "expectedQuery": "none"
   }
 ]

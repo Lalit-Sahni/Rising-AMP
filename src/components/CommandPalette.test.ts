@@ -168,6 +168,15 @@ describe('command palette answers', () => {
     expect(app).not.toContain('askHistory');
     expect(app).not.toContain('HistoryList');
     expect(app).not.toContain('askRefusal');
+    expect(app).not.toContain('jobFacts');
+    expect(app).not.toContain('firebase/jobFacts');
+    const header = read('src/components/Header.js');
+    expect(header).not.toContain('queries/');
+    expect(header).not.toContain('askRisingAmp');
+    expect(header).not.toContain('runAsk');
+    expect(header).not.toContain('firebase/jobFacts');
+    expect(host).not.toContain('jobFacts');
+    expect(host).not.toContain('firebase/jobFacts');
     const palette = read('src/components/CommandPalette.tsx');
     expect(palette).toContain("lazy(() => import('./files/JobFileViewer'))");
     expect(palette).toContain("import('../queries/fetch')");
@@ -254,10 +263,15 @@ describe('command palette answers', () => {
     expect(runAsk).toContain('fetchJobSummary');
     expect(runAsk).toContain('fetchAnswerFromDocuments');
     expect(runAsk).toContain('answerFromDocuments');
+    expect(runAsk).toContain('fetchJobFacts');
+    expect(runAsk).toContain('jobFacts');
     expect(runAsk).toContain('assignRefusalReason');
     expect(rows).toContain('nothing_coded');
+    expect(rows).toContain('fact_missing');
+    expect(rows).toContain('Overview');
     expect(rows).not.toContain('facts/current');
     expect(rows).not.toMatch(/\bsetDoc\b/);
+    expect(read('src/components/CommandPalette.tsx')).toContain("setCurrentPage('dashboard'");
   });
 
   test('none plus a plan still shows estimated and spent from planVsActual', () => {

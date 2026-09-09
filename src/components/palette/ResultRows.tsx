@@ -1,9 +1,10 @@
 import React from 'react';
 import type {
   AnswerWorking,
+  FactAnswer,
   FileHit,
   InvoiceHit,
-  PaletteAnswer,
+  PortfolioAnswer,
   RefusalAnswer,
   SpendAnswer,
 } from './answers';
@@ -72,10 +73,12 @@ export function RefusalAnswerBody({
   row,
   onCodeThem,
   onOpenWorking,
+  onOpenOverview,
 }: {
   row: RefusalAnswer;
   onCodeThem?: (event: React.MouseEvent) => void;
   onOpenWorking?: (event: React.MouseEvent) => void;
+  onOpenOverview?: (event: React.MouseEvent) => void;
 }) {
   const showCodeThem = Boolean(onCodeThem && (row.refusalReason === 'nothing_coded' || row.affected));
   return (
@@ -105,9 +108,35 @@ export function RefusalAnswerBody({
           </button>
         </span>
       ) : null}
-      {row.actionNote && row.refusalReason === 'fact_missing' ? (
+      {row.refusalReason === 'fact_missing' && onOpenOverview ? (
+        <span className="mt-1.5 block text-[12px] leading-snug text-slate-600">
+          <button
+            type="button"
+            onClick={onOpenOverview}
+            className="font-bold text-accent"
+          >
+            Overview
+          </button>
+        </span>
+      ) : row.actionNote && row.refusalReason === 'fact_missing' ? (
         <span className="mt-1.5 block text-[12px] leading-snug text-slate-600">{row.actionNote}</span>
       ) : null}
+      {row.working ? <WorkingLine working={row.working} onOpenRows={onOpenWorking} /> : null}
+    </span>
+  );
+}
+
+export function FactAnswerBody({
+  row,
+  onOpenWorking,
+}: {
+  row: FactAnswer;
+  onOpenWorking?: (event: React.MouseEvent) => void;
+}) {
+  return (
+    <span className="min-w-0 flex-1">
+      <span className="block text-[13.5px] font-extrabold text-ink">{row.title}</span>
+      <span className="mt-0.5 block text-[12px] text-slate-500">{row.detail}</span>
       {row.working ? <WorkingLine working={row.working} onOpenRows={onOpenWorking} /> : null}
     </span>
   );
@@ -118,7 +147,7 @@ export function SpendAnswerBody({
   onCodeThem,
   onOpenWorking,
 }: {
-  row: PaletteAnswer;
+  row: SpendAnswer | PortfolioAnswer | RefusalAnswer;
   onCodeThem?: (event: React.MouseEvent) => void;
   onOpenWorking?: (event: React.MouseEvent) => void;
 }) {

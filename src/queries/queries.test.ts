@@ -6,6 +6,7 @@ import { formatCents } from '../money';
 import { findExpenses } from './expenses';
 import { contentKey, findFiles } from './files';
 import { answerFromDocuments } from './documents';
+import { jobFacts } from './facts';
 import { invoicesByStatus } from './invoices';
 import { planVsActual } from './plan';
 import { quotesForTrade } from './quotes';
@@ -649,6 +650,200 @@ describe('answerFromDocuments', () => {
   });
 });
 
+const FACT_NOW = new Date('2026-09-09T00:00:00Z');
+
+function kellyFacts(extra: Record<string, unknown> = {}) {
+  return {
+    jobId: 'job-a',
+    schemaVersion: 1 as const,
+    updatedAt: FACT_NOW,
+    floorArea: {
+      value: 167.22,
+      unit: 'sqm' as const,
+      source: 'import' as const,
+      sourceRef: 'file-boq',
+      confirmedBy: null,
+      confirmedAt: null,
+      updatedAt: FACT_NOW,
+    },
+    ...extra,
+  };
+}
+
+describe('jobFacts', () => {
+  test('Kelly floor area is 167.22 sqm from the stored import, unconfirmed', () => {
+    const result = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-a',
+      field: 'floorArea',
+      facts: kellyFacts(),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields).toHaveLength(1);
+    expect(result.fields[0].display).toBe('167.22 sqm');
+    expect(result.fields[0].source).toBe('import');
+    expect(result.fields[0].confirmed).toBe(false);
+    expect(result.provenance.query).toBe('jobFacts');
+    expect(result.provenance.source).toBe('facts');
+    expect(result.provenance.params).toEqual({ jobId: 'job-a', field: 'floorArea' });
+    expect(JSON.stringify(result)).not.toMatch(/0 sqm/);
+    expect(JSON.stringify(result)).not.toContain('$0');
+    expect(result.fields[0]).not.toHaveProperty('cents');
+  });
+
+  test('missing floorArea is an empty result, never 0 sqm', () => {
+    const result = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-a',
+      field: 'floorArea',
+      facts: { jobId: 'job-a', schemaVersion: 1, updatedAt: FACT_NOW },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields).toEqual([]);
+    expect(result.provenance.rowCount).toBe(0);
+    expect(JSON.stringify(result)).not.toMatch(/0 sqm/);
+    expect(JSON.stringify(result)).not.toContain('$0.00');
+  });
+
+  test('empty facts doc and null facts are the same missing result', () => {
+    const empty = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-a',
+      field: 'floorArea',
+      facts: { jobId: 'job-a', schemaVersion: 1, updatedAt: FACT_NOW },
+    });
+    const missing = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-a',
+      field: 'floorArea',
+      facts: null,
+    });
+    expect(empty.ok && missing.ok).toBe(true);
+    if (!empty.ok || !missing.ok) return;
+    expect(empty.fields).toEqual([]);
+    expect(missing.fields).toEqual([]);
+  });
+
+  test('does not convert 18 squares into a floor area', () => {
+    const result = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-a',
+      field: 'floorArea',
+      facts: { jobId: 'job-a', schemaVersion: 1, updatedAt: FACT_NOW, storeys: {
+        value: 1,
+        source: 'import',
+        sourceRef: null,
+        confirmedBy: null,
+        confirmedAt: null,
+        updatedAt: FACT_NOW,
+      } },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields).toEqual([]);
+    const source = read('src/queries/facts.ts');
+    expect(source).not.toMatch(/9\.29/);
+    expect(source).not.toMatch(/\b11\b/);
+    expect(source).not.toMatch(/\bsquares?\b/i);
+    expect(source).not.toContain('saveJobFacts');
+    expect(source).not.toContain('firebase/jobFacts');
+    expect(source).not.toContain('decideFactWrite');
+  });
+
+  test('omitted field returns only the Overview lead fields that exist', () => {
+    const result = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-a',
+      facts: kellyFacts({
+        address: {
+          value: '12 Kelly Street',
+          source: 'owner',
+          sourceRef: null,
+          confirmedBy: 'u1',
+          confirmedAt: FACT_NOW,
+          updatedAt: FACT_NOW,
+        },
+        suburb: {
+          value: 'South Wentworthville',
+          source: 'owner',
+          sourceRef: null,
+          confirmedBy: 'u1',
+          confirmedAt: FACT_NOW,
+          updatedAt: FACT_NOW,
+        },
+      }),
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields.map((row) => row.field)).toEqual(['address', 'floorArea']);
+    expect(result.fields.find((row) => row.field === 'suburb')).toBeUndefined();
+  });
+
+  test('money facts keep integer cents and formatCents display', () => {
+    const result = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-a',
+      field: 'contractValueCents',
+      facts: {
+        jobId: 'job-a',
+        schemaVersion: 1,
+        updatedAt: FACT_NOW,
+        contractValueCents: {
+          value: 32191629,
+          source: 'document',
+          sourceRef: 'hia-1',
+          confirmedBy: 'u1',
+          confirmedAt: FACT_NOW,
+          updatedAt: FACT_NOW,
+        },
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields[0].cents).toBe(32191629);
+    expect(result.fields[0].display).toBe(formatCents(32191629));
+    expect(result.fields[0].confirmed).toBe(true);
+  });
+
+  test('dates stay YYYY-MM-DD', () => {
+    const result = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-a',
+      field: 'practicalCompletionTarget',
+      facts: {
+        jobId: 'job-a',
+        schemaVersion: 1,
+        updatedAt: FACT_NOW,
+        practicalCompletionTarget: {
+          value: '2026-12-15',
+          source: 'owner',
+          sourceRef: null,
+          confirmedBy: 'u1',
+          confirmedAt: FACT_NOW,
+          updatedAt: FACT_NOW,
+        },
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.fields[0].display).toBe('2026-12-15');
+  });
+
+  test('rejects a job that is not on the invited list', () => {
+    const result = jobFacts({
+      scope: SCOPE,
+      jobId: 'phase8-isolation',
+      field: 'floorArea',
+      facts: kellyFacts({ jobId: 'phase8-isolation' }),
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe('job_not_allowed');
+  });
+});
+
 describe('query layer stays read-only and off the Dashboard barrel', () => {
   test('query modules never write', () => {
     const dir = path.join(root, 'src/queries');
@@ -675,6 +870,11 @@ describe('query layer stays read-only and off the Dashboard barrel', () => {
     expect(fetch).not.toContain('setDoc');
     expect(fetch).toContain('fetchAnswerFromDocuments');
     expect(fetch).toContain('answerFromDocuments');
+    expect(fetch).toContain('fetchJobFacts');
+    expect(fetch).toContain('jobFacts');
+    expect(fetch).not.toContain('saveJobFacts');
+    expect(fetch).not.toContain('firebase/jobFacts');
+    expect(fetch).not.toMatch(/\/\s*11\b/);
     const documents = read('src/queries/documents.ts');
     expect(documents).not.toMatch(/openai/i);
     expect(documents).not.toContain('unpdf');

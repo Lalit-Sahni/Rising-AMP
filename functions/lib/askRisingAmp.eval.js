@@ -37,6 +37,7 @@ const EMPTY_PARAMS = {
   to: null,
   period: null,
   olderThanDays: null,
+  field: null,
 };
 
 function clipText(value) {
@@ -63,8 +64,22 @@ function stripInjection(text) {
     .replace(/system prompt:\s*/gi, ' '));
 }
 
+function isRateQuestion(q) {
+  if (/\b(per\s*(sq\.?\s*m|sqm|square\s+metr)|cost per|unit rate|\$\s*\/\s*sqm)\b/i.test(q)) return true;
+  if (/\brate\b/i.test(q) && /\b(sqm|square\s+metr|floor area|m²|\bm2\b)\b/i.test(q)) return true;
+  if (/\bcosts?\b/i.test(q) && /\b(sqm|square\s+metr|floor area)\b/i.test(q) && !/\bwhat('?s| is) the floor area\b/i.test(q)) {
+    return true;
+  }
+  return false;
+}
+
+function isSpendOnTopic(q) {
+  return /\b(how much|spend|spent|paid|costs?)\b[\s\S]{0,50}\bon\b/i.test(q);
+}
+
 function isHardRefuse(q) {
   const s = q.toLowerCase();
+  if (isRateQuestion(q)) return true;
   if (/\b(will we finish|will this job make|forecast|predict|next quarter spend|next year)\b/.test(s)) {
     return true;
   }
@@ -149,6 +164,31 @@ function isDocumentAnswer(q) {
   return false;
 }
 
+function pickFactField(q) {
+  if (isRateQuestion(q) || isSpendOnTopic(q)) return '';
+  if (/\bhow many square metres? is\b/i.test(q) || /\bhow many square meters? is\b/i.test(q)) {
+    return 'floorArea';
+  }
+  if (/\bwhat('?s| is) the floor area\b/i.test(q)) return 'floorArea';
+  if (/\bwhat('?s| is) the site area\b/i.test(q)) return 'siteArea';
+  if (/\b((job|site|street) address|address of|what('?s| is) the address)\b/i.test(q)) {
+    return 'address';
+  }
+  if (/\b(what('?s| is) the )?contract (value|sum|price|amount)\b/i.test(q)) return 'contractValueCents';
+  if (/\b(when is pc|practical completion|pc target|pc date)\b/i.test(q)) {
+    return 'practicalCompletionTarget';
+  }
+  if (/\bhow many (storeys?|stories|floors)\b/i.test(q)) return 'storeys';
+  if (/\bhow many bedrooms?\b/i.test(q)) return 'bedrooms';
+  if (/\b(lot\s*(and|&)?\s*dp|what('?s| is) the lot( number)?|lot\/dp)\b/i.test(q)) return 'lotDp';
+  if (/\b(what|which) council\b/i.test(q)) return 'council';
+  if (/\b(what('?s| is) (the )?(cdc|da)(\s*(or da)?\s*number)?|cdc or da number)\b/i.test(q)) {
+    return 'cdcOrDaNumber';
+  }
+  if (/\b(what('?s| is) the )?(builder('?s)? licence|builder license)\b/i.test(q)) return 'builderLicence';
+  return '';
+}
+
 function spendSignal(q) {
   return /\b(spend|spent|cost|costs|how much)\b/i.test(q);
 }
@@ -200,6 +240,16 @@ function matchQuery(q) {
       query: 'answerFromDocuments',
       params,
       sentence: 'Here is the passage from that document.',
+      reason: '',
+    };
+  }
+
+  const factField = pickFactField(q);
+  if (factField) {
+    return {
+      query: 'jobFacts',
+      params: { field: factField },
+      sentence: 'Here is that recorded job fact.',
       reason: '',
     };
   }

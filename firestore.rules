@@ -907,7 +907,7 @@ service cloud.firestore {
             return name in [
               'spendByTrade', 'spendByParty', 'spendByCategory', 'planVsActual',
               'invoicesByStatus', 'jobSummary', 'portfolioSummary', 'findFiles',
-              'findExpenses', 'quotesForTrade', 'answerFromDocuments', 'none'
+              'findExpenses', 'quotesForTrade', 'answerFromDocuments', 'jobFacts', 'none'
             ];
           }
 
@@ -915,14 +915,14 @@ service cloud.firestore {
             return name in [
               'spendByTrade', 'spendByParty', 'spendByCategory', 'planVsActual',
               'invoicesByStatus', 'jobSummary', 'portfolioSummary', 'findFiles',
-              'findExpenses', 'quotesForTrade', 'answerFromDocuments'
+              'findExpenses', 'quotesForTrade', 'answerFromDocuments', 'jobFacts'
             ];
           }
 
           function askParamsOk(params) {
             return params.keys().hasOnly([
               'jobId', 'tradeId', 'trade', 'partyId', 'party', 'category',
-              'status', 'type', 'text', 'from', 'to', 'period', 'olderThanDays'
+              'status', 'type', 'text', 'from', 'to', 'period', 'olderThanDays', 'field'
             ]);
           }
 
@@ -950,7 +950,7 @@ service cloud.firestore {
             return p == null || (
               p.keys().hasOnly(['query', 'params', 'source', 'revision', 'rowCount', 'capped'])
               && provenanceQueryOk(p.query)
-              && p.source in ['rollup', 'ledger', 'files', 'mixed']
+              && p.source in ['rollup', 'ledger', 'files', 'mixed', 'facts']
               && p.rowCount is int
               && p.capped is bool
               && (!p.keys().hasAny(['revision']) || p.revision is int)

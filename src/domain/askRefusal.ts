@@ -6,6 +6,11 @@
  * Does not write. Does not create a job facts record. Does not add a facts schema.
  */
 import { z } from 'zod';
+import {
+  JOB_FACT_FIELD_LABELS,
+  JOB_FACT_FIELD_NAMES,
+  type JobFactFieldName,
+} from './jobFacts';
 
 export const REFUSAL_REASONS = [
   'fact_missing',
@@ -31,13 +36,14 @@ type FactKind = {
 };
 
 const JOB_FACTS: FactKind[] = [
-  { id: 'floor_area', phrase: 'the floor area', pattern: /\b(floor area|floorarea|sqm|square metres?|square meters?|m²|\bm2\b)\b/i },
-  { id: 'storeys', phrase: 'how many storeys', pattern: /\b(storeys?|stories|how many floors)\b/i },
-  { id: 'bedrooms', phrase: 'how many bedrooms', pattern: /\bbedrooms?\b/i },
+  { id: 'floor_area', phrase: 'the floor area', pattern: /\b(how many square metres? is|how many square meters? is|what('?s| is) the floor area)\b/i },
+  { id: 'storeys', phrase: 'how many storeys', pattern: /\bhow many (storeys?|stories|floors)\b/i },
+  { id: 'bedrooms', phrase: 'how many bedrooms', pattern: /\bhow many bedrooms?\b/i },
   { id: 'address', phrase: 'the address', pattern: /\b((job|site|street) address|address of|what('?s| is) the address)\b/i },
-  { id: 'lot', phrase: 'the lot', pattern: /\b(lot\s*(and|&)?\s*dp|lot number|lot\/dp)\b/i },
-  { id: 'council', phrase: 'the council', pattern: /\bcouncil\b/i },
-  { id: 'contract_value', phrase: 'the contract value', pattern: /\bcontract (value|sum|price|amount)\b/i },
+  { id: 'lot', phrase: 'the lot', pattern: /\b(lot\s*(and|&)?\s*dp|what('?s| is) the lot( number)?|lot\/dp)\b/i },
+  { id: 'council', phrase: 'the council', pattern: /\b(what|which) council\b/i },
+  { id: 'contract_value', phrase: 'the contract value', pattern: /\b(what('?s| is) the )?contract (value|sum|price|amount)\b/i },
+  { id: 'pc', phrase: 'the PC target', pattern: /\b(when is pc|practical completion|pc target|pc date)\b/i },
 ];
 
 function clip(value: unknown): string {
@@ -100,10 +106,24 @@ export function isLegalAdviceWording(question: string): boolean {
   return /\b(legal advice|lawyer|solicitor|\bsue\b)\b/i.test(clip(question));
 }
 
+function isRateQuestion(question: string): boolean {
+  if (/\b(per\s*(sq\.?\s*m|sqm|square\s+metr)|cost per|unit rate|\$\s*\/\s*sqm)\b/i.test(question)) return true;
+  if (/\brate\b/i.test(question) && /\b(sqm|square\s+metr|floor area|m²|\bm2\b)\b/i.test(question)) return true;
+  if (/\bcosts?\b/i.test(question) && /\b(sqm|square\s+metr|floor area)\b/i.test(question) && !/\bwhat('?s| is) the floor area\b/i.test(question)) {
+    return true;
+  }
+  return false;
+}
+
+function isSpendOnTopic(question: string): boolean {
+  return /\b(how much|spend|spent|paid|costs?)\b[\s\S]{0,50}\bon\b/i.test(question);
+}
+
 export function jobFactFromQuestion(question: string): FactKind | null {
   const q = clip(question);
   if (!q) return null;
   if (isDocumentWording(q) || isLegalAdviceWording(q)) return null;
+  if (isRateQuestion(q) || isSpendOnTopic(q)) return null;
   for (const fact of JOB_FACTS) {
     if (fact.pattern.test(q)) return fact;
   }
@@ -139,12 +159,17 @@ export function nothingCodedCopy(tradeName: string): RefusalCopy {
   };
 }
 
-export function factMissingCopy(question: string): RefusalCopy {
-  const fact = jobFactFromQuestion(question);
-  const phrase = fact?.phrase || 'that fact';
+export function factMissingCopy(question: string, field?: string): RefusalCopy {
+  const fromField = field && (JOB_FACT_FIELD_NAMES as readonly string[]).includes(field)
+    ? JOB_FACT_FIELD_LABELS[field as JobFactFieldName]
+    : null;
+  const phrase = fromField
+    ? `the ${fromField.charAt(0).toLowerCase()}${fromField.slice(1)}`.replace(/^the pc /i, 'the PC ')
+    : (jobFactFromQuestion(question)?.phrase || 'that fact');
+  const titled = phrase.charAt(0).toUpperCase() + phrase.slice(1);
   return {
-    title: `I do not know ${phrase}. It is not recorded on this job.`,
-    detail: 'Add it once it is stored on the job. Ask does not write it.',
+    title: `${titled} is not recorded on this job.`,
+    detail: 'Add it on Overview. Ask does not write it.',
   };
 }
 
@@ -189,9 +214,10 @@ export function copyForRefusal(input: {
   fileType?: string;
   textStatus?: string;
   hasKnownFigures?: boolean;
+  field?: string;
 }): RefusalCopy {
   if (input.reason === 'nothing_coded') return nothingCodedCopy(input.tradeName || '');
-  if (input.reason === 'fact_missing') return factMissingCopy(input.question || '');
+  if (input.reason === 'fact_missing') return factMissingCopy(input.question || '', input.field);
   if (input.reason === 'unreadable_file') {
     return unreadableFileCopy({
       name: input.fileName,
@@ -220,7 +246,7 @@ export function firstUnreadablePassage(result: unknown): Record<string, unknown>
  */
 export function assignRefusalReason(input: {
   query: string;
-  params?: { tradeId?: string; trade?: string };
+  params?: { tradeId?: string; trade?: string; field?: string };
   result?: unknown;
   question?: string;
 }): RefusalReason | undefined {
@@ -237,6 +263,19 @@ export function assignRefusalReason(input: {
 
   if (query === 'answerFromDocuments' && isUnreadableDocumentsResult(input.result)) {
     return 'unreadable_file';
+  }
+
+  if (query === 'jobFacts') {
+    if (!isRecord(input.result) || input.result.ok !== true) return undefined;
+    const fields = Array.isArray(input.result.fields) ? input.result.fields : [];
+    const requested = clip(input.params?.field);
+    if (requested) {
+      const row = fields.find((item) => isRecord(item) && clip(item.field) === requested);
+      if (!row || !clip(isRecord(row) ? row.display : '')) return 'fact_missing';
+      return undefined;
+    }
+    if (fields.length === 0) return 'fact_missing';
+    return undefined;
   }
 
   if (query === 'none') {

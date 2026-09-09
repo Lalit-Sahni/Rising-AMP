@@ -14,6 +14,11 @@ import { provenanceSchema, scopeFromMembership } from '../../queries/core';
 import type { FindExpensesResult } from '../../queries/expenses';
 import type { FindFilesResult } from '../../queries/files';
 import type { AnswerFromDocumentsResult, DocumentPassage } from '../../queries/documents';
+import type { JobFactsQueryResult } from '../../queries/facts';
+import {
+  type FactSource,
+  type JobFactFieldName,
+} from '../../domain/jobFacts';
 import { invoicesByStatus, type InvoicesByStatusResult } from '../../queries/invoices';
 import { planVsActual, type PlanVsActualResult } from '../../queries/plan';
 import { spendByTrade, type SpendResult } from '../../queries/spend';
@@ -96,7 +101,19 @@ export type RefusalAnswer = {
   actionNote?: string;
 };
 
-export type PaletteAnswer = SpendAnswer | PortfolioAnswer | RefusalAnswer;
+export type FactAnswer = {
+  id: string;
+  section: 'Answers';
+  kind: 'fact';
+  title: string;
+  detail: string;
+  field: JobFactFieldName;
+  confirmed?: boolean;
+  source?: FactSource;
+  working?: AnswerWorking;
+};
+
+export type PaletteAnswer = SpendAnswer | PortfolioAnswer | RefusalAnswer | FactAnswer;
 
 export type InvoiceHit = {
   id: string;
@@ -174,6 +191,7 @@ export type RoutedAskParams = {
   to?: string;
   period?: 'week' | 'month' | 'quarter';
   olderThanDays?: number;
+  field?: JobFactFieldName;
 };
 
 export type RoutedAskChoice = {
@@ -188,6 +206,7 @@ export type RoutedPaletteItem =
   | { kind: 'spend'; answer: SpendAnswer }
   | { kind: 'portfolio'; answer: PortfolioAnswer }
   | { kind: 'none'; answer: RefusalAnswer }
+  | { kind: 'fact'; answer: FactAnswer }
   | { kind: 'invoice'; invoice: InvoiceHit }
   | { kind: 'file'; file: FileHit }
   | { kind: 'document'; file: FileHit }
@@ -312,6 +331,7 @@ function rowNoun(query: QueryName, count: number): string {
   if (query === 'answerFromDocuments') return count === 1 ? 'passage' : 'passages';
   if (query === 'invoicesByStatus') return count === 1 ? 'invoice' : 'invoices';
   if (query === 'quotesForTrade') return count === 1 ? 'quote' : 'quotes';
+  if (query === 'jobFacts') return count === 1 ? 'fact' : 'facts';
   return count === 1 ? 'expense' : 'expenses';
 }
 
@@ -349,6 +369,8 @@ export function workingFromProvenance(
     bits.push('ledger');
   } else if (provenance.source === 'files') {
     bits.push('files');
+  } else if (provenance.source === 'facts') {
+    bits.push('facts');
   } else if (provenance.source === 'mixed') {
     bits.push('mixed');
   } else if (provenance.source === 'rollup') {
@@ -847,6 +869,7 @@ function teachingRefusal(
     fileName?: string;
     fileType?: string;
     textStatus?: string;
+    field?: string;
     known?: KnownFigure[];
     working?: AnswerWorking;
     incomplete?: string;
@@ -863,6 +886,7 @@ function teachingRefusal(
     fileType: input.fileType,
     textStatus: input.textStatus,
     hasKnownFigures: Boolean(input.known?.length),
+    field: input.field,
   });
   return {
     kind: 'none',
@@ -886,6 +910,29 @@ function teachingRefusal(
 
 function nearestFallback(): string {
   return 'You can ask about spend, estimated against spent, files, or invoices.';
+}
+
+function isJobFactsOk(value: unknown): value is Extract<JobFactsQueryResult, { ok: true }> {
+  return Boolean(
+    value
+    && typeof value === 'object'
+    && (value as JobFactsQueryResult).ok === true
+    && Array.isArray((value as { fields?: unknown }).fields),
+  );
+}
+
+function factSourceDetail(source: FactSource, confirmed: boolean): string {
+  const from = source === 'import'
+    ? 'from the cost sheet you imported'
+    : source === 'owner'
+      ? 'typed by you'
+      : source === 'document'
+        ? 'from a document'
+        : 'from the assistant';
+  if (!confirmed) {
+    return `${from.charAt(0).toUpperCase()}${from.slice(1)}. Nobody has confirmed it yet.`;
+  }
+  return `${from.charAt(0).toUpperCase()}${from.slice(1)}.`;
 }
 
 function noneAnswer(
@@ -1151,6 +1198,34 @@ export function itemsFromRoutedQuery(input: {
         },
       };
     });
+  }
+
+  if (choice.query === 'jobFacts') {
+    if (!isJobFactsOk(input.result)) {
+      return [refusalItem('ask:facts', 'Those job details could not be loaded.', 'Nothing was added up.')];
+    }
+    const working = workingFromProvenance(input.result.provenance, { job: input.jobLabel });
+    if (refusalReason === 'fact_missing') {
+      return [teachingRefusal('ask:fact-missing', 'fact_missing', {
+        question: input.question,
+        field: choice.params.field,
+        working,
+      })];
+    }
+    return input.result.fields.map((row) => ({
+      kind: 'fact' as const,
+      answer: {
+        id: `ask:jobFacts:${row.field}`,
+        section: 'Answers' as const,
+        kind: 'fact' as const,
+        title: row.display,
+        detail: factSourceDetail(row.source, row.confirmed),
+        field: row.field,
+        confirmed: row.confirmed,
+        source: row.source,
+        working,
+      },
+    }));
   }
 
   if (choice.query === 'jobSummary') {

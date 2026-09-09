@@ -18,11 +18,12 @@ export const QUERY_NAMES = [
   'findExpenses',
   'quotesForTrade',
   'answerFromDocuments',
+  'jobFacts',
 ] as const;
 
 export type QueryName = (typeof QUERY_NAMES)[number];
 
-export const provenanceSourceSchema = z.enum(['rollup', 'ledger', 'files', 'mixed']);
+export const provenanceSourceSchema = z.enum(['rollup', 'ledger', 'files', 'mixed', 'facts']);
 export type ProvenanceSource = z.infer<typeof provenanceSourceSchema>;
 
 export const queryScopeSchema = z.object({

@@ -45,11 +45,11 @@ import {
 import type { AskHistoryRow } from '../domain/askHistory';
 import { HistoryList } from './palette/HistoryList';
 import { itemsFromAskHistory } from './palette/historyDisplay';
-import { FileAnswerBody, InvoiceAnswerBody, RefusalAnswerBody, SpendAnswerBody } from './palette/ResultRows';
+import { FileAnswerBody, FactAnswerBody, InvoiceAnswerBody, RefusalAnswerBody, SpendAnswerBody } from './palette/ResultRows';
 
 const JobFileViewer = lazy(() => import('./files/JobFileViewer'));
 
-type RowKind = 'default' | 'spend' | 'invoice' | 'file' | 'none';
+type RowKind = 'default' | 'spend' | 'invoice' | 'file' | 'none' | 'fact';
 
 type Row = {
   id: string;
@@ -374,6 +374,7 @@ export default function CommandPalette() {
           return;
         }
         if (item.kind === 'none') {
+          const toOverview = Boolean(scopedJobId && item.answer.refusalReason === 'fact_missing');
           const openPlan = Boolean(scopedJobId && (
             item.answer.known?.length
             || item.answer.affected
@@ -388,7 +389,26 @@ export default function CommandPalette() {
             icon: Search,
             kind: 'none',
             answer: item.answer,
-            run: openPlan ? () => setCurrentPage('cost-plan', scopedJobId as string) : () => {},
+            run: toOverview
+              ? () => setCurrentPage('dashboard', scopedJobId as string)
+              : openPlan
+                ? () => setCurrentPage('cost-plan', scopedJobId as string)
+                : () => {},
+          });
+          return;
+        }
+        if (item.kind === 'fact') {
+          out.push({
+            id: item.answer.id,
+            section: 'Answers',
+            title: item.answer.title,
+            detail: item.answer.detail,
+            icon: LayoutDashboard,
+            kind: 'fact',
+            answer: item.answer,
+            run: () => {
+              if (scopedJobId) setCurrentPage('dashboard', scopedJobId);
+            },
           });
           return;
         }
@@ -704,6 +724,7 @@ export default function CommandPalette() {
         && !answer.known?.length
         && !answer.affected
         && answer.refusalReason !== 'nothing_coded'
+        && answer.refusalReason !== 'fact_missing'
       )) return;
       close();
       row.run();
@@ -942,6 +963,13 @@ export default function CommandPalette() {
                               navigate(costPlanCodePath(scopedJobId));
                             }
                             : undefined}
+                          onOpenOverview={row.answer.refusalReason === 'fact_missing' && scopedJobId
+                            ? (event) => {
+                              event.stopPropagation();
+                              close();
+                              setCurrentPage('dashboard', scopedJobId);
+                            }
+                            : undefined}
                           onOpenWorking={row.answer.working
                             ? (event) => {
                               event.stopPropagation();
@@ -950,7 +978,25 @@ export default function CommandPalette() {
                             : undefined}
                         />
                       </div>
-                    ) : row.kind === 'spend' && row.answer ? (
+                    ) : row.kind === 'fact' && row.answer && row.answer.kind === 'fact' ? (
+                      <div
+                        data-index={index}
+                        onMouseEnter={() => setCursor(index)}
+                        onClick={() => pick(row)}
+                        className={`flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left ${
+                          active ? 'bg-canvas' : ''
+                        }`}
+                      >
+                        <FactAnswerBody
+                          row={row.answer}
+                          onOpenWorking={(event) => {
+                            event.stopPropagation();
+                            pick(row);
+                          }}
+                        />
+                        {active ? <CornerDownLeft className="hidden h-4 w-4 shrink-0 text-slate-400 md:block" strokeWidth={1.7} /> : null}
+                      </div>
+                    ) : row.kind === 'spend' && row.answer && row.answer.kind !== 'fact' ? (
                       <div
                         data-index={index}
                         onMouseEnter={() => setCursor(index)}

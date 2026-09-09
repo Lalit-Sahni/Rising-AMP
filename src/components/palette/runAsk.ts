@@ -63,7 +63,7 @@ function resolveParams(
 }
 
 function needsJob(query: RoutedAskChoice['query']): boolean {
-  return query === 'planVsActual' || query === 'jobSummary' || query === 'quotesForTrade';
+  return query === 'planVsActual' || query === 'jobSummary' || query === 'quotesForTrade' || query === 'jobFacts';
 }
 
 async function runRoutedQuery(
@@ -152,6 +152,12 @@ async function runRoutedQuery(
         scope,
         jobId: params.jobId as string,
         tradeId: params.tradeId,
+      });
+    case 'jobFacts':
+      return fetchMod.fetchJobFacts({
+        scope,
+        jobId: params.jobId as string,
+        field: params.field,
       });
     default:
       return { ok: false, error: { code: 'invalid_input', message: 'That cannot be answered from the records.' } };

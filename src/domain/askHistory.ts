@@ -10,6 +10,7 @@ import {
   provenanceSchema,
   type QueryName,
 } from '../queries/core';
+import { JOB_FACT_FIELD_NAMES } from './jobFacts';
 import { refusalReasonSchema, type RefusalReason } from './askRefusal';
 
 export const ASK_HISTORY_QUERIES = [...QUERY_NAMES, 'none'] as const;
@@ -32,6 +33,7 @@ export const askHistoryParamsSchema = z
     to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     period: z.enum(['week', 'month', 'quarter']).optional(),
     olderThanDays: z.number().int().min(0).max(3650).optional(),
+    field: z.enum(JOB_FACT_FIELD_NAMES).optional(),
   })
   .strict();
 
@@ -39,7 +41,7 @@ export const askHistoryProvenanceSchema = z
   .object({
     query: z.enum(QUERY_NAMES),
     params: z.record(z.string(), primitive),
-    source: z.enum(['rollup', 'ledger', 'files', 'mixed']),
+    source: z.enum(['rollup', 'ledger', 'files', 'mixed', 'facts']),
     revision: z.number().int().nonnegative().optional(),
     rowCount: z.number().int().nonnegative(),
     capped: z.boolean(),
@@ -159,8 +161,23 @@ function sumField(rows: unknown, field: string): { count: number; cents: number 
 /** Code-computed cents/counts from a src/queries/ result. Not model prose. */
 export function snapshotFromQueryResult(result: unknown): AskHistorySnapshot | undefined {
   if (!isRecord(result) || result.ok !== true) return undefined;
-  const snap: AskHistorySnapshot = {};
   const provenance = isRecord(result.provenance) ? result.provenance : null;
+
+  if (provenance?.query === 'jobFacts') {
+    const snap: AskHistorySnapshot = {};
+    const fields = Array.isArray(result.fields) ? result.fields : [];
+    const money = fields.find((row) => isRecord(row) && typeof row.cents === 'number' && Number.isInteger(row.cents));
+    if (money && isRecord(money) && typeof money.cents === 'number') {
+      snap.cents = money.cents;
+    } else if (fields.length > 0) {
+      snap.count = fields.length;
+    }
+    if (Object.keys(snap).length === 0) return undefined;
+    const parsed = askHistorySnapshotSchema.safeParse(snap);
+    return parsed.success ? parsed.data : undefined;
+  }
+
+  const snap: AskHistorySnapshot = {};
   const uncoded = isRecord(result.uncoded) ? result.uncoded : null;
   const totals = isRecord(result.totals) ? result.totals : null;
 

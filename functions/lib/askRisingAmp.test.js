@@ -92,11 +92,13 @@ test('QUERY_NAMES matches the read-only queries', () => {
     'findExpenses',
     'quotesForTrade',
     'answerFromDocuments',
+    'jobFacts',
   ]);
 });
 
 test('model is gpt-4o-mini and the prompt forbids numbers and junk', () => {
   assert.equal(ASK_MODEL, 'gpt-4o-mini');
+  assert.match(ASK_PROMPT, /jobFacts/);
   assert.match(ASK_PROMPT, /never calculate/i);
   assert.match(ASK_PROMPT, /none/);
   assert.match(ASK_PROMPT, /Junk/);
@@ -136,6 +138,16 @@ test('answerFromDocuments is an allowed query', () => {
   }));
   assert.equal(result.choices[0].query, 'answerFromDocuments');
   assert.deepEqual(result.choices[0].params, { type: 'contract', text: 'retention', jobId: 'job-1' });
+});
+
+test('jobFacts is an allowed query', () => {
+  const result = parseAskRoute(JSON.stringify({
+    query: 'jobFacts',
+    params: { jobId: 'job-1', field: 'floorArea' },
+    sentence: 'Here is that recorded job fact.',
+  }));
+  assert.equal(result.choices[0].query, 'jobFacts');
+  assert.deepEqual(result.choices[0].params, { jobId: 'job-1', field: 'floorArea' });
 });
 
 test('unknown query name is rejected', () => {

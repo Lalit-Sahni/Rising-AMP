@@ -63,6 +63,20 @@ test('answerFromDocuments is an allowed query name', () => {
   expect('query' in choice && choice.query).toBe('answerFromDocuments');
 });
 
+test('jobFacts is an allowed query name', () => {
+  const result = parseAskCallableResponse({
+    ok: true,
+    model: 'gpt-4o-mini',
+    choices: [{
+      query: 'jobFacts',
+      params: { jobId: 'job-1', field: 'floorArea' },
+      sentence: 'Here is that recorded job fact.',
+    }],
+  });
+  const choice = result.choices[0];
+  expect('query' in choice && choice.query).toBe('jobFacts');
+});
+
 test('a codeExpense action choice is accepted', () => {
   const result = parseAskCallableResponse({
     ok: true,

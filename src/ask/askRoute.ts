@@ -7,6 +7,7 @@
  */
 import { z } from 'zod';
 import { ACTION_NAMES, NEVER_ACTIONS } from '../actions/core';
+import { JOB_FACT_FIELD_NAMES } from '../domain/jobFacts';
 import { QUERY_NAMES } from '../queries/core';
 
 const NO_FIGURES = /[$£€¥0-9]/;
@@ -28,6 +29,7 @@ const askParamsSchema = z
     to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     period: z.enum(['week', 'month', 'quarter']).optional(),
     olderThanDays: z.number().int().min(0).max(3650).optional(),
+    field: z.enum(JOB_FACT_FIELD_NAMES).optional(),
   })
   .strict();
 

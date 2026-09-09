@@ -29,6 +29,23 @@ describe('assignRefusalReason', () => {
     expect(looksLikeJobFactQuestion('what is the floor area')).toBe(true);
     expect(looksLikeJobFactQuestion('what does the contract say about retention')).toBe(false);
     expect(looksLikeJobFactQuestion('legal advice on the HIA contract')).toBe(false);
+    expect(looksLikeJobFactQuestion('how much have we spent on council')).toBe(false);
+    expect(looksLikeJobFactQuestion('how much on the CDC')).toBe(false);
+    expect(looksLikeJobFactQuestion('how much on bedrooms')).toBe(false);
+    expect(looksLikeJobFactQuestion('what is the cost per sqm')).toBe(false);
+    expect(looksLikeJobFactQuestion('how much per square metre')).toBe(false);
+    expect(looksLikeJobFactQuestion('what is the sqm rate')).toBe(false);
+    expect(looksLikeJobFactQuestion('what is the floor area rate')).toBe(false);
+    expect(looksLikeJobFactQuestion('floor area cost')).toBe(false);
+    expect(looksLikeJobFactQuestion('what is the rate for the floor area')).toBe(false);
+    expect(assignRefusalReason({
+      query: 'none',
+      question: 'how much have we spent on council',
+    })).toBe('out_of_scope');
+    expect(assignRefusalReason({
+      query: 'none',
+      question: 'what is the cost per sqm',
+    })).toBe('out_of_scope');
     expect(assignRefusalReason({
       query: 'none',
       question: 'how many square metres is the house',
@@ -103,6 +120,32 @@ describe('assignRefusalReason', () => {
     expect(copyForRefusal({
       reason: 'fact_missing',
       question: 'what is the floor area',
+    }).title).toContain('floor area');
+    expect(copyForRefusal({
+      reason: 'fact_missing',
+      question: 'what is the floor area',
     }).detail).toContain('Ask does not write it');
+    expect(copyForRefusal({
+      reason: 'fact_missing',
+      question: 'what is the floor area',
+    }).detail).toContain('Overview');
+    expect(assignRefusalReason({
+      query: 'jobFacts',
+      params: { field: 'floorArea' },
+      result: {
+        ok: true,
+        fields: [],
+        provenance: { query: 'jobFacts', capped: false },
+      },
+      question: 'what is the floor area',
+    })).toBe('fact_missing');
+    expect(assignRefusalReason({
+      query: 'jobFacts',
+      params: { field: 'floorArea' },
+      result: {
+        ok: true,
+        fields: [{ field: 'floorArea', display: '167.22 sqm', source: 'import', confirmed: false }],
+      },
+    })).toBeUndefined();
   });
 });

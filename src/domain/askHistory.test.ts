@@ -143,4 +143,50 @@ describe('ask history schema', () => {
     expect(JSON.stringify(snap)).not.toContain('99,999');
     expect(JSON.stringify(snap)).not.toContain('sentence');
   });
+
+  test('jobFacts snapshot stores cents only for money, count otherwise, and omits extras', () => {
+    const area = snapshotFromQueryResult({
+      ok: true,
+      fields: [{ field: 'floorArea', display: '167.22 sqm', source: 'import', confirmed: false }],
+      provenance: { query: 'jobFacts', params: { field: 'floorArea' }, source: 'facts', rowCount: 1, capped: false },
+    });
+    expect(area).toEqual({ count: 1 });
+    expect(area).not.toHaveProperty('cents');
+    expect(JSON.stringify(area)).not.toContain('167.22');
+    expect(JSON.stringify(area)).not.toContain('sqm');
+
+    const money = snapshotFromQueryResult({
+      ok: true,
+      fields: [{ field: 'contractValueCents', display: '$321,916.29', source: 'document', confirmed: true, cents: 32191629 }],
+      provenance: { query: 'jobFacts', params: { field: 'contractValueCents' }, source: 'facts', rowCount: 1, capped: false },
+    });
+    expect(money).toEqual({ cents: 32191629 });
+
+    const missing = snapshotFromQueryResult({
+      ok: true,
+      fields: [],
+      provenance: { query: 'jobFacts', params: { field: 'floorArea' }, source: 'facts', rowCount: 0, capped: false },
+    });
+    expect(missing).toBeUndefined();
+
+    const choice = historyChoiceFromRoute({
+      query: 'jobFacts',
+      params: { jobId: 'job-1', field: 'floorArea' },
+    }, {
+      ok: true,
+      fields: [{ field: 'floorArea', display: '167.22 sqm', source: 'import', confirmed: false }],
+      provenance: {
+        query: 'jobFacts',
+        params: { jobId: 'job-1', field: 'floorArea' },
+        source: 'facts',
+        rowCount: 1,
+        capped: false,
+      },
+    });
+    expect(choice.query).toBe('jobFacts');
+    expect(choice.params.field).toBe('floorArea');
+    expect(choice.provenance?.source).toBe('facts');
+    expect(choice.snapshot).toEqual({ count: 1 });
+    expect(JSON.stringify(choice)).not.toContain('sentence');
+  });
 });

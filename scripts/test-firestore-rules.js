@@ -770,6 +770,22 @@ async function main() {
         snapshot: { count: 1, capped: false },
       }],
     }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/askHistory/${OWNER.uid}/items/q-facts`).set({
+      ...validAsk,
+      question: 'what is the floor area',
+      choices: [{
+        query: 'jobFacts',
+        params: { jobId: JOB, field: 'floorArea' },
+        provenance: {
+          query: 'jobFacts',
+          params: { jobId: JOB, field: 'floorArea' },
+          source: 'facts',
+          rowCount: 1,
+          capped: false,
+        },
+        snapshot: { count: 1, capped: false },
+      }],
+    }));
     await assertFails(owner.firestore().doc(askPath).update({
       question: 'changed',
     }));

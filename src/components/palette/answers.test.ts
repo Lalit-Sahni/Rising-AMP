@@ -4,6 +4,7 @@ import { formatCents } from '../../money';
 import { planVsActual } from '../../queries/plan';
 import { spendByTrade } from '../../queries/spend';
 import { answerFromDocuments } from '../../queries/documents';
+import { jobFacts } from '../../queries/facts';
 import { contentKey } from '../../queries/files';
 import {
   spendAnswersForQuery,
@@ -660,5 +661,70 @@ describe('Ask routing onto query rows', () => {
     if (legal[0].kind !== 'none') return;
     expect(legal[0].answer.refusalReason).toBe('out_of_scope');
     expect(legal[0].answer.detail.toLowerCase()).toContain('contract');
+  });
+
+  it('jobFacts paints the stored floor area and source, never model digits', () => {
+    const queried = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-1',
+      field: 'floorArea',
+      facts: {
+        jobId: 'job-1',
+        schemaVersion: 1,
+        updatedAt: new Date('2026-09-09T00:00:00Z'),
+        floorArea: {
+          value: 167.22,
+          unit: 'sqm',
+          source: 'import',
+          sourceRef: 'file-boq',
+          confirmedBy: null,
+          confirmedAt: null,
+          updatedAt: new Date('2026-09-09T00:00:00Z'),
+        },
+      },
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+    const items = itemsFromRoutedQuery({
+      choice: {
+        query: 'jobFacts',
+        params: { jobId: 'job-1', field: 'floorArea' },
+        sentence: 'The house is 99999 sqm.',
+      },
+      result: queried,
+      question: 'how many square metres is the house',
+    });
+    expect(items[0].kind).toBe('fact');
+    if (items[0].kind !== 'fact') return;
+    expect(items[0].answer.title).toBe('167.22 sqm');
+    expect(items[0].answer.detail.toLowerCase()).toContain('cost sheet');
+    expect(items[0].answer.detail.toLowerCase()).toContain('nobody has confirmed');
+    expect(items[0].answer.working?.call).toContain('jobFacts');
+    expect(JSON.stringify(items[0])).not.toContain('99999');
+    expect(JSON.stringify(items[0])).not.toMatch(/0 sqm/);
+  });
+
+  it('a missing jobFacts field is fact_missing, never 0 sqm', () => {
+    const queried = jobFacts({
+      scope: SCOPE,
+      jobId: 'job-1',
+      field: 'floorArea',
+      facts: { jobId: 'job-1', schemaVersion: 1, updatedAt: new Date() },
+    });
+    expect(queried.ok).toBe(true);
+    if (!queried.ok) return;
+    const items = itemsFromRoutedQuery({
+      choice: { query: 'jobFacts', params: { jobId: 'job-1', field: 'floorArea' } },
+      result: queried,
+      question: 'what is the floor area',
+    });
+    expect(items[0].kind).toBe('none');
+    if (items[0].kind !== 'none') return;
+    expect(items[0].answer.refusalReason).toBe('fact_missing');
+    expect(items[0].answer.title.toLowerCase()).toContain('floor area');
+    expect(items[0].answer.detail).toContain('Overview');
+    expect(items[0].answer.detail).toContain('Ask does not write it');
+    expect(JSON.stringify(items)).not.toMatch(/0 sqm/);
+    expect(JSON.stringify(items)).not.toContain('$0.00');
   });
 });

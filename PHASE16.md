@@ -100,6 +100,8 @@ Commit: `Show job details where they belong, with their source.`
 3. **An answer states the source when the fact is unconfirmed**: *"167.22 sqm, from the cost sheet you imported. Nobody has confirmed it yet."*
 4. **A missing fact refuses usefully**, per Phase 14 Part G: *"The floor area is not recorded on this job."* with an action to add it. After Phase 15 that action can write it with the owner's confirmation.
 
+**Part D done.** Ask can answer recorded job facts. Read-only query `jobFacts(jobId, field?)` in `src/queries/facts.ts` (getDoc of `facts/current` only; 403/missing is empty; never `saveJobFacts`; never 0 sqm / $0). Palette paints the stored display (Kelly `167.22 sqm` from source `import`, unconfirmed names the cost sheet). Missing is `fact_missing` (“The floor area is not recorded on this job.” / “Add it on Overview. Ask does not write it.”) and opens Overview, not a write. Classifier/evals/prompt route floor area / address / contract value / PC to `jobFacts`; “what does the contract say about retention” stays `answerFromDocuments`; spend stays spend; legal advice stays `none`; spend-on-council/CDC/bedrooms and cost-per-sqm / floor-area-rate stay `none` (Ask does not calculate); injection 99999 is not a param. Function source (`askRisingAmp`) updated in the repo; **staging `askRisingAmp` and Firestore askHistory rules not deployed** — the live function still classifies floor area as `none` until a named deploy. Production untouched. No `setJobFact`. App.js / PaletteHost / Header still have no ask/query adapter.
+
 Commit: `Let Ask answer a question about the job itself.`
 
 ---

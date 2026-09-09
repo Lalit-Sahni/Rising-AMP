@@ -10,6 +10,7 @@ import {
   type AskHistorySnapshot,
 } from '../../domain/askHistory';
 import { copyForRefusal } from '../../domain/askRefusal';
+import { JOB_FACT_FIELD_LABELS, type JobFactFieldName } from '../../domain/jobFacts';
 import { formatCents } from '../../money';
 import {
   INCOMPLETE_CAP_MESSAGE,
@@ -28,6 +29,7 @@ function countLabel(query: AskHistoryQuery, count: number): string {
   }
   if (query === 'findExpenses') return `${count} expense${count === 1 ? '' : 's'}`;
   if (query === 'quotesForTrade') return `${count} quote${count === 1 ? '' : 's'}`;
+  if (query === 'jobFacts') return `${count} fact${count === 1 ? '' : 's'}`;
   return `${count}`;
 }
 
@@ -65,6 +67,9 @@ export function historySubtitle(row: AskHistoryRow, now = new Date()): string {
 }
 
 function choiceTitle(choice: AskHistoryChoice): string {
+  if (choice.query === 'jobFacts' && choice.params.field) {
+    return JOB_FACT_FIELD_LABELS[choice.params.field as JobFactFieldName] || 'Job details';
+  }
   return choice.params.trade
     || choice.params.party
     || choice.params.category
@@ -114,6 +119,7 @@ function itemFromHistoryChoice(
       fileType: choice.params.type,
       hasKnownFigures: Boolean(knownFromSnapshot(choice.snapshot)?.length)
         && choice.refusalReason === 'out_of_scope',
+      field: choice.params.field,
     });
     const known = choice.refusalReason === 'out_of_scope'
       ? knownFromSnapshot(choice.snapshot)
@@ -155,6 +161,35 @@ function itemFromHistoryChoice(
         known: knownFromSnapshot(choice.snapshot),
         working,
         incomplete,
+      },
+    };
+  }
+
+  if (choice.query === 'jobFacts') {
+    if (typeof choice.snapshot?.cents === 'number' && !choice.snapshot.capped) {
+      return {
+        kind: 'fact',
+        answer: {
+          id,
+          section: 'Answers',
+          kind: 'fact',
+          title: formatCents(choice.snapshot.cents),
+          detail: choiceTitle(choice),
+          field: (choice.params.field || 'contractValueCents') as JobFactFieldName,
+          working,
+        },
+      };
+    }
+    return {
+      kind: 'fact',
+      answer: {
+        id,
+        section: 'Answers',
+        kind: 'fact',
+        title: choiceTitle(choice),
+        detail: historyFigure(choice.snapshot, choice.query) || 'Recorded on this job.',
+        field: (choice.params.field || 'address') as JobFactFieldName,
+        working,
       },
     };
   }
