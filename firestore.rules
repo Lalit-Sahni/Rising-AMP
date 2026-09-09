@@ -325,6 +325,279 @@ service cloud.firestore {
             );
           allow delete: if false;
         }
+        // Phase 16 Part A. Optional typed facts. Schema in the repo; not deployed.
+        match /facts/{factId} {
+          function factsKeysOk() {
+            return request.resource.data.keys().hasAll([
+                'jobId', 'schemaVersion', 'updatedAt'
+              ])
+              && request.resource.data.keys().hasOnly([
+                'jobId', 'schemaVersion', 'updatedAt', 'createdAt', 'createdBy',
+                'address', 'suburb', 'postcode', 'lotDp', 'council', 'zoning',
+                'floorArea', 'siteArea', 'storeys', 'bedrooms', 'bathrooms',
+                'garageSpaces', 'buildType',
+                'contractValueCents', 'contractType', 'depositCents',
+                'retentionPercent',
+                'contractSigned', 'siteStart',
+                'practicalCompletionTarget', 'practicalCompletionActual',
+                'builderLicence', 'hbcfCertificate', 'cdcOrDaNumber', 'certifier'
+              ]);
+          }
+
+          function factMetaOk(field) {
+            return field is map
+              && field.source in ['owner', 'import', 'document', 'assistant']
+              && (
+                field.sourceRef == null
+                || (
+                  field.sourceRef is string
+                  && field.sourceRef.size() > 0
+                  && field.sourceRef.size() <= 80
+                )
+              )
+              && (
+                field.confirmedBy == null
+                || (
+                  field.confirmedBy is string
+                  && field.confirmedBy.size() > 0
+                  && field.confirmedBy.size() <= 128
+                )
+              )
+              && (field.confirmedAt == null || field.confirmedAt is timestamp)
+              && field.updatedAt is timestamp
+              && (
+                !field.keys().hasAny(['previous'])
+                || (
+                  field.previous is list
+                  && field.previous.size() <= 20
+                )
+              );
+          }
+
+          function stringFactOk(field) {
+            return factMetaOk(field)
+              && field.keys().hasAll([
+                'value', 'source', 'sourceRef', 'confirmedBy', 'confirmedAt', 'updatedAt'
+              ])
+              && field.keys().hasOnly([
+                'value', 'source', 'sourceRef', 'confirmedBy', 'confirmedAt',
+                'updatedAt', 'previous'
+              ])
+              && field.value is string
+              && field.value.size() > 0
+              && field.value.size() <= 200;
+          }
+
+          function areaFactOk(field) {
+            return factMetaOk(field)
+              && field.keys().hasAll([
+                'value', 'unit', 'source', 'sourceRef', 'confirmedBy',
+                'confirmedAt', 'updatedAt'
+              ])
+              && field.keys().hasOnly([
+                'value', 'unit', 'source', 'sourceRef', 'confirmedBy',
+                'confirmedAt', 'updatedAt', 'previous'
+              ])
+              && field.unit == 'sqm'
+              && (field.value is int || field.value is float)
+              && field.value >= 0;
+          }
+
+          function centsFactOk(field) {
+            return factMetaOk(field)
+              && field.keys().hasAll([
+                'value', 'source', 'sourceRef', 'confirmedBy', 'confirmedAt', 'updatedAt'
+              ])
+              && field.keys().hasOnly([
+                'value', 'source', 'sourceRef', 'confirmedBy', 'confirmedAt',
+                'updatedAt', 'previous'
+              ])
+              && field.value is int
+              && field.value >= 0;
+          }
+
+          function percentFactOk(field) {
+            return factMetaOk(field)
+              && field.keys().hasAll([
+                'value', 'source', 'sourceRef', 'confirmedBy', 'confirmedAt', 'updatedAt'
+              ])
+              && field.keys().hasOnly([
+                'value', 'source', 'sourceRef', 'confirmedBy', 'confirmedAt',
+                'updatedAt', 'previous'
+              ])
+              && (field.value is int || field.value is float)
+              && field.value >= 0
+              && field.value <= 100;
+          }
+
+          function dateFactOk(field) {
+            return factMetaOk(field)
+              && field.keys().hasAll([
+                'value', 'source', 'sourceRef', 'confirmedBy', 'confirmedAt', 'updatedAt'
+              ])
+              && field.keys().hasOnly([
+                'value', 'source', 'sourceRef', 'confirmedBy', 'confirmedAt',
+                'updatedAt', 'previous'
+              ])
+              && field.value is string
+              && field.value.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+          }
+
+          function factsFieldsOk() {
+            return (
+                !request.resource.data.keys().hasAny(['address'])
+                || stringFactOk(request.resource.data.address)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['suburb'])
+                || stringFactOk(request.resource.data.suburb)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['postcode'])
+                || stringFactOk(request.resource.data.postcode)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['lotDp'])
+                || stringFactOk(request.resource.data.lotDp)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['council'])
+                || stringFactOk(request.resource.data.council)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['zoning'])
+                || stringFactOk(request.resource.data.zoning)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['buildType'])
+                || stringFactOk(request.resource.data.buildType)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['contractType'])
+                || stringFactOk(request.resource.data.contractType)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['builderLicence'])
+                || stringFactOk(request.resource.data.builderLicence)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['hbcfCertificate'])
+                || stringFactOk(request.resource.data.hbcfCertificate)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['cdcOrDaNumber'])
+                || stringFactOk(request.resource.data.cdcOrDaNumber)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['certifier'])
+                || stringFactOk(request.resource.data.certifier)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['floorArea'])
+                || areaFactOk(request.resource.data.floorArea)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['siteArea'])
+                || areaFactOk(request.resource.data.siteArea)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['storeys'])
+                || centsFactOk(request.resource.data.storeys)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['bedrooms'])
+                || centsFactOk(request.resource.data.bedrooms)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['bathrooms'])
+                || centsFactOk(request.resource.data.bathrooms)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['garageSpaces'])
+                || centsFactOk(request.resource.data.garageSpaces)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['contractValueCents'])
+                || centsFactOk(request.resource.data.contractValueCents)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['depositCents'])
+                || centsFactOk(request.resource.data.depositCents)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['retentionPercent'])
+                || percentFactOk(request.resource.data.retentionPercent)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['contractSigned'])
+                || dateFactOk(request.resource.data.contractSigned)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['siteStart'])
+                || dateFactOk(request.resource.data.siteStart)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['practicalCompletionTarget'])
+                || dateFactOk(request.resource.data.practicalCompletionTarget)
+              )
+              && (
+                !request.resource.data.keys().hasAny(['practicalCompletionActual'])
+                || dateFactOk(request.resource.data.practicalCompletionActual)
+              );
+          }
+
+          function factsShapeOk() {
+            return factId == 'current'
+              && factsKeysOk()
+              && request.resource.data.jobId == projectId
+              && request.resource.data.schemaVersion == 1
+              && request.resource.data.updatedAt is timestamp
+              && (
+                !request.resource.data.keys().hasAny(['createdAt'])
+                || request.resource.data.createdAt is timestamp
+              )
+              && (
+                !request.resource.data.keys().hasAny(['createdBy'])
+                || (
+                  request.resource.data.createdBy is string
+                  && request.resource.data.createdBy.size() > 0
+                  && request.resource.data.createdBy.size() <= 128
+                )
+              )
+              && factsFieldsOk();
+          }
+
+          function factsIdentityOk() {
+            return request.resource.data.jobId == resource.data.jobId
+              && request.resource.data.schemaVersion == resource.data.schemaVersion
+              && (
+                (
+                  !resource.data.keys().hasAny(['createdBy'])
+                  && !request.resource.data.keys().hasAny(['createdBy'])
+                )
+                || request.resource.data.createdBy == resource.data.createdBy
+              )
+              && (
+                (
+                  !resource.data.keys().hasAny(['createdAt'])
+                  && !request.resource.data.keys().hasAny(['createdAt'])
+                )
+                || request.resource.data.createdAt == resource.data.createdAt
+              );
+          }
+
+          allow read: if canUseProject();
+          allow create: if canUseProject()
+            && factsShapeOk()
+            && (
+              !request.resource.data.keys().hasAny(['createdBy'])
+              || request.resource.data.createdBy == request.auth.uid
+            );
+          allow update: if canUseProject()
+            && factsShapeOk()
+            && factsIdentityOk();
+          allow delete: if false;
+        }
         match /quotes/{itemId} {
           function quoteOk() {
             // Allocations must cover amountCents in the client. Rules cannot

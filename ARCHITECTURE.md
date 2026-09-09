@@ -87,9 +87,10 @@ Old PIN trees `users/{accessCode}/…` still exist. The live app does not use th
 - `organizations/{orgId}/projects/{projectId}` — signed-in email must be in that project’s `invitedEmails`. List queries use `resource.data.invitedEmails` so they match `array-contains`. Owner-only: create job, archive, invite, remove person. Delete job is denied.
 - Project subcollections use a `get()` of the parent project’s `invitedEmails`.
 - `costPlan/current` — members can read and write a valid plan; Level 1 creates as `target`; updates may raise `level` and `sections`. Audit fields stay fixed and delete is denied.
+- `facts/current` — members can read and write a valid Phase 16 facts document (`schemaVersion: 1`); delete is denied. Schema is in the repo; rules are **not deployed**.
 - `quotes/{quoteId}` — members can create/update a valid quote; delete is denied (void instead).
 - `organizations/{orgId}/tradeList/{tradeId}` — signed-in read; org-invited write; delete denied.
-- These Phase 10 rules are live on staging and production (2 Sep 2026).
+- These Phase 10 rules are live on staging and production (2 Sep 2026). Phase 16 `facts/current` rules are in the repo only.
 
 `storage.rules` in the repo: receipts require sign-in and job membership (or a known legacy PIN folder). Production Storage rules shipped 31 Aug 2026 with Phase 9. Quote and estimate files use the same job-file path; Phase 10 did not change Storage rules. See `DATABASE.md`.
 
@@ -111,7 +112,7 @@ organizations/{orgId}
   counters/invoices            # year + next sequence; written by allocateInvoiceNumber
   tradeList/{tradeId}          org-wide cost-plan trades (not job trade contacts)
   projects/{projectId}
-    expenses, invoices, files, costPlan, quotes, ledgerRollup, clients, labour, trades, …
+    expenses, invoices, files, costPlan, facts, quotes, ledgerRollup, clients, labour, trades, …
 profiles/{uid}              # private: name, mobile, ABN, address, photo
 publicProfiles/{email}      # display name + photo only
 users/{accessCode}          # leftover copies, unused by the app
@@ -119,7 +120,7 @@ users/{accessCode}          # leftover copies, unused by the app
 
 Project document fields include `name`, `invitedEmails`, `legacyWorkspaceId`, `orgId`, optional `kind` (`client` | `own`).
 
-`costPlan/current` is optional. Level 1 stores one GST-inclusive target. Level 2 adds `sections` keyed by trade. Level 3 adds imported lines under those trades. `quotes/{quoteId}` are separate documents with optional `fileIds` (and leftover `fileId`) pointing at `files/{fileId}`. Expenses may carry optional `tradeId` and a retaggable `category`. `ledgerRollup/current` is the server-owned expense summary (cost, counts, category and calendar buckets). Members can read it; only Cloud Functions write it. A job with no document has no Cost Plan nav item. Plan, quotes and the org trade list are shared through TanStack Query; they are not added to AppContext.
+`costPlan/current` is optional. Level 1 stores one GST-inclusive target. Level 2 adds `sections` keyed by trade. Level 3 adds imported lines under those trades. `facts/current` is optional too (`schemaVersion: 1` in `src/domain/jobFacts.ts`): every field is optional with provenance; an empty document is valid; nothing invents 0 sqm or $0. Schema is in the repo; **not deployed**. `quotes/{quoteId}` are separate documents with optional `fileIds` (and leftover `fileId`) pointing at `files/{fileId}`. Expenses may carry optional `tradeId` and a retaggable `category`. `ledgerRollup/current` is the server-owned expense summary (cost, counts, category and calendar buckets). Members can read it; only Cloud Functions write it. A job with no document has no Cost Plan nav item. Plan, quotes and the org trade list are shared through TanStack Query; they are not added to AppContext.
 
 ---
 

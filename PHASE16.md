@@ -52,6 +52,8 @@ Rules that hold for all of them:
 
 Rules and emulator tests as usual: members read, org-invited write a valid shape, delete denied.
 
+**Part A done.** A job can hold `facts/current` (`schemaVersion: 1`): every field optional, every present field a value with source (`owner` | `import` | `document` | `assistant`), sourceRef, confirmation and a soft `previous` cap of 20. Empty `{ jobId, schemaVersion: 1, updatedAt }` is valid; nothing invents 0 sqm or $0. Money is integer cents; areas are `{ value, unit: 'sqm' }`. `decideFactWrite` never silently overwrites a confirmed value unless the incoming source is `owner`; otherwise it proposes (proposals are not persisted this part). Domain `src/domain/jobFacts.ts`, adapter `src/firebase/jobFacts.ts` (not imported from App.js / PaletteHost). Members read/write a valid shape; delete denied; extra keys denied. Schema in the repo; not deployed. Production untouched.
+
 Commit: `Give a job a facts record, with provenance on every field.`
 
 ---

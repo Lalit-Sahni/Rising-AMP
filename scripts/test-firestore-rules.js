@@ -583,6 +583,97 @@ async function main() {
       email_verified: true,
     });
 
+    const factsPath = `organizations/${ORG}/projects/${JOB}/facts/current`;
+    const validFacts = {
+      jobId: JOB,
+      schemaVersion: 1,
+      createdBy: OWNER.uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const addressFact = {
+      value: '72 Centenary Dr',
+      source: 'owner',
+      sourceRef: null,
+      confirmedBy: OWNER.uid,
+      confirmedAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const floorAreaFact = {
+      value: 167.22,
+      unit: 'sqm',
+      source: 'import',
+      sourceRef: 'file-boq',
+      confirmedBy: null,
+      confirmedAt: null,
+      updatedAt: new Date(),
+    };
+    const contractFact = {
+      value: 32191629,
+      source: 'document',
+      sourceRef: null,
+      confirmedBy: null,
+      confirmedAt: null,
+      updatedAt: new Date(),
+    };
+    await assertSucceeds(owner.firestore().doc(factsPath).set(validFacts));
+    await assertSucceeds(owner.firestore().doc(factsPath).get());
+    await assertFails(stranger.firestore().doc(factsPath).get());
+    await assertFails(stranger.firestore().doc(factsPath).set(validFacts));
+    await assertSucceeds(coworker.firestore().doc(factsPath).get());
+    await assertSucceeds(coworker.firestore().doc(factsPath).update({
+      address: addressFact,
+      floorArea: floorAreaFact,
+      contractValueCents: contractFact,
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(factsPath).delete());
+    await assertFails(coworker.firestore().doc(factsPath).delete());
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/facts/other`).set(validFacts));
+    await assertFails(owner.firestore().doc(factsPath).set({
+      ...validFacts,
+      sentence: 'The house is 167 sqm',
+    }));
+    await assertFails(owner.firestore().doc(factsPath).set({
+      ...validFacts,
+      contractValueCents: { ...contractFact, value: '32191629' },
+    }));
+    await assertFails(owner.firestore().doc(factsPath).set({
+      schemaVersion: 1,
+      createdBy: OWNER.uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(factsPath).set({
+      ...validFacts,
+      floorArea: { ...floorAreaFact, unit: 'm2' },
+    }));
+    await assertFails(owner.firestore().doc(factsPath).set({
+      ...validFacts,
+      siteStart: {
+        value: '09/09/2026',
+        source: 'owner',
+        sourceRef: null,
+        confirmedBy: null,
+        confirmedAt: null,
+        updatedAt: new Date(),
+      },
+    }));
+    await assertSucceeds(owner.firestore().doc(factsPath).set({
+      ...validFacts,
+      address: addressFact,
+      floorArea: floorAreaFact,
+      contractValueCents: contractFact,
+      siteStart: {
+        value: '2026-09-09',
+        source: 'owner',
+        sourceRef: null,
+        confirmedBy: null,
+        confirmedAt: null,
+        updatedAt: new Date(),
+      },
+    }));
+
     const askPath = `organizations/${ORG}/askHistory/${OWNER.uid}/items/q1`;
     const validAsk = {
       uid: OWNER.uid,
