@@ -48,21 +48,24 @@ const generateSummary = (expenses) => {
 };
 
 // Create Executive Summary Sheet
-const createExecutiveSummary = (workbook, summary) => {
+const createExecutiveSummary = (workbook, summary, identity) => {
   const worksheet = workbook.addWorksheet('Executive Summary');
+  const jobName = identity && String(identity.jobName || '').trim();
+  const subtitle = identity && String(identity.subtitle || '').trim();
   
-  // Title
-  addTitleRow(worksheet, 1, 'Expense Report - Executive Summary');
+  // Title — optional job name, never invented facts
+  addTitleRow(worksheet, 1, jobName ? `Expense Report - ${jobName}` : 'Expense Report - Executive Summary');
   
-  // Export date
+  // Export date, with present fact strings when they exist
   const dateCell = worksheet.getCell(2, 1);
-  dateCell.value = `Generated: ${new Date().toLocaleDateString('en-US', { 
+  const generated = `Generated: ${new Date().toLocaleDateString('en-US', { 
     year: 'numeric', 
     month: 'long', 
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
   })}`;
+  dateCell.value = subtitle ? `${subtitle}  ·  ${generated}` : generated;
   dateCell.font = { name: 'Arial', size: 12, bold: true };
   dateCell.alignment = { horizontal: 'center', vertical: 'middle' };
   mergeCells(worksheet, 2, 2, 1, 4);
@@ -620,7 +623,7 @@ const createMasterSheet = (workbook, allExpenses) => {
 };
 
 // Main export function
-export const exportExpensesToExcel = async (expenses, filename) => {
+export const exportExpensesToExcel = async (expenses, filename, identity) => {
   try {
     const ExcelJS = (await import('exceljs')).default;
     const workbook = new ExcelJS.Workbook();
@@ -640,7 +643,7 @@ export const exportExpensesToExcel = async (expenses, filename) => {
     const purchaseExpenses = live.filter(exp => exp.category === 'purchase');
     const installationExpenses = live.filter(exp => exp.category === 'installation');
 
-    createExecutiveSummary(workbook, summary);
+    createExecutiveSummary(workbook, summary, identity);
     createLabourSheet(workbook, labourExpenses);
     createTradeSheet(workbook, tradeExpenses);
     createEquipmentSheet(workbook, equipmentExpenses);

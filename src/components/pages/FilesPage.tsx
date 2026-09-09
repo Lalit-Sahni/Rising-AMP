@@ -586,6 +586,7 @@ export default function FilesPage() {
 
       <HandoverPackSheet
         open={handoverOpen}
+        jobId={jobId}
         jobName={projectName}
         files={files}
         clients={clients || []}

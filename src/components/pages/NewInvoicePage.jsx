@@ -47,6 +47,7 @@ const NewInvoicePage = ({ onComplete }) => {
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [numberError, setNumberError] = useState('');
   const [selectedClient, setSelectedClient] = useState(null);
+  const [siteAddress, setSiteAddress] = useState('');
   
   const [formData, setFormData] = useState({
     clientName: '',
@@ -98,6 +99,24 @@ const NewInvoicePage = ({ onComplete }) => {
     // Allocate once when the page opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [membership && membership.orgId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!jobId) {
+      setSiteAddress('');
+      return undefined;
+    }
+    import('../../firebase/jobFacts').then(({ fetchJobFacts }) => (
+      fetchJobFacts(jobId)
+    )).then((facts) => {
+      if (!cancelled) setSiteAddress(String((facts && facts.address && facts.address.value) || '').trim());
+    }).catch(() => {
+      if (!cancelled) setSiteAddress('');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
 
   const savedBank = bankQuery.data || null;
   useEffect(() => {
@@ -258,7 +277,7 @@ const NewInvoicePage = ({ onComplete }) => {
   const downloadPDF = async () => {
     try {
       const { downloadInvoicePdf } = await import('../../pdf/invoicePdf');
-      await downloadInvoicePdf({ invoice: previewInvoiceData(), business, jobName }, `Invoice-${invoiceNumber || 'draft'}.pdf`);
+      await downloadInvoicePdf({ invoice: previewInvoiceData(), business, jobName, siteAddress: siteAddress || undefined }, `Invoice-${invoiceNumber || 'draft'}.pdf`);
       showToast('Invoice PDF downloaded', 'success');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -944,6 +963,7 @@ const NewInvoicePage = ({ onComplete }) => {
           invoice={previewInvoiceData()}
           business={business}
           jobName={jobName}
+          siteAddress={siteAddress || undefined}
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
           onSave={saveInvoice}

@@ -87,6 +87,8 @@ Commit: `Propose job facts from the estimate, the contract and the invoices.`
 
 Follow the design system. Facts are data, so a source marker is a small dot or a quiet label, never a coloured pill or a tinted card.
 
+**Part C done.** Job details live on Overview (`/jobs/:jobId`), not a new route. The lead under the job title shows address, floor area (`{value} sqm`) and contract value (`formatCents`) only when those facts exist; an address that equals the job name is not repeated; the Contract / Cost-to-date KPI cards stay paid-invoice / spend figures. A grouped Details panel (Site / Building / Commercial / Dates / Compliance) is lazy (`JobFactsPanel.tsx`): present fields only, in-place edit, quiet source (11px slate label or a 7px hairline dot — never a pill), unconfirmed reads `Not confirmed`, empty groups stay quiet behind **Add a detail**. Empty strings / 0 sqm / $0 are not saved. `facts/current` is fetched with a dynamic adapter import and fails quiet (rules still not deployed). `unconfirmedJobFactCount` plus `withJobFactsAttention` add one what-needs-you line when the count is above 0; Review scrolls to Details. Owner edits go through `saveJobFacts` with `source: 'owner'`. The handover cover prefers `facts.address` when present, else the client address, and may add floor area / contract value only if stored. Invoices take an optional `siteAddress` under Job (Bill to stays the client; HIA claims omit the prop). Expense export still works as two arguments and may title/subtitle a job name and present fact strings. Not imported from App.js / PaletteHost / Header. Dashboard does not static-import the adapter or the proposal sheet. Production untouched.
+
 Commit: `Show job details where they belong, with their source.`
 
 ---

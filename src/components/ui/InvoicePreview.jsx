@@ -6,6 +6,7 @@ const InvoicePreview = ({
   invoice,
   business,
   jobName,
+  siteAddress,
   isOpen,
   onClose,
   onSave,
@@ -19,7 +20,7 @@ const InvoicePreview = ({
     setBusy(true);
     try {
       const { downloadInvoicePdf } = await import('../../pdf/invoicePdf');
-      await downloadInvoicePdf({ invoice, business, jobName });
+      await downloadInvoicePdf({ invoice, business, jobName, siteAddress });
       if (showToast) showToast('Invoice PDF downloaded', 'success');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -81,7 +82,7 @@ const InvoicePreview = ({
 
         <div className="flex-1 overflow-auto p-3 md:p-6" style={{ paddingBottom: 'calc(16px + var(--safe-bottom))' }}>
           <div className="mx-auto max-w-[794px] bg-white border border-hairline shadow-whisper rounded-[6px] overflow-hidden">
-            <InvoiceDocument invoice={invoice} business={business} jobName={jobName} />
+            <InvoiceDocument invoice={invoice} business={business} jobName={jobName} siteAddress={siteAddress} />
           </div>
         </div>
       </div>

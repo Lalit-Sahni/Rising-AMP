@@ -36,6 +36,8 @@ export type HandoverSkip = {
 export type HandoverCover = {
   jobName: string;
   jobAddress: string;
+  floorArea?: string;
+  contractValue?: string;
   generatedAt: Date;
   businessName: string;
   displayName: string;
@@ -152,6 +154,8 @@ export function jobAddressFromClients(clients: unknown[] = []): string {
 export function coverFromProfile(input: {
   jobName?: string;
   jobAddress?: string;
+  floorArea?: string;
+  contractValue?: string;
   generatedAt?: Date;
   profile?: {
     businessName?: string;
@@ -166,6 +170,8 @@ export function coverFromProfile(input: {
   } | null;
 }): HandoverCover {
   const profile = input.profile || {};
+  const floorArea = optionalCoverLine(input.floorArea);
+  const contractValue = optionalCoverLine(input.contractValue);
   return {
     jobName: String(input.jobName || '').trim() || 'This job',
     jobAddress: String(input.jobAddress || '').trim(),
@@ -176,5 +182,15 @@ export function coverFromProfile(input: {
     addressLines: builderAddressLines(profile),
     mobile: String(profile.mobile || '').trim(),
     email: String(profile.email || '').trim(),
+    ...(floorArea ? { floorArea } : {}),
+    ...(contractValue ? { contractValue } : {}),
   };
+}
+
+function optionalCoverLine(value: unknown): string {
+  const text = String(value || '').trim();
+  if (!text || text === '—') return '';
+  if (/^0(?:\.0+)?\s*sqm$/i.test(text)) return '';
+  if (/^\$0(?:\.00)?$/.test(text)) return '';
+  return text;
 }

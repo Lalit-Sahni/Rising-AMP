@@ -4,11 +4,19 @@ import {
   JOB_FACTS_DOC_ID,
   JOB_FACTS_SCHEMA_VERSION,
   applyFactWrite,
+  buildConfirmFactPatch,
+  buildOwnerFactPatch,
   decideFactWrite,
+  formatAreaSqm,
+  handoverFactLines,
+  jobExportIdentity,
+  jobFactsLead,
+  jobFactsLeadParts,
   jobFactsPatchSchema,
   jobFactsSchema,
   mergeJobFactsPatch,
   parseJobFacts,
+  unconfirmedJobFactCount,
   type FactLike,
   type FactSource,
   type JobFacts,
@@ -282,5 +290,119 @@ describe('applyFactWrite and merge', () => {
     expect(merged.facts.floorArea).toBeUndefined();
     expect(merged.facts.contractValueCents).toBeUndefined();
     expect(merged.facts.createdBy).toBe('owner-1');
+  });
+});
+
+describe('unconfirmedJobFactCount', () => {
+  test('present unconfirmed counts as 1; missing and confirmed are ignored; empty facts are 0', () => {
+    expect(unconfirmedJobFactCount(null)).toBe(0);
+    expect(unconfirmedJobFactCount(undefined)).toBe(0);
+    expect(unconfirmedJobFactCount(emptyFacts)).toBe(0);
+    expect(unconfirmedJobFactCount(jobFactsSchema.parse({
+      ...emptyFacts,
+      floorArea: areaFact(167.22, 'import'),
+    }))).toBe(1);
+    expect(unconfirmedJobFactCount(jobFactsSchema.parse({
+      ...emptyFacts,
+      address: stringFact('72 Centenary Dr', 'import'),
+      floorArea: { ...areaFact(167.22, 'owner'), ...confirmed() },
+    }))).toBe(1);
+    expect(unconfirmedJobFactCount(jobFactsSchema.parse({
+      ...emptyFacts,
+      address: { ...stringFact('72 Centenary Dr', 'owner'), ...confirmed() },
+      floorArea: { ...areaFact(167.22, 'owner'), ...confirmed() },
+    }))).toBe(0);
+  });
+});
+
+describe('overview lead and export lines', () => {
+  test('omits absent fields and does not repeat an address that is the job name', () => {
+    expect(jobFactsLead(null, 'Kelly St')).toEqual({});
+    expect(jobFactsLead(emptyFacts, 'Kelly St')).toEqual({});
+    expect(jobFactsLeadParts(jobFactsLead(emptyFacts, 'Kelly St'))).toEqual([]);
+
+    const sameAddress = jobFactsSchema.parse({
+      ...emptyFacts,
+      address: stringFact('Kelly St', 'import'),
+      floorArea: areaFact(167.22, 'import'),
+      contractValueCents: centsFact(32_191_629, 'document'),
+    });
+    expect(jobFactsLead(sameAddress, 'Kelly St')).toEqual({
+      floorArea: '167.22 sqm',
+      contractValue: '$321,916.29',
+    });
+
+    const different = jobFactsSchema.parse({
+      ...emptyFacts,
+      address: stringFact('12 Kelly Street, South Wentworthville', 'import'),
+    });
+    expect(jobFactsLead(different, 'Kelly St').address).toBe('12 Kelly Street, South Wentworthville');
+  });
+
+  test('never invents 0 sqm, $0 or an em dash on the lead', () => {
+    const lead = jobFactsLead(emptyFacts, 'Kelly St');
+    const painted = JSON.stringify(lead);
+    expect(painted).not.toContain('0 sqm');
+    expect(painted).not.toContain('$0');
+    expect(painted).not.toContain('—');
+    expect(formatAreaSqm(0)).toBeNull();
+    expect(formatAreaSqm(undefined)).toBeNull();
+    expect(jobExportIdentity('Kelly St', emptyFacts)).toEqual({ jobName: 'Kelly St' });
+    expect(jobExportIdentity('', null)).toEqual({});
+  });
+});
+
+describe('owner edit patch', () => {
+  test('owner edit patch uses source owner and does not persist empty or 0 sqm', () => {
+    const written = buildOwnerFactPatch('floorArea', '167.22', 'uid-1', NOW);
+    expect(written.ok).toBe(true);
+    if (written.ok) {
+      expect(written.patch.floorArea?.source).toBe('owner');
+      expect(written.patch.floorArea?.value).toBe(167.22);
+      expect(written.patch.floorArea?.unit).toBe('sqm');
+      expect(written.patch.floorArea?.confirmedBy).toBe('uid-1');
+      expect(written.patch.floorArea?.confirmedAt).toEqual(NOW);
+    }
+    const money = buildOwnerFactPatch('contractValueCents', '321916.29', 'uid-1', NOW);
+    expect(money.ok).toBe(true);
+    if (money.ok) {
+      expect(money.patch.contractValueCents?.source).toBe('owner');
+      expect(money.patch.contractValueCents?.value).toBe(32_191_629);
+    }
+    expect(buildOwnerFactPatch('address', '   ', 'uid-1', NOW)).toEqual({ ok: false, reason: 'empty' });
+    expect(buildOwnerFactPatch('floorArea', '0', 'uid-1', NOW)).toEqual({ ok: false, reason: 'empty' });
+    expect(buildOwnerFactPatch('contractValueCents', '0', 'uid-1', NOW)).toEqual({ ok: false, reason: 'empty' });
+  });
+
+  test('confirm in place keeps the original source', () => {
+    const current = jobFactsSchema.parse({
+      ...emptyFacts,
+      floorArea: areaFact(167.22, 'import', { sourceRef: 'file-boq' }),
+    });
+    const confirmedPatch = buildConfirmFactPatch('floorArea', current, 'uid-1', NOW);
+    expect(confirmedPatch.ok).toBe(true);
+    if (confirmedPatch.ok) {
+      expect(confirmedPatch.patch.floorArea?.source).toBe('import');
+      expect(confirmedPatch.patch.floorArea?.sourceRef).toBe('file-boq');
+      expect(confirmedPatch.patch.floorArea?.value).toBe(167.22);
+      expect(confirmedPatch.patch.floorArea?.confirmedBy).toBe('uid-1');
+      expect(confirmedPatch.patch.floorArea?.confirmedAt).toEqual(NOW);
+    }
+  });
+});
+
+describe('handover fact lines', () => {
+  test('omits missing facts and never paints 0 sqm or $0', () => {
+    expect(handoverFactLines(null)).toEqual({});
+    expect(handoverFactLines(emptyFacts)).toEqual({});
+    const lines = handoverFactLines(jobFactsSchema.parse({
+      ...emptyFacts,
+      address: stringFact('12 Kelly Street', 'import'),
+      floorArea: areaFact(167.22, 'import'),
+    }));
+    expect(lines.address).toBe('12 Kelly Street');
+    expect(lines.floorArea).toBe('167.22 sqm');
+    expect(lines.contractValue).toBeUndefined();
+    expect(JSON.stringify(lines)).not.toMatch(/0 sqm|\$0\.00|—/);
   });
 });

@@ -90,5 +90,47 @@ describe('handover pack selection', () => {
     });
     expect(cover.businessName).toBe('Opal SS Constructions');
     expect(cover.addressLines).toEqual([]);
+    expect(cover.floorArea).toBeUndefined();
+    expect(cover.contractValue).toBeUndefined();
+  });
+
+  test('cover prefers a facts address over the client and omits missing floor area and contract value', () => {
+    const clientAddress = jobAddressFromClients([
+      { email: 'owner@example.com', address: 'Client house, Kellyville' },
+    ]);
+    const fromFacts: { address?: string; floorArea?: string; contractValue?: string } = {
+      address: '12 Kelly Street, South Wentworthville',
+      floorArea: '167.22 sqm',
+    };
+    const cover = coverFromProfile({
+      jobName: 'Kelly St',
+      jobAddress: fromFacts.address || clientAddress,
+      floorArea: fromFacts.floorArea,
+      contractValue: fromFacts.contractValue,
+    });
+    expect(cover.jobAddress).toBe('12 Kelly Street, South Wentworthville');
+    expect(cover.floorArea).toBe('167.22 sqm');
+    expect(cover.contractValue).toBeUndefined();
+    expect(JSON.stringify(cover)).not.toMatch(/0 sqm|\$0\.00/);
+
+    const fallback = coverFromProfile({
+      jobName: 'Kelly St',
+      jobAddress: jobAddressFromClients([
+        { email: 'owner@example.com', address: 'Client house, Kellyville' },
+      ]),
+    });
+    expect(fallback.jobAddress).toBe('Client house, Kellyville');
+    expect(fallback.floorArea).toBeUndefined();
+    const stripped = coverFromProfile({
+      jobName: 'Kelly St',
+      jobAddress: '',
+      floorArea: '0 sqm',
+      contractValue: '$0.00',
+    });
+    expect(stripped.jobAddress).toBe('');
+    expect(stripped.floorArea).toBeUndefined();
+    expect(stripped.contractValue).toBeUndefined();
+    expect(stripped).not.toHaveProperty('floorArea');
+    expect(stripped).not.toHaveProperty('contractValue');
   });
 });

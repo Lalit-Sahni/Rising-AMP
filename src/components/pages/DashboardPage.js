@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   CalendarDays,
@@ -17,6 +17,8 @@ import EmptyState from '../EmptyState';
 import { fetchJobFiles } from '../../firebase/jobFiles';
 import { withFileAttention } from '../../domain/jobFileAttention';
 import { withAssistantDailyLine } from '../../domain/assistantActivity';
+import { withJobFactsAttention } from '../../domain/jobFactsAttention';
+import { jobExportIdentity, jobFactsLead, jobFactsLeadParts } from '../../domain/jobFacts';
 import { withCostPlanAttention, deriveCostPlanProgressFromSpent, hasActiveCostPlan, planHasTrades } from '../../domain/costPlan';
 import { overlayExpenseTotals } from '../../domain/ledgerRollup';
 import { useCostPlan, useCostPlanQuotes } from '../../hooks/useCostPlan';
@@ -50,6 +52,8 @@ function costPlanDismissKey(jobId) {
   return `risingAmp.costPlan.setupDismissed.${jobId}`;
 }
 
+const JobFactsPanel = lazy(() => import('../jobFacts/JobFactsPanel'));
+
 export default function DashboardPage() {
   const {
     orgId,
@@ -72,9 +76,11 @@ export default function DashboardPage() {
   const [showExport, setShowExport] = useState(false);
   const [jobFiles, setJobFiles] = useState([]);
   const [assistantReceipts, setAssistantReceipts] = useState([]);
+  const [jobFacts, setJobFacts] = useState(null);
   const [targetSheetOpen, setTargetSheetOpen] = useState(false);
   const [costPlanSetupDismissed, setCostPlanSetupDismissed] = useState(false);
   const attentionRef = useRef(null);
+  const detailsRef = useRef(null);
   const [kindBusy, setKindBusy] = useState(false);
   const costPlanQuery = useCostPlan(orgId, jobId);
   const quotesQuery = useCostPlanQuotes(orgId, jobId, planHasTrades(costPlanQuery.data));
@@ -130,6 +136,24 @@ export default function DashboardPage() {
     };
   }, [orgId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (!jobId) {
+      setJobFacts(null);
+      return undefined;
+    }
+    import('../../firebase/jobFacts').then(({ fetchJobFacts }) => (
+      fetchJobFacts(jobId)
+    )).then((row) => {
+      if (!cancelled) setJobFacts(row || null);
+    }).catch(() => {
+      if (!cancelled) setJobFacts(null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
   const metrics = useMemo(
     () => {
       const base = withFileAttention(
@@ -142,13 +166,17 @@ export default function DashboardPage() {
         quotes: quotesQuery.data || [],
         expensesCapped,
       });
-      return withAssistantDailyLine(
-        overlayExpenseTotals(withAttention, totals),
-        { receipts: assistantReceipts, jobId, expenses },
+      return withJobFactsAttention(
+        withAssistantDailyLine(
+          overlayExpenseTotals(withAttention, totals),
+          { receipts: assistantReceipts, jobId, expenses },
+        ),
+        jobFacts,
       );
     },
-    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped, jobKind, costPlanQuery.data, quotesQuery.data, totals, assistantReceipts, jobId]
+    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped, jobKind, costPlanQuery.data, quotesQuery.data, totals, assistantReceipts, jobId, jobFacts]
   );
+  const leadParts = jobFactsLeadParts(jobFactsLead(jobFacts, projectName));
   const planProgress = useMemo(
     () => (
       hasActiveCostPlan(costPlanQuery.data)
@@ -168,14 +196,28 @@ export default function DashboardPage() {
   const subtitle = jobSubtitle({ clients: clientsQuery.data || [], invoices, metrics });
   const maxCategory = metrics.categories[0]?.amount || 1;
 
-  const handleNavigate = (page) => {
+  const scrollToDetails = () => {
+    if (detailsRef.current) {
+      detailsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleNavigate = (page, itemId) => {
+    if (itemId === 'job-facts-unconfirmed' || page === 'dashboard') {
+      scrollToDetails();
+      return;
+    }
     if (!page) return;
     setCurrentPage(page);
   };
 
   const handleExport = async (filename) => {
     const { exportExpensesToExcel } = await import('../../utils/excelExport');
-    const result = await exportExpensesToExcel(expenses || [], filename);
+    const result = await exportExpensesToExcel(
+      expenses || [],
+      filename,
+      jobExportIdentity(projectName, jobFacts),
+    );
     if (result.success) {
       showToast('Excel file exported.', 'success');
     } else {
@@ -242,6 +284,9 @@ export default function DashboardPage() {
           <div>
             <div className="eyebrow">Project overview</div>
             <h1 className="text-[25px] font-extrabold tracking-tight mt-1">{projectName || 'Job'}</h1>
+            {leadParts.length > 0 ? (
+              <p className="text-[13.5px] text-slate-600 mt-0.5">{leadParts.join(' · ')}</p>
+            ) : null}
             {jobStatus === 'archived' && (
               <p className="text-[13.5px] text-warn mt-1">This job is archived. Records stay. The owner can bring it back from Jobs.</p>
             )}
@@ -481,7 +526,7 @@ export default function DashboardPage() {
                       <CalendarDays className="w-4 h-4" strokeWidth={1.7} />
                     ) : item.id === 'expenses-no-receipt' ? (
                       <Camera className="w-4 h-4" strokeWidth={1.7} />
-                    ) : item.id.startsWith('files') || item.id === 'assistant-yesterday' ? (
+                    ) : item.id.startsWith('files') || item.id === 'assistant-yesterday' || item.id === 'job-facts-unconfirmed' ? (
                       <FileText className="w-4 h-4" strokeWidth={1.7} />
                     ) : (
                       <AlertTriangle className="w-4 h-4" strokeWidth={1.7} />
@@ -493,7 +538,7 @@ export default function DashboardPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => handleNavigate(item.page)}
+                    onClick={() => handleNavigate(item.page, item.id)}
                     className="shrink-0 inline-flex items-center bg-surface text-ink border border-hairline text-xs font-semibold px-3 py-1.5 rounded-ot-sm hover:border-[#D6D9DD]"
                   >
                     {item.action}
@@ -592,6 +637,22 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div ref={detailsRef} id="job-facts-details" className="mb-4">
+          <Suspense fallback={(
+            <div className="bg-surface border border-hairline rounded-ot px-5 py-[18px] shadow-whisper">
+              <h3 className="text-sm font-extrabold">Details</h3>
+            </div>
+          )}>
+            <JobFactsPanel
+              jobId={jobId}
+              userId={(authUser && authUser.uid) || ''}
+              facts={jobFacts}
+              onFactsChange={setJobFacts}
+              showToast={showToast}
+            />
+          </Suspense>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">

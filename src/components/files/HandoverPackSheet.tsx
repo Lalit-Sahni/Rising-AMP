@@ -16,6 +16,7 @@ import { getBytesForPath } from '../../firebase/storageBytes';
 
 type HandoverPackSheetProps = {
   open: boolean;
+  jobId?: string;
   jobName?: string;
   files: JobFile[];
   clients?: unknown[];
@@ -52,6 +53,7 @@ function downloadPdf(bytes: Uint8Array, fileName: string) {
 
 export default function HandoverPackSheet({
   open,
+  jobId,
   jobName,
   files,
   clients = [],
@@ -112,9 +114,21 @@ export default function HandoverPackSheet({
       }
       setProgress('Building PDF…');
       const { buildHandoverPackPdf } = await import('../../pdf/buildHandoverPack');
+      let factLines: { address?: string; floorArea?: string; contractValue?: string } = {};
+      if (jobId) {
+        try {
+          const { fetchJobFacts } = await import('../../firebase/jobFacts');
+          const { handoverFactLines } = await import('../../domain/jobFacts');
+          factLines = handoverFactLines(await fetchJobFacts(jobId));
+        } catch {
+          factLines = {};
+        }
+      }
       const cover = coverFromProfile({
         jobName,
-        jobAddress: jobAddressFromClients(clients),
+        jobAddress: factLines.address || jobAddressFromClients(clients),
+        floorArea: factLines.floorArea,
+        contractValue: factLines.contractValue,
         generatedAt: new Date(),
         profile,
       });

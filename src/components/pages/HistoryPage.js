@@ -110,6 +110,7 @@ export default function HistoryPage() {
     codeExpenseTrade,
     codeExpenseCategory,
     setCurrentPage,
+    projectName,
   } = useApp();
   const planQuery = useCostPlan(orgId, jobId);
   const tradeQuery = useTradeList(orgId);
@@ -230,9 +231,18 @@ export default function HistoryPage() {
   const handleExport = async (filename) => {
     try {
       const { exportExpensesToExcel } = await import('../../utils/excelExport');
+      let identity = { jobName: projectName || undefined };
+      try {
+        const { fetchJobFacts } = await import('../../firebase/jobFacts');
+        const { jobExportIdentity } = await import('../../domain/jobFacts');
+        identity = jobExportIdentity(projectName, await fetchJobFacts(jobId));
+      } catch {
+        // Missing facts or undeployed rules — export the expenses anyway.
+      }
       const result = await exportExpensesToExcel(
         filteredAndSortedExpenses.filter((expense) => !isVoidExpense(expense)),
         filename,
+        identity,
       );
       if (result.success) {
         showToast('Excel file downloaded', 'success');

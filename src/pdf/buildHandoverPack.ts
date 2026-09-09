@@ -170,6 +170,30 @@ function drawCover(
       16,
     );
   }
+  if (cover.floorArea) {
+    y = drawLines(
+      page,
+      font,
+      wrapText(font, cover.floorArea, 12, width),
+      MARGIN,
+      y,
+      12,
+      slate,
+      16,
+    );
+  }
+  if (cover.contractValue) {
+    y = drawLines(
+      page,
+      font,
+      wrapText(font, cover.contractValue, 12, width),
+      MARGIN,
+      y,
+      12,
+      slate,
+      16,
+    );
+  }
   y -= 8;
   page.drawText(formatHandoverDate(cover.generatedAt), {
     x: MARGIN,

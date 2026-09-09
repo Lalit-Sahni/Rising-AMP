@@ -1,4 +1,5 @@
 import { PDFDocument } from 'pdf-lib';
+import { inflateSync } from 'node:zlib';
 import { jobFileSchema } from '../domain/schemas';
 import { coverFromProfile } from '../domain/handoverPack';
 import { buildHandoverPackPdf } from './buildHandoverPack';
@@ -31,6 +32,28 @@ async function onePagePdf(): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.addPage();
   return doc.save();
+}
+
+function pdfVisibleText(bytes: Uint8Array): string {
+  const raw = Buffer.from(bytes);
+  const marker = Buffer.from('stream\n');
+  const chunks: Buffer[] = [];
+  let from = 0;
+  while (from < raw.length) {
+    const start = raw.indexOf(marker, from);
+    if (start < 0) break;
+    const end = raw.indexOf(Buffer.from('\nendstream'), start);
+    if (end < 0) break;
+    try {
+      chunks.push(inflateSync(raw.subarray(start + marker.length, end)));
+    } catch {
+      // Image/other streams can fail inflate; skip them.
+    }
+    from = end + 1;
+  }
+  return Buffer.concat(chunks).toString('latin1').replace(/<([0-9A-Fa-f]+)> Tj/g, (_match, hex) => (
+    Buffer.from(hex, 'hex').toString('latin1')
+  ));
 }
 
 describe('handover pack PDF', () => {
@@ -73,5 +96,38 @@ describe('handover pack PDF', () => {
     expect(skipped.some((row) => /Spec/.test(row.name))).toBe(true);
     const pack = await PDFDocument.load(bytes);
     expect(pack.getPageCount()).toBeGreaterThanOrEqual(2);
+  });
+
+  test('cover omits missing facts and does not paint 0 sqm or $0.00', async () => {
+    const { bytes } = await buildHandoverPackPdf({
+      cover: coverFromProfile({
+        jobName: 'Kelly St',
+        generatedAt: new Date('2026-08-31T12:00:00+10:00'),
+        profile: { businessName: 'Opal SS Constructions' },
+      }),
+      files: [],
+      sources: new Map(),
+    });
+    const raw = pdfVisibleText(bytes);
+    expect(raw).not.toContain('0 sqm');
+    expect(raw).not.toContain('$0.00');
+
+    const withFacts = await buildHandoverPackPdf({
+      cover: coverFromProfile({
+        jobName: 'Kelly St',
+        jobAddress: '12 Kelly Street',
+        floorArea: '167.22 sqm',
+        contractValue: '$321,916.29',
+        generatedAt: new Date('2026-08-31T12:00:00+10:00'),
+        profile: { businessName: 'Opal SS Constructions' },
+      }),
+      files: [],
+      sources: new Map(),
+    });
+    const painted = pdfVisibleText(withFacts.bytes);
+    expect(painted).toContain('12 Kelly Street');
+    expect(painted).toContain('167.22 sqm');
+    expect(painted).toContain('$321,916.29');
+    expect(painted).not.toContain('0 sqm');
   });
 });

@@ -54,6 +54,7 @@ const InvoiceManagementPage = () => {
   const [showRecentlyDeleted, setShowRecentlyDeleted] = useState(false);
   const [jobFiles, setJobFiles] = useState([]);
   const [downloadingId, setDownloadingId] = useState(null);
+  const [siteAddress, setSiteAddress] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +64,24 @@ const InvoiceManagementPage = () => {
     }
     fetchJobFiles(jobId).then((result) => {
       if (!cancelled && result.success) setJobFiles(result.files || []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!jobId) {
+      setSiteAddress('');
+      return undefined;
+    }
+    import('../../firebase/jobFacts').then(({ fetchJobFacts }) => (
+      fetchJobFacts(jobId)
+    )).then((facts) => {
+      if (!cancelled) setSiteAddress(String((facts && facts.address && facts.address.value) || '').trim());
+    }).catch(() => {
+      if (!cancelled) setSiteAddress('');
     });
     return () => {
       cancelled = true;
@@ -109,7 +128,7 @@ const InvoiceManagementPage = () => {
     setDownloadingId(invoice.id);
     try {
       const { downloadInvoicePdf } = await import('../../pdf/invoicePdf');
-      await downloadInvoicePdf({ invoice, business, jobName });
+      await downloadInvoicePdf({ invoice, business, jobName, siteAddress: siteAddress || undefined });
       showToast('Invoice PDF downloaded', 'success');
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -378,6 +397,7 @@ const InvoiceManagementPage = () => {
             invoice={previewInvoice}
             business={business}
             jobName={jobName}
+            siteAddress={siteAddress || undefined}
             isOpen
             onClose={() => setPreviewInvoice(null)}
             isNewInvoice={false}

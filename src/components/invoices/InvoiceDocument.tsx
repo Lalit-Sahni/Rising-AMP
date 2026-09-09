@@ -63,6 +63,8 @@ type Props = {
   invoice: AnyRecord;
   business: InvoiceBusiness;
   jobName?: string;
+  /** Site address under Job. Omit when empty. Never used for Bill to. */
+  siteAddress?: string;
   /** Fixed A4 width for the PDF renderer; fluid on screen. */
   fixedWidth?: boolean;
   /** Overrides 'Tax invoice' / 'Invoice', e.g. 'Progress claim'. */
@@ -75,7 +77,7 @@ type Props = {
  * The one invoice layout. The preview shows it, the PDF renders it, and the
  * top block is the builder's own details, not the app's name.
  */
-export default function InvoiceDocument({ invoice, business, jobName, fixedWidth = false, title: titleProp, gstNote }: Props) {
+export default function InvoiceDocument({ invoice, business, jobName, siteAddress, fixedWidth = false, title: titleProp, gstNote }: Props) {
   const totals = invoiceTotals(invoice);
   const lines: AnyRecord[] = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
   const title = titleProp || (totals.hasGst ? 'Tax invoice' : 'Invoice');
@@ -149,6 +151,9 @@ export default function InvoiceDocument({ invoice, business, jobName, fixedWidth
             <div className="text-[11px] font-bold tracking-[0.14em] uppercase text-slate-400 mb-1.5">Job</div>
             <div className="text-[14px] font-bold">{jobName || project || '—'}</div>
             {showProject ? <div className="text-[12.5px] text-slate-600">{project}</div> : null}
+            {text(siteAddress) && text(siteAddress) !== (jobName || project || '') ? (
+              <div className="text-[12.5px] text-slate-600">{text(siteAddress)}</div>
+            ) : null}
             {text(invoice.projectReference) ? <div className="text-[12.5px] text-slate-600">Ref {text(invoice.projectReference)}</div> : null}
           </div>
         </div>
