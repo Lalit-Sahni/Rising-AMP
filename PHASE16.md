@@ -62,8 +62,8 @@ Commit: `Give a job a facts record, with provenance on every field.`
 
 Typing thirty fields per job is how this feature dies. Almost all of it is already in the app.
 
-1. **The BOQ import.** `boqLayout.ts` already walks the header block where `Built Area (Sqm)` and the date sit. Capture them instead of discarding them. This is the smallest change with the largest payoff and it is what started this phase.
-2. **The HIA contract**: contract value, contract type, dates, deposit, retention.
+1. **The BOQ import.** `boqLayout.ts` already walks the header block where `Built Area (Sqm)` sits. Capture that labelled area instead of discarding it. This is the smallest change with the largest payoff and it is what started this phase. The cover `Date` is the estimate’s date, not a job fact — do not map it to `siteStart` or any date field.
+2. **The HIA contract**: contract value and type when stored. Do not invent dates, deposit or retention the form does not keep.
 3. **Invoices and client details**: the client, and often the site address.
 4. **Documents** (needs Phase 14 Part F): a CDC or DA number, a licence number, a certifier off a permit or a certificate.
 5. **The job name** is frequently the address. Offer it, never assume it.
@@ -71,6 +71,8 @@ Typing thirty fields per job is how this feature dies. Almost all of it is alrea
 Every one of these arrives as a **proposal with its source**, shown in one place: *"From your cost sheet: floor area 167.22 sqm. Correct?"* Accept, edit, or dismiss. Nothing auto-writes on the first pass.
 
 **Do not OCR drawings to read dimensions.** A vision model reading a figure off a plan will be confidently wrong eventually, on a number somebody prices work from. That is the scaffold-stock-photo idea the owner already rejected, in a new costume. The floor area is a fact a human confirms once, not one inferred from a drawing on every question.
+
+**Part B done.** Importing a bill of quantities proposes cover facts instead of discarding them: Kelly St `Built Area (Sqm) 167.22` (unit always `sqm`, source `import`) and `Sinlge Storey` as `single storey`. `18 Square` is not converted. The cover `Date` (29/5/2026) is the estimate’s date, not `siteStart` or any date field. A BOQ line `Certifier - CDC` is not a CDC number. Live HIA rows propose `contractValueCents` (integer cents from `totalAmount`), `contractType` `HIA`, and a non-empty client address; the form does not store deposit, retention or signed dates, so those are not invented. Unique live client / invoice addresses propose `address`; two different addresses propose nothing from that source. Permit / certificate / contract `content/text` (`ok` / `truncated` only) may propose a labelled CDC/DA, builder licence or certifier; `none` / `error` is a scan, not a guess; plan files are not read. A job name that looks like a street is offered as `address`, never assumed. One proposal per field; import beats document beats job name. `decideFactWrite` `keep` is not shown; a confirmed conflict is shown as blocked and is not written on Accept-all. Edited values save as `source: 'owner'`. Writes go through `saveJobFacts` after Accept (`confirmedBy` / `confirmedAt` set). The review sheet is lazy from Cost Plan (after a successful import, and from **Review job details** for existing HIA / clients / invoices / job name / files) and from HIA after a successful save. Floor area from an already imported plan cannot be recovered — the cover was discarded and Excel extracts are unsupported; re-import is how 167.22 appears. Not imported from App.js / PaletteHost / Header. Production untouched.
 
 Commit: `Propose job facts from the estimate, the contract and the invoices.`
 
@@ -110,8 +112,8 @@ Commit: `Let Ask answer a question about the job itself.`
 ## Definition of done
 
 - A job carries typed facts, every one optional, every one with a source.
-- Importing a BOQ proposes the floor area and the date instead of discarding them.
-- The HIA contract proposes the contract value and dates.
+- Importing a BOQ proposes the floor area from a labelled Built Area (Sqm). The cover Date is the estimate’s date, not a job fact.
+- The HIA contract proposes the stored contract value (integer cents) and type. Dates, deposit and retention are not invented when the form does not store them.
 - Nothing auto-overwrites a fact a human confirmed.
 - "How many square metres is the house" answers from a field, states its source, and refuses usefully when the field is empty.
 - Money is cents, areas are numbers in sqm, and no drawing was read by a model.

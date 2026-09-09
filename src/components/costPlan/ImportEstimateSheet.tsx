@@ -33,6 +33,12 @@ import type { EstimateCheckResult } from '../../domain/estimateCheck';
 import { queryKeys } from '../../query/client';
 import type { CostPlan, TradeListItem } from '../../domain/schemas';
 
+export type EstimateImportMeta = {
+  rows: string[][];
+  headerRowIndex: number;
+  sourceFileId: string;
+};
+
 type ImportEstimateSheetProps = {
   open: boolean;
   orgId: string;
@@ -41,7 +47,7 @@ type ImportEstimateSheetProps = {
   plan: CostPlan | null;
   trades: TradeListItem[];
   onClose: () => void;
-  onSaved: (plan: CostPlan) => void;
+  onSaved: (plan: CostPlan, meta: EstimateImportMeta) => void;
   showToast: (message: string, type?: string) => void;
 };
 
@@ -405,7 +411,11 @@ export default function ImportEstimateSheet({
       });
       queryClient.setQueryData(queryKeys.costPlan(orgId, jobId), saved);
       showToast('Estimate imported.', 'success');
-      onSaved(saved);
+      onSaved(saved, {
+        rows,
+        headerRowIndex,
+        sourceFileId: uploaded.file.id,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not import that estimate.');
     } finally {

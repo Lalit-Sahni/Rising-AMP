@@ -17,70 +17,7 @@ import {
   parseDelimitedText,
 } from './costPlanImport';
 import { APP_TRADES } from './costPlan';
-
-/**
- * The real Kelly St Bill of Quantities layout: a cover block, a section heading
- * ABOVE the first column header, the column header repeated before every
- * section, a Total row after every section, and a grand-total block at the end.
- * Section figures are the actual ones from the 29 May 2026 estimate.
- */
-const KELLY_BOQ = [
-  ',Sinlge Storey - 18 Square or 167.22 Sqm,,,,',
-  ',Bill of Quantities,,,,',
-  ',,,,Built Area (Sqm),167.22',
-  ',,,,Date,29/5/2026',
-  '1.000,Site Works - Planning approval and site requirements,,,,',
-  'Item Code,Description,Qty,Unit,Price,Total',
-  '1.001,Temporary Fence,92.00,LS,9.00,828.00',
-  '1.002,Sediment control,1.00,LS,650.00,650.00',
-  '1.003,Toilet,1.00,LS,950.00,950.00',
-  '1.003,Architectural plans Including all other plans,1.00,LS,13636.36,13636.36',
-  '1.01,Long Service Levy,1.00,LS,912.00,912.00',
-  '1.011,Home Warranty Insurance,1.00,LS,5718.18,5718.18',
-  '1.014,Certifier - CDC,1.00,LS,3272.73,3272.73',
-  '1.02,Engineers inspection,3.00,Each,325.00,975.00',
-  '1.021,Pegout Survey,1.00,Job,550.00,550.00',
-  '1.022,Formwork check,1.00,Job,-,-',
-  '1.023,Nails on slab,1.00,Job,450.00,450.00',
-  '1.024,Final Survey,1.00,Job,550.00,550.00',
-  '1.025,Interim Occupation Certificate,1.00,Job,49.00,49.00',
-  '1.026,Termite treatment,1.00,Job,1630.00,1630.00',
-  ',,,,Total,30171.27',
-  ',,,,,',
-  '2.000,Concreting,,,,',
-  'Item Code,Description,Qty,Unit,Price,Total',
-  '2.001,Benching,1.00,Per House,1500.00,1500.00',
-  '2.002,Excavation,5.00,Loads,650.00,3250.00',
-  '2.003,Piering,60.00,LM,90.00,5400.00',
-  '2.004,Pump Hire for Concrete,2.00,Per Hire,650.00,1300.00',
-  '2.005,Concrete Slab,167.22,SQM,145.45,24322.91',
-  '2.006,Drop Edge Beams,5.00,SQM,320.00,1600.00',
-  '2.007,Pad Footing,1.00,LS,-,-',
-  ',,,,Total,37372.91',
-  ',,,,,',
-  '3.000,Plumbing,,,,',
-  'Item Code,Description,Qty,Unit,Price,Total',
-  '3.001,Supply and install hot water unit - 26L,1.00,Per House,909.09,909.09',
-  '3.002,Plumbing Work - Includes drainage stormwater work,1.00,Per House,14545.45,14545.45',
-  '3.003,Rainwater Tank -2000 Litre,1.00,Per Tank,1818.18,1818.18',
-  '3.004,Path valve connection for granny flat,-,Charges,,-',
-  ',,,,Total,17272.73',
-  ',,,,,',
-  '15.000,Painting,,,,',
-  'Item Code,Description,Qty,Unit,Price,Total',
-  '15.001,Painting work,1.00,LS,10386.36,10386.36',
-  ',,,,Total,10386.36',
-  ',,,,,',
-  '15.000,Scaffolding,,,,',
-  'Item Code,Description,Qty,Unit,Price,Total',
-  '15.001,Scaffolding,1.00,LS,,-',
-  ',,,,Total,-',
-  ',,,,,',
-  ',Construction Cost + GST - Sum to Total,,,,321916.29',
-  ',,,,GST,32191.63',
-  ',,,,Sum including,354107.92',
-  ',,,,Unit rate,2117.62',
-].join('\n');
+import { KELLY_BOQ } from './boqLayout.kelly';
 
 function readKelly() {
   const rows = parseDelimitedText(KELLY_BOQ);

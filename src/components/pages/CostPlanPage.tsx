@@ -23,7 +23,7 @@ import LoadingSkeleton from '../ui/LoadingSkeleton';
 import SetTargetCostSheet from '../costPlan/SetTargetCostSheet';
 import BreakIntoTradesSheet from '../costPlan/BreakIntoTradesSheet';
 import QuoteSheet from '../costPlan/QuoteSheet';
-import ImportEstimateSheet from '../costPlan/ImportEstimateSheet';
+import ImportEstimateSheet, { type EstimateImportMeta } from '../costPlan/ImportEstimateSheet';
 import ExpenseTradePicker from '../costPlan/ExpenseTradePicker';
 import EditCategoriesSheet from '../costPlan/EditCategoriesSheet';
 import type { CostPlanQuote, JobFile } from '../../domain/schemas';
@@ -32,6 +32,7 @@ import { quoteFileIds } from '../../domain/quoteFiles';
 import { getExpenseTotalCents } from '../../utils/jobMetrics';
 
 const ProposeTradesSheet = lazy(() => import('../costPlan/ProposeTradesSheet'));
+const ProposeJobFactsSheet = lazy(() => import('../costPlan/ProposeJobFactsSheet'));
 
 function formatBaselineDate(value: string) {
   const date = ymdToLocalDate(value);
@@ -94,6 +95,8 @@ export default function CostPlanPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [jobFiles, setJobFiles] = useState<JobFile[]>([]);
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
+  const [factsOpen, setFactsOpen] = useState(false);
+  const [factsBoq, setFactsBoq] = useState<EstimateImportMeta | null>(null);
 
   useEffect(() => {
     setJobFiles([]);
@@ -153,6 +156,39 @@ export default function CostPlanPage() {
     setQuoteOpen(true);
   };
 
+  const openFactsFromRecords = () => {
+    setFactsBoq(null);
+    setFactsOpen(true);
+  };
+
+  const handleEstimateSaved = async (_plan: unknown, meta: EstimateImportMeta) => {
+    setImportOpen(false);
+    try {
+      const { proposeFromBoqCover } = await import('../../domain/proposeJobFacts');
+      if (proposeFromBoqCover(meta).length === 0) return;
+      setFactsBoq(meta);
+      setFactsOpen(true);
+    } catch {
+      // The estimate is already saved.
+    }
+  };
+
+  const factsSheet = jobId && factsOpen ? (
+    <Suspense fallback={null}>
+      <ProposeJobFactsSheet
+        open={factsOpen}
+        jobId={jobId}
+        userId={authUser?.uid || ''}
+        boq={factsBoq}
+        onClose={() => {
+          setFactsOpen(false);
+          setFactsBoq(null);
+        }}
+        showToast={showToast}
+      />
+    </Suspense>
+  ) : null;
+
   const codeSheet = jobId && codeSheetOpen ? (
     <Suspense fallback={null}>
       <ProposeTradesSheet
@@ -184,6 +220,7 @@ export default function CostPlanPage() {
           <LoadingSkeleton type="job" lines={4} />
         </div>
         {codeSheet}
+        {factsSheet}
       </div>
     );
   }
@@ -196,6 +233,7 @@ export default function CostPlanPage() {
           <EmptyState title="Cost plan unavailable" body={message} actionLabel="Try again" onAction={() => planQuery.refetch()} />
         </div>
         {codeSheet}
+        {factsSheet}
       </div>
     );
   }
@@ -233,6 +271,13 @@ export default function CostPlanPage() {
                 Sort to cost plan
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={openFactsFromRecords}
+              className="inline-flex min-h-[44px] items-center justify-center px-3.5 py-2 rounded-ot-sm bg-surface border border-hairline text-[13px] font-bold"
+            >
+              Review job details
+            </button>
           </div>
         </div>
         <SetTargetCostSheet
@@ -254,10 +299,11 @@ export default function CostPlanPage() {
           plan={null}
           trades={trades}
           onClose={() => setImportOpen(false)}
-          onSaved={() => setImportOpen(false)}
+          onSaved={handleEstimateSaved}
           showToast={showToast}
         />
         {codeSheet}
+        {factsSheet}
       </div>
     );
   }
@@ -313,6 +359,13 @@ export default function CostPlanPage() {
                 Sort to cost plan
               </button>
             ) : null}
+            <button
+              type="button"
+              onClick={openFactsFromRecords}
+              className="inline-flex min-h-[44px] items-center justify-center px-3.5 py-2 rounded-ot-sm bg-surface border border-hairline text-[13px] font-bold"
+            >
+              Review job details
+            </button>
             {plan.status === 'draft' && planHasTrades(plan) ? (
               <>
                 <button type="button" onClick={() => setTradesSheetOpen(true)} className="inline-flex min-h-[44px] items-center justify-center px-3.5 py-2 rounded-ot-sm bg-surface border border-hairline text-[13px] font-bold">
@@ -633,7 +686,7 @@ export default function CostPlanPage() {
         plan={plan}
         trades={trades}
         onClose={() => setImportOpen(false)}
-        onSaved={() => setImportOpen(false)}
+        onSaved={handleEstimateSaved}
         showToast={showToast}
       />
       <EditCategoriesSheet
@@ -644,6 +697,7 @@ export default function CostPlanPage() {
         showToast={showToast}
       />
       {codeSheet}
+      {factsSheet}
     </div>
   );
 }

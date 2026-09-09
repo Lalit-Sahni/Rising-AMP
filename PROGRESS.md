@@ -2,13 +2,13 @@
 
 ## Fleet (8 Sep 2026)
 
-Latest branch **`phase-16-job-facts`**. Restore tag **`pre-phase16-2026-09-09`** (`a3fba94`, last Phase 15 commit). Phase 16 **Part A is done**. Next is **Phase 16 Part B** (propose facts from estimate, contract, invoices). Phase 14 Parts A–G remain on `phase-14-ask`. Phase 15 lifts the read-only ban for reversible internal writes only. The model never calculates and never chooses the tier. Production is **untouched** (original six functions; no `askRisingAmp`). Localhost stays on staging. Never `--force`. Gzip ceiling **400 KB**.
+Latest branch **`phase-16-job-facts`**. Restore tag **`pre-phase16-2026-09-09`** (`a3fba94`, last Phase 15 commit). Phase 16 **Parts A–B are done**. Next is **Phase 16 Part C** (Details panel, Overview lead, one what-needs-you line). Phase 14 Parts A–G remain on `phase-14-ask`. Phase 15 lifts the read-only ban for reversible internal writes only. The model never calculates and never chooses the tier. Production is **untouched** (original six functions; no `askRisingAmp`). Localhost stays on staging. Never `--force`. Gzip ceiling **400 KB**.
 
 Phase 13 blockers **closed on staging**: uncoded pool; Lalit + Sydney Excavation merges; re-extract. Still the owner’s: **Metro Consulting** and the cross-kind unlinked list (`scripts/party-backfill-unlinked-staging.md`).
 
 ## Morning report (8 Sep 2026)
 
-Phase 16 is **open on `phase-16-job-facts`**. Part A is **done**. Production is **untouched**. Restore tag `pre-phase16-2026-09-09` (before Phase 16). Older: `pre-phase15-2026-09-08`.
+Phase 16 is **open on `phase-16-job-facts`**. Parts A–B are **done**. Production is **untouched**. Restore tag `pre-phase16-2026-09-09` (before Phase 16). Older: `pre-phase15-2026-09-08`.
 
 ### Parts committed, and gzip
 
@@ -35,6 +35,7 @@ Phase 16 is **open on `phase-16-job-facts`**. Part A is **done**. Production is 
 | 15D activity view with undo | `a2ce51b` | **271.2 KB** |
 | 15E evals and kill switch | `a3fba94` | **271.2 KB** |
 | 16A job facts record | this commit | **271.2 KB** |
+| 16B propose facts from records | this commit | **271.2 KB** |
 
 Ceiling **400 KB** (owner, 7 Sep 2026), held. Current **271.2 KB**. The build still fails on breach. Prefer smaller when free. Independent typecheck / test / test:rules / build on every accepted part.
 
@@ -61,7 +62,7 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 
 ## Fleet state
 
-- **Phase 16:** open on `phase-16-job-facts`. Restore tag `pre-phase16-2026-09-09` (`a3fba94`). **Part A done.** Next is Part B. `facts/current` rules in the repo, **not deployed**. Production untouched.
+- **Phase 16:** open on `phase-16-job-facts`. Restore tag `pre-phase16-2026-09-09` (`a3fba94`). **Parts A–B done.** Next is Part C. `facts/current` rules in the repo, **not deployed**. Production untouched.
 - **Phase 15:** done on `phase-15-actions`. Restore tag `pre-phase15-2026-09-08` (`176002f`). **Parts A–E done.** Palette does not execute writes. Kill switch ships off. `assistantReceipts` rules in the repo, **not deployed**. Production untouched.
 - **Phase 14:** done on `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` (`0dfcb51`). **Parts A–G done.** Router callable `askRisingAmp` (`retry: false`; `gpt-4o-mini`; ADR `docs/adr-ask-model.md`) returns a route only. The palette calls it, runs `src/queries/` with membership scope, paints existing rows from `formatCents`, and shows a working line from provenance. A `none` route refuses honestly and may still show `planVsActual` / `jobSummary` figures the code already knows. Question history is `organizations/{orgId}/askHistory/{uid}/items/{id}` (question, routed choice, provenance, snapshot cents, code-assigned `refusalReason`; no model prose). CI evals: 68 cases, 21 `none`, no live OpenAI key. `answerFromDocuments` quotes a verbatim slice of `files/{id}/content/text` (scan/`none` and `error` are unreadable; weak match offers the file). Teaching refusals: `nothing_coded` / `unreadable_file` / `fact_missing` / `out_of_scope` assigned in code after the query. Staging Firestore rules allow `answerFromDocuments` history and `refusalReason`. Production untouched (no `askRisingAmp`). No hosting. Phase 15 is open on `phase-15-actions`; do not re-impose the Phase 14 write ban on that branch.
 - **Part A1:** committed `5e78dd7`. Initial JS gzip **268.3 KB**.
@@ -86,11 +87,12 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 - **Phase 15 Part D done.** Activity view at `/assistant-activity` (lazy): newest-first stored receipts, Undo by receipt id after reload, History quiet “Check” until `assistantConfirmed`, daily what-needs-you line omitted when yesterday’s added and coded are both 0. Confirm writes `assistantConfirmed: true` only — not `reviewed`. Typecheck, 418+149 tests, rules, build. Initial JS gzip **271.2 KB** (ceiling 400). Schema in the repo, not deployed. No production.
 - **Phase 15 Part E done.** Tier evals (42 cases; inferred never reaches do). Refusal evals (every NEVER name plus phrasings; `runAction` writes nothing). Injection: instruction clauses span newlines; supplier name is not a trade hint; leftover `concreting` in “also code everything to concreting” does not propose. Same `clientKey` writes once for create / code / batch. Undo returns costCents to the prior cent; create undo voids. Kill switch `assistantWritesEnabled` (Firestore missing = off; memory tests default on; `runAction` choke point; undo still works when off; owner-only Profile toggle). Typecheck, 496+153 tests, rules, build. Initial JS gzip **271.2 KB** (ceiling 400). Schema in the repo, not deployed. No production.
 - **Phase 16 Part A done.** `facts/current` (`schemaVersion: 1`): every field optional, provenance on each (`owner` | `import` | `document` | `assistant`), soft `previous` cap 20. Empty document is valid. Money integer cents; areas `{ value, unit: 'sqm' }`. `decideFactWrite` does not silently overwrite a confirmed value unless incoming source is `owner`. Adapter not on first paint. Typecheck, 514+153 tests, rules, build. Initial JS gzip **271.2 KB** (ceiling 400). Schema in the repo, not deployed. No production.
+- **Phase 16 Part B done.** Collectors propose from the BOQ cover (Kelly `Built Area (Sqm) 167.22`, `Sinlge Storey` → `single storey`; no 18-square conversion; cover Date is not `siteStart`; `Certifier - CDC` is not a CDC), live HIA rows (integer cents, type `HIA`, unique address; no invented deposit/retention/dates), unique client/invoice addresses, labelled permit/certificate/contract extracts, and a job name that looks like a street. Nothing auto-writes. Lazy Cost Plan / HIA review sheet; Accept → `saveJobFacts`. Re-import is how floor area appears on an already imported plan. Typecheck, 541+153 tests, rules, build. Initial JS gzip **271.2 KB** (ceiling 400). Schema in the repo, not deployed. No production.
 - **Dependency rule:** root Vite `package.json` takes **no new packages**. Functions may add **one** PDF-text library (`unpdf@1.8.1`). It is not imported from `src/`. It does not change initial JS gzip. No OpenAI SDK.
 
 ## Current branch
 
-`phase-16-job-facts` — Phase 16 the job knows itself, **Part A done**, **not on production**. Parent: `phase-15-actions` (Parts A–E). Record: `PHASE16.md`. Parent: `phase-14-ask` (Parts A–G). Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE15.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-16-job-facts` — Phase 16 the job knows itself, **Parts A–B done**, **not on production**. Parent: `phase-15-actions` (Parts A–E). Record: `PHASE16.md`. Parent: `phase-14-ask` (Parts A–G). Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE15.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase16-2026-09-09` (this phase, before code; SHA `a3fba94`), `pre-phase15-2026-09-08` (SHA `176002f`), `pre-phase14-2026-09-07`, `pre-phase13-2026-09-06`, `pre-phase12-2026-09-05`, `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -102,7 +104,7 @@ Staging: `rising-amp-staging` — localhost / `.env.local`
 
 **Phase 12 is closed and live on production hosting (6 Sep 2026).** `firebase deploy --project production --only hosting`. No functions, Firestore rules or Storage. Branch `phase-12-fables-upgrade`. Scan a receipt on Add expense is a white `--surface` card (was `steel-900`); verified on localhost as Lalit, 72 Centenary Dr, `rgb(255, 255, 255)`. Typecheck, 254 tests, build **267.9 KB** gzip (ceiling 275). Front-end only: no rules, functions, schema or data writes. Full detail: `PHASE12.md`. Ultrareview PRs #1–#4 were closed unused; the empty-base branches are gone.
 
-**Next:** Phase 16 Part B on `phase-16-job-facts` (propose facts from the estimate, the contract and the invoices). Part A is **done**. Do not deploy Phase 13–16 to production until he names the project and surface.
+**Next:** Phase 16 Part C on `phase-16-job-facts` (Details panel, Overview lead, one what-needs-you line). Parts A–B are **done**. Do not deploy Phase 13–16 to production until he names the project and surface.
 
 **Phase 11 Parts A–E are live on production (5 Sep 2026).** Function `maintainLedgerRollup`, Part E Firestore rules, `ledgerRollup/current` for both production jobs, and hosting (`index-BTUZ3uws.js` on https://risingamp.com.au). Brief: `PHASE11.md`. Part A: service worker cache-firsts hashed JS/CSS and network-firsts HTML. Firestore, functions and Storage are never cached in the worker. `/clear-sw` unregisters it. Part B: Firestore `persistentLocalCache` plus `onSnapshot` on the job list, expenses and invoices. IndexedDB holds the last ledger; listeners paint from disk then revalidate. Empty disk snapshots cannot wipe a boot-cached job list. Invoice numbers stay server-allocated; a manual invoice reload uses `getDocsFromServer`. Cost Plan saves stay transactions. Part C: opening a job only listens to expenses and invoices. Labour, trades, clients, suppliers, service providers, payers, progress payments, HIA contracts and bank details load on the screen that uses them. Clients are one query, not two. Part D: a write invalidates only its own TanStack Query keys (`invalidateKeys`). Saving an expense does not refetch Cost Plan, quotes or directories. Part E: `maintainLedgerRollup` rebuilds `ledgerRollup/current` from every expense, then writes that complete document in one set. Overview, Cost Plan headline spend, Budget and Jobs home counts read the rollup. History, “what needs you,” and the Cost Plan trade board still read expense rows. If they disagree, the ledger wins on Overview.
 

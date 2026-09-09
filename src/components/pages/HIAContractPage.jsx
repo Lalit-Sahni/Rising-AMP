@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Download, FileCheck, Plus, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useJobBankDetails, useJobClients, useJobHiaContracts } from '../../hooks/useJobDirectories';
@@ -8,6 +8,8 @@ import EmptyState from '../EmptyState';
 import { addCents, dollarsFromUnknown, formatCents, fromCents, safeParseToCents } from '../../money';
 import { addDaysYmd, todayYmd } from '../../dates';
 import { formatMoney } from '../../utils/jobMetrics';
+
+const ProposeJobFactsSheet = lazy(() => import('../costPlan/ProposeJobFactsSheet'));
 
 const STANDARD_STAGE_NAMES = [
   'Deposit',
@@ -103,6 +105,7 @@ const HIAContractPage = () => {
   const [client, setClient] = useState({ clientName: '', clientEmail: '', clientPhone: '', clientAddress: '' });
   const [bank, setBank] = useState({ bsb: '', accountName: '', accountNumber: '' });
   const [error, setError] = useState('');
+  const [factsOpen, setFactsOpen] = useState(false);
 
   useEffect(() => {
     // Open the form only once we know the job has no contracts; a query that
@@ -234,6 +237,12 @@ const HIAContractPage = () => {
       resetForm();
       setAdding(false);
       if (result.hiaContract && result.hiaContract.id) setExpandedId(result.hiaContract.id);
+      try {
+        const { proposeFromHiaContracts } = await import('../../domain/proposeJobFacts');
+        if (proposeFromHiaContracts([result.hiaContract]).length > 0) setFactsOpen(true);
+      } catch {
+        // The contract is already saved.
+      }
     } finally {
       setSaving(false);
     }
@@ -502,6 +511,17 @@ const HIAContractPage = () => {
           })
         )}
       </div>
+      {factsOpen && jobId ? (
+        <Suspense fallback={null}>
+          <ProposeJobFactsSheet
+            open={factsOpen}
+            jobId={jobId}
+            userId={(authUser && authUser.uid) || ''}
+            onClose={() => setFactsOpen(false)}
+            showToast={showToast}
+          />
+        </Suspense>
+      ) : null}
     </div>
   );
 };

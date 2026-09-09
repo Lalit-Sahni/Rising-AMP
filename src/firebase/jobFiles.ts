@@ -215,3 +215,28 @@ export async function restoreJobFile(jobId: string, fileId: string): Promise<{
     return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+/** Stored extract only. Never loads the original file. */
+export async function fetchJobFileTextContent(
+  jobId: string,
+  fileId: string,
+): Promise<{ text: string; textStatus: string } | null> {
+  if (!jobId || !fileId) return null;
+  const snap = await getDoc(doc(
+    db,
+    'organizations',
+    getActiveOrgId(),
+    'projects',
+    jobId,
+    'files',
+    fileId,
+    'content',
+    'text',
+  ));
+  if (!snap.exists()) return null;
+  const data = snap.data() || {};
+  return {
+    text: typeof data.text === 'string' ? data.text : '',
+    textStatus: typeof data.textStatus === 'string' ? data.textStatus : '',
+  };
+}
