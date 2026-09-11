@@ -1,8 +1,10 @@
 # Phase 15 — Ask does things (agent brief)
 
-Read `CLAUDE.md`, `PROGRESS.md`, `PHASE13.md`, `PHASE14.md`, then this. Branch **`phase-15-actions`** from `phase-14-ask` (`176002f`). Restore tag `pre-phase15-2026-09-08`. One part per session, one commit per part. Production untouched. Localhost staging. Never `--force`. Model never calculates.
+Read `CLAUDE.md`, `PROGRESS.md`, `PHASE13.md`, `PHASE14.md`, then this. Branch **`phase-15-actions`** from `phase-14-ask` (`176002f`). Restore tag `pre-phase15-2026-09-08`. One part per session, one commit per part. Hosting and `assistantReceipts` rules live with Phase 16 go-live 11 Sep 2026; kill switch stays off. Localhost staging. Never `--force`. Model never calculates.
 
 Phase 14 said "read-only, no writes of any kind." **This phase deliberately lifts that**, under the rule below. `PHASE14.md` and `CLAUDE.md` on this branch say so, so a later session does not re-impose the ban mid-phase.
+
+**UI and `assistantReceipts` rules went live with the Phase 16 go-live (11 Sep 2026).** Kill switch `assistantWritesEnabled` stays **off** (missing = off). Palette still does not execute writes. Do not turn the switch on unless named.
 
 ## The rule that replaces "no writes"
 

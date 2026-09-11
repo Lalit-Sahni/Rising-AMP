@@ -1,9 +1,9 @@
 /**
- * Production functions are sendJobInviteEmail, readReceiptImage,
- * allocateInvoiceNumber, checkEstimateImport, readQuoteFile and
- * maintainLedgerRollup (Firestore trigger, Phase 11 Part E, live 5 Sep 2026).
- * Staging also has extractJobFileText (Phase 13 Part C; not production)
- * and askRisingAmp (Phase 14 Part A; not production).
+ * Production functions (11 Sep 2026): sendJobInviteEmail, readReceiptImage,
+ * allocateInvoiceNumber, checkEstimateImport, readQuoteFile,
+ * maintainLedgerRollup (Firestore trigger, Phase 11 Part E, live 5 Sep 2026;
+ * not redeployed with Phase 16), extractJobFileText (Phase 13 Part C) and
+ * askRisingAmp (Phase 14 Part A + Phase 16 Part D). Staging has the same eight.
  * Deploy by name:
  *
  *   firebase deploy --project rising-amp-staging --only functions:sendJobInviteEmail
@@ -19,12 +19,15 @@
  *   firebase deploy --project staging --only functions:maintainLedgerRollup
  *   firebase deploy --project production --only functions:maintainLedgerRollup
  *   firebase deploy --project staging --only functions:extractJobFileText
+ *   firebase deploy --project production --only functions:extractJobFileText
  *   firebase deploy --project staging --only functions:askRisingAmp
+ *   firebase deploy --project production --only functions:askRisingAmp
  *
  * No --force. --force suppresses the confirmation before deleting functions.
  * This repo never lets a functions deploy delete something.
  * extractJobFileText and askRisingAmp use retry: false so a first create
- * does not demand --force. Do not deploy askRisingAmp to production until named.
+ * does not demand --force. Do not redeploy production maintainLedgerRollup
+ * unless a production recompute is also named (the script refuses --production).
  * Production maintainLedgerRollup create (5 Sep 2026) answered the retry prompt; no --force.
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):

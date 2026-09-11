@@ -1,14 +1,16 @@
 # Progress
 
-## Fleet (8 Sep 2026)
+## Fleet (11 Sep 2026)
 
-Latest branch **`phase-16-job-facts`**. Restore tag **`pre-phase16-2026-09-09`** (`a3fba94`, last Phase 15 commit). Phase 16 **Parts A–D are done**. Not merged. Not deployed. Phase 14 Parts A–G remain on `phase-14-ask`. Phase 15 lifts the read-only ban for reversible internal writes only. The model never calculates and never chooses the tier. Production is **untouched** (original six functions; no `askRisingAmp`). Localhost stays on staging. Never `--force`. Gzip ceiling **400 KB**.
+Latest branch **`phase-16-job-facts`** (pushed; **not merged to `master`/`main`**). Restore tag **`pre-phase16-2026-09-09`** (`a3fba94`, last Phase 15 commit). Phase 16 **Parts A–D are live on production** (hosting `index-DhMkWQ3T.js`, Firestore rules, `extractJobFileText`, `askRisingAmp`). Phase 15 UI and `assistantReceipts` rules went with that ship; kill switch stays **off**. Phase 14 Parts A–G remain on `phase-14-ask`. Phase 15 lifts the read-only ban for reversible internal writes only. The model never calculates and never chooses the tier. Production backup: `backups/production-2026-09-11T12-03-06-245Z` (528 documents, 36 Storage files). Localhost stays on staging. Never `--force`. Gzip ceiling **400 KB**.
 
-Phase 13 blockers **closed on staging**: uncoded pool; Lalit + Sydney Excavation merges; re-extract. Still the owner’s: **Metro Consulting** and the cross-kind unlinked list (`scripts/party-backfill-unlinked-staging.md`).
+Phase 13 blockers **closed on staging**: uncoded pool; Lalit + Sydney Excavation merges; re-extract. Still the owner’s: **Metro Consulting** and the cross-kind unlinked list (`scripts/party-backfill-unlinked-staging.md`). `maintainLedgerRollup` was **not** redeployed; production rollups stay the Phase 11 shape.
 
-## Morning report (8 Sep 2026)
+## Morning report (11 Sep 2026)
 
-Phase 16 is **done on `phase-16-job-facts`**. Parts A–D are **done**. Production is **untouched**. Restore tag `pre-phase16-2026-09-09` (before Phase 16). Older: `pre-phase15-2026-09-08`.
+Phase 16 is **live on production** from `phase-16-job-facts`. Parts A–D are **done**. Restore tag `pre-phase16-2026-09-09` (before Phase 16). Older: `pre-phase15-2026-09-08`.
+
+**Go-live (named 11 Sep 2026):** staging Firestore rules + `askRisingAmp` update first; production backup; production hosting, Firestore rules, `extractJobFileText` (create, `retry: false`), `askRisingAmp` (create, `retry: false`). No `--force`. Storage rules not redeployed. `maintainLedgerRollup` not redeployed. Kill switch not turned on. Shopfront https://risingamp.com.au serves `index-DhMkWQ3T.js`. **Phone:** force-close and reopen the home-screen app twice.
 
 ### Parts committed, and gzip
 
@@ -41,7 +43,7 @@ Phase 16 is **done on `phase-16-job-facts`**. Parts A–D are **done**. Producti
 
 Ceiling **400 KB** (owner, 7 Sep 2026), held. Current **271.2 KB**. The build still fails on breach. Prefer smaller when free. Independent typecheck / test / test:rules / build on every accepted part.
 
-**Staging (named):** party backfill 60 created / 183 stamped / 19 unlinked, second dry-run `0 write(s) planned`; job+org rollups recomputed (`0 write(s)` after); Firestore rules for parties, org rollup, `files/.../content/text`, askHistory `answerFromDocuments` + `refusalReason`; `extractJobFileText` created with `retry: false`. Production functions still the original six. No production hosting, rules, functions, or data writes.
+**Staging (named):** party backfill 60 created / 183 stamped / 19 unlinked, second dry-run `0 write(s) planned`; job+org rollups recomputed (`0 write(s)` after); Firestore rules for parties, org rollup, `files/.../content/text`, askHistory `answerFromDocuments` + `refusalReason` + `jobFacts`, `facts/current`, `assistantReceipts`; `extractJobFileText` created with `retry: false`. `askRisingAmp` updated 11 Sep 2026 (jobFacts routing). Production functions are the original six plus `extractJobFileText` and `askRisingAmp` (11 Sep 2026). Production hosting and Firestore rules live the same day.
 
 ### Rejected from a worker
 
@@ -64,9 +66,9 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 
 ## Fleet state
 
-- **Phase 16:** done on `phase-16-job-facts`. Restore tag `pre-phase16-2026-09-09` (`a3fba94`). **Parts A–D done.** Not merged. `facts/current` rules and askHistory `jobFacts` in the repo, **not deployed**. Staging `askRisingAmp` source updated, **not redeployed**. Production untouched.
-- **Phase 15:** done on `phase-15-actions`. Restore tag `pre-phase15-2026-09-08` (`176002f`). **Parts A–E done.** Palette does not execute writes. Kill switch ships off. `assistantReceipts` rules in the repo, **not deployed**. Production untouched.
-- **Phase 14:** done on `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` (`0dfcb51`). **Parts A–G done.** Router callable `askRisingAmp` (`retry: false`; `gpt-4o-mini`; ADR `docs/adr-ask-model.md`) returns a route only. The palette calls it, runs `src/queries/` with membership scope, paints existing rows from `formatCents`, and shows a working line from provenance. A `none` route refuses honestly and may still show `planVsActual` / `jobSummary` figures the code already knows. Question history is `organizations/{orgId}/askHistory/{uid}/items/{id}` (question, routed choice, provenance, snapshot cents, code-assigned `refusalReason`; no model prose). CI evals: 68 cases, 21 `none`, no live OpenAI key. `answerFromDocuments` quotes a verbatim slice of `files/{id}/content/text` (scan/`none` and `error` are unreadable; weak match offers the file). Teaching refusals: `nothing_coded` / `unreadable_file` / `fact_missing` / `out_of_scope` assigned in code after the query. Staging Firestore rules allow `answerFromDocuments` history and `refusalReason`. Production untouched (no `askRisingAmp`). No hosting. Phase 15 is open on `phase-15-actions`; do not re-impose the Phase 14 write ban on that branch.
+- **Phase 16:** live on production 11 Sep 2026 from `phase-16-job-facts`. Restore tag `pre-phase16-2026-09-09` (`a3fba94`). **Parts A–D done.** Not merged to master. Hosting `index-DhMkWQ3T.js`, Firestore rules (`facts/current`, askHistory `jobFacts`, `assistantReceipts`), `extractJobFileText`, `askRisingAmp`. Kill switch still off.
+- **Phase 15:** done on `phase-15-actions`. Restore tag `pre-phase15-2026-09-08` (`176002f`). **Parts A–E done.** Palette does not execute writes. Kill switch ships off. UI and `assistantReceipts` rules live with the 11 Sep 2026 ship.
+- **Phase 14:** done on `phase-14-ask`. Restore tag `pre-phase14-2026-09-07` (`0dfcb51`). **Parts A–G done.** Router callable `askRisingAmp` (`retry: false`; `gpt-4o-mini`; ADR `docs/adr-ask-model.md`) returns a route only. The palette calls it, runs `src/queries/` with membership scope, paints existing rows from `formatCents`, and shows a working line from provenance. A `none` route refuses honestly and may still show `planVsActual` / `jobSummary` figures the code already knows. Question history is `organizations/{orgId}/askHistory/{uid}/items/{id}` (question, routed choice, provenance, snapshot cents, code-assigned `refusalReason`; no model prose). CI evals: 68 cases, 21 `none`, no live OpenAI key. `answerFromDocuments` quotes a verbatim slice of `files/{id}/content/text` (scan/`none` and `error` are unreadable; weak match offers the file). Teaching refusals: `nothing_coded` / `unreadable_file` / `fact_missing` / `out_of_scope` assigned in code after the query. `askRisingAmp` is live on staging and production (11 Sep 2026).
 - **Part A1:** committed `5e78dd7`. Initial JS gzip **268.3 KB**.
 - **Part A2:** accepted. `cabc330` + docs-only apply record `b031ee3`. Independent proof: typecheck/test/test:rules/build, gzip **268.3 KB**, staging dry-run `0 write(s) planned`. Two-commit nit noted, not a reject.
 - **Part B:** accepted `649a518`. Independent proof: typecheck, 255+40 tests, rules, build, gzip **268.3 KB**. Staging: function `maintainLedgerRollup` updated, Firestore rules released, recompute **5** writes (3 job repairs + 2 org creates). Second dry-run: `0 write(s) planned`. Schema v1. Production untouched; the recompute script refuses `--production`.
@@ -96,7 +98,7 @@ Process nits, not rejects: A2’s extra docs commit (`b031ee3`); C’s header/DA
 
 ## Current branch
 
-`phase-16-job-facts` — Phase 16 the job knows itself, **Parts A–D done**, **not on production**. Parent: `phase-15-actions` (Parts A–E). Record: `PHASE16.md`. Parent: `phase-14-ask` (Parts A–G). Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE15.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026). Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
+`phase-16-job-facts` — Phase 16 the job knows itself, **Parts A–D live on production 11 Sep 2026**, **not merged to `master`/`main`**. Parent: `phase-15-actions` (Parts A–E). Record: `PHASE16.md`. Parent: `phase-14-ask` (Parts A–G). Phase 12 is **closed** and **live on production hosting** (6 Sep 2026). Record: `PHASE15.md`. Phase 11 Parts A–E remain **live on production** (5 Sep 2026); `maintainLedgerRollup` was not redeployed this go-live. Localhost still uses `.env.local` → staging (`VITE_FIREBASE_PROJECT_ID=rising-amp-staging`).
 
 Restore tags: `pre-phase16-2026-09-09` (this phase, before code; SHA `a3fba94`), `pre-phase15-2026-09-08` (SHA `176002f`), `pre-phase14-2026-09-07`, `pre-phase13-2026-09-06`, `pre-phase12-2026-09-05`, `pre-phase11-2026-09-05`, `pre-phase10-2026-09-02` (before staging rules), `pre-phase10-2026-08-31`, `pre-phase9-2026-08-31`, `pre-phase8-2026-08-28`, `pre-phase7-2026-08-28`, `pre-phase6-2026-08-27`, `pre-phase1-2026-08-22`
 
@@ -199,10 +201,12 @@ The expense read boundary now preserves labour `hours × rate` and `quantity × 
 Read CLAUDE.md, then PROGRESS.md, then PHASE16.md, then PHASE15.md.
 
 Latest branch is phase-16-job-facts. Restore tag pre-phase16-2026-09-09.
-Phase 16 Part A is done (facts record with provenance). Part B is next.
-Phase 15 Parts A–E are done on phase-15-actions (not merged; not deployed).
-The model never calculates and never chooses the tier. Production is
-untouched. Localhost stays on staging. Deploy nothing unless named.
+Phase 16 Parts A–D are live on production (11 Sep 2026): hosting,
+Firestore rules, extractJobFileText, askRisingAmp. Not merged to master.
+Phase 15 UI and assistantReceipts rules went with that ship; kill switch
+stays off. The model never calculates and never chooses the tier.
+Localhost stays on staging. Deploy nothing unless named. Do not
+recompute production rollups unless named.
 
 400 KB is the held ceiling (now 271.2 KB). The build still fails on breach.
 Look first: scripts/party-backfill-unlinked-staging.md.
@@ -220,7 +224,7 @@ a pasted API key.
 3. Optional leftovers (not unless he asks): App Check **enforcement**; `PHASE6-INTEGRITY.md`; live Resend invite proof then remove Gmail fallback; `www` SSL; forward `privacy@risingamp.com.au`; money-field migration; dismantle remaining AppContext ledger/directory blob.
 4. Home-screen icon / `manifest.json` if he later wants a real installed-app icon.
 5. Offline queue / queued writes — still its own phase. The Part A worker caches the shell only.
-6. **Phase 16 Part B** — propose job facts from estimate, contract, invoices on `phase-16-job-facts`. Part A is done. Production still the original six functions. Do not deploy unless named.
+6. **Phase 16 Parts B–D** — done and live on production 11 Sep 2026. Force-close and reopen the home-screen app twice.
 
 ## Next
 
@@ -266,7 +270,8 @@ a pasted API key.
 - [x] Phase 13 Part D — typed read-only query layer (Overview on `jobSummary`)
 - [x] Phase 13 Part E — command palette answers real questions
 - [x] Phase 13 Part D amendment — uncoded pool on trade/plan answers; matcher negatives
-- [ ] Phase 13 production — not deployed; owner names project and surface first
+- [x] Phase 13 `extractJobFileText` live on production (11 Sep 2026)
+- [ ] Phase 13 production rollup byTrade / byParty — not deployed; recompute script refuses `--production`
 - [ ] Phase 13 owner list — merge or leave unlinked parties on staging
 - [x] Phase 14 Part A — Ask router callable (`askRisingAmp`, staging after this commit)
 - [x] Phase 14 Part B — palette answers from the router
@@ -281,9 +286,10 @@ a pasted API key.
 - [x] Phase 15 Part D — activity view with undo
 - [x] Phase 15 Part E — tier/refusal/injection/undo tests and kill switch
 - [x] Phase 16 Part A — facts record with provenance
-- [ ] Phase 16 Part B — propose facts from estimate, contract, invoices
-- [ ] Phase 16 Part C — Details panel, overview, what-needs-you
-- [ ] Phase 16 Part D — Ask answers job facts
+- [x] Phase 16 Part B — propose facts from estimate, contract, invoices
+- [x] Phase 16 Part C — Details panel, overview, what-needs-you
+- [x] Phase 16 Part D — Ask answers job facts
+- [x] Phase 16 live — production hosting, Firestore rules, extractJobFileText, askRisingAmp (11 Sep 2026)
 
 ## What shipped (localhost / staging)
 
