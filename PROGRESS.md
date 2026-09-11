@@ -2,15 +2,15 @@
 
 ## Fleet (11 Sep 2026)
 
-Latest branch **`phase-16-job-facts`** (pushed; **not merged to `master`/`main`**). Restore tag **`pre-phase16-2026-09-09`** (`a3fba94`, last Phase 15 commit). Phase 16 **Parts A–D are live on production** (hosting `index-DhMkWQ3T.js`, Firestore rules, `extractJobFileText`, `askRisingAmp`). Phase 15 UI and `assistantReceipts` rules went with that ship; kill switch stays **off**. Phase 14 Parts A–G remain on `phase-14-ask`. Phase 15 lifts the read-only ban for reversible internal writes only. The model never calculates and never chooses the tier. Production backup: `backups/production-2026-09-11T12-03-06-245Z` (528 documents, 36 Storage files). Localhost stays on staging. Never `--force`. Gzip ceiling **400 KB**.
+Latest branch **`phase-16-job-facts`** (pushed; **not merged to `master`/`main`**). Restore tag **`pre-phase16-2026-09-09`** (`a3fba94`, last Phase 15 commit). Production walked **12 → 13 → 14 → 15 → 16** (hosting `index-DhMkWQ3T.js`, Firestore rules, `extractJobFileText`, `askRisingAmp`, `maintainLedgerRollup` + recompute). Kill switch stays **off**. Phase 14 Parts A–G remain on `phase-14-ask`. The model never calculates and never chooses the tier. Production backup: `backups/production-2026-09-11T12-03-06-245Z` (528 documents, 36 Storage files). Localhost stays on staging. Never `--force`. Gzip ceiling **400 KB**.
 
-Phase 13 blockers **closed on staging**: uncoded pool; Lalit + Sydney Excavation merges; re-extract. Still the owner’s: **Metro Consulting** and the cross-kind unlinked list (`scripts/party-backfill-unlinked-staging.md`). `maintainLedgerRollup` was **not** redeployed; production rollups stay the Phase 11 shape.
+Phase 13 blockers **closed on staging**: uncoded pool; Lalit + Sydney Excavation merges; re-extract. Still the owner’s: **Metro Consulting** and the cross-kind unlinked list (`scripts/party-backfill-unlinked-staging.md`). Party backfill and file re-extract still refuse `--production`.
 
 ## Morning report (11 Sep 2026)
 
-Phase 16 is **live on production** from `phase-16-job-facts`. Parts A–D are **done**. Restore tag `pre-phase16-2026-09-09` (before Phase 16). Older: `pre-phase15-2026-09-08`.
+Phase 16 is **live** from `phase-16-job-facts` after a stepped production walk. Parts A–D are **done**. Restore tag `pre-phase16-2026-09-09` (before Phase 16). Older: `pre-phase15-2026-09-08`.
 
-**Go-live (named 11 Sep 2026):** staging Firestore rules + `askRisingAmp` update first; production backup; production hosting, Firestore rules, `extractJobFileText` (create, `retry: false`), `askRisingAmp` (create, `retry: false`). No `--force`. Storage rules not redeployed. `maintainLedgerRollup` not redeployed. Kill switch not turned on. Shopfront https://risingamp.com.au serves `index-DhMkWQ3T.js`. **Phone:** force-close and reopen the home-screen app twice.
+**Go-live (named, then corrected 11 Sep 2026):** first jump 12 → 16 hosting was rolled back. Then in order: Phase 12 hosting (`index-Cg6g5vL4.js`); Phase 13 `maintainLedgerRollup` update + recompute (72 Centenary Dr `costCents=79758713` / 131 live; Kelly St `costCents=1198372` investor `5574194` / 8 live; org create; second dry-run `0 write(s)`); Phase 13 hosting (`index--sURiOoC.js`); Phase 14 hosting (`index-D7s_sRBh.js`); Phase 15 hosting (`index-D5ISWnFb.js`, kill switch off); Phase 16 hosting (`index-DhMkWQ3T.js`). Firestore rules, `extractJobFileText` and `askRisingAmp` were already created on the first pass. No `--force`. Storage rules not redeployed. Shopfront https://risingamp.com.au serves `index-DhMkWQ3T.js`. **Phone:** force-close and reopen the home-screen app twice.
 
 ### Parts committed, and gzip
 
@@ -271,8 +271,9 @@ a pasted API key.
 - [x] Phase 13 Part E — command palette answers real questions
 - [x] Phase 13 Part D amendment — uncoded pool on trade/plan answers; matcher negatives
 - [x] Phase 13 `extractJobFileText` live on production (11 Sep 2026)
-- [ ] Phase 13 production rollup byTrade / byParty — not deployed; recompute script refuses `--production`
+- [x] Phase 13 production rollup byTrade / byParty (`maintainLedgerRollup` + recompute, 11 Sep 2026)
 - [ ] Phase 13 owner list — merge or leave unlinked parties on staging
+- [ ] Phase 13 production party backfill — script still refuses `--production`
 - [x] Phase 14 Part A — Ask router callable (`askRisingAmp`, staging after this commit)
 - [x] Phase 14 Part B — palette answers from the router
 - [x] Phase 14 Part C — working line, uncoded pool, honest refusal

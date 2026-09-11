@@ -27,7 +27,7 @@
  * This repo never lets a functions deploy delete something.
  * extractJobFileText and askRisingAmp use retry: false so a first create
  * does not demand --force. Do not redeploy production maintainLedgerRollup
- * unless a production recompute is also named (the script refuses --production).
+ * unless a production recompute is also named.
  * Production maintainLedgerRollup create (5 Sep 2026) answered the retry prompt; no --force.
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):

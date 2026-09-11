@@ -9,14 +9,17 @@
  * on jobs and the org. Expenses, invoices and jobs are never changed.
  * Reverse is --clear, or a Firestore restore; it does not delete user records.
  *
- * Dry-run is the default. Writes require --apply and --staging.
+ * Dry-run is the default. Writes require --apply and --staging, or
+ * --apply and --production. --clear is staging only.
  *
  *   node scripts/recompute-ledger-rollups.js --dry-run --staging
  *   node scripts/recompute-ledger-rollups.js --apply --staging
  *   node scripts/recompute-ledger-rollups.js --clear --apply --staging
+ *   node scripts/recompute-ledger-rollups.js --dry-run --production
+ *   node scripts/recompute-ledger-rollups.js --apply --production
  *
- * Phase 13 Part B refuses --production even if passed. Production hosting
- * still parses v1 without byTrade/byParty; do not write the new buckets there.
+ * Production writes only ledgerRollup/current (job + org). Follow immediately
+ * with Phase 13+ hosting: Phase 12 hosting rejects byTrade/byParty extra keys.
  */
 
 const {
@@ -46,19 +49,22 @@ function parseArgs(argv) {
   const dryRun = argv.includes('--dry-run') || !apply;
   const jobFlag = argv.find((arg) => arg.startsWith('--job='));
   const jobId = jobFlag ? jobFlag.slice('--job='.length).trim() : '';
-  if (production) {
-    throw new Error('Phase 13 Part B refuses --production. Staging only.');
+  if (production && staging) {
+    throw new Error('Pick --staging or --production, not both.');
   }
-  if (!staging) {
-    throw new Error('Pass --staging. Phase 13 Part B refuses --production.');
+  if (!production && !staging) {
+    throw new Error('Pass --staging or --production.');
+  }
+  if (clear && production) {
+    throw new Error('Refusing --clear on production.');
   }
   return {
     apply,
     clear,
     dryRun: !apply || dryRun,
-    production: false,
+    production,
     jobId,
-    destination: STAGING_PROJECT,
+    destination: production ? PRODUCTION_PROJECT : STAGING_PROJECT,
   };
 }
 
@@ -142,14 +148,14 @@ async function listOrEmpty(accessToken, parentName, collectionId) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  if (args.apply && !process.argv.includes('--staging')) {
+  if (args.apply && args.production && !process.argv.includes('--production')) {
+    throw new Error('Refusing to write without --apply --production.');
+  }
+  if (args.apply && !args.production && !process.argv.includes('--staging')) {
     throw new Error('Refusing to write without --apply --staging.');
   }
   if (STAGING_PROJECT === PRODUCTION_PROJECT) {
     throw new Error('Staging and production IDs match. Stop.');
-  }
-  if (args.destination !== STAGING_PROJECT) {
-    throw new Error('Phase 13 Part B refuses any destination except staging.');
   }
 
   const destination = args.destination;
@@ -283,7 +289,11 @@ async function main() {
   console.log(`${writes.length} write(s) planned`);
 
   if (!args.apply) {
-    console.log('Dry run. Re-run with --apply --staging to write.');
+    console.log(
+      args.production
+        ? 'Dry run. Re-run with --apply --production to write.'
+        : 'Dry run. Re-run with --apply --staging to write.',
+    );
     return;
   }
 

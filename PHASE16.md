@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md`, `PROGRESS.md`, `PHASE14.md`, `PHASE15.md`, then this. Branch **`phase-16-job-facts`**. Tag a restore point first. One part per session, one commit per part.
 
-**Live on production 11 Sep 2026** from this branch (not merged to `master`/`main`): hosting `index-DhMkWQ3T.js`, Firestore rules (`facts/current`, askHistory `jobFacts`, `assistantReceipts`), `extractJobFileText` and `askRisingAmp` (`retry: false`). Backup first: `backups/production-2026-09-11T12-03-06-245Z`. `maintainLedgerRollup` was not redeployed. Kill switch stays off. Force-close and reopen the home-screen app twice.
+**Live on production 11 Sep 2026** after a **12 → 13 → 14 → 15 → 16** walk (not merged to `master`/`main`): hosting `index-DhMkWQ3T.js`, Firestore rules (`facts/current`, askHistory `jobFacts`, `assistantReceipts`), `extractJobFileText`, `askRisingAmp` (`retry: false`), and Phase 13 `maintainLedgerRollup` + recompute. Backup first: `backups/production-2026-09-11T12-03-06-245Z`. Kill switch stays off. Party backfill and file re-extract still refuse `--production`. Force-close and reopen the home-screen app twice.
 
 ## Why this exists
 

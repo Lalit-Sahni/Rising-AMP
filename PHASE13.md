@@ -2,7 +2,7 @@
 
 Read `CLAUDE.md` then `PROGRESS.md` then this file before touching anything.
 
-**Status (7 Sep 2026):** Parts A1–E are **done on `phase-13-query-layer`**. Part D amendment (uncoded pool on trade answers) is on this branch. Staging applied (parties, rollups, `extractJobFileText`, rules). Production is **not** deployed. Do not start Phase 14 until the owner names it. Morning report is at the top of `PROGRESS.md`.
+**Status (11 Sep 2026):** Parts A1–E are **done on `phase-13-query-layer`**. Staging applied (parties, rollups, `extractJobFileText`, rules). Production walked on 11 Sep 2026: `extractJobFileText` created; `maintainLedgerRollup` updated; job+org rollups recomputed (second dry-run zero). Party backfill and file re-extract still refuse `--production`.
 
 Branch: **`phase-13-query-layer`** from the merged Phase 12 branch. Tag `pre-phase13-2026-09-XX` first. One part per session, one commit per part.
 
