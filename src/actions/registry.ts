@@ -9,7 +9,6 @@ import { createExpense } from './createExpense';
 import { neverActionMessage } from './neverRequest';
 import type { ActionStore } from './store';
 import { undoAction } from './undo';
-import { refuseMutatingActionIfDisabled } from './writesGate';
 
 export async function runAction(
   name: unknown,
@@ -23,8 +22,6 @@ export async function runAction(
   if (isNeverAction(action)) {
     return actionFailure('never_action', neverActionMessage(action));
   }
-  const blocked = await refuseMutatingActionIfDisabled(action, input, store);
-  if (blocked) return blocked;
   if (action === 'codeExpense') return codeExpense(input, store);
   if (action === 'createExpense') return createExpense(input, store);
   if (action === 'codeExpenseBatch') return codeExpenseBatch(input, store);

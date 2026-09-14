@@ -1118,7 +1118,7 @@ service cloud.firestore {
             && request.resource.data.keys().hasOnly([
               'id', 'orgId', 'jobId', 'action', 'source', 'clientKey',
               'tier', 'status', 'evidence', 'documentIds', 'undo', 'createdAt',
-              'changed', 'undoneAt', 'undoReceiptId'
+              'changed', 'undoneAt', 'undoReceiptId', 'origin'
             ])
             && request.resource.data.id == receiptId
             && request.resource.data.orgId == orgId
@@ -1145,6 +1145,10 @@ service cloud.firestore {
             && (
               !request.resource.data.keys().hasAny(['undoReceiptId'])
               || stringId(request.resource.data.undoReceiptId, 128)
+            )
+            && (
+              !request.resource.data.keys().hasAny(['origin'])
+              || request.resource.data.origin in ['human', 'assistant']
             )
             && !request.resource.data.keys().hasAny(['sentence', 'reason', 'messages', 'content', 'reply']);
         }

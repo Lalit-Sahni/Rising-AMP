@@ -78,10 +78,10 @@ export type ActionStore = {
   putReceipt(receipt: ActionReceipt): Promise<void>;
   patchReceipt(orgId: string, receiptId: string, patch: ReceiptPatch): Promise<void>;
   /**
-   * Live/Firestore: missing or not true is off.
-   * In-memory tests: missing is on, so Part A–D cases stay green.
+   * Only a deliberate false is off. Missing is on. A read that failed is
+   * 'unknown', which is allowed rather than presented as someone's choice.
    */
-  assistantWritesEnabled(orgId: string): Promise<boolean>;
+  assistantWritesEnabled(orgId: string): Promise<boolean | 'unknown'>;
 };
 
 export type MemoryActionStore = ActionStore & {
@@ -90,7 +90,7 @@ export type MemoryActionStore = ActionStore & {
   receiptPatchCount: number;
   fileLinkCount: number;
   seedExpense(orgId: string, expense: StoredExpense): void;
-  setAssistantWritesEnabled(orgId: string, enabled: boolean): void;
+  setAssistantWritesEnabled(orgId: string, enabled: boolean | 'unknown'): void;
 };
 
 function expenseKey(orgId: string, jobId: string, expenseId: string): string {
@@ -114,7 +114,7 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
   const receipts = new Map<string, ActionReceipt>();
   const byClientKey = new Map<string, string>();
   const files = new Map<string, LinkedFile>();
-  const writeFlags = new Map<string, boolean>();
+  const writeFlags = new Map<string, boolean | 'unknown'>();
   seed.forEach((row) => {
     expenses.set(expenseKey(orgId, row.jobId, row.id), { ...row });
   });
@@ -128,10 +128,10 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
       expenses.set(expenseKey(nextOrgId, expense.jobId, expense.id), { ...expense });
     },
     setAssistantWritesEnabled(nextOrgId, enabled) {
-      writeFlags.set(nextOrgId, enabled === true);
+      writeFlags.set(nextOrgId, enabled === 'unknown' ? 'unknown' : enabled === true);
     },
     async assistantWritesEnabled(nextOrgId) {
-      if (writeFlags.has(nextOrgId)) return writeFlags.get(nextOrgId) === true;
+      if (writeFlags.has(nextOrgId)) return writeFlags.get(nextOrgId) as boolean | 'unknown';
       return true;
     },
     async getExpense(nextOrgId, jobId, expenseId) {

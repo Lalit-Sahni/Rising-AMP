@@ -386,6 +386,7 @@ describe('tier evals — codeExpense / createExpense', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: 'tier-code-inferred',
+      origin: 'human',
       evidence: { tradeId: { source: 'inferred', value: 'concreting' } },
     }, store);
     expect(result.ok).toBe(true);
@@ -403,6 +404,7 @@ describe('tier evals — codeExpense / createExpense', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: 'tier-code-userxxxx',
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
     expect(result.ok).toBe(true);
@@ -416,6 +418,7 @@ describe('tier evals — codeExpense / createExpense', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: 'tier-gst-inferredx',
+      origin: 'assistant',
       category: 'purchase',
       total: 110,
       partyId: 'party-1',
@@ -439,6 +442,7 @@ describe('tier evals — codeExpense / createExpense', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: 'tier-party-inferrx',
+      origin: 'assistant',
       category: 'purchase',
       total: 50,
       evidence: {
@@ -459,6 +463,7 @@ describe('tier evals — codeExpense / createExpense', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: 'tier-create-doxxxx',
+      origin: 'assistant',
       category: 'purchase',
       date: '2026-08-14',
       total: 124.5,

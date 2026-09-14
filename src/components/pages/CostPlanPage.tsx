@@ -79,7 +79,9 @@ export default function CostPlanPage() {
     showToast,
     codeExpenseTrade,
     allowedJobs,
+    membership,
   } = useApp();
+  const isOwner = Boolean(membership && membership.role === 'owner');
   const [searchParams, setSearchParams] = useSearchParams();
   const planQuery = useCostPlan(orgId, jobId);
   const tradeQuery = useTradeList(orgId);
@@ -199,6 +201,7 @@ export default function CostPlanPage() {
         expenses={expenses || []}
         trades={trades.map((trade) => ({ id: trade.id, name: trade.name }))}
         sections={sections}
+        isOwner={isOwner}
         onClose={() => setCodeSheetOpen(false)}
         showToast={showToast}
       />

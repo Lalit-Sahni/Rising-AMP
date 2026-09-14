@@ -8,6 +8,7 @@ import { resolveTargetJobIds } from '../queries/core';
 import { codeExpense } from './codeExpense';
 import {
   actionFailure,
+  actionOriginSchema,
   actionReceiptSchema,
   asTradeId,
   assignTier,
@@ -22,7 +23,7 @@ import {
   type EvidenceSource,
 } from './core';
 import type { ActionStore } from './store';
-import { refuseIfAssistantWritesDisabled } from './writesGate';
+import { refuseIfWriteBlocked } from './writesGate';
 
 const batchRowSchema = z
   .object({
@@ -41,6 +42,8 @@ export const codeExpenseBatchInputSchema = z
     scope: queryScopeSchema,
     jobId: z.string().min(1).max(128),
     clientKey: z.string().min(8).max(128),
+    origin: actionOriginSchema,
+    viewerIsOwner: z.boolean().optional(),
     rows: z.array(batchRowSchema).min(1).max(80),
   })
   .strict();
@@ -65,7 +68,7 @@ function buildReceipt(row: ActionReceipt): ActionReceipt {
 export async function codeExpenseBatch(input: unknown, store: ActionStore): Promise<ActionResult> {
   const parsed = codeExpenseBatchInputSchema.safeParse(input);
   if (!parsed.success) return invalidActionInput(firstZodIssue(parsed.error));
-  const { scope, jobId, clientKey, rows } = parsed.data;
+  const { scope, jobId, clientKey, origin, viewerIsOwner, rows } = parsed.data;
   if (!scope.orgId) return actionFailure('org_required', 'An organisation is required.');
 
   const target = resolveTargetJobIds(scope, jobId);
@@ -76,8 +79,17 @@ export async function codeExpenseBatch(input: unknown, store: ActionStore): Prom
   const replay = await store.getReceiptByClientKey(scope.orgId, clientKey);
   if (replay) return { ok: true, receipt: replay };
 
-  const blocked = await refuseIfAssistantWritesDisabled(scope.orgId, store);
-  if (blocked) return blocked;
+  const wouldApply = rows.some((row) => isDirectEvidence(row.evidence.tradeId.source));
+  if (wouldApply) {
+    const blocked = await refuseIfWriteBlocked({
+      orgId: scope.orgId,
+      origin,
+      tier: 'do',
+      viewerIsOwner: viewerIsOwner === true,
+      store,
+    });
+    if (blocked) return blocked;
+  }
 
   const seen = new Set<string>();
   for (const row of rows) {
@@ -137,6 +149,8 @@ export async function codeExpenseBatch(input: unknown, store: ActionStore): Prom
       expenseId: item.row.expenseId,
       tradeId: item.row.tradeId,
       clientKey: childClientKey(clientKey, item.row.expenseId),
+      origin,
+      viewerIsOwner,
       evidence: item.row.evidence,
     }, store);
     if (!child.ok) return child;
@@ -166,6 +180,7 @@ export async function codeExpenseBatch(input: unknown, store: ActionStore): Prom
       jobId,
       action: 'codeExpenseBatch',
       source: 'assistant',
+      origin,
       clientKey,
       tier: 'propose',
       status: 'proposed',
@@ -184,6 +199,7 @@ export async function codeExpenseBatch(input: unknown, store: ActionStore): Prom
     jobId,
     action: 'codeExpenseBatch',
     source: 'assistant',
+    origin,
     clientKey,
     tier: 'do',
     status: 'applied',

@@ -34,6 +34,14 @@ export type ReceiptStatus = (typeof RECEIPT_STATUSES)[number];
 export const EVIDENCE_SOURCES = ['user', 'record', 'ocr', 'inferred'] as const;
 export type EvidenceSource = (typeof EVIDENCE_SOURCES)[number];
 
+/**
+ * Who chose the value: a person looking at it, or an unreviewed flow.
+ * Only the screen that owns the confirmation may claim 'human'. Never spread a
+ * model-supplied object into an action input, or the model sets this itself.
+ */
+export const ACTION_ORIGINS = ['human', 'assistant'] as const;
+export type ActionOrigin = (typeof ACTION_ORIGINS)[number];
+
 const ACTION_SET = new Set<string>(ACTION_NAMES);
 const NEVER_SET = new Set<string>(NEVER_ACTIONS);
 const DIRECT_SOURCES = new Set<EvidenceSource>(['user', 'record', 'ocr']);
@@ -50,6 +58,7 @@ export type FieldEvidence = z.infer<typeof fieldEvidenceSchema>;
 export const actionTierSchema = z.enum(ACTION_TIERS);
 export const receiptStatusSchema = z.enum(RECEIPT_STATUSES);
 export const actionNameSchema = z.enum(ACTION_NAMES);
+export const actionOriginSchema = z.enum(ACTION_ORIGINS);
 
 export const undoPayloadSchema = z.discriminatedUnion('kind', [
   z.object({
@@ -106,6 +115,8 @@ export const actionReceiptSchema = z
     jobId: z.string().min(1).max(128),
     action: actionNameSchema,
     source: z.literal('assistant'),
+    /** Optional so receipts written before Phase 17 still parse. */
+    origin: actionOriginSchema.optional(),
     clientKey: z.string().min(8).max(128),
     tier: actionTierSchema,
     status: receiptStatusSchema,

@@ -1,60 +1,35 @@
 /**
- * Org kill switch for assistant writes. Read at the start of every
- * mutating action. Undo is not gated here.
+ * Org kill switch for assistant writes. Only a deliberate boolean false is off;
+ * missing, unreadable and junk are on. The tier and the origin decide what is
+ * gated, never the function name. A propose wrote nothing, so it is never gated.
  */
-import { actionFailure, type ActionFailure } from './core';
+import { actionFailure, type ActionFailure, type ActionOrigin, type ActionTier } from './core';
 import type { ActionStore } from './store';
 
-export const ASSISTANT_WRITES_OFF_MESSAGE =
-  'The owner has turned off assistant writes. Nothing was changed. You can still undo what it already did.';
+export const ASSISTANT_WRITES_OFF_OWNER_MESSAGE =
+  'Assistant writes are off. Turn them back on in Profile.';
 
-export const MUTATING_ACTION_NAMES = ['codeExpense', 'createExpense', 'codeExpenseBatch'] as const;
+export const ASSISTANT_WRITES_OFF_MEMBER_MESSAGE =
+  'Assistant writes are off for this organisation. Only the owner can turn them on.';
 
-export function isMutatingActionName(name: string): boolean {
-  return (MUTATING_ACTION_NAMES as readonly string[]).includes(name);
+export function assistantWritesOffMessage(viewerIsOwner: boolean): string {
+  return viewerIsOwner ? ASSISTANT_WRITES_OFF_OWNER_MESSAGE : ASSISTANT_WRITES_OFF_MEMBER_MESSAGE;
 }
 
-/** Firestore / live: only an explicit true is on. Missing, false, "yes" are off. */
+/** Only an explicit false is off. Missing, 'unknown' and junk values are on. */
 export function isAssistantWritesEnabledValue(value: unknown): boolean {
-  return value === true;
+  return value !== false;
 }
 
-export function peekActionOrgId(input: unknown): string {
-  if (!input || typeof input !== 'object') return '';
-  const orgId = (input as { scope?: { orgId?: unknown } }).scope?.orgId;
-  return String(orgId || '').trim();
-}
-
-export function peekActionClientKey(input: unknown): string {
-  if (!input || typeof input !== 'object') return '';
-  return String((input as { clientKey?: unknown }).clientKey || '').trim();
-}
-
-export async function refuseIfAssistantWritesDisabled(
-  orgId: string,
-  store: ActionStore,
-): Promise<ActionFailure | null> {
-  const enabled = await store.assistantWritesEnabled(orgId);
-  if (isAssistantWritesEnabledValue(enabled)) return null;
-  return actionFailure('assistant_writes_disabled', ASSISTANT_WRITES_OFF_MESSAGE);
-}
-
-/**
- * Registry choke point. Replay of an existing clientKey still returns
- * the original receipt when the switch is off.
- */
-export async function refuseMutatingActionIfDisabled(
-  name: string,
-  input: unknown,
-  store: ActionStore,
-): Promise<ActionFailure | null> {
-  if (!isMutatingActionName(name)) return null;
-  const orgId = peekActionOrgId(input);
-  if (!orgId) return null;
-  const clientKey = peekActionClientKey(input);
-  if (clientKey) {
-    const existing = await store.getReceiptByClientKey(orgId, clientKey);
-    if (existing) return null;
-  }
-  return refuseIfAssistantWritesDisabled(orgId, store);
+export async function refuseIfWriteBlocked(args: {
+  orgId: string;
+  origin: ActionOrigin;
+  tier: ActionTier;
+  viewerIsOwner: boolean;
+  store: ActionStore;
+}): Promise<ActionFailure | null> {
+  if (args.tier !== 'do' || args.origin !== 'assistant') return null;
+  const stored = await args.store.assistantWritesEnabled(args.orgId);
+  if (isAssistantWritesEnabledValue(stored)) return null;
+  return actionFailure('assistant_writes_disabled', assistantWritesOffMessage(args.viewerIsOwner));
 }

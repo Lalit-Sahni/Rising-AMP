@@ -89,6 +89,7 @@ describe('codeExpense', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: CLIENT_KEY,
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
     expect(result.ok).toBe(false);
@@ -108,6 +109,7 @@ describe('codeExpense', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: CLIENT_KEY,
+      origin: 'human',
       evidence: { tradeId: { source: 'inferred', value: 'concreting' } },
     }, store);
     expect(result.ok).toBe(true);
@@ -129,6 +131,7 @@ describe('codeExpense', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: CLIENT_KEY,
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
     expect(result.ok).toBe(true);
@@ -157,6 +160,7 @@ describe('codeExpense', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: 'client-key-recode-1',
+      origin: 'human',
       evidence: { tradeId: { source: 'record', value: 'concreting' } },
     }, store);
     expect(result.ok).toBe(true);
@@ -178,6 +182,7 @@ describe('codeExpense', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: CLIENT_KEY,
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
     const second = await codeExpense({
@@ -186,6 +191,7 @@ describe('codeExpense', () => {
       expenseId: 'exp-1',
       tradeId: 'carpentry',
       clientKey: CLIENT_KEY,
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'carpentry' } },
     }, store);
     expect(first.ok).toBe(true);
@@ -207,6 +213,7 @@ describe('codeExpense', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: CLIENT_KEY,
+      origin: 'human',
       cents: 12450,
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
@@ -226,6 +233,7 @@ describe('undoAction', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: CLIENT_KEY,
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
     expect(coded.ok).toBe(true);
@@ -263,6 +271,7 @@ describe('undoAction', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: 'client-key-undo-prev',
+      origin: 'human',
       evidence: { tradeId: { source: 'record', value: 'concreting' } },
     }, store);
     expect(coded.ok).toBe(true);
@@ -287,6 +296,7 @@ describe('undoAction', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: 'client-key-undo-scope',
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
     expect(coded.ok).toBe(true);
@@ -314,6 +324,7 @@ describe('undoAction', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: 'client-key-stored-undo',
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
     expect(coded.ok).toBe(true);
@@ -357,6 +368,7 @@ describe('createExpense', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: CREATE_KEY,
+      origin: 'assistant',
       id: 'exp-new',
       category: 'purchase',
       date: '2026-08-14',
@@ -534,6 +546,7 @@ describe('runAction registry', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: CLIENT_KEY,
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
     expect(result.ok).toBe(false);

@@ -14,18 +14,21 @@ export default function ProfilePage() {
     orgId,
   } = useApp();
   const isOwner = Boolean(membership && membership.role === 'owner' && orgId);
-  const [writesEnabled, setWritesEnabled] = useState(false);
+  // 'checking' until the org document answers. 'unknown' means the read failed,
+  // which allows writes, so the box is ticked and the line says why.
+  const [writesSetting, setWritesSetting] = useState('checking');
   const [writesBusy, setWritesBusy] = useState(false);
+  const writesEnabled = writesSetting !== false;
 
   useEffect(() => {
     if (!isOwner) return undefined;
     let cancelled = false;
     import('../../firebase/assistantWrites').then(({ readAssistantWritesEnabled }) => (
       readAssistantWritesEnabled(orgId)
-    )).then((enabled) => {
-      if (!cancelled) setWritesEnabled(Boolean(enabled));
+    )).then((setting) => {
+      if (!cancelled) setWritesSetting(setting);
     }).catch(() => {
-      if (!cancelled) setWritesEnabled(false);
+      if (!cancelled) setWritesSetting('unknown');
     });
     return () => {
       cancelled = true;
@@ -62,14 +65,14 @@ export default function ProfilePage() {
                 type="checkbox"
                 className="mt-1"
                 checked={writesEnabled}
-                disabled={writesBusy}
+                disabled={writesBusy || writesSetting === 'checking'}
                 onChange={async (event) => {
                   const next = event.target.checked;
                   setWritesBusy(true);
                   try {
                     const { setAssistantWritesEnabled } = await import('../../firebase/assistantWrites');
                     await setAssistantWritesEnabled(orgId, next);
-                    setWritesEnabled(next);
+                    setWritesSetting(next);
                     showToast(
                       next
                         ? 'The assistant can write.'
@@ -86,7 +89,9 @@ export default function ProfilePage() {
               <span>
                 <b className="block text-[13.5px] font-bold text-ink">Allow the assistant to write</b>
                 <small className="block text-xs text-slate-400 mt-0.5">
-                  Off until you turn it on. Undo still works when this is off.
+                  {writesSetting === 'unknown'
+                    ? 'Could not check this setting just now, so writes are allowed. Undo still works when this is off.'
+                    : 'On unless you turn it off. Undo still works when this is off.'}
                 </small>
               </span>
             </label>

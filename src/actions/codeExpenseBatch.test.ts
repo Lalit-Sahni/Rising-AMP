@@ -27,6 +27,7 @@ describe('codeExpenseBatch', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: BATCH_KEY,
+      origin: 'human',
       rows: [
         {
           expenseId: 'e1',
@@ -69,6 +70,7 @@ describe('codeExpenseBatch', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: 'client-key-batch-coded',
+      origin: 'human',
       rows: [
         {
           expenseId: 'e1',
@@ -95,6 +97,7 @@ describe('codeExpenseBatch', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: 'client-key-batch-inf',
+      origin: 'human',
       rows: [{
         expenseId: 'e1',
         tradeId: 'concreting',
@@ -115,6 +118,7 @@ describe('codeExpenseBatch', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: BATCH_KEY,
+      origin: 'human',
       rows: [{
         expenseId: 'e1',
         tradeId: 'concreting',
@@ -144,6 +148,7 @@ describe('codeExpenseBatch', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: BATCH_KEY,
+      origin: 'human',
       rows: [
         {
           expenseId: 'e1',
@@ -176,6 +181,7 @@ describe('codeExpenseBatch', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: BATCH_KEY,
+      origin: 'human',
       rows: [
         {
           expenseId: 'e1',
@@ -208,6 +214,7 @@ describe('codeExpenseBatch', () => {
       scope: SCOPE,
       jobId: 'phase8-isolation',
       clientKey: BATCH_KEY,
+      origin: 'human',
       rows: [{
         expenseId: 'e1',
         tradeId: 'concreting',
@@ -226,6 +233,7 @@ describe('codeExpenseBatch', () => {
       scope: SCOPE,
       jobId: 'job-a',
       clientKey: 'client-key-batch-run',
+      origin: 'human',
       rows: [{
         expenseId: 'e1',
         tradeId: 'concreting',

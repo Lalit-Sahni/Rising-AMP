@@ -29,6 +29,7 @@ type ProposeTradesSheetProps = {
   expenses: Array<Record<string, unknown>>;
   trades: TradeRef[];
   sections: TradeRef[];
+  isOwner: boolean;
   onClose: () => void;
   showToast: (message: string, type?: string, extras?: { action?: { label: string; onClick: () => void } }) => void;
 };
@@ -131,6 +132,7 @@ export default function ProposeTradesSheet({
   expenses,
   trades,
   sections,
+  isOwner,
   onClose,
   showToast,
 }: ProposeTradesSheetProps) {
@@ -138,6 +140,7 @@ export default function ProposeTradesSheet({
   const [orgCoded, setOrgCoded] = useState<Array<Record<string, unknown>>>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [writesOff, setWritesOff] = useState(false);
 
   const uncoded = useMemo(() => listUncodedExpenses(expenses || []), [expenses]);
   const localCoded = useMemo(
@@ -180,6 +183,20 @@ export default function ProposeTradesSheet({
     });
     setDrafts(rows.map(toDraft));
   }, [open, uncoded, orgCoded, trades, sections]);
+
+  useEffect(() => {
+    if (!open || !orgId) return undefined;
+    let cancelled = false;
+    void import('../../firebase/assistantWrites')
+      .then(({ readAssistantWritesEnabled }) => readAssistantWritesEnabled(orgId))
+      .then((setting) => {
+        if (!cancelled) setWritesOff(setting === false);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, orgId]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -228,6 +245,7 @@ export default function ProposeTradesSheet({
         orgId,
         allowedJobs,
         rows,
+        viewerIsOwner: isOwner,
       });
       if (result.kind === 'applied') {
         showToast(result.message, 'success', {
@@ -300,6 +318,12 @@ export default function ProposeTradesSheet({
             <p className="text-[12.5px] text-slate-500 mt-0.5">
               Review every proposal before anything is written. Accept all is the confident set only.
             </p>
+            {writesOff ? (
+              <p className="text-[12px] text-slate-500 mt-1">
+                Assistant writes are off, but anything you accept here is your own choice, so it still saves.
+                {isOwner ? ' Turn them back on in Profile.' : ' Only the owner can turn them on.'}
+              </p>
+            ) : null}
           </div>
           <button
             type="button"

@@ -33,6 +33,7 @@ function createInput(overrides: Record<string, unknown> = {}) {
     scope: SCOPE,
     jobId: JOB,
     clientKey: 'undo-ledger-create-1',
+    origin: 'assistant',
     id: 'exp-new',
     category: 'purchase',
     date: '2026-08-14',
@@ -74,6 +75,7 @@ describe('idempotency', () => {
       scope: SCOPE,
       jobId: JOB,
       clientKey: 'undo-ledger-batch-1',
+      origin: 'human',
       rows: [{
         expenseId: 'e1',
         tradeId: 'concreting',
@@ -105,6 +107,7 @@ describe('idempotency', () => {
       expenseId: 'e1',
       tradeId: 'concreting',
       clientKey: 'undo-ledger-code-1x',
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     };
     const first = await codeExpense(payload, store);
@@ -175,6 +178,7 @@ describe('undo + ledger cents', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: 'undo-ledger-code-1',
+      origin: 'human',
       evidence: { tradeId: { source: 'user', value: 'concreting' } },
     }, store);
     expect(coded.ok).toBe(true);
@@ -211,6 +215,7 @@ describe('undo + ledger cents', () => {
       expenseId: 'exp-1',
       tradeId: 'concreting',
       clientKey: 'undo-ledger-recode-1',
+      origin: 'human',
       evidence: { tradeId: { source: 'record', value: 'concreting' } },
     }, store);
     expect(coded.ok).toBe(true);
@@ -250,6 +255,7 @@ describe('undo + ledger cents', () => {
       scope: SCOPE,
       jobId: JOB,
       clientKey: 'undo-ledger-batch-u1',
+      origin: 'human',
       rows: [
         {
           expenseId: 'e1',

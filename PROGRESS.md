@@ -1,5 +1,17 @@
 # Progress
 
+## Phase 17 — in flight (14 Sep 2026)
+
+Branch **`phase-17-coding-fixes`**, cut from `phase-16-job-facts` at `ac1239c`. Restore tag **`pre-phase17-2026-09-14`**. Brief: `PHASE17.md`. Nothing deployed. Production is untouched and still runs the Phase 16 build.
+
+**Read this before trusting the older notes below.** On this branch a missing `assistantWritesEnabled` field means writes are **on**. Only an explicit `false` is off. **Production still runs the old code, where missing means off**, so every older line in this file, `CLAUDE.md`, `AGENTS.md` and `DATABASE.md` that says "missing = off" is still true of production and will be corrected when this phase ships.
+
+| Part | SHA | Initial JS gzip | State |
+| --- | --- | --- | --- |
+| A switch defaults on, gate on tier and origin | this commit | **271.2 KB** | done |
+
+Baseline at the branch point: typecheck clean, 54 files / 568 vitest tests, 168 node tests, rules pass, **271.2 KB** gzip (ceiling 400 KB).
+
 ## Fleet (11 Sep 2026)
 
 Latest branch **`phase-16-job-facts`** (pushed; **not merged to `master`/`main`**). Restore tag **`pre-phase16-2026-09-09`** (`a3fba94`, last Phase 15 commit). Production walked **12 → 13 → 14 → 15 → 16** (hosting `index-DhMkWQ3T.js`, Firestore rules, `extractJobFileText`, `askRisingAmp`, `maintainLedgerRollup` + recompute). Kill switch stays **off**. Phase 14 Parts A–G remain on `phase-14-ask`. The model never calculates and never chooses the tier. Production backup: `backups/production-2026-09-11T12-03-06-245Z` (528 documents, 36 Storage files). Localhost stays on staging. Never `--force`. Gzip ceiling **400 KB**.

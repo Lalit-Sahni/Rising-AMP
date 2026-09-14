@@ -1,6 +1,7 @@
 /**
  * Apply a reviewed set of trade proposals. Lazy-loaded from Cost Plan.
- * Do not import from App.js or PaletteHost.
+ * Every row here was on screen with an override dropdown, so the origin
+ * is human. Do not import from App.js or PaletteHost.
  */
 import { scopeFromMembership } from '../queries/core';
 import { codeExpenseBatch } from './codeExpenseBatch';
@@ -18,6 +19,7 @@ export type ApplyTradesInput = {
   orgId: string | null | undefined;
   allowedJobs: Array<{ projectId?: string; id?: string }> | null | undefined;
   rows: ApplyTradeRow[];
+  viewerIsOwner?: boolean;
 };
 
 export type ApplyTradesResult =
@@ -65,6 +67,8 @@ export async function applyProposedTrades(input: ApplyTradesInput): Promise<Appl
     scope,
     jobId,
     clientKey: clientKeyFor(jobId, rows),
+    origin: 'human',
+    viewerIsOwner: input.viewerIsOwner === true,
     rows: rows.map((row) => ({
       expenseId: row.expenseId,
       tradeId: row.tradeId,

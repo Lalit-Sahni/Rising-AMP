@@ -1,5 +1,12 @@
+/**
+ * The kill switch is an off-ramp, not the default posture.
+ * Missing is on, a failed read is 'unknown' and allowed, and only a do-tier
+ * assistant write is refused. A person's own choice always writes.
+ */
 import {
-  ASSISTANT_WRITES_OFF_MESSAGE,
+  ASSISTANT_WRITES_OFF_MEMBER_MESSAGE,
+  ASSISTANT_WRITES_OFF_OWNER_MESSAGE,
+  assistantWritesOffMessage,
   isAssistantWritesEnabledValue,
 } from './writesGate';
 import { codeExpense } from './codeExpense';
@@ -16,6 +23,7 @@ function createInput(overrides: Record<string, unknown> = {}) {
     scope: SCOPE,
     jobId: 'job-a',
     clientKey: 'kill-create-1xxxxx',
+    origin: 'assistant',
     id: 'exp-kill',
     category: 'purchase',
     date: '2026-08-14',
@@ -30,139 +38,180 @@ function createInput(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('kill switch', () => {
-  test('Firestore missing or not true is off', () => {
-    expect(isAssistantWritesEnabledValue(undefined)).toBe(false);
-    expect(isAssistantWritesEnabledValue(null)).toBe(false);
-    expect(isAssistantWritesEnabledValue(false)).toBe(false);
-    expect(isAssistantWritesEnabledValue('yes')).toBe(false);
-    expect(isAssistantWritesEnabledValue('true')).toBe(false);
-    expect(isAssistantWritesEnabledValue(1)).toBe(false);
-    expect(isAssistantWritesEnabledValue(true)).toBe(true);
-  });
+function codeInput(overrides: Record<string, unknown> = {}) {
+  return {
+    scope: SCOPE,
+    jobId: 'job-a',
+    expenseId: 'exp-1',
+    tradeId: 'concreting',
+    clientKey: 'kill-code-1xxxxxxx',
+    origin: 'assistant',
+    evidence: { tradeId: { source: 'user', value: 'concreting' } },
+    ...overrides,
+  };
+}
 
-  test('runAction is the choke point for create, code and batch when off', async () => {
-    const store = createMemoryActionStore();
-    store.seedExpense(SCOPE.orgId, { id: 'exp-1', jobId: 'job-a', tradeId: null, total: 10 });
-    store.setAssistantWritesEnabled(SCOPE.orgId, false);
+function batchInput(overrides: Record<string, unknown> = {}) {
+  return {
+    scope: SCOPE,
+    jobId: 'job-a',
+    clientKey: 'kill-batch-1xxxxxx',
+    origin: 'assistant',
+    rows: [{
+      expenseId: 'exp-1',
+      tradeId: 'concreting',
+      evidence: { tradeId: { source: 'user', value: 'concreting' } },
+    }],
+    ...overrides,
+  };
+}
+
+function storeWithExpense() {
+  const store = createMemoryActionStore();
+  store.seedExpense(SCOPE.orgId, { id: 'exp-1', jobId: 'job-a', tradeId: null, total: 10 });
+  return store;
+}
+
+describe('kill switch value', () => {
+  test('only an explicit false is off', () => {
+    expect(isAssistantWritesEnabledValue(undefined)).toBe(true);
+    expect(isAssistantWritesEnabledValue(null)).toBe(true);
+    expect(isAssistantWritesEnabledValue('yes')).toBe(true);
+    expect(isAssistantWritesEnabledValue('true')).toBe(true);
+    expect(isAssistantWritesEnabledValue(1)).toBe(true);
+    expect(isAssistantWritesEnabledValue('unknown')).toBe(true);
+    expect(isAssistantWritesEnabledValue(true)).toBe(true);
+    expect(isAssistantWritesEnabledValue(false)).toBe(false);
+  });
+});
+
+describe('an org that never touched the switch', () => {
+  test('a fresh org writes normally', async () => {
+    const store = storeWithExpense();
+    expect(await store.assistantWritesEnabled(SCOPE.orgId)).toBe(true);
+
+    const coded = await codeExpense(codeInput(), store);
+    expect(coded.ok).toBe(true);
+    if (!coded.ok) return;
+    expect(coded.receipt.status).toBe('applied');
+    expect(coded.receipt.origin).toBe('assistant');
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-1'))?.tradeId).toBe('concreting');
 
     const created = await runAction('createExpense', createInput(), store);
-    const coded = await runAction('codeExpense', {
-      scope: SCOPE,
-      jobId: 'job-a',
-      expenseId: 'exp-1',
-      tradeId: 'concreting',
-      clientKey: 'kill-run-codexxxxxx',
-      evidence: { tradeId: { source: 'user', value: 'concreting' } },
-    }, store);
-    const batched = await runAction('codeExpenseBatch', {
-      scope: SCOPE,
-      jobId: 'job-a',
-      clientKey: 'kill-run-batchxxxxx',
-      rows: [{
-        expenseId: 'exp-1',
-        tradeId: 'concreting',
-        evidence: { tradeId: { source: 'user', value: 'concreting' } },
-      }],
-    }, store);
-
-    expect(created.ok).toBe(false);
-    expect(coded.ok).toBe(false);
-    expect(batched.ok).toBe(false);
-    if (created.ok || coded.ok || batched.ok) return;
-    expect(created.error.code).toBe('assistant_writes_disabled');
-    expect(coded.error.code).toBe('assistant_writes_disabled');
-    expect(batched.error.code).toBe('assistant_writes_disabled');
-    expect(store.expenseWriteCount).toBe(0);
-    expect(store.receiptWriteCount).toBe(0);
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    expect(created.receipt.status).toBe('applied');
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-kill'))?.category).toBe('purchase');
   });
+});
 
-  test('memory store defaults on so existing writes still run', async () => {
-    const store = createMemoryActionStore();
-    store.seedExpense(SCOPE.orgId, { id: 'exp-1', jobId: 'job-a', tradeId: null });
-    expect(await store.assistantWritesEnabled(SCOPE.orgId)).toBe(true);
-    const result = await codeExpense({
-      scope: SCOPE,
-      jobId: 'job-a',
-      expenseId: 'exp-1',
-      tradeId: 'concreting',
-      clientKey: 'kill-default-onxxx',
-      evidence: { tradeId: { source: 'user', value: 'concreting' } },
-    }, store);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.receipt.status).toBe('applied');
-  });
-
-  test('off refuses createExpense, codeExpense and codeExpenseBatch with no write', async () => {
-    const store = createMemoryActionStore();
-    store.seedExpense(SCOPE.orgId, { id: 'exp-1', jobId: 'job-a', tradeId: null, total: 10 });
+describe('the switch turned off deliberately', () => {
+  test('a do-tier assistant write is refused with no expense and no receipt', async () => {
+    const store = storeWithExpense();
     store.setAssistantWritesEnabled(SCOPE.orgId, false);
+
+    const coded = await codeExpense(codeInput(), store);
+    expect(coded.ok).toBe(false);
+    if (coded.ok) return;
+    expect(coded.error.code).toBe('assistant_writes_disabled');
 
     const created = await createExpense(createInput(), store);
     expect(created.ok).toBe(false);
     if (created.ok) return;
     expect(created.error.code).toBe('assistant_writes_disabled');
-    expect(created.error.message).toBe(ASSISTANT_WRITES_OFF_MESSAGE);
 
-    const coded = await codeExpense({
-      scope: SCOPE,
-      jobId: 'job-a',
-      expenseId: 'exp-1',
-      tradeId: 'concreting',
-      clientKey: 'kill-code-offxxxxx',
-      evidence: { tradeId: { source: 'user', value: 'concreting' } },
-    }, store);
-    expect(coded.ok).toBe(false);
-    if (coded.ok) return;
-    expect(coded.error.code).toBe('assistant_writes_disabled');
-
-    const batched = await codeExpenseBatch({
-      scope: SCOPE,
-      jobId: 'job-a',
-      clientKey: 'kill-batch-offxxxx',
-      rows: [{
-        expenseId: 'exp-1',
-        tradeId: 'concreting',
-        evidence: { tradeId: { source: 'user', value: 'concreting' } },
-      }],
-    }, store);
+    const batched = await codeExpenseBatch(batchInput(), store);
     expect(batched.ok).toBe(false);
     if (batched.ok) return;
     expect(batched.error.code).toBe('assistant_writes_disabled');
 
     expect(store.expenseWriteCount).toBe(0);
     expect(store.receiptWriteCount).toBe(0);
-    expect(await store.getExpense(SCOPE.orgId, 'job-a', 'exp-kill')).toBe(null);
     expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-1'))?.tradeId).toBe(null);
+    expect(await store.getExpense(SCOPE.orgId, 'job-a', 'exp-kill')).toBe(null);
   });
 
-  test('off still allows undo of an already-applied receipt', async () => {
-    const store = createMemoryActionStore();
-    const created = await createExpense(createInput(), store);
+  test('a row the owner accepted by hand still writes', async () => {
+    const store = storeWithExpense();
+    store.setAssistantWritesEnabled(SCOPE.orgId, false);
+
+    const batched = await codeExpenseBatch(batchInput({ origin: 'human' }), store);
+    expect(batched.ok).toBe(true);
+    if (!batched.ok) return;
+    expect(batched.receipt.status).toBe('applied');
+    expect(batched.receipt.origin).toBe('human');
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-1'))?.tradeId).toBe('concreting');
+
+    const created = await createExpense(createInput({ origin: 'human' }), store);
     expect(created.ok).toBe(true);
     if (!created.ok) return;
-    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-kill'))?.status).not.toBe('void');
+    expect(created.receipt.status).toBe('applied');
+    expect(created.receipt.origin).toBe('human');
+  });
+
+  test('a propose is never gated', async () => {
+    const store = storeWithExpense();
+    store.setAssistantWritesEnabled(SCOPE.orgId, false);
+
+    const coded = await codeExpense(codeInput({
+      evidence: { tradeId: { source: 'inferred', value: 'concreting' } },
+    }), store);
+    expect(coded.ok).toBe(true);
+    if (!coded.ok) return;
+    expect(coded.receipt.tier).toBe('propose');
+    expect(coded.receipt.status).toBe('proposed');
+    expect(coded.receipt.origin).toBe('assistant');
+    expect(store.receiptWriteCount).toBe(1);
+    expect(store.expenseWriteCount).toBe(0);
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-1'))?.tradeId).toBe(null);
+
+    const batched = await codeExpenseBatch(batchInput({
+      rows: [{
+        expenseId: 'exp-1',
+        tradeId: 'concreting',
+        evidence: { tradeId: { source: 'inferred', value: 'concreting' } },
+      }],
+    }), store);
+    expect(batched.ok).toBe(true);
+    if (!batched.ok) return;
+    expect(batched.receipt.status).toBe('proposed');
+    expect(store.expenseWriteCount).toBe(0);
+  });
+
+  test('undo still works while the switch is off', async () => {
+    const store = storeWithExpense();
+    const created = await createExpense(createInput(), store);
+    const coded = await codeExpense(codeInput(), store);
+    expect(created.ok && coded.ok).toBe(true);
+    if (!created.ok || !coded.ok) return;
 
     store.setAssistantWritesEnabled(SCOPE.orgId, false);
-    const blocked = await runAction('createExpense', createInput({
+    const refused = await createExpense(createInput({
       clientKey: 'kill-create-2xxxxx',
       id: 'exp-kill-2',
     }), store);
-    expect(blocked.ok).toBe(false);
+    expect(refused.ok).toBe(false);
 
-    const undone = await undoAction({
+    const undoneCreate = await undoAction({
       scope: SCOPE,
       receiptId: created.receipt.id,
-      clientKey: 'kill-undo-stillxxxx',
+      clientKey: 'kill-undo-createxx',
     }, store);
-    expect(undone.ok).toBe(true);
-    if (!undone.ok) return;
-    expect(undone.receipt.status).toBe('undone');
+    expect(undoneCreate.ok).toBe(true);
+    if (!undoneCreate.ok) return;
+    expect(undoneCreate.receipt.status).toBe('undone');
     expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-kill'))?.status).toBe('void');
+
+    const undoneCode = await undoAction({
+      scope: SCOPE,
+      receiptId: coded.receipt.id,
+      clientKey: 'kill-undo-codexxxx',
+    }, store);
+    expect(undoneCode.ok).toBe(true);
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-1'))?.tradeId).toBe(null);
   });
 
-  test('same clientKey after off still returns the original applied receipt', async () => {
+  test('the same clientKey replayed after off returns the original receipt', async () => {
     const store = createMemoryActionStore();
     const first = await createExpense(createInput(), store);
     expect(first.ok).toBe(true);
@@ -172,6 +221,50 @@ describe('kill switch', () => {
     expect(replay.ok).toBe(true);
     if (!replay.ok) return;
     expect(replay.receipt.id).toBe(first.receipt.id);
+    expect(replay.receipt.status).toBe('applied');
     expect(store.expenseWriteCount).toBe(1);
+    expect(store.receiptWriteCount).toBe(1);
+  });
+});
+
+describe('a read that failed is not a decision', () => {
+  test("'unknown' allows the write and blames nobody", async () => {
+    const store = storeWithExpense();
+    store.setAssistantWritesEnabled(SCOPE.orgId, 'unknown');
+    expect(await store.assistantWritesEnabled(SCOPE.orgId)).toBe('unknown');
+
+    const coded = await codeExpense(codeInput(), store);
+    expect(coded.ok).toBe(true);
+    if (!coded.ok) return;
+    expect(coded.receipt.status).toBe('applied');
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-1'))?.tradeId).toBe('concreting');
+    expect(JSON.stringify(coded)).not.toContain('Assistant writes are off');
+  });
+});
+
+describe('the refusal names who can fix it', () => {
+  test('the owner is told where the toggle is, anyone else is told who to ask', async () => {
+    expect(assistantWritesOffMessage(true)).toBe(ASSISTANT_WRITES_OFF_OWNER_MESSAGE);
+    expect(assistantWritesOffMessage(false)).toBe(ASSISTANT_WRITES_OFF_MEMBER_MESSAGE);
+    expect(ASSISTANT_WRITES_OFF_OWNER_MESSAGE).toContain('Profile');
+    expect(ASSISTANT_WRITES_OFF_MEMBER_MESSAGE).toContain('owner');
+
+    const store = storeWithExpense();
+    store.setAssistantWritesEnabled(SCOPE.orgId, false);
+
+    const asOwner = await codeExpense(codeInput({ viewerIsOwner: true }), store);
+    expect(asOwner.ok).toBe(false);
+    if (asOwner.ok) return;
+    expect(asOwner.error.message).toBe(ASSISTANT_WRITES_OFF_OWNER_MESSAGE);
+
+    const asMember = await codeExpense(codeInput({ viewerIsOwner: false }), store);
+    expect(asMember.ok).toBe(false);
+    if (asMember.ok) return;
+    expect(asMember.error.message).toBe(ASSISTANT_WRITES_OFF_MEMBER_MESSAGE);
+
+    const unstated = await codeExpense(codeInput(), store);
+    expect(unstated.ok).toBe(false);
+    if (unstated.ok) return;
+    expect(unstated.error.message).toBe(ASSISTANT_WRITES_OFF_MEMBER_MESSAGE);
   });
 });

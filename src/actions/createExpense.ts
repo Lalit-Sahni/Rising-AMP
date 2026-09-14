@@ -15,6 +15,7 @@ import {
 import { resolveTargetJobIds } from '../queries/core';
 import {
   actionFailure,
+  actionOriginSchema,
   actionReceiptSchema,
   assignTier,
   fieldEvidenceSchema,
@@ -28,7 +29,7 @@ import {
   type FieldEvidence,
 } from './core';
 import type { ActionStore } from './store';
-import { refuseIfAssistantWritesDisabled } from './writesGate';
+import { refuseIfWriteBlocked } from './writesGate';
 
 const moneyField = z.union([z.number(), z.string()]).optional();
 const dateField = z.union([z.string(), z.date()]).optional();
@@ -38,6 +39,8 @@ export const createExpenseInputSchema = z
     scope: queryScopeSchema,
     jobId: z.string().min(1).max(128),
     clientKey: z.string().min(8).max(128),
+    origin: actionOriginSchema,
+    viewerIsOwner: z.boolean().optional(),
     id: z.string().min(1).max(128).optional(),
     category: z.string().min(1).max(40),
     date: dateField,
@@ -164,9 +167,6 @@ export async function createExpense(input: unknown, store: ActionStore): Promise
   const replay = await store.getReceiptByClientKey(data.scope.orgId, data.clientKey);
   if (replay) return { ok: true, receipt: replay };
 
-  const blocked = await refuseIfAssistantWritesDisabled(data.scope.orgId, store);
-  if (blocked) return blocked;
-
   const category = normalizeExpenseCategory(data.category);
   if (!category) return invalidActionInput('Choose a category.');
 
@@ -183,6 +183,15 @@ export async function createExpense(input: unknown, store: ActionStore): Promise
     tier = 'propose';
   }
 
+  const blocked = await refuseIfWriteBlocked({
+    orgId: data.scope.orgId,
+    origin: data.origin,
+    tier,
+    viewerIsOwner: data.viewerIsOwner === true,
+    store,
+  });
+  if (blocked) return blocked;
+
   const expenseId = data.id || newExpenseId();
   const createdAt = new Date();
   const id = newReceiptId();
@@ -195,6 +204,7 @@ export async function createExpense(input: unknown, store: ActionStore): Promise
       jobId: data.jobId,
       action: 'createExpense',
       source: 'assistant',
+      origin: data.origin,
       clientKey: data.clientKey,
       tier,
       status: tier === 'refuse' ? 'refused' : 'proposed',
@@ -270,6 +280,7 @@ export async function createExpense(input: unknown, store: ActionStore): Promise
     jobId: data.jobId,
     action: 'createExpense',
     source: 'assistant',
+    origin: data.origin,
     clientKey: data.clientKey,
     tier: 'do',
     status: 'applied',

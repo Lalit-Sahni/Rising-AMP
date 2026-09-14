@@ -9,7 +9,8 @@ import ErrorBoundary from '../ui/ErrorBoundary';
 import EmptyState from '../EmptyState';
 
 export default function AddExpensePage() {
-  const { showToast, jobId, projectName, orgId, allowedJobs } = useApp();
+  const { showToast, jobId, projectName, orgId, allowedJobs, membership } = useApp();
+  const isOwner = Boolean(membership && membership.role === 'owner');
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState({});
@@ -58,6 +59,7 @@ export default function AddExpensePage() {
         orgId,
         allowedJobs,
         ocr: extractedData,
+        viewerIsOwner: isOwner,
       });
       if (result.kind === 'applied') {
         showToast(result.message, 'success', {

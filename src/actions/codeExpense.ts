@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { resolveTargetJobIds } from '../queries/core';
 import {
   actionFailure,
+  actionOriginSchema,
   actionReceiptSchema,
   assignTier,
   asTradeId,
@@ -18,7 +19,7 @@ import {
   type ActionResult,
 } from './core';
 import type { ActionStore } from './store';
-import { refuseIfAssistantWritesDisabled } from './writesGate';
+import { refuseIfWriteBlocked } from './writesGate';
 
 export const codeExpenseInputSchema = z
   .object({
@@ -27,6 +28,8 @@ export const codeExpenseInputSchema = z
     expenseId: z.string().min(1).max(128),
     tradeId: z.string().min(1).max(80).nullable(),
     clientKey: z.string().min(8).max(128),
+    origin: actionOriginSchema,
+    viewerIsOwner: z.boolean().optional(),
     evidence: z
       .object({
         tradeId: fieldEvidenceSchema,
@@ -44,7 +47,7 @@ function buildReceipt(row: ActionReceipt): ActionReceipt {
 export async function codeExpense(input: unknown, store: ActionStore): Promise<ActionResult> {
   const parsed = codeExpenseInputSchema.safeParse(input);
   if (!parsed.success) return invalidActionInput(firstZodIssue(parsed.error));
-  const { scope, jobId, expenseId, tradeId, clientKey, evidence } = parsed.data;
+  const { scope, jobId, expenseId, tradeId, clientKey, origin, viewerIsOwner, evidence } = parsed.data;
   if (!scope.orgId) return actionFailure('org_required', 'An organisation is required.');
 
   const target = resolveTargetJobIds(scope, jobId);
@@ -55,13 +58,19 @@ export async function codeExpense(input: unknown, store: ActionStore): Promise<A
   const replay = await store.getReceiptByClientKey(scope.orgId, clientKey);
   if (replay) return { ok: true, receipt: replay };
 
-  const blocked = await refuseIfAssistantWritesDisabled(scope.orgId, store);
-  if (blocked) return blocked;
-
   const expense = await store.getExpense(scope.orgId, jobId, expenseId);
   if (!expense) return invalidActionInput('That expense was not found.');
 
   const tier = assignTier({ action: 'codeExpense', evidence });
+  const blocked = await refuseIfWriteBlocked({
+    orgId: scope.orgId,
+    origin,
+    tier,
+    viewerIsOwner: viewerIsOwner === true,
+    store,
+  });
+  if (blocked) return blocked;
+
   const previousTradeId = asTradeId(expense.tradeId);
   const createdAt = new Date();
   const id = newReceiptId();
@@ -73,6 +82,7 @@ export async function codeExpense(input: unknown, store: ActionStore): Promise<A
       jobId,
       action: 'codeExpense',
       source: 'assistant',
+      origin,
       clientKey,
       tier,
       status: tier === 'refuse' ? 'refused' : 'proposed',
@@ -92,6 +102,7 @@ export async function codeExpense(input: unknown, store: ActionStore): Promise<A
     jobId,
     action: 'codeExpense',
     source: 'assistant',
+    origin,
     clientKey,
     tier: 'do',
     status: 'applied',

@@ -863,6 +863,24 @@ async function main() {
       id: 'r-email',
       action: 'sendEmail',
     }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/assistantReceipts/r-human`).set({
+      ...validReceipt,
+      id: 'r-human',
+      clientKey: 'client-key-human-1',
+      origin: 'human',
+    }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/assistantReceipts/r-origin-assistant`).set({
+      ...validReceipt,
+      id: 'r-origin-assistant',
+      clientKey: 'client-key-assistant-1',
+      origin: 'assistant',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/assistantReceipts/r-robot`).set({
+      ...validReceipt,
+      id: 'r-robot',
+      clientKey: 'client-key-robot-1',
+      origin: 'robot',
+    }));
     await assertFails(owner.firestore().doc(receiptPath).update({
       clientKey: 'changed-key-1',
     }));

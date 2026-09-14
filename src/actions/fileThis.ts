@@ -1,5 +1,6 @@
 /**
  * File a scanned receipt as an expense, or fall back to the existing form.
+ * Nobody has reviewed the scanned values yet, so the origin is assistant.
  * Lazy-loaded from Add expense / OCR. Do not import from App.js or PaletteHost.
  */
 import { calendarDateToYmd } from '../dates';
@@ -33,6 +34,7 @@ export type FileExpenseFromScanInput = {
   orgId: string | null | undefined;
   allowedJobs: Array<{ projectId?: string; id?: string }> | null | undefined;
   ocr: ScanPayload;
+  viewerIsOwner?: boolean;
 };
 
 export type FileExpenseFromScanResult =
@@ -176,6 +178,8 @@ export async function fileExpenseFromScan(input: FileExpenseFromScanInput): Prom
     scope,
     jobId,
     clientKey,
+    origin: 'assistant',
+    viewerIsOwner: input.viewerIsOwner === true,
     id: expenseId,
     category,
     date: expenseShape.date,
@@ -216,6 +220,7 @@ export async function fileExpenseFromScan(input: FileExpenseFromScanInput): Prom
   payload.clientKey = clientKey;
   payload.id = expenseId;
   payload.category = category;
+  payload.origin = 'assistant';
   payload.evidence = decision.evidence;
   const result = await createExpense(payload, store);
 
