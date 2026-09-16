@@ -42,12 +42,26 @@ export async function undoAction(input: unknown, store: ActionStore): Promise<Ac
     return { ok: true, receipt };
   }
 
+  const undoneAt = new Date();
+  const undoneReceipt = { ...receipt, status: 'undone' as const, undoneAt };
+
   if (receipt.status === 'applied' && receipt.undo.kind === 'restoreTradeId') {
-    await store.updateExpense(scope.orgId, receipt.jobId, receipt.undo.expenseId, {
-      tradeId: receipt.undo.previousTradeId,
-      clearAssistantStamp: true,
-      updatedAt: new Date(),
+    await store.commitUndo({
+      orgId: scope.orgId,
+      jobId: receipt.jobId,
+      expenseId: receipt.undo.expenseId,
+      expense: {
+        kind: 'restoreTradeId',
+        patch: {
+          tradeId: receipt.undo.previousTradeId,
+          clearAssistantStamp: true,
+          updatedAt: undoneAt,
+        },
+      },
+      receiptId: receipt.id,
+      receiptPatch: { status: 'undone', undoneAt },
     });
+    return { ok: true, receipt: undoneReceipt };
   }
 
   if (receipt.status === 'applied' && receipt.undo.kind === 'restoreTradeIdBatch') {
@@ -64,13 +78,22 @@ export async function undoAction(input: unknown, store: ActionStore): Promise<Ac
         updatedAt: new Date(),
       });
     }
+    await store.patchReceipt(scope.orgId, receipt.id, { status: 'undone', undoneAt });
+    return { ok: true, receipt: undoneReceipt };
   }
 
   if (receipt.status === 'applied' && receipt.undo.kind === 'voidExpense') {
-    await store.voidExpense(scope.orgId, receipt.jobId, receipt.undo.expenseId);
+    await store.commitUndo({
+      orgId: scope.orgId,
+      jobId: receipt.jobId,
+      expenseId: receipt.undo.expenseId,
+      expense: { kind: 'voidExpense' },
+      receiptId: receipt.id,
+      receiptPatch: { status: 'undone', undoneAt },
+    });
+    return { ok: true, receipt: undoneReceipt };
   }
 
-  const undoneAt = new Date();
   await store.patchReceipt(scope.orgId, receipt.id, { status: 'undone', undoneAt });
-  return { ok: true, receipt: { ...receipt, status: 'undone', undoneAt } };
+  return { ok: true, receipt: undoneReceipt };
 }

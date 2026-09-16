@@ -15,6 +15,9 @@ import {
   setDoc,
   updateDoc,
   where,
+  writeBatch,
+  type DocumentData,
+  type UpdateData,
 } from 'firebase/firestore';
 import {
   actionReceiptSchema,
@@ -71,6 +74,75 @@ function firestoreSafe<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+/** Shared patch shaping: updateExpense and commitCoding must never drift. */
+function expensePatchFields(patch: ExpenseWrite): UpdateData<DocumentData> {
+  return {
+    tradeId: patch.tradeId,
+    updatedAt: serverTimestamp(),
+    ...(patch.clearAssistantStamp
+      ? { source: deleteField(), assistantReceiptId: deleteField() }
+      : {
+        ...(patch.source ? { source: patch.source } : {}),
+        ...(patch.assistantReceiptId ? { assistantReceiptId: patch.assistantReceiptId } : {}),
+        ...(patch.assistantConfirmed === undefined
+          ? {}
+          : { assistantConfirmed: patch.assistantConfirmed }),
+      }),
+  };
+}
+
+/** Shared create shaping: createExpense and commitCreation must never drift. */
+function expenseCreateFields(jobId: string, expense: CreatedExpenseWrite): DocumentData {
+  return definedFields({
+    ...expense.fields,
+    id: expense.id,
+    jobId,
+    category: expense.category,
+    source: expense.source,
+    assistantReceiptId: expense.assistantReceiptId,
+    assistantConfirmed: expense.assistantConfirmed,
+    partyId: expense.partyId,
+    gstCents: expense.gstCents,
+    receiptImagePath: expense.receiptImagePath,
+    receiptImageUrl: expense.receiptImageUrl,
+    receiptUploadedAt: expense.receiptUploadedAt,
+    timestamp: serverTimestamp(),
+  });
+}
+
+function expenseVoidFields(statusBeforeVoid: string): UpdateData<DocumentData> {
+  return {
+    status: 'void',
+    statusBeforeVoid,
+    voidedAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  };
+}
+
+function fileLinkFields(expenseId: string): UpdateData<DocumentData> {
+  return {
+    linkedTo: { kind: 'expense', id: expenseId },
+    updatedAt: serverTimestamp(),
+  };
+}
+
+/** Shared receipt shaping: putReceipt and the commit methods must never drift. */
+function receiptCreateFields(receipt: ActionReceipt): DocumentData {
+  const { createdAt: _createdAt, undoneAt: _undoneAt, ...rest } = receipt;
+  return {
+    ...firestoreSafe(rest),
+    createdAt: serverTimestamp(),
+  };
+}
+
+function receiptPatchFields(patch: ReceiptPatch): UpdateData<DocumentData> {
+  return {
+    status: patch.status,
+    undoneAt: serverTimestamp(),
+    ...(patch.undoReceiptId ? { undoReceiptId: patch.undoReceiptId } : {}),
+  };
+}
+
 /**
  * Family org: read the collection with getDocs, then sort createdAt in
  * memory (newest 50). A composite index is not required.
@@ -118,54 +190,20 @@ export function createFirestoreActionStore(): ActionStore {
       return row;
     },
     async updateExpense(orgId, jobId, expenseId, patch: ExpenseWrite) {
-      await updateDoc(expenseRef(orgId, jobId, expenseId), {
-        tradeId: patch.tradeId,
-        updatedAt: serverTimestamp(),
-        ...(patch.clearAssistantStamp
-          ? { source: deleteField(), assistantReceiptId: deleteField() }
-          : {
-            ...(patch.source ? { source: patch.source } : {}),
-            ...(patch.assistantReceiptId ? { assistantReceiptId: patch.assistantReceiptId } : {}),
-            ...(patch.assistantConfirmed === undefined
-              ? {}
-              : { assistantConfirmed: patch.assistantConfirmed }),
-          }),
-      });
+      await updateDoc(expenseRef(orgId, jobId, expenseId), expensePatchFields(patch));
     },
     async createExpense(orgId, jobId, expense: CreatedExpenseWrite) {
-      await setDoc(expenseRef(orgId, jobId, expense.id), definedFields({
-        ...expense.fields,
-        id: expense.id,
-        jobId,
-        category: expense.category,
-        source: expense.source,
-        assistantReceiptId: expense.assistantReceiptId,
-        assistantConfirmed: expense.assistantConfirmed,
-        partyId: expense.partyId,
-        gstCents: expense.gstCents,
-        receiptImagePath: expense.receiptImagePath,
-        receiptImageUrl: expense.receiptImageUrl,
-        receiptUploadedAt: expense.receiptUploadedAt,
-        timestamp: serverTimestamp(),
-      }));
+      await setDoc(expenseRef(orgId, jobId, expense.id), expenseCreateFields(jobId, expense));
     },
     async voidExpense(orgId, jobId, expenseId) {
       const snap = await getDoc(expenseRef(orgId, jobId, expenseId));
       if (!snap.exists()) throw new Error('expense_not_found');
       const current = String(snap.data()?.status || 'active');
       if (current.toLowerCase() === 'void') return;
-      await updateDoc(expenseRef(orgId, jobId, expenseId), {
-        status: 'void',
-        statusBeforeVoid: current,
-        voidedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      await updateDoc(expenseRef(orgId, jobId, expenseId), expenseVoidFields(current));
     },
     async linkFileToExpense(orgId, jobId, fileId, expenseId) {
-      await updateDoc(fileRef(orgId, jobId, fileId), {
-        linkedTo: { kind: 'expense', id: expenseId },
-        updatedAt: serverTimestamp(),
-      });
+      await updateDoc(fileRef(orgId, jobId, fileId), fileLinkFields(expenseId));
     },
     async getReceipt(orgId, receiptId) {
       const snap = await getDoc(receiptRef(orgId, receiptId));
@@ -181,18 +219,52 @@ export function createFirestoreActionStore(): ActionStore {
       return parseStoredReceipt(row.id, row.data() as Record<string, unknown>);
     },
     async putReceipt(receipt: ActionReceipt) {
-      const { createdAt: _createdAt, undoneAt: _undoneAt, ...rest } = receipt;
-      await setDoc(receiptRef(receipt.orgId, receipt.id), {
-        ...firestoreSafe(rest),
-        createdAt: serverTimestamp(),
-      });
+      await setDoc(receiptRef(receipt.orgId, receipt.id), receiptCreateFields(receipt));
     },
     async patchReceipt(orgId, receiptId, patch: ReceiptPatch) {
-      await updateDoc(receiptRef(orgId, receiptId), {
-        status: patch.status,
-        undoneAt: serverTimestamp(),
-        ...(patch.undoReceiptId ? { undoReceiptId: patch.undoReceiptId } : {}),
-      });
+      await updateDoc(receiptRef(orgId, receiptId), receiptPatchFields(patch));
+    },
+    async commitCoding(commit) {
+      const batch = writeBatch(db);
+      batch.update(
+        expenseRef(commit.orgId, commit.jobId, commit.expenseId),
+        expensePatchFields(commit.patch),
+      );
+      batch.set(receiptRef(commit.receipt.orgId, commit.receipt.id), receiptCreateFields(commit.receipt));
+      await batch.commit();
+    },
+    async commitCreation(commit) {
+      const batch = writeBatch(db);
+      batch.set(
+        expenseRef(commit.orgId, commit.jobId, commit.expense.id),
+        expenseCreateFields(commit.jobId, commit.expense),
+      );
+      if (commit.fileId) {
+        batch.update(fileRef(commit.orgId, commit.jobId, commit.fileId), fileLinkFields(commit.expense.id));
+      }
+      batch.set(receiptRef(commit.receipt.orgId, commit.receipt.id), receiptCreateFields(commit.receipt));
+      await batch.commit();
+    },
+    async commitUndo(commit) {
+      const batch = writeBatch(db);
+      if (commit.expense.kind === 'restoreTradeId') {
+        batch.update(
+          expenseRef(commit.orgId, commit.jobId, commit.expenseId),
+          expensePatchFields(commit.expense.patch),
+        );
+      } else {
+        const snap = await getDoc(expenseRef(commit.orgId, commit.jobId, commit.expenseId));
+        if (!snap.exists()) throw new Error('expense_not_found');
+        const current = String(snap.data()?.status || 'active');
+        if (current.toLowerCase() !== 'void') {
+          batch.update(
+            expenseRef(commit.orgId, commit.jobId, commit.expenseId),
+            expenseVoidFields(current),
+          );
+        }
+      }
+      batch.update(receiptRef(commit.orgId, commit.receiptId), receiptPatchFields(commit.receiptPatch));
+      await batch.commit();
     },
     async assistantWritesEnabled(orgId) {
       return readAssistantWritesEnabled(orgId);

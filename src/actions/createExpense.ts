@@ -254,26 +254,6 @@ export async function createExpense(input: unknown, store: ActionStore): Promise
     if (value != null && value !== '') fields[key] = value;
   });
 
-  const partyId = String(data.partyId || '').trim();
-  await store.createExpense(data.scope.orgId, data.jobId, {
-    id: expenseId,
-    jobId: data.jobId,
-    category,
-    source: 'assistant',
-    assistantReceiptId: id,
-    assistantConfirmed: false,
-    partyId: partyId || undefined,
-    gstCents,
-    receiptImagePath: data.receiptImagePath,
-    receiptImageUrl: data.receiptImageUrl,
-    receiptUploadedAt: data.receiptUploadedAt,
-    fields,
-  });
-
-  if (data.fileId && store.linkFileToExpense) {
-    await store.linkFileToExpense(data.scope.orgId, data.jobId, data.fileId, expenseId);
-  }
-
   const receipt = buildReceipt({
     id,
     orgId: data.scope.orgId,
@@ -289,6 +269,27 @@ export async function createExpense(input: unknown, store: ActionStore): Promise
     undo: { kind: 'voidExpense', expenseId },
     createdAt,
   });
-  await store.putReceipt(receipt);
+
+  const partyId = String(data.partyId || '').trim();
+  await store.commitCreation({
+    orgId: data.scope.orgId,
+    jobId: data.jobId,
+    expense: {
+      id: expenseId,
+      jobId: data.jobId,
+      category,
+      source: 'assistant',
+      assistantReceiptId: id,
+      assistantConfirmed: false,
+      partyId: partyId || undefined,
+      gstCents,
+      receiptImagePath: data.receiptImagePath,
+      receiptImageUrl: data.receiptImageUrl,
+      receiptUploadedAt: data.receiptUploadedAt,
+      fields,
+    },
+    fileId: data.fileId && store.linkFileToExpense ? data.fileId : undefined,
+    receipt,
+  });
   return { ok: true, receipt };
 }

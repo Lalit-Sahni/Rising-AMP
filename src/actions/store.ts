@@ -59,6 +59,36 @@ export type ReceiptPatch = {
   undoReceiptId?: string;
 };
 
+/** One atomic write: the expense patch AND its receipt, or neither. */
+export type CodingCommit = {
+  orgId: string;
+  jobId: string;
+  expenseId: string;
+  patch: ExpenseWrite;
+  receipt: ActionReceipt;
+};
+
+/** One atomic write: the new expense (plus optional file link) AND its receipt. */
+export type CreationCommit = {
+  orgId: string;
+  jobId: string;
+  expense: CreatedExpenseWrite;
+  receipt: ActionReceipt;
+  fileId?: string;
+};
+
+/** One atomic write: the expense revert (restore or void) AND the receipt's undone stamp. */
+export type UndoCommit = {
+  orgId: string;
+  jobId: string;
+  expenseId: string;
+  expense:
+    | { kind: 'restoreTradeId'; patch: ExpenseWrite }
+    | { kind: 'voidExpense' };
+  receiptId: string;
+  receiptPatch: ReceiptPatch;
+};
+
 export type ActionStore = {
   getExpense(orgId: string, jobId: string, expenseId: string): Promise<StoredExpense | null>;
   updateExpense(
@@ -79,6 +109,9 @@ export type ActionStore = {
   getReceiptByClientKey(orgId: string, clientKey: string): Promise<ActionReceipt | null>;
   putReceipt(receipt: ActionReceipt): Promise<void>;
   patchReceipt(orgId: string, receiptId: string, patch: ReceiptPatch): Promise<void>;
+  commitCoding(commit: CodingCommit): Promise<void>;
+  commitCreation(commit: CreationCommit): Promise<void>;
+  commitUndo(commit: UndoCommit): Promise<void>;
   /**
    * Only a deliberate false is off. Missing is on. A read that failed is
    * 'unknown', which is allowed rather than presented as someone's choice.
@@ -91,6 +124,8 @@ export type MemoryActionStore = ActionStore & {
   receiptWriteCount: number;
   receiptPatchCount: number;
   fileLinkCount: number;
+  /** Test hook: the next commit* call throws before applying anything. */
+  failNextCommit: boolean;
   seedExpense(orgId: string, expense: StoredExpense): void;
   setAssistantWritesEnabled(orgId: string, enabled: boolean | 'unknown'): void;
 };
@@ -121,11 +156,96 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
     expenses.set(expenseKey(orgId, row.jobId, row.id), { ...row });
   });
 
+  const applyExpensePatch = (nextOrgId: string, jobId: string, expenseId: string, patch: ExpenseWrite): void => {
+    const key = expenseKey(nextOrgId, jobId, expenseId);
+    const current = expenses.get(key);
+    if (!current) throw new Error('expense_not_found');
+    const next: StoredExpense = {
+      ...current,
+      tradeId: patch.tradeId,
+      updatedAt: patch.updatedAt,
+      id: current.id,
+      jobId: current.jobId,
+    };
+    if (patch.clearAssistantStamp) {
+      delete next.source;
+      delete next.assistantReceiptId;
+    } else {
+      if (patch.source) next.source = patch.source;
+      if (patch.assistantReceiptId) next.assistantReceiptId = patch.assistantReceiptId;
+      if (patch.assistantConfirmed !== undefined) next.assistantConfirmed = patch.assistantConfirmed;
+    }
+    expenses.set(key, next);
+    store.expenseWriteCount += 1;
+  };
+
+  const applyCreateExpense = (nextOrgId: string, jobId: string, expense: CreatedExpenseWrite): void => {
+    const key = expenseKey(nextOrgId, jobId, expense.id);
+    if (expenses.has(key)) return;
+    const row: StoredExpense = {
+      ...expense.fields,
+      id: expense.id,
+      jobId,
+      category: expense.category,
+      tradeId: null,
+      source: expense.source,
+      assistantReceiptId: expense.assistantReceiptId,
+      assistantConfirmed: expense.assistantConfirmed,
+    };
+    if (expense.partyId) row.partyId = expense.partyId;
+    if (expense.gstCents != null) row.gstCents = expense.gstCents;
+    if (expense.receiptImagePath) row.receiptImagePath = expense.receiptImagePath;
+    if (expense.receiptImageUrl) row.receiptImageUrl = expense.receiptImageUrl;
+    if (expense.receiptUploadedAt) row.receiptUploadedAt = expense.receiptUploadedAt;
+    expenses.set(key, row);
+    store.expenseWriteCount += 1;
+  };
+
+  const applyVoidExpense = (nextOrgId: string, jobId: string, expenseId: string): void => {
+    const key = expenseKey(nextOrgId, jobId, expenseId);
+    const current = expenses.get(key);
+    if (!current) throw new Error('expense_not_found');
+    if (String(current.status || '').toLowerCase() === 'void') return;
+    const statusBeforeVoid = String(current.status || 'active');
+    expenses.set(key, {
+      ...current,
+      status: 'void',
+      statusBeforeVoid,
+      voidedAt: new Date(),
+      updatedAt: new Date(),
+    });
+    store.expenseWriteCount += 1;
+  };
+
+  const applyLinkFile = (nextOrgId: string, jobId: string, fileId: string, expenseId: string): void => {
+    files.set(fileKey(nextOrgId, jobId, fileId), {
+      id: fileId,
+      jobId,
+      linkedTo: { kind: 'expense', id: expenseId },
+    });
+    store.fileLinkCount += 1;
+  };
+
+  const applyPutReceipt = (receipt: ActionReceipt): void => {
+    receipts.set(receiptKey(receipt.orgId, receipt.id), { ...receipt });
+    byClientKey.set(clientKeyIndex(receipt.orgId, receipt.clientKey), receipt.id);
+    store.receiptWriteCount += 1;
+  };
+
+  const applyReceiptPatch = (nextOrgId: string, receiptId: string, patch: ReceiptPatch): void => {
+    const key = receiptKey(nextOrgId, receiptId);
+    const current = receipts.get(key);
+    if (!current) throw new Error('receipt_not_found');
+    receipts.set(key, { ...current, ...patch });
+    store.receiptPatchCount += 1;
+  };
+
   const store: MemoryActionStore = {
     expenseWriteCount: 0,
     receiptWriteCount: 0,
     receiptPatchCount: 0,
     fileLinkCount: 0,
+    failNextCommit: false,
     seedExpense(nextOrgId, expense) {
       expenses.set(expenseKey(nextOrgId, expense.jobId, expense.id), { ...expense });
     },
@@ -141,70 +261,16 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
       return row ? { ...row } : null;
     },
     async updateExpense(nextOrgId, jobId, expenseId, patch) {
-      const key = expenseKey(nextOrgId, jobId, expenseId);
-      const current = expenses.get(key);
-      if (!current) throw new Error('expense_not_found');
-      const next: StoredExpense = {
-        ...current,
-        tradeId: patch.tradeId,
-        updatedAt: patch.updatedAt,
-        id: current.id,
-        jobId: current.jobId,
-      };
-      if (patch.clearAssistantStamp) {
-        delete next.source;
-        delete next.assistantReceiptId;
-      } else {
-        if (patch.source) next.source = patch.source;
-        if (patch.assistantReceiptId) next.assistantReceiptId = patch.assistantReceiptId;
-        if (patch.assistantConfirmed !== undefined) next.assistantConfirmed = patch.assistantConfirmed;
-      }
-      expenses.set(key, next);
-      store.expenseWriteCount += 1;
+      applyExpensePatch(nextOrgId, jobId, expenseId, patch);
     },
     async createExpense(nextOrgId, jobId, expense) {
-      const key = expenseKey(nextOrgId, jobId, expense.id);
-      if (expenses.has(key)) return;
-      const row: StoredExpense = {
-        ...expense.fields,
-        id: expense.id,
-        jobId,
-        category: expense.category,
-        tradeId: null,
-        source: expense.source,
-        assistantReceiptId: expense.assistantReceiptId,
-        assistantConfirmed: expense.assistantConfirmed,
-      };
-      if (expense.partyId) row.partyId = expense.partyId;
-      if (expense.gstCents != null) row.gstCents = expense.gstCents;
-      if (expense.receiptImagePath) row.receiptImagePath = expense.receiptImagePath;
-      if (expense.receiptImageUrl) row.receiptImageUrl = expense.receiptImageUrl;
-      if (expense.receiptUploadedAt) row.receiptUploadedAt = expense.receiptUploadedAt;
-      expenses.set(key, row);
-      store.expenseWriteCount += 1;
+      applyCreateExpense(nextOrgId, jobId, expense);
     },
     async voidExpense(nextOrgId, jobId, expenseId) {
-      const key = expenseKey(nextOrgId, jobId, expenseId);
-      const current = expenses.get(key);
-      if (!current) throw new Error('expense_not_found');
-      if (String(current.status || '').toLowerCase() === 'void') return;
-      const statusBeforeVoid = String(current.status || 'active');
-      expenses.set(key, {
-        ...current,
-        status: 'void',
-        statusBeforeVoid,
-        voidedAt: new Date(),
-        updatedAt: new Date(),
-      });
-      store.expenseWriteCount += 1;
+      applyVoidExpense(nextOrgId, jobId, expenseId);
     },
     async linkFileToExpense(nextOrgId, jobId, fileId, expenseId) {
-      files.set(fileKey(nextOrgId, jobId, fileId), {
-        id: fileId,
-        jobId,
-        linkedTo: { kind: 'expense', id: expenseId },
-      });
-      store.fileLinkCount += 1;
+      applyLinkFile(nextOrgId, jobId, fileId, expenseId);
     },
     async getReceipt(nextOrgId, receiptId) {
       const row = receipts.get(receiptKey(nextOrgId, receiptId));
@@ -216,17 +282,39 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
       return store.getReceipt(nextOrgId, id);
     },
     async putReceipt(receipt) {
-      receipts.set(receiptKey(receipt.orgId, receipt.id), { ...receipt });
-      byClientKey.set(clientKeyIndex(receipt.orgId, receipt.clientKey), receipt.id);
-      store.receiptWriteCount += 1;
+      applyPutReceipt(receipt);
     },
     async patchReceipt(nextOrgId, receiptId, patch) {
-      const key = receiptKey(nextOrgId, receiptId);
-      const current = receipts.get(key);
-      if (!current) throw new Error('receipt_not_found');
-      receipts.set(key, { ...current, ...patch });
-      store.receiptPatchCount += 1;
+      applyReceiptPatch(nextOrgId, receiptId, patch);
+    },
+    async commitCoding(commit) {
+      throwIfCommitFault();
+      applyExpensePatch(commit.orgId, commit.jobId, commit.expenseId, commit.patch);
+      applyPutReceipt(commit.receipt);
+    },
+    async commitCreation(commit) {
+      throwIfCommitFault();
+      applyCreateExpense(commit.orgId, commit.jobId, commit.expense);
+      if (commit.fileId) applyLinkFile(commit.orgId, commit.jobId, commit.fileId, commit.expense.id);
+      applyPutReceipt(commit.receipt);
+    },
+    async commitUndo(commit) {
+      throwIfCommitFault();
+      if (commit.expense.kind === 'restoreTradeId') {
+        applyExpensePatch(commit.orgId, commit.jobId, commit.expenseId, commit.expense.patch);
+      } else {
+        applyVoidExpense(commit.orgId, commit.jobId, commit.expenseId);
+      }
+      applyReceiptPatch(commit.orgId, commit.receiptId, commit.receiptPatch);
     },
   };
+
+  function throwIfCommitFault(): void {
+    if (store.failNextCommit) {
+      store.failNextCommit = false;
+      throw new Error('injected_commit_failure');
+    }
+  }
+
   return store;
 }
