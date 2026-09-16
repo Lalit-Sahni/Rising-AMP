@@ -56,8 +56,8 @@ export default function ProfilePage() {
             onClick={() => setCurrentPage('assistant-activity')}
             className="w-full text-left bg-surface border border-hairline rounded-ot px-4 py-3.5 shadow-whisper hover:border-[#D6D9DD]"
           >
-            <b className="block text-[13.5px] font-bold text-ink">What the assistant did</b>
-            <small className="block text-xs text-slate-400 mt-0.5">See every write, and undo it.</small>
+            <b className="block text-[13.5px] font-bold text-ink">Activity</b>
+            <small className="block text-xs text-slate-400 mt-0.5">See every change, and undo it.</small>
           </button>
           {isOwner ? (
             <label className="mt-3 flex items-start gap-3 w-full bg-surface border border-hairline rounded-ot px-4 py-3.5 shadow-whisper">

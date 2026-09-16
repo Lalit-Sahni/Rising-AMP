@@ -5,7 +5,7 @@ import { Menu, Search, X } from 'lucide-react';
 const PAGE_TITLES = {
   jobs: 'Jobs',
   profile: 'Profile',
-  'assistant-activity': 'What it did',
+  'assistant-activity': 'Activity',
   dashboard: 'Overview',
   'add-expense': 'Add expense',
   history: 'History',

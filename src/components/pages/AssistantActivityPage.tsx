@@ -105,10 +105,10 @@ export default function AssistantActivityPage() {
   return (
     <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">
       <div className="max-w-3xl mx-auto">
-        <div className="eyebrow">Assistant</div>
-        <h1 className="text-[25px] font-extrabold tracking-tight mt-1">What it did</h1>
+        <div className="eyebrow">All jobs</div>
+        <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Activity</h1>
         <p className="text-[13.5px] text-slate-600 mt-2">
-          Everything the assistant wrote, newest first. Undo still works after a reload.
+          What you and the assistant changed, newest first. Undo still works after a reload.
         </p>
 
         {loading ? (
@@ -119,7 +119,7 @@ export default function AssistantActivityPage() {
           <div className="mt-5">
             <EmptyState
               title="Nothing yet"
-              body="When the assistant adds or codes an expense, it will show up here."
+              body="Accept rows in Sort to cost plan on the Cost plan page, or scan a receipt on Add expense, and it shows up here. Anything on this list can be undone."
             />
           </div>
         ) : (

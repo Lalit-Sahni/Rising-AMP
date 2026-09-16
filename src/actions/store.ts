@@ -25,6 +25,8 @@ export type ExpenseWrite = {
   tradeId: string | null;
   source?: 'assistant';
   assistantReceiptId?: string;
+  /** True when a person confirmed the value on screen. Undo leaves it alone. */
+  assistantConfirmed?: boolean;
   /** Undo: drop source / assistantReceiptId rather than leaving a stale stamp. */
   clearAssistantStamp?: boolean;
   updatedAt: Date;
@@ -155,6 +157,7 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
       } else {
         if (patch.source) next.source = patch.source;
         if (patch.assistantReceiptId) next.assistantReceiptId = patch.assistantReceiptId;
+        if (patch.assistantConfirmed !== undefined) next.assistantConfirmed = patch.assistantConfirmed;
       }
       expenses.set(key, next);
       store.expenseWriteCount += 1;

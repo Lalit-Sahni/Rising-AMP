@@ -199,7 +199,7 @@ export default function Sidebar({ user, projectName, onLogout }) {
                 : 'text-[#B4B9C1] hover:bg-steel-800 hover:text-[#EDEFF2]'
               }`}
           >
-            What the assistant did
+            Activity
           </button>
           <div className="flex items-center gap-1">
           <button

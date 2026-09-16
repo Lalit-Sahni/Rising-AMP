@@ -1,6 +1,7 @@
 /**
  * Code (or clear) one existing expense's tradeId. Does not create expenses.
- * Does not invent money. The model never runs here.
+ * Does not invent money. The model never runs here. A human-origin coding is
+ * confirmed by definition, so History does not ask him to check it again.
  */
 import { z } from 'zod';
 import { resolveTargetJobIds } from '../queries/core';
@@ -121,6 +122,7 @@ export async function codeExpense(input: unknown, store: ActionStore): Promise<A
     tradeId,
     source: 'assistant',
     assistantReceiptId: id,
+    ...(origin === 'human' ? { assistantConfirmed: true } : {}),
     updatedAt: createdAt,
   });
   await store.putReceipt(receipt);

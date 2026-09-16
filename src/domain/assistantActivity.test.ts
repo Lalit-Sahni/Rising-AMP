@@ -1,5 +1,6 @@
 import {
   ACTIVITY_LIST_LIMIT,
+  activityActionLabel,
   activityEvidenceSummary,
   activityReceiptsForView,
   assistantDailyLineCopy,
@@ -19,6 +20,7 @@ function receipt(overrides: Record<string, unknown> = {}) {
     jobId: 'job-a',
     action: 'createExpense',
     status: 'applied',
+    origin: 'assistant',
     createdAt: new Date(2026, 8, 7, 15, 0, 0),
     evidence: {
       party: { source: 'ocr', value: 'Bunnings' },
@@ -75,6 +77,65 @@ describe('activity list helper', () => {
       action: 'codeExpense',
       evidence: { tradeId: { source: 'record', value: 'concreting' } },
     }))).toBe('concreting (record)');
+  });
+});
+
+describe('row label says who did it', () => {
+  test('a human batch is his, an assistant batch is its', () => {
+    const human = receipt({
+      action: 'codeExpenseBatch',
+      origin: 'human',
+      documentIds: { expenseIds: Array.from({ length: 12 }, (_, i) => `e${i}`) },
+    });
+    const assistant = receipt({
+      action: 'codeExpenseBatch',
+      origin: 'assistant',
+      documentIds: { expenseIds: Array.from({ length: 12 }, (_, i) => `e${i}`) },
+    });
+    expect(activityActionLabel('codeExpenseBatch', human)).toBe('You coded 12 expenses');
+    expect(activityActionLabel('codeExpenseBatch', assistant)).toBe('The assistant coded 12 expenses');
+  });
+
+  test('single rows and one-expense batches read the same way', () => {
+    expect(activityActionLabel('createExpense', receipt({ origin: 'human' })))
+      .toBe('You added an expense');
+    expect(activityActionLabel('createExpense', receipt({ origin: 'assistant' })))
+      .toBe('The assistant added an expense');
+    expect(activityActionLabel('codeExpense', receipt({ action: 'codeExpense', origin: 'human' })))
+      .toBe('You coded an expense');
+    expect(activityActionLabel('codeExpenseBatch', receipt({
+      action: 'codeExpenseBatch',
+      origin: 'human',
+      documentIds: { expenseIds: ['e1'] },
+    }))).toBe('You coded 1 expense');
+  });
+
+  test('a receipt with no origin stays neutral and names nobody', () => {
+    const old = receipt({
+      action: 'codeExpenseBatch',
+      origin: undefined,
+      documentIds: { expenseIds: ['e1', 'e2'] },
+    });
+    expect(activityActionLabel('codeExpenseBatch', old)).toBe('Coded 2 expenses');
+    expect(activityActionLabel('createExpense', receipt({ origin: undefined })))
+      .toBe('Added an expense');
+    expect(activityActionLabel('codeExpense', receipt({ action: 'codeExpense', origin: undefined })))
+      .toBe('Coded an expense');
+    expect(activityActionLabel('codeExpenseBatch', old)).not.toContain('You');
+    expect(activityActionLabel('codeExpenseBatch', old)).not.toContain('assistant');
+  });
+
+  test('an unknown origin is treated as no origin, not as a person', () => {
+    const label = activityActionLabel('codeExpense', receipt({
+      action: 'codeExpense',
+      origin: 'robot',
+    }));
+    expect(label).toBe('Coded an expense');
+  });
+
+  test('undo keeps its own label whoever pressed it', () => {
+    expect(activityActionLabel('undoAction', receipt({ action: 'undoAction', origin: 'human' })))
+      .toBe('Undo');
   });
 });
 
@@ -139,6 +200,55 @@ describe('daily line copy', () => {
       receipt({ id: 'other-job', jobId: 'job-b', action: 'createExpense' }),
       receipt({ id: 'undone', action: 'createExpense', status: 'undone' }),
       receipt({ id: 'proposed', action: 'createExpense', status: 'proposed' }),
+    ], 'job-a', now);
+    expect(counts).toEqual({ added: 1, coded: 1 });
+  });
+
+  test('forty rows he accepted himself are not the assistant, and make no line', () => {
+    const accepted = Array.from({ length: 40 }, (_, i) => receipt({
+      id: `human-${i}`,
+      action: 'codeExpense',
+      origin: 'human',
+    }));
+    expect(assistantYesterdayCounts(accepted, 'job-a', now)).toEqual({ added: 0, coded: 0 });
+    expect(assistantDailyLineItem({
+      receipts: accepted,
+      jobId: 'job-a',
+      expenses: [],
+      now,
+    })).toBeNull();
+  });
+
+  test('three the assistant did still make the line', () => {
+    const byAssistant = Array.from({ length: 3 }, (_, i) => receipt({
+      id: `assistant-${i}`,
+      action: 'codeExpense',
+      origin: 'assistant',
+    }));
+    expect(assistantYesterdayCounts(byAssistant, 'job-a', now)).toEqual({ added: 0, coded: 3 });
+    expect(assistantDailyLineItem({
+      receipts: byAssistant,
+      jobId: 'job-a',
+      expenses: [],
+      now,
+    })?.title).toBe('The assistant coded 3 yesterday.');
+  });
+
+  test('a receipt with no origin is not credited to the assistant', () => {
+    const rows = [
+      receipt({ id: 'old-add', action: 'createExpense', origin: undefined }),
+      receipt({ id: 'old-code', action: 'codeExpense', origin: undefined }),
+    ];
+    expect(assistantYesterdayCounts(rows, 'job-a', now)).toEqual({ added: 0, coded: 0 });
+    expect(assistantDailyLineItem({ receipts: rows, jobId: 'job-a', expenses: [], now })).toBeNull();
+  });
+
+  test('a mixed day counts only the assistant half', () => {
+    const counts = assistantYesterdayCounts([
+      receipt({ id: 'his-1', action: 'codeExpense', origin: 'human' }),
+      receipt({ id: 'his-2', action: 'createExpense', origin: 'human' }),
+      receipt({ id: 'its-1', action: 'codeExpense', origin: 'assistant' }),
+      receipt({ id: 'its-2', action: 'createExpense', origin: 'assistant' }),
     ], 'job-a', now);
     expect(counts).toEqual({ added: 1, coded: 1 });
   });

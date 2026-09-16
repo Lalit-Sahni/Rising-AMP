@@ -914,6 +914,15 @@ async function main() {
       assistantConfirmed: false,
       gstCents: 1245,
     }));
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-scan`).update({
+      tradeId: 'electrical',
+      source: 'assistant',
+      assistantReceiptId: 'r-code-human',
+      assistantConfirmed: true,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-scan`).update({
+      assistantConfirmed: 'yes',
+    }));
     await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/expenses/e-gst-bad`).set({
       category: 'purchase',
       total: 12,

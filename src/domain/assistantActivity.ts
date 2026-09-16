@@ -24,6 +24,8 @@ export type ActivityReceiptLike = {
   jobId: string;
   action: string;
   status: string;
+  /** 'human', 'assistant', or missing on a receipt written before Phase 17. */
+  origin?: string;
   createdAt: Date | string | number;
   evidence?: Record<string, ActivityEvidenceField>;
   documentIds?: {
@@ -78,14 +80,28 @@ export function activityReceiptsForView<T extends ActivityReceiptLike>(
   ).slice(0, limit);
 }
 
+function activityActor(origin: string | undefined): string {
+  if (origin === 'human') return 'You';
+  if (origin === 'assistant') return 'The assistant';
+  return '';
+}
+
+/** No origin means a pre-Phase-17 receipt. Stay neutral rather than guess who. */
+function activityPhrase(origin: string | undefined, verb: string, rest: string): string {
+  const actor = activityActor(origin);
+  if (actor) return `${actor} ${verb} ${rest}`;
+  return `${verb.charAt(0).toUpperCase()}${verb.slice(1)} ${rest}`;
+}
+
 export function activityActionLabel(action: string, receipt?: ActivityReceiptLike): string {
-  if (action === 'createExpense') return 'Added an expense';
-  if (action === 'codeExpense') return 'Coded an expense';
+  const origin = receipt?.origin;
+  if (action === 'createExpense') return activityPhrase(origin, 'added', 'an expense');
+  if (action === 'codeExpense') return activityPhrase(origin, 'coded', 'an expense');
   if (action === 'codeExpenseBatch') {
     const count = receipt?.documentIds?.expenseIds?.length;
-    if (count === 1) return 'Coded 1 expense';
-    if (count && count > 1) return `Coded ${count} expenses`;
-    return 'Coded expenses';
+    if (count === 1) return activityPhrase(origin, 'coded', '1 expense');
+    if (count && count > 1) return activityPhrase(origin, 'coded', `${count} expenses`);
+    return activityPhrase(origin, 'coded', 'expenses');
   }
   if (action === 'undoAction') return 'Undo';
   return action || 'Action';
@@ -167,7 +183,9 @@ function isLocalYesterday(value: Date | string | number, now: Date): boolean {
 
 /**
  * Yesterday on the local calendar (AU phone = AU day). Applied createExpense
- * and codeExpense only, so a batch parent is not counted twice.
+ * and codeExpense only, so a batch parent is not counted twice. Assistant
+ * origin only: the line says "the assistant", so his own accepted rows and
+ * receipts with no origin are left out rather than credited to it.
  */
 export function assistantYesterdayCounts(
   receipts: ActivityReceiptLike[] | null | undefined,
@@ -179,6 +197,7 @@ export function assistantYesterdayCounts(
   let coded = 0;
   (receipts || []).forEach((row) => {
     if (!job || row.jobId !== job) return;
+    if (row.origin !== 'assistant') return;
     if (String(row.status || '') !== 'applied') return;
     if (!isLocalYesterday(row.createdAt, now)) return;
     if (row.action === 'createExpense') added += 1;

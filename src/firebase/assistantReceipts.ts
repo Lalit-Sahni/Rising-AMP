@@ -126,6 +126,9 @@ export function createFirestoreActionStore(): ActionStore {
           : {
             ...(patch.source ? { source: patch.source } : {}),
             ...(patch.assistantReceiptId ? { assistantReceiptId: patch.assistantReceiptId } : {}),
+            ...(patch.assistantConfirmed === undefined
+              ? {}
+              : { assistantConfirmed: patch.assistantConfirmed }),
           }),
       });
     },
