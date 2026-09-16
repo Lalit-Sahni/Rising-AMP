@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Rules tests: profiles, ledger void/purge, org isolation, and job files.
+ * Rules tests: profiles, ledger void/purge, org isolation, job files,
+ * and invite send records (Phase 17 Part F).
  * Run with: npm run test:rules
  */
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
@@ -1007,6 +1008,86 @@ async function main() {
       legacyWorkspaceNames: { pin: 'Kelly St' },
       updatedAt: new Date(),
     }));
+
+    // Phase 17 Part F: invite send records.
+    const seededInvitePath = `organizations/${ORG}/projects/${JOB}/invites/inv-seeded`;
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc(seededInvitePath).set({
+        to: COWORKER.email,
+        invitedBy: OWNER.email,
+        sentAt: new Date(),
+        via: 'resend',
+        providerId: 're_seeded',
+        status: 'sent',
+        statusAt: new Date(),
+      });
+    });
+    const gmailInvite = {
+      to: COWORKER.email,
+      invitedBy: OWNER.email,
+      sentAt: new Date(),
+      via: 'gmail',
+      providerId: null,
+      status: 'sent',
+      statusAt: new Date(),
+    };
+    await assertSucceeds(owner.firestore().doc(seededInvitePath).get());
+    await assertSucceeds(coworker.firestore().doc(seededInvitePath).get());
+    await assertSucceeds(owner.firestore().collection(`organizations/${ORG}/projects/${JOB}/invites`).get());
+    await assertFails(stranger.firestore().doc(seededInvitePath).get());
+    await assertFails(stranger.firestore().collection(`organizations/${ORG}/projects/${JOB}/invites`).get());
+
+    // The Gmail fallback row is the only client write allowed.
+    await assertSucceeds(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-gmail`).set(gmailInvite));
+    await assertSucceeds(coworker.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-gmail-2`).set({
+      ...gmailInvite,
+      invitedBy: COWORKER.email,
+    }));
+
+    // Nobody writes a 'resend' row from the client.
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-resend`).set({
+      ...gmailInvite,
+      via: 'resend',
+      providerId: 're_abc',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-resend-2`).set({
+      ...gmailInvite,
+      via: 'resend',
+      providerId: null,
+    }));
+
+    // Shape checks on the fallback row.
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-bad-provider`).set({
+      ...gmailInvite,
+      providerId: 're_abc',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-bad-status`).set({
+      ...gmailInvite,
+      status: 'delivered',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-bad-by`).set({
+      ...gmailInvite,
+      invitedBy: COWORKER.email,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-bad-to`).set({
+      ...gmailInvite,
+      to: STRANGER.email,
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-bad-case`).set({
+      ...gmailInvite,
+      to: 'Coworker@Opal.Test',
+    }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-extra`).set({
+      ...gmailInvite,
+      failureReason: 'sneaky',
+    }));
+    await assertFails(stranger.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-stranger`).set(gmailInvite));
+
+    // No client updates or deletes, even for the sender.
+    await assertFails(owner.firestore().doc(seededInvitePath).update({ status: 'bounced' }));
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-gmail`).update({ status: 'bounced' }));
+    await assertFails(owner.firestore().doc(seededInvitePath).delete());
+    await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-gmail`).delete());
 
     const storageRefPath = `files/${ORG}/${JOB}/f1/slab.pdf`;
     await assertSucceeds(

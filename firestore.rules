@@ -781,6 +781,38 @@ service cloud.firestore {
           allow read: if canUseProject() && docId == 'current';
           allow create, update, delete: if false;
         }
+        // Phase 17 Part F. One row per invite send. The sendJobInviteEmail
+        // function writes Resend rows as admin; resendWebhook patches status
+        // as admin. A client may only ever write the Gmail fallback row.
+        match /invites/{inviteId} {
+          function inviteEmailOk(value) {
+            return value is string
+              && value.size() >= 3
+              && value.size() <= 254
+              && value == value.lower()
+              && value.matches('^[^@]+@[^@]+$');
+          }
+
+          function gmailInviteOk() {
+            return request.resource.data.keys().hasOnly([
+                'to', 'invitedBy', 'sentAt', 'via', 'providerId',
+                'status', 'statusAt'
+              ])
+              && inviteEmailOk(request.resource.data.to)
+              && inviteEmailOk(request.resource.data.invitedBy)
+              && request.resource.data.invitedBy == emailLower()
+              && request.resource.data.sentAt is timestamp
+              && request.resource.data.via == 'gmail'
+              && request.resource.data.providerId == null
+              && request.resource.data.status == 'sent'
+              && request.resource.data.statusAt is timestamp
+              && request.resource.data.to in get(/databases/$(database)/documents/organizations/$(orgId)/projects/$(projectId)).data.invitedEmails;
+          }
+
+          allow read: if canUseProject();
+          allow create: if canUseProject() && gmailInviteOk();
+          allow update, delete: if false;
+        }
         match /{allPaths=**} {
           allow read, write: if false;
         }

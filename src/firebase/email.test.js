@@ -3,11 +3,13 @@ import path from 'path';
 import { isInviteFunctionUnavailable } from './inviteSendSwitch';
 
 describe('invite send switch', () => {
-  test('falls back when the Cloud Function is missing or down', () => {
+  test('falls back only when the Cloud Function is not deployed', () => {
     expect(isInviteFunctionUnavailable({ code: 'functions/not-found' })).toBe(true);
-    expect(isInviteFunctionUnavailable({ code: 'functions/unavailable' })).toBe(true);
-    expect(isInviteFunctionUnavailable({ code: 'functions/internal' })).toBe(true);
-    expect(isInviteFunctionUnavailable({})).toBe(true);
+    expect(isInviteFunctionUnavailable({ code: 'functions/unimplemented' })).toBe(true);
+  });
+
+  test('a Resend rejection (functions/internal) is a real error, never a fallback', () => {
+    expect(isInviteFunctionUnavailable({ code: 'functions/internal' })).toBe(false);
   });
 
   test('does not fall back on real permission or validation errors', () => {
@@ -15,6 +17,13 @@ describe('invite send switch', () => {
     expect(isInviteFunctionUnavailable({ code: 'functions/invalid-argument' })).toBe(false);
     expect(isInviteFunctionUnavailable({ code: 'functions/unauthenticated' })).toBe(false);
     expect(isInviteFunctionUnavailable({ code: 'functions/failed-precondition' })).toBe(false);
+  });
+
+  test('anything else is a real error, not a missing function', () => {
+    expect(isInviteFunctionUnavailable({ code: 'functions/unavailable' })).toBe(false);
+    expect(isInviteFunctionUnavailable({ code: 'functions/deadline-exceeded' })).toBe(false);
+    expect(isInviteFunctionUnavailable({})).toBe(false);
+    expect(isInviteFunctionUnavailable(null)).toBe(false);
   });
 });
 

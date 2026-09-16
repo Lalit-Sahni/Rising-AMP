@@ -174,6 +174,24 @@ export const costPlanSchema = z
   })
   .passthrough();
 
+export const inviteViaSchema = z.enum(['resend', 'gmail']);
+export const inviteStatusSchema = z.enum(['sent', 'delivered', 'bounced', 'complained', 'failed']);
+
+export const jobInviteSchema = z
+  .object({
+    id: z.string().optional(),
+    to: z.string().trim().min(3).max(254),
+    invitedBy: z.string().trim().min(3).max(254),
+    sentAt: z.unknown().optional(),
+    via: inviteViaSchema,
+    providerId: z.string().max(128).nullable().optional(),
+    status: inviteStatusSchema,
+    statusAt: z.unknown().optional(),
+    failureReason: z.string().max(500).nullable().optional(),
+    jobId: z.string().optional(),
+  })
+  .passthrough();
+
 export const partyKindSchema = z.enum([
   'supplier',
   'worker',
@@ -277,6 +295,9 @@ export type CostPlanQuote = z.infer<typeof costPlanQuoteSchema>;
 export type PartyKind = z.infer<typeof partyKindSchema>;
 export type PartyStatus = z.infer<typeof partyStatusSchema>;
 export type Party = z.infer<typeof partySchema>;
+export type InviteVia = z.infer<typeof inviteViaSchema>;
+export type InviteStatus = z.infer<typeof inviteStatusSchema>;
+export type JobInvite = z.infer<typeof jobInviteSchema>;
 
 export function parseAtBoundary<T>(
   schema: z.ZodType<T>,

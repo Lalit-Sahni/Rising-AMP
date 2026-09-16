@@ -15,6 +15,7 @@ import ExportDialog from '../ExportDialog';
 import JobPeople from '../JobPeople';
 import EmptyState from '../EmptyState';
 import { fetchJobFiles } from '../../firebase/jobFiles';
+import { listJobInvites } from '../../firebase/invites';
 import { withFileAttention } from '../../domain/jobFileAttention';
 import { withAssistantDailyLine } from '../../domain/assistantActivity';
 import { withJobFactsAttention } from '../../domain/jobFactsAttention';
@@ -75,6 +76,7 @@ export default function DashboardPage() {
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [showExport, setShowExport] = useState(false);
   const [jobFiles, setJobFiles] = useState([]);
+  const [jobInvites, setJobInvites] = useState([]);
   const [assistantReceipts, setAssistantReceipts] = useState([]);
   const [jobFacts, setJobFacts] = useState(null);
   const [targetSheetOpen, setTargetSheetOpen] = useState(false);
@@ -113,6 +115,24 @@ export default function DashboardPage() {
     fetchJobFiles(jobId).then((result) => {
       if (!cancelled && result.success) setJobFiles(result.files || []);
     });
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!jobId) {
+      setJobInvites([]);
+      return undefined;
+    }
+    listJobInvites(jobId)
+      .then((rows) => {
+        if (!cancelled) setJobInvites(rows);
+      })
+      .catch((error) => {
+        console.warn('Invite status could not be loaded:', error);
+      });
     return () => {
       cancelled = true;
     };
@@ -291,7 +311,7 @@ export default function DashboardPage() {
               <p className="text-[13.5px] text-warn mt-1">This job is archived. Records stay. The owner can bring it back from Jobs.</p>
             )}
             <p className="text-[13.5px] text-slate-600 mt-0.5">{subtitle}</p>
-            <JobPeople emails={jobInvitedEmails} />
+            <JobPeople emails={jobInvitedEmails} invites={jobInvites} />
             <div className="inline-flex mt-3 bg-surface border border-hairline rounded-[9px] p-[3px]">
               {[
                 { id: 'client', label: 'Client build' },

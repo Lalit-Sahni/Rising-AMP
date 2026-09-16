@@ -1,9 +1,13 @@
 /**
  * Professional RisingAMP HTML mail.
- * Layout follows design/risingamp-signin-email.html with inline hex colours
- * (Gmail ignores CSS variables). Job invites are built here and sent from
- * invites@risingamp.com.au via the sendJobInviteEmail Cloud Function (Resend),
- * with the old Gmail send path as fallback until that function is live.
+ * Layout follows design/risingamp-invite-email-v2.html. Rules it enforces:
+ * no SVG anywhere (Apple Mail, Gmail and Outlook strip it), no images
+ * (clients block remote images on first open), tables and inline styles
+ * only (Outlook renders through Word), a font stack rather than a webfont,
+ * and an explicit color and text-decoration on every anchor so no client
+ * paints a link default blue. Job invites are sent from
+ * invites@risingamp.com.au via the sendJobInviteEmail Cloud Function
+ * (Resend), with the old Gmail send path as fallback.
  * Do not put a fake street address or Help Centre that does not exist.
  */
 
@@ -15,18 +19,10 @@ const MUTED = '#8A9099';
 const CANVAS = '#F5F6F8';
 const SURFACE = '#FFFFFF';
 const HAIRLINE = '#E7E9EC';
-const POS = '#2E7D57';
-const POS_TINT = '#E7F1EC';
-const ACCENT_TINT = '#FCEEE4';
 const ACCENT_600 = '#C64E12';
-const FOOTER_MUTED = '#8B909A';
-const FOOTER_DIM = '#5B606A';
-
-const HELMET_18 = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.9" style="display:block;margin:8px auto" xmlns="http://www.w3.org/2000/svg"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg>`;
-const HELMET_13 = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" style="display:block;margin:6.5px auto" xmlns="http://www.w3.org/2000/svg"><path d="M4 15.5V13a8 8 0 0 1 16 0v2.5"/><path d="M9 6.5V4h6v2.5"/><path d="M3 15.5h18v2H3z"/></svg>`;
-const SHIELD = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${POS}" stroke-width="2" style="display:block;margin:12px auto" xmlns="http://www.w3.org/2000/svg"><path d="M12 2 3 6v6c0 5 3.8 8.7 9 10 5.2-1.3 9-5 9-10V6z"/><path d="m9 12 2 2 4-4"/></svg>`;
-const DEVICE = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="${SLATE}" stroke-width="1.7" style="display:block;margin:9.5px auto" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>`;
-const BRIEFCASE = `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="${SLATE}" stroke-width="1.7" style="display:block;margin:9.5px auto" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`;
+const ACCENT_TINT = '#FCEEE4';
+const FOOTER_DIM = '#B6BAC1';
+const FONT = "Manrope,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
 export function escapeHtml(value) {
   return String(value || '')
@@ -36,20 +32,23 @@ export function escapeHtml(value) {
     .replace(/"/g, '&quot;');
 }
 
-function logoCell(size, svg) {
-  const radius = size >= 32 ? 9 : 7;
-  return `<td style="width:${size}px;height:${size}px;border-radius:${radius}px;background:${ACCENT};text-align:center;vertical-align:middle">${svg}</td>`;
+/**
+ * The job tile is live text on a tint background, not an icon: the street
+ * number when the job name starts with one, otherwise the first letter.
+ * There is nothing for a mail client to strip.
+ */
+function jobTileMark(projectName) {
+  const name = String(projectName || '').trim();
+  const number = name.match(/^(\d+[A-Za-z]?)/);
+  if (number) return escapeHtml(number[1]);
+  return escapeHtml((name.charAt(0) || 'J').toUpperCase());
 }
 
-function kvRow(label, value, { last = false } = {}) {
-  const pad = last ? '9px 18px 16px' : '9px 18px';
-  return `<tr>
-    <td style="padding:${pad};font-size:12.5px;color:${SLATE};width:40%">${label}</td>
-    <td style="padding:${pad};font-size:12.5px;color:${INK};font-weight:700;text-align:right">${value}</td>
-  </tr>`;
+function wordmark() {
+  return `<span style="font-size:16px;font-weight:800;letter-spacing:-0.01em;color:#FFFFFF;line-height:1">Rising<span style="color:${ACCENT}">AMP</span></span>`;
 }
 
-function emailChrome({ innerHtml, footerNote }) {
+function emailChrome({ innerHtml, sectionLabel }) {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -59,36 +58,47 @@ function emailChrome({ innerHtml, footerNote }) {
 <meta name="supported-color-schemes" content="light">
 <title>RisingAMP</title>
 </head>
-<body style="margin:0;padding:0;background:${CANVAS};color:${INK};font-family:Manrope,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CANVAS};padding:28px 12px">
-  <tr><td align="center">
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:${SURFACE};border-radius:16px;overflow:hidden;border:1px solid ${HAIRLINE}">
+<body style="margin:0;padding:0;background:${CANVAS};color:${INK};font-family:${FONT}">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CANVAS}">
+  <tr><td align="center" style="padding:28px 12px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:${SURFACE};border-radius:14px;overflow:hidden;border:1px solid ${HAIRLINE}">
       <tr>
-        <td style="background:${STEEL};padding:26px 32px">
-          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-            ${logoCell(34, HELMET_18)}
-            <td style="padding-left:10px;font-size:15px;font-weight:800;color:#ffffff;letter-spacing:-0.01em">RisingAMP</td>
+        <td style="background:${STEEL};padding:20px 28px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td>${wordmark()}</td>
+            <td align="right" style="font-size:10px;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:${MUTED};line-height:1">${escapeHtml(sectionLabel || '')}</td>
           </tr></table>
         </td>
       </tr>
+      <tr><td style="background:${ACCENT};font-size:0;line-height:0;height:3px">&nbsp;</td></tr>
       ${innerHtml}
-      <tr>
-        <td style="background:${STEEL};padding:26px 32px">
-          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-            ${logoCell(26, HELMET_13)}
-            <td style="padding-left:9px;font-size:13px;font-weight:800;color:#ffffff">RisingAMP</td>
-          </tr></table>
-          <p style="font-size:11.5px;line-height:1.7;color:${FOOTER_MUTED};margin:14px 0 0">
-            Know where every dollar goes, and what needs you today.
-          </p>
-          <p style="font-size:11px;color:${FOOTER_DIM};margin:16px 0 0">${escapeHtml(footerNote || '© 2026 RisingAMP. All rights reserved.')}</p>
-        </td>
-      </tr>
     </table>
   </td></tr>
 </table>
 </body>
 </html>`;
+}
+
+function docketLabel(label) {
+  return `<div style="font-size:9.5px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${MUTED};padding-bottom:4px">${label}</div>`;
+}
+
+function docketRow({ label, valueHtml, first = false, last = false }) {
+  const border = last ? '' : `border-bottom:1px solid ${HAIRLINE};`;
+  const pad = `13px 18px${last ? ' 15px' : ''}`;
+  return `<tr><td style="padding:${pad};${border}">
+    ${docketLabel(label)}
+    <div style="font-size:13.5px;color:${INK};font-weight:600;word-break:break-word">${valueHtml}</div>
+  </td></tr>`;
+}
+
+function footerRow(lines) {
+  return `<tr><td style="padding:26px 28px 24px">
+    <div style="border-top:1px solid ${HAIRLINE};padding-top:16px;font-size:11.5px;line-height:1.65;color:${MUTED}">
+      ${lines}<br>
+      <span style="color:${FOOTER_DIM}">RisingAMP, Sydney NSW</span>
+    </div>
+  </td></tr>`;
 }
 
 export function buildJobInviteEmail({ inviterName, inviterEmail, projectName, appUrl, to }) {
@@ -97,68 +107,70 @@ export function buildJobInviteEmail({ inviterName, inviterEmail, projectName, ap
   const url = escapeHtml(appUrl || 'https://rising-amp-467702-b5.web.app');
   const signInAs = escapeHtml(to || '');
   const fromLine = escapeHtml(inviterEmail || '');
+  let host = 'risingamp.com.au';
+  try {
+    host = new URL(appUrl || 'https://risingamp.com.au').host;
+  } catch (error) {
+    // keep the default host
+  }
 
   const inner = `
       <tr>
-        <td style="padding:38px 32px 8px">
-          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-            <td style="width:46px;height:46px;border-radius:12px;background:${POS_TINT};text-align:center;vertical-align:middle">${SHIELD}</td>
+        <td style="padding:36px 28px 0">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.17em;text-transform:uppercase;color:${MUTED};padding-bottom:13px">You have been added to a job</div>
+          <div style="font-size:29px;line-height:1.14;font-weight:800;letter-spacing:-0.03em;color:${INK}">${job}</div>
+          <div style="font-size:14.5px;line-height:1.62;color:${SLATE};padding-top:14px">
+            ${name} added you to this job on RisingAMP. Sign in with the address
+            below and you will see this job only, nothing else on the account.
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:26px 28px 0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CANVAS};border:1px solid ${HAIRLINE};border-radius:11px">
+            <tr><td style="padding:16px 18px 14px;border-bottom:1px solid ${HAIRLINE}">
+              <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+                <td style="width:42px;height:42px;background:${ACCENT_TINT};border-radius:9px;text-align:center;font-size:15px;font-weight:800;letter-spacing:-0.02em;color:${ACCENT_600};line-height:42px">${jobTileMark(projectName)}</td>
+                <td style="padding-left:13px">
+                  <div style="font-size:14.5px;font-weight:700;color:${INK};letter-spacing:-0.012em;line-height:1.3">${job}</div>
+                  <div style="font-size:11.5px;color:${MUTED};padding-top:3px;letter-spacing:0.01em">RisingAMP job</div>
+                </td>
+              </tr></table>
+            </td></tr>
+            ${docketRow({
+              label: 'Invited by',
+              valueHtml: `${name}${fromLine ? `<div style="font-size:12.5px;padding-top:2px"><a href="mailto:${fromLine}" style="color:${ACCENT_600};text-decoration:none">${fromLine}</a></div>` : ''}`,
+            })}
+            ${docketRow({ label: 'Sign in with', valueHtml: signInAs, last: true })}
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:22px 28px 0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td align="center" style="background:${ACCENT};border-radius:10px">
+              <a href="${url}" style="display:block;padding:15px 20px;font-family:${FONT};font-size:14.5px;font-weight:700;letter-spacing:-0.005em;color:#FFFFFF;text-decoration:none">Open the job</a>
+            </td>
           </tr></table>
-          <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.02em;margin:18px 0 8px;color:${INK}">You're invited to ${job}</h1>
-          <p style="font-size:14.5px;line-height:1.6;color:${SLATE};margin:0 0 4px;max-width:480px">
-            ${name} added you to <b style="color:${INK}">${job}</b> on RisingAMP. Sign in with this email and you will only see this job — not the others.
-          </p>
+          <div style="font-size:11.5px;color:${MUTED};text-align:center;padding-top:11px;line-height:1.5">
+            Or paste this into your browser: <span style="color:${SLATE}">${escapeHtml(host)}</span>
+          </div>
         </td>
       </tr>
       <tr>
-        <td style="padding:22px 32px 6px">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CANVAS};border:1px solid ${HAIRLINE};border-radius:12px">
-            <tr>
-              <td style="padding:16px 18px 6px" colspan="2">
-                <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-                  <td style="width:36px;height:36px;border-radius:9px;background:${SURFACE};border:1px solid ${HAIRLINE};text-align:center;vertical-align:middle">${BRIEFCASE}</td>
-                  <td style="padding-left:11px">
-                    <div style="font-size:13.5px;font-weight:700;color:${INK}">${job}</div>
-                    <div style="font-size:11.5px;color:${MUTED}">RisingAMP job</div>
-                  </td>
-                </tr></table>
-              </td>
-            </tr>
-            <tr><td colspan="2" style="padding:0 18px"><div style="height:1px;background:${HAIRLINE};margin:14px 0 4px"></div></td></tr>
-            ${kvRow('Invited by', `${name}${fromLine ? ` · ${fromLine}` : ''}`)}
-            ${kvRow('Sign in with', signInAs, { last: true })}
-          </table>
+        <td style="padding:24px 28px 0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td style="border-left:3px solid ${HAIRLINE};padding:2px 0 2px 14px;font-size:12.5px;line-height:1.6;color:${SLATE}">
+              <b style="color:${INK};font-weight:700">New to RisingAMP?</b> Create an account with this
+              same address. Google sign-in and a password both work. If you were not
+              expecting this, ignore it and nothing happens.
+            </td>
+          </tr></table>
         </td>
       </tr>
-      <tr>
-        <td style="padding:24px 32px 6px">
-          <a href="${url}" style="display:inline-block;background:${ACCENT};color:#ffffff;font-family:Manrope,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13.5px;font-weight:700;padding:12px 20px;border-radius:9px;text-decoration:none">Open RisingAMP</a>
-        </td>
-      </tr>
-      <tr>
-        <td style="padding:22px 32px 4px">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${ACCENT_TINT};border-radius:12px">
-            <tr>
-              <td style="padding:14px 16px;font-size:12.5px;line-height:1.6;color:${INK}">
-                <b style="color:${ACCENT_600}">New here?</b> Create an account with this email — Google or email and password both work. If you were not expecting this, you can ignore it.
-              </td>
-            </tr>
-          </table>
-        </td>
-      </tr>
-      <tr><td style="padding:26px 32px 0"><div style="height:1px;background:${HAIRLINE}"></div></td></tr>
-      <tr>
-        <td style="padding:20px 32px 30px">
-          <p style="font-size:12.5px;line-height:1.6;color:${MUTED};margin:0">
-            Sent because ${name} invited ${signInAs || 'you'} to a job on RisingAMP.
-          </p>
-        </td>
-      </tr>`;
+      ${footerRow(`Sent because ${name} invited ${signInAs || 'you'} to a job on RisingAMP.`)}`;
 
-  const html = emailChrome({
-    innerHtml: inner,
-    footerNote: '© 2026 RisingAMP. All rights reserved.',
-  });
+  const html = emailChrome({ innerHtml: inner, sectionLabel: 'Job invite' });
   const text = [
     `You're invited to ${projectName} on RisingAMP.`,
     '',
@@ -248,75 +260,56 @@ export function buildNewSignInEmail({
 
   const inner = `
       <tr>
-        <td style="padding:38px 32px 8px">
-          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-            <td style="width:46px;height:46px;border-radius:12px;background:${POS_TINT};text-align:center;vertical-align:middle">${SHIELD}</td>
-          </tr></table>
-          <h1 style="font-size:22px;font-weight:800;letter-spacing:-0.02em;margin:18px 0 8px;color:${INK}">New sign-in to your account</h1>
-          <p style="font-size:14.5px;line-height:1.6;color:${SLATE};margin:0 0 4px;max-width:480px">
+        <td style="padding:36px 28px 0">
+          <div style="font-size:10.5px;font-weight:700;letter-spacing:0.17em;text-transform:uppercase;color:${MUTED};padding-bottom:13px">Account security</div>
+          <div style="font-size:29px;line-height:1.14;font-weight:800;letter-spacing:-0.03em;color:${INK}">New sign-in to your account</div>
+          <div style="font-size:14.5px;line-height:1.62;color:${SLATE};padding-top:14px">
             Hi ${who}, we noticed a new sign-in to your RisingAMP account${companyBit}. If this was you, there is nothing else you need to do.
-          </p>
+          </div>
         </td>
       </tr>
       <tr>
-        <td style="padding:22px 32px 6px">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CANVAS};border:1px solid ${HAIRLINE};border-radius:12px">
-            <tr>
-              <td style="padding:16px 18px 6px" colspan="2">
-                <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-                  <td style="width:36px;height:36px;border-radius:9px;background:${SURFACE};border:1px solid ${HAIRLINE};text-align:center;vertical-align:middle">${DEVICE}</td>
-                  <td style="padding-left:11px">
-                    <div style="font-size:13.5px;font-weight:700;color:${INK}">${escapeHtml(deviceTitle || 'Signed-in device')}</div>
-                    <div style="font-size:11.5px;color:${MUTED}">${escapeHtml(deviceSubtitle || '')}</div>
-                  </td>
-                </tr></table>
-              </td>
-            </tr>
-            <tr><td colspan="2" style="padding:0 18px"><div style="height:1px;background:${HAIRLINE};margin:14px 0 4px"></div></td></tr>
-            ${kvRow('Time', escapeHtml(whenLabel || ''))}
-            ${kvRow('Location', escapeHtml(locationLabel || 'Not available from this sign-in'))}
-            ${kvRow('IP address', escapeHtml(ipLabel || 'Not available from this sign-in'), { last: true })}
+        <td style="padding:26px 28px 0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${CANVAS};border:1px solid ${HAIRLINE};border-radius:11px">
+            ${docketRow({
+              label: 'Device',
+              valueHtml: `${escapeHtml(deviceTitle || 'Signed-in device')}${deviceSubtitle ? `<div style="font-size:11.5px;color:${MUTED};padding-top:3px;letter-spacing:0.01em">${escapeHtml(deviceSubtitle)}</div>` : ''}`,
+              first: true,
+            })}
+            ${docketRow({ label: 'Time', valueHtml: escapeHtml(whenLabel || '') })}
+            ${docketRow({ label: 'Location', valueHtml: escapeHtml(locationLabel || 'Not available from this sign-in') })}
+            ${docketRow({ label: 'IP address', valueHtml: escapeHtml(ipLabel || 'Not available from this sign-in'), last: true })}
           </table>
         </td>
       </tr>
       <tr>
-        <td style="padding:24px 32px 6px">
-          <table role="presentation" cellpadding="0" cellspacing="0" width="100%"><tr>
-            <td style="width:1%">
-              <a href="${url}" style="display:inline-block;background:${ACCENT};color:#ffffff;font-family:Manrope,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13.5px;font-weight:700;padding:12px 20px;border-radius:9px;white-space:nowrap;text-decoration:none">This was me</a>
+        <td style="padding:22px 28px 0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td align="center" style="background:${ACCENT};border-radius:10px">
+              <a href="${url}" style="display:block;padding:15px 20px;font-family:${FONT};font-size:14.5px;font-weight:700;letter-spacing:-0.005em;color:#FFFFFF;text-decoration:none">This was me</a>
             </td>
-            <td style="padding-left:10px">
-              <a href="${resetUrl}" style="display:inline-block;background:${SURFACE};color:${INK};border:1px solid ${HAIRLINE};font-family:Manrope,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13.5px;font-weight:700;padding:11px 19px;border-radius:9px;white-space:nowrap;text-decoration:none">Secure my account</a>
+          </tr></table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px"><tr>
+            <td align="center" style="background:${SURFACE};border:1px solid ${HAIRLINE};border-radius:10px">
+              <a href="${resetUrl}" style="display:block;padding:14px 20px;font-family:${FONT};font-size:14.5px;font-weight:700;letter-spacing:-0.005em;color:${INK};text-decoration:none">Secure my account</a>
             </td>
           </tr></table>
         </td>
       </tr>
       <tr>
-        <td style="padding:22px 32px 4px">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${ACCENT_TINT};border-radius:12px">
-            <tr>
-              <td style="padding:14px 16px;font-size:12.5px;line-height:1.6;color:${INK}">
-                <b style="color:${ACCENT_600}">Didn't sign in?</b> Someone else may have your password. Reset it straight away from the sign-in page.
-              </td>
-            </tr>
-          </table>
+        <td style="padding:24px 28px 0">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+            <td style="border-left:3px solid ${HAIRLINE};padding:2px 0 2px 14px;font-size:12.5px;line-height:1.6;color:${SLATE}">
+              <b style="color:${INK};font-weight:700">Didn't sign in?</b> Someone else may have your password. Reset it straight away from the sign-in page.
+            </td>
+          </tr></table>
         </td>
       </tr>
-      <tr><td style="padding:26px 32px 0"><div style="height:1px;background:${HAIRLINE}"></div></td></tr>
-      <tr>
-        <td style="padding:20px 32px 30px">
-          <p style="font-size:12.5px;line-height:1.6;color:${MUTED};margin:0">
-            This is an automated security notice sent to <span style="color:${SLATE}">${escapeHtml(to)}</span> because a new sign-in was recorded on this account.
-          </p>
-        </td>
-      </tr>`;
+      ${footerRow(`This is an automated security notice sent to <span style="color:${SLATE}">${escapeHtml(to)}</span> because a new sign-in was recorded on this account.`)}`;
 
   return {
     subject: 'New sign-in to your RisingAMP account',
-    html: emailChrome({
-      innerHtml: inner,
-      footerNote: '© 2026 RisingAMP. All rights reserved.',
-    }),
+    html: emailChrome({ innerHtml: inner, sectionLabel: 'Security notice' }),
     text: [
       'New sign-in to your RisingAMP account.',
       '',

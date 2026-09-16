@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { loadProfilesForEmails } from '../firebase/profiles';
 import { canonicalEmail } from '../firebase/emailAddress';
+import { latestInviteLines } from '../domain/inviteStatus';
 
 function uniqueEmails(emails) {
   const seen = new Set();
@@ -22,7 +23,7 @@ function initials(profile) {
   return source.slice(0, 1).toUpperCase();
 }
 
-export default function JobPeople({ emails, ownerEmail, onRemove, saving }) {
+export default function JobPeople({ emails, ownerEmail, onRemove, saving, invites }) {
   const [people, setPeople] = useState([]);
 
   useEffect(() => {
@@ -39,7 +40,9 @@ export default function JobPeople({ emails, ownerEmail, onRemove, saving }) {
     };
   }, [emails]);
 
-  if (!people.length) return null;
+  const inviteLines = latestInviteLines(invites || []);
+
+  if (!people.length && !inviteLines.length) return null;
 
   return (
     <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -77,6 +80,18 @@ export default function JobPeople({ emails, ownerEmail, onRemove, saving }) {
           </div>
         );
       })}
+      {inviteLines.length > 0 && (
+        <div className="w-full mt-1 space-y-0.5">
+          {inviteLines.map((line) => (
+            <div
+              key={line.id}
+              className={`text-[11.5px] ${line.attention ? 'text-neg font-semibold' : 'text-slate-500'}`}
+            >
+              {line.to} — invited {line.ageLabel} · {line.statusLabel}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

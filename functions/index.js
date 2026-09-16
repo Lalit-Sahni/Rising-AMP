@@ -22,6 +22,8 @@
  *   firebase deploy --project production --only functions:extractJobFileText
  *   firebase deploy --project staging --only functions:askRisingAmp
  *   firebase deploy --project production --only functions:askRisingAmp
+ *   firebase deploy --project rising-amp-staging --only functions:resendWebhook
+ *   firebase deploy --project production --only functions:resendWebhook
  *
  * No --force. --force suppresses the confirmation before deleting functions.
  * This repo never lets a functions deploy delete something.
@@ -31,14 +33,16 @@
  * Production maintainLedgerRollup create (5 Sep 2026) answered the retry prompt; no --force.
  *
  * Secrets the owner sets at a masked prompt (never paste into chat):
- *   RESEND_API_KEY, OPENAI_API_KEY
+ *   RESEND_API_KEY, OPENAI_API_KEY, RESEND_WEBHOOK_SECRET
  */
 
 const admin = require('firebase-admin');
-const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentWritten, onDocumentCreated } = require('firebase-functions/v2/firestore');
 const { recomputeLedgerRollupForJob, recomputeOrgLedgerRollup } = require('./lib/maintainLedgerRollup');
 const { handleJobFileCreated } = require('./lib/extractJobFileText');
+const { recordInviteSent, recordInviteFailed } = require('./lib/inviteRecord');
+const { verifyResendSignature, handleResendWebhookEvent } = require('./lib/resendWebhook');
 const { defineSecret } = require('firebase-functions/params');
 const {
   canonicalEmail,
@@ -63,6 +67,7 @@ const {
 const { handleAskRisingAmp } = require('./lib/askRisingAmp');
 const resendApiKey = defineSecret('RESEND_API_KEY');
 const openaiApiKey = defineSecret('OPENAI_API_KEY');
+const resendWebhookSecret = defineSecret('RESEND_WEBHOOK_SECRET');
 
 const ALLOWED_APP_ORIGINS = new Set([
   'https://rising-amp-467702-b5.web.app',
@@ -172,6 +177,16 @@ exports.sendJobInviteEmail = onCall(
 
     const apiKey = resendApiKey.value();
     if (!apiKey) {
+      try {
+        await recordInviteFailed(projectRef, {
+          to,
+          invitedBy: callerEmail,
+          reason: 'resend-not-configured',
+          FieldValue: admin.firestore.FieldValue,
+        });
+      } catch (recordError) {
+        console.error('Invite failure was not recorded', recordError);
+      }
       throw new HttpsError('internal', 'Invite email is not configured yet.');
     }
 
@@ -193,11 +208,82 @@ exports.sendJobInviteEmail = onCall(
     if (!response.ok) {
       const details = await response.text();
       console.error('Resend invite send failed', response.status, details.slice(0, 500));
+      try {
+        await recordInviteFailed(projectRef, {
+          to,
+          invitedBy: callerEmail,
+          reason: `resend-http-${response.status}`,
+          FieldValue: admin.firestore.FieldValue,
+        });
+      } catch (recordError) {
+        console.error('Invite failure was not recorded', recordError);
+      }
       throw new HttpsError('internal', 'Could not send the invite email.');
     }
 
     const payload = await response.json().catch(() => ({}));
+    try {
+      await recordInviteSent(projectRef, {
+        to,
+        invitedBy: callerEmail,
+        providerId: payload.id || null,
+        FieldValue: admin.firestore.FieldValue,
+      });
+    } catch (recordError) {
+      // The email already went; a missing record must not read as a failed send.
+      console.error('Invite sent but the record was not written', recordError);
+    }
     return { ok: true, id: payload.id || null, via: 'resend' };
+  }
+);
+
+/**
+ * Resend delivery events. Rejects anything without a valid signature before
+ * Firestore is touched. The owner sets RESEND_WEBHOOK_SECRET at a masked
+ * prompt and pastes this function's URL into the Resend dashboard.
+ */
+exports.resendWebhook = onRequest(
+  {
+    region: 'us-central1',
+    secrets: [resendWebhookSecret],
+    maxInstances: 10,
+    timeoutSeconds: 15,
+    memory: '256MiB',
+  },
+  async (req, res) => {
+    if (req.method !== 'POST') {
+      res.status(405).send('Method not allowed');
+      return;
+    }
+    const secret = resendWebhookSecret.value();
+    if (!secret) {
+      console.error('RESEND_WEBHOOK_SECRET is not set.');
+      res.status(500).send('Webhook is not configured.');
+      return;
+    }
+    const rawBody = req.rawBody ? req.rawBody.toString('utf8') : '';
+    const verified = verifyResendSignature({
+      secret,
+      id: req.get('webhook-id'),
+      timestamp: req.get('webhook-timestamp'),
+      signature: req.get('webhook-signature'),
+      rawBody,
+    });
+    if (!verified) {
+      res.status(401).send('Bad signature.');
+      return;
+    }
+    try {
+      const result = await handleResendWebhookEvent({
+        rawBody,
+        db: admin.firestore(),
+        FieldValue: admin.firestore.FieldValue,
+      });
+      res.status(200).json({ ok: true, ...result });
+    } catch (error) {
+      console.error('resendWebhook handling failed', error);
+      res.status(500).send('Webhook handling failed.');
+    }
   }
 );
 

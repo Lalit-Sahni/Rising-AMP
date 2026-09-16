@@ -178,6 +178,13 @@ export async function sendJobInvite({ to, projectId, projectName }) {
     }
     console.warn('Resend invite path unavailable, falling back to Gmail:', error && error.code);
     await sendInviteFromSignedInGmail({ to, projectName });
+    try {
+      const { recordGmailInvite } = await import('./invites');
+      await recordGmailInvite({ projectId, to });
+    } catch (recordErr) {
+      // The email already went; a missing record must not read as a failed send.
+      console.warn('Invite sent via Gmail but the record was not written:', recordErr);
+    }
     return { via: 'gmail' };
   }
 }

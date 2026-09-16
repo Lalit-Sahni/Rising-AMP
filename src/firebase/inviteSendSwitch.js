@@ -1,13 +1,10 @@
+/**
+ * The Gmail fallback exists for exactly one case: the sendJobInviteEmail
+ * Cloud Function is not deployed. Everything else — including
+ * functions/internal, which is what the function throws when Resend
+ * rejects the send — is a real error and must surface to the user.
+ */
 export function isInviteFunctionUnavailable(error) {
   const code = String((error && error.code) || '');
-  if (
-    code === 'functions/invalid-argument' ||
-    code === 'functions/permission-denied' ||
-    code === 'functions/unauthenticated' ||
-    code === 'functions/failed-precondition' ||
-    code === 'functions/already-exists'
-  ) {
-    return false;
-  }
-  return true;
+  return code === 'functions/not-found' || code === 'functions/unimplemented';
 }
