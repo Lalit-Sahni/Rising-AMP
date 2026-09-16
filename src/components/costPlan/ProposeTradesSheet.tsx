@@ -138,6 +138,7 @@ export default function ProposeTradesSheet({
 }: ProposeTradesSheetProps) {
   const [drafts, setDrafts] = useState<DraftRow[]>([]);
   const [orgCoded, setOrgCoded] = useState<Array<Record<string, unknown>>>([]);
+  const [partyNamesById, setPartyNamesById] = useState<Map<string, string> | undefined>(undefined);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [writesOff, setWritesOff] = useState(false);
@@ -174,15 +175,39 @@ export default function ProposeTradesSheet({
   }, [open, orgId, jobId, allowedJobs, localCoded]);
 
   useEffect(() => {
+    if (!open || !orgId) return undefined;
+    let cancelled = false;
+    void import('../../firebase/parties')
+      .then(({ listParties, followMergedParty }) => (
+        listParties().then((parties) => ({ parties, followMergedParty }))
+      ))
+      .then(({ parties, followMergedParty }) => {
+        if (cancelled) return;
+        const map = new Map<string, string>();
+        parties.forEach((party) => {
+          const survivor = party.status === 'active' ? party : followMergedParty(parties, party.id);
+          const name = String(survivor?.displayName || '').trim();
+          if (name && !map.has(party.id)) map.set(party.id, name);
+        });
+        setPartyNamesById(map);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, orgId]);
+
+  useEffect(() => {
     if (!open) return;
     const rows = proposeTrades({
       uncoded,
       orgCoded,
       trades,
       sections,
+      partyNamesById,
     });
     setDrafts(rows.map(toDraft));
-  }, [open, uncoded, orgCoded, trades, sections]);
+  }, [open, uncoded, orgCoded, trades, sections, partyNamesById]);
 
   useEffect(() => {
     if (!open || !orgId) return undefined;

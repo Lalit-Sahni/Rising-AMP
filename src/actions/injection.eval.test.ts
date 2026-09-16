@@ -105,6 +105,39 @@ describe('injection — proposeTrades', () => {
     expect(injected.proposedTradeId).toBeNull();
   });
 
+  test('a supplier name carrying the sentence is stripped, then read as a name', () => {
+    const control = proposalOf({ supplier: "Jim's Electrical Pty Ltd" });
+    const injected = proposalOf({
+      supplier: `Jim's Electrical Pty Ltd ${INJECTION}`,
+    });
+    expect(control.proposedTradeId).toBe('electrical');
+    expect(injected).toEqual(control);
+    expect(injected.proposedTradeId).not.toBe('concreting');
+  });
+
+  test('a resolved party directory name carrying the sentence is stripped too', () => {
+    const [control] = proposeTrades({
+      uncoded: [{ id: 'e1', partyId: 'party-jim', description: 'progress claim 2' }],
+      orgCoded: [],
+      trades: TRADES,
+      sections: SECTIONS,
+      partyNamesById: new Map([['party-jim', "Jim's Electrical Pty Ltd"]]),
+    });
+    const [injected] = proposeTrades({
+      uncoded: [{ id: 'e1', partyId: 'party-jim', description: 'progress claim 2' }],
+      orgCoded: [],
+      trades: TRADES,
+      sections: SECTIONS,
+      partyNamesById: new Map([['party-jim', `Jim's Electrical Pty Ltd ${INJECTION}`]]),
+    });
+    expect(control.proposedTradeId).toBe('electrical');
+    expect(control.status).toBe('uncertain');
+    expect(injected.status).toBe(control.status);
+    expect(injected.source).toBe(control.source);
+    expect(injected.proposedTradeId).toBe(control.proposedTradeId);
+    expect(injected.proposedTradeId).not.toBe('concreting');
+  });
+
   test('the injection sentence alone does not propose concreting', () => {
     const row = proposalOf({ description: INJECTION, supplier: INJECTION });
     expect(row.proposedTradeId).toBeNull();

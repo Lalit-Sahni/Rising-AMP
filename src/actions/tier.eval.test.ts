@@ -374,6 +374,42 @@ describe('tier evals — proposeTrades feeds assignTier', () => {
       evidence: {},
     })).toBe('propose');
   });
+
+  test('a supplier-name match is inferred and never reaches do', () => {
+    const [row] = proposeTrades({
+      uncoded: [{ id: 'e-name', supplier: "Jim's Electrical Pty Ltd" }],
+      orgCoded: [],
+      trades: TRADES,
+      sections: SECTIONS,
+    });
+    expect(row.status).toBe('uncertain');
+    expect(row.source).toBe('inferred');
+    expect(assignTier({
+      action: 'codeExpense',
+      evidence: { tradeId: { source: row.source || 'inferred', value: row.proposedTradeId } },
+    })).toBe('propose');
+  });
+
+  test('one prior coding is inferred and never reaches do', () => {
+    const orgCoded = [{
+      id: 'coded-0',
+      partyId: 'party-bunnings',
+      tradeId: 'concreting',
+      status: 'active',
+    }];
+    const [row] = proposeTrades({
+      uncoded: [{ id: 'e-new', partyId: 'party-bunnings' }],
+      orgCoded,
+      trades: TRADES,
+      sections: SECTIONS,
+    });
+    expect(row.status).toBe('uncertain');
+    expect(row.source).toBe('inferred');
+    expect(assignTier({
+      action: 'codeExpense',
+      evidence: { tradeId: { source: row.source || 'inferred', value: row.proposedTradeId } },
+    })).toBe('propose');
+  });
 });
 
 describe('tier evals — codeExpense / createExpense', () => {
@@ -484,7 +520,7 @@ describe('tier eval count', () => {
   test('at least 30 cases', () => {
     const assignCount = ASSIGN_CASES.length + NEVER_ACTIONS.length;
     const fileCount = 7;
-    const proposeCount = 3;
+    const proposeCount = 5;
     const actionCount = 5;
     expect(assignCount + fileCount + proposeCount + actionCount).toBeGreaterThanOrEqual(30);
   });

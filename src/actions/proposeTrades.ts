@@ -1,6 +1,9 @@
 /**
  * Propose a trade for each uncoded expense from evidence, never a model.
- * Party history on this org is strongest. A keyword in a description is a guess.
+ * Party history on this org is strongest: two or more prior codings is the
+ * only confident proposal. One prior coding, or a keyword in any text field
+ * including who was paid, is a guess — always inferred, always uncertain,
+ * always a proposal a person has to accept.
  * Already-coded rows are omitted. No evidence stays uncoded.
  */
 import { INVESTOR_TRADE_ID, NOT_IN_ESTIMATE_TRADE_ID, expenseTradeId } from '../domain/costPlan';
@@ -34,6 +37,9 @@ export type ProposeTradesInput = {
   orgCoded: Array<Record<string, unknown>>;
   trades: TradeRef[];
   sections?: TradeRef[];
+  /** Org party directory as id → display name, so a first expense from a
+   * known supplier can be proposed from who was paid. */
+  partyNamesById?: Map<string, string>;
 };
 
 const SPECIAL_TRADE = new Set([INVESTOR_TRADE_ID, NOT_IN_ESTIMATE_TRADE_ID]);
@@ -84,17 +90,44 @@ function sectionNameMatches(haystack: string, section: TradeRef): boolean {
   return aliases.some((alias) => containsWholePhrase(haystack, alias));
 }
 
-function expenseHaystack(expense: Record<string, unknown>): string {
-  const raw = [
-    expense.description,
-    expense.itemName,
-    expense.tradeName,
-    expense.notes,
-  ]
-    .map((value) => String(value || '').trim().toLowerCase())
-    .filter(Boolean)
-    .join(' ');
-  return stripInstructionClauses(raw);
+/**
+ * One matched section, credited to the field that won so the reason can
+ * name it. The owner audits these reasons.
+ */
+type SectionHit = {
+  section: TradeRef;
+  fieldLabel: string;
+};
+
+/**
+ * Evidence fields, in the order they should be credited. Each field is
+ * stripped of instruction clauses on its own, exactly as the description is
+ * treated: a supplier name does not get to tell the app what to do, and an
+ * instruction in one field does not blank the others.
+ */
+function expenseHaystackFields(
+  expense: Record<string, unknown>,
+  partyNamesById?: Map<string, string>,
+): Array<{ fieldLabel: string; text: string }> {
+  const raw: Array<[string, unknown]> = [
+    ['Description', expense.description],
+    ['Item name', expense.itemName],
+    ['Trade name', expense.tradeName],
+    ['Notes', expense.notes],
+    ['Supplier name', expense.supplier],
+    ['Worker name', expense.workerName],
+    ['Service name', expense.serviceName],
+    ['Equipment name', expense.equipmentName],
+    ['Party name', expense.partyName],
+  ];
+  const resolvedName = partyNamesById ? partyNamesById.get(asId(expense.partyId)) : undefined;
+  if (resolvedName) raw.push(['Party name', resolvedName]);
+  return raw
+    .map(([fieldLabel, value]) => ({
+      fieldLabel,
+      text: stripInstructionClauses(String(value || '').trim().toLowerCase()),
+    }))
+    .filter((field) => field.text.length > 0);
 }
 
 function tradeNameById(trades: TradeRef[], tradeId: string): string {
@@ -134,16 +167,20 @@ function uniqueLeader(counts: Map<string, number>): { tradeId: string; count: nu
   return { tradeId: bestId, count: bestCount };
 }
 
-function matchingSections(haystack: string, sections: TradeRef[]): TradeRef[] {
-  if (!haystack) return [];
-  const hits: TradeRef[] = [];
+function matchingSections(
+  fields: Array<{ fieldLabel: string; text: string }>,
+  sections: TradeRef[],
+): SectionHit[] {
+  const hits: SectionHit[] = [];
   const seen = new Set<string>();
-  sections.forEach((section) => {
-    const id = asId(section.id);
-    if (!id || SPECIAL_TRADE.has(id) || seen.has(id)) return;
-    if (!sectionNameMatches(haystack, section)) return;
-    seen.add(id);
-    hits.push({ id, name: section.name });
+  fields.forEach((field) => {
+    sections.forEach((section) => {
+      const id = asId(section.id);
+      if (!id || SPECIAL_TRADE.has(id) || seen.has(id)) return;
+      if (!sectionNameMatches(field.text, section)) return;
+      seen.add(id);
+      hits.push({ section: { id, name: section.name }, fieldLabel: field.fieldLabel });
+    });
   });
   return hits;
 }
@@ -180,6 +217,7 @@ function proposeOne(
   orgCoded: Array<Record<string, unknown>>,
   trades: TradeRef[],
   sections: TradeRef[],
+  partyNamesById?: Map<string, string>,
 ): TradeProposal {
   const expenseId = asId(expense.id);
   const partyId = asId(expense.partyId);
@@ -207,17 +245,28 @@ function proposeOne(
       if (alternatives.length > 0) row.alternatives = alternatives;
       return row;
     }
+    // One prior coding is real evidence, but too thin to auto-write: it is a
+    // proposal a person has to accept, never confident.
+    if (leader && leader.count === 1) {
+      return {
+        expenseId,
+        proposedTradeId: leader.tradeId,
+        proposedTradeName: tradeNameById(trades, leader.tradeId),
+        reason: `Coded to ${tradeNameById(trades, leader.tradeId)} once for this supplier.`,
+        source: 'inferred',
+        status: 'uncertain',
+      };
+    }
   }
 
-  const haystack = expenseHaystack(expense);
-  const sectionHits = matchingSections(haystack, sections);
-  if (sectionHits.length === 1) {
-    const hit = sectionHits[0];
+  const hits = matchingSections(expenseHaystackFields(expense, partyNamesById), sections);
+  if (hits.length === 1) {
+    const hit = hits[0];
     return {
       expenseId,
-      proposedTradeId: hit.id,
-      proposedTradeName: hit.name || tradeNameById(trades, hit.id),
-      reason: `Description matches the ${hit.name} section.`,
+      proposedTradeId: hit.section.id,
+      proposedTradeName: hit.section.name || tradeNameById(trades, hit.section.id),
+      reason: `${hit.fieldLabel} matches the ${hit.section.name} section.`,
       source: 'inferred',
       status: 'uncertain',
     };
@@ -225,10 +274,10 @@ function proposeOne(
 
   const fromCategory = categoryTrade(expense, trades);
   if (fromCategory) {
-    const alternatives = sectionHits.map((hit) => ({
-      tradeId: hit.id,
-      tradeName: hit.name,
-      reason: `Description also matches ${hit.name}.`,
+    const alternatives = hits.map((hit) => ({
+      tradeId: hit.section.id,
+      tradeName: hit.section.name,
+      reason: `${hit.fieldLabel} also matches ${hit.section.name}.`,
     }));
     const row: TradeProposal = {
       expenseId,
@@ -242,10 +291,10 @@ function proposeOne(
     return row;
   }
 
-  const alternatives = sectionHits.map((hit) => ({
-    tradeId: hit.id,
-    tradeName: hit.name,
-    reason: `Description matches ${hit.name}.`,
+  const alternatives = hits.map((hit) => ({
+    tradeId: hit.section.id,
+    tradeName: hit.section.name,
+    reason: `${hit.fieldLabel} matches ${hit.section.name}.`,
   }));
   return noneProposal(expenseId, alternatives);
 }
@@ -260,7 +309,7 @@ export function proposeTrades(input: ProposeTradesInput): TradeProposal[] {
       if (!isLive(expense) || isInvestorExpense(expense)) return false;
       return !expenseTradeId(expense);
     })
-    .map((expense) => proposeOne(expense, orgCoded, trades, sections));
+    .map((expense) => proposeOne(expense, orgCoded, trades, sections, input.partyNamesById));
 }
 
 export function splitTradeProposals(rows: TradeProposal[]): {
