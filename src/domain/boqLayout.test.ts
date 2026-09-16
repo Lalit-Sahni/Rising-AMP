@@ -16,7 +16,14 @@ import {
   guessTradeIdForSection,
   parseDelimitedText,
 } from './costPlanImport';
-import { APP_TRADES } from './costPlan';
+import {
+  APP_TRADES,
+  applyTradeAmountEdits,
+  deriveCostPlanBoard,
+  mergeTradeList,
+  sumSectionAmounts,
+} from './costPlan';
+import type { CostPlan } from './schemas';
 import { KELLY_BOQ } from './boqLayout.kelly';
 
 function readKelly() {
@@ -293,6 +300,93 @@ describe('estimate columns beat the file\'s own actuals columns', () => {
     expect(map[6]).toBe('ignore');
     const layout = readBoqLayout(quietRows, map, index);
     expect(layout.sections[0].amountCents).toBe(75000);
+  });
+});
+
+/**
+ * Phase 17 Part D: the owner can add a section himself. It is a bucket spend
+ * can be coded to, with no allocation, and it must never move the estimate.
+ * The fixture is the real Kelly St bill of quantities, trimmed to 5 of 21
+ * sections; its stated Construction Cost is the owner's $321,916.29. The
+ * estimate the app holds is that stated figure, so that is the number pinned
+ * here to the cent. (There is no 112 Cost Sheet.xlsx fixture in the repo;
+ * this is the real-file fixture the import tests share.)
+ */
+describe('adding a section after import never moves the $321,916.29 estimate', () => {
+  function importedPlan(): { plan: CostPlan; importedTotal: number } {
+    const rows = parseDelimitedText(KELLY_BOQ);
+    const headerRowIndex = findHeaderRowIndex(rows);
+    const layout = readBoqLayout(rows, guessColumnMapStrict(rows[headerRowIndex]), headerRowIndex);
+    const stated = layout.grandTotals.find((entry) => entry.amountCents === 32_191_629);
+    expect(stated?.label).toContain('Construction Cost');
+    const sections = buildImportedSections(
+      layout.sections,
+      Object.fromEntries(
+        layout.sections.map((section) => [section.key, guessTradeIdForSection(section.name) || 'other']),
+      ),
+      Object.fromEntries(APP_TRADES.map((trade) => [trade.id, trade.name])),
+    );
+    const plan: CostPlan = {
+      id: 'current',
+      jobId: 'job-1',
+      level: 'imported',
+      // The file's stated Construction Cost, reconciled before save.
+      targetCents: 32_191_629,
+      baselineDate: '2026-05-29',
+      gstMode: 'exclusive',
+      status: 'locked',
+      sections,
+      createdBy: 'owner-1',
+      archivedAt: null,
+    };
+    return { plan, importedTotal: sumSectionAmounts(sections) };
+  }
+
+  test('a zero-allocation section cannot enter the plan, so the total holds to the cent', () => {
+    const { plan, importedTotal } = importedPlan();
+    const before = deriveCostPlanBoard({ plan, trades: mergeTradeList([]) });
+    expect(plan.targetCents).toBe(32_191_629);
+    expect(before.estimatedCents).toBe(importedTotal);
+
+    // The owner adds "Waste and bins". addOrgTrade writes the org trade list
+    // only; the plan document is untouched, and a zero amount is filtered out
+    // of any sections write.
+    const tradesWithNew = mergeTradeList([{
+      id: 'waste-removal',
+      name: 'Waste and bins',
+      order: APP_TRADES.length,
+      isAppDefault: true,
+      status: 'active',
+    }]);
+    expect(tradesWithNew.some((trade) => trade.id === 'waste-removal')).toBe(true);
+    const rewritten = applyTradeAmountEdits(plan.sections, [
+      ...plan.sections.map((section) => ({
+        tradeId: section.tradeId,
+        name: section.name,
+        amountCents: section.amountCents,
+      })),
+      { tradeId: 'waste-removal', name: 'Waste and bins', amountCents: 0 },
+    ]);
+    // Zero-amount rows are filtered out of any sections write, so the new
+    // section cannot enter the plan with an allocation of zero — or anything.
+    expect(rewritten.some((section) => section.tradeId === 'waste-removal')).toBe(false);
+    expect(sumSectionAmounts(rewritten)).toBe(importedTotal);
+
+    // Spend coded to the new section shows against its zero allocation,
+    // exactly like the existing "Not in the estimate" extras. The estimate
+    // and the target do not move a cent; the forecast honestly counts the
+    // spend once.
+    const after = deriveCostPlanBoard({
+      plan,
+      expenses: [{ id: 'e-skip', tradeId: 'waste-removal', itemName: 'Skip bin', total: 480 }],
+      trades: tradesWithNew,
+    });
+    expect(plan.targetCents).toBe(32_191_629);
+    expect(after.estimatedCents).toBe(before.estimatedCents);
+    expect(after.expectedCents).toBe((before.expectedCents || 0) + 48_000);
+    const extra = after.extras.rows.find((row) => row.tradeId === 'waste-removal');
+    expect(extra?.label).toBe('Waste and bins');
+    expect(extra?.spentCents).toBe(48_000);
   });
 });
 

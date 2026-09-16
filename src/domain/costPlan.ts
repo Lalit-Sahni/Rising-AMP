@@ -253,7 +253,11 @@ export function uncodedSpendPool(
   };
 }
 
-const TRADE_ALIASES: Record<string, string[]> = {
+/**
+ * Duplicated in `src/actions/proposeTrades.ts` on purpose this phase.
+ * The two tables must stay identical; a test pins them together.
+ */
+export const TRADE_ALIASES: Record<string, string[]> = {
   electrical: ['electrician', 'sparky'],
   plumbing: ['plumber'],
   carpentry: ['carpenter'],
@@ -265,15 +269,30 @@ const TRADE_ALIASES: Record<string, string[]> = {
   'kitchen-joinery': ['joinery', 'kitchen'],
   plastering: ['plasterer'],
   'tiling-flooring': ['tiler', 'flooring'],
+  'waste-removal': ['bin', 'bins', 'skip', 'skip bin', 'waste', 'rubbish', 'tip', 'tip fees', 'disposal'],
+  cleaning: ['clean', 'cleaner', 'builders clean', 'final clean', 'site clean'],
+  'fixtures-fittings': ['bathtub', 'bath', 'tub', 'basin', 'sink', 'vanity', 'tapware', 'tap', 'taps', 'mixer', 'mixers', 'shower', 'toilet', 'appliance', 'appliances', 'dishwasher', 'oven', 'cooktop', 'rangehood', 'pc item'],
 };
+
+function escapeRe(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Whole words only: "tap" must never match "tape", "waste" never "wasteland". */
+function containsWholePhrase(haystack: string, phrase: string): boolean {
+  const needle = phrase.trim().toLowerCase();
+  if (!needle) return false;
+  const pattern = new RegExp(`(^|[^a-z0-9])${escapeRe(needle)}([^a-z0-9]|$)`);
+  return pattern.test(haystack);
+}
 
 function tradeMatchesHint(trade: { id: string; name: string }, hint: string): boolean {
   const name = String(trade.name || '').trim().toLowerCase();
   if (name.length >= 4 && hint.includes(name)) return true;
   const words = name.split(/[^a-z0-9]+/).filter((word) => word.length >= 5);
-  if (words.some((word) => hint.includes(word))) return true;
+  if (words.some((word) => containsWholePhrase(hint, word))) return true;
   const aliases = TRADE_ALIASES[trade.id] || [];
-  return aliases.some((alias) => alias.length >= 4 && hint.includes(alias));
+  return aliases.some((alias) => containsWholePhrase(hint, alias));
 }
 
 function expenseHint(expense: Record<string, unknown>): string {

@@ -69,7 +69,11 @@ function containsWholePhrase(haystack: string, phrase: string): boolean {
   return pattern.test(haystack);
 }
 
-const TRADE_ALIASES: Record<string, string[]> = {
+/**
+ * Duplicated in `src/domain/costPlan.ts` on purpose this phase.
+ * The two tables must stay identical; a test pins them together.
+ */
+export const TRADE_ALIASES: Record<string, string[]> = {
   electrical: ['electrician', 'sparky'],
   plumbing: ['plumber'],
   carpentry: ['carpenter'],
@@ -81,6 +85,9 @@ const TRADE_ALIASES: Record<string, string[]> = {
   'kitchen-joinery': ['joinery', 'kitchen'],
   plastering: ['plasterer'],
   'tiling-flooring': ['tiler', 'flooring'],
+  'waste-removal': ['bin', 'bins', 'skip', 'skip bin', 'waste', 'rubbish', 'tip', 'tip fees', 'disposal'],
+  cleaning: ['clean', 'cleaner', 'builders clean', 'final clean', 'site clean'],
+  'fixtures-fittings': ['bathtub', 'bath', 'tub', 'basin', 'sink', 'vanity', 'tapware', 'tap', 'taps', 'mixer', 'mixers', 'shower', 'toilet', 'appliance', 'appliances', 'dishwasher', 'oven', 'cooktop', 'rangehood', 'pc item'],
 };
 
 function sectionNameMatches(haystack: string, section: TradeRef): boolean {

@@ -1,4 +1,5 @@
-import { proposeTrades, splitTradeProposals } from './proposeTrades';
+import { proposeTrades, splitTradeProposals, TRADE_ALIASES } from './proposeTrades';
+import { TRADE_ALIASES as DOMAIN_TRADE_ALIASES } from '../domain/costPlan';
 
 const TRADES = [
   { id: 'concreting', name: 'Concreting' },
@@ -376,5 +377,68 @@ describe('proposeTrades', () => {
       });
       expect(rows.every((row) => row.status === 'none' && row.proposedTradeId == null)).toBe(true);
     });
+  });
+});
+
+describe('the duplicated alias tables cannot drift apart', () => {
+  test('proposeTrades and the cost plan domain hold identical aliases', () => {
+    expect(TRADE_ALIASES).toEqual(DOMAIN_TRADE_ALIASES);
+  });
+});
+
+describe('waste, cleaning and fixtures aliases', () => {
+  const NEW_TRADES = [
+    ...TRADES,
+    { id: 'waste-removal', name: 'Waste and bins' },
+    { id: 'cleaning', name: 'Cleaning' },
+    { id: 'fixtures-fittings', name: 'Fixtures and fittings' },
+  ];
+  const NEW_SECTIONS = [
+    ...SECTIONS,
+    { id: 'waste-removal', name: 'Waste and bins' },
+    { id: 'cleaning', name: 'Cleaning' },
+    { id: 'fixtures-fittings', name: 'Fixtures and fittings' },
+  ];
+
+  test.each([
+    [{ description: 'Skip bin hire' }, 'waste-removal', 'Waste and bins'],
+    [{ supplier: 'Rubbish removal co' }, 'waste-removal', 'Waste and bins'],
+    [{ notes: 'Tip fees on top' }, 'waste-removal', 'Waste and bins'],
+    [{ itemName: 'Builders clean' }, 'cleaning', 'Cleaning'],
+    [{ serviceName: 'Final clean' }, 'cleaning', 'Cleaning'],
+    [{ description: 'Dishwasher and oven install' }, 'fixtures-fittings', 'Fixtures and fittings'],
+    [{ itemName: 'PC item allowance' }, 'fixtures-fittings', 'Fixtures and fittings'],
+  ])('%o proposes %s, always uncertain and inferred', (expense, tradeId, tradeName) => {
+    const [row] = proposeTrades({
+      uncoded: [{ id: 'e-new', ...expense }],
+      orgCoded: [],
+      trades: NEW_TRADES,
+      sections: NEW_SECTIONS,
+    });
+    expect(row.status).toBe('uncertain');
+    expect(row.source).toBe('inferred');
+    expect(row.proposedTradeId).toBe(tradeId);
+    expect(row.proposedTradeName).toBe(tradeName);
+  });
+
+  test.each([
+    [{ description: 'Wasteland survey' }, 'waste is not wasteland'],
+    [{ itemName: 'Cabinet delivery' }, 'bin is not cabinet'],
+    [{ description: 'Tipping point analysis' }, 'tip is not tipping'],
+    [{ notes: 'Cleanliness inspection' }, 'clean is not cleanliness'],
+    [{ itemName: 'Tape measure' }, 'tap is not tape'],
+    [{ description: 'Tapered leg bolts' }, 'tap is not tapered'],
+    [{ itemName: 'Sinking fund' }, 'sink is not sinking'],
+    [{ description: 'Stipend for travel' }, 'tip is not stipend'],
+  ])('%o proposes nothing — %s', (expense, _why) => {
+    const [row] = proposeTrades({
+      uncoded: [{ id: 'e-trap', ...expense }],
+      orgCoded: [],
+      trades: NEW_TRADES,
+      sections: NEW_SECTIONS,
+    });
+    expect(row.status).toBe('none');
+    expect(row.proposedTradeId).toBeNull();
+    expect(row.alternatives ?? []).toEqual([]);
   });
 });

@@ -46,9 +46,46 @@ const tradesPlan: CostPlan = {
 
 describe('cost plan model', () => {
   test('uses stable, unique app trade ids', () => {
-    expect(APP_TRADES).toHaveLength(20);
+    expect(APP_TRADES).toHaveLength(23);
     expect(new Set(APP_TRADES.map((trade) => trade.id)).size).toBe(APP_TRADES.length);
     expect(APP_TRADES.at(-1)).toEqual({ id: 'other', name: 'Other' });
+  });
+
+  test('the full trade id list, in order — ids live on expense documents', () => {
+    expect(APP_TRADES.map((trade) => trade.id)).toEqual([
+      'site-works',
+      'demolition',
+      'concreting',
+      'structural-steel',
+      'plumbing',
+      'carpentry',
+      'brickwork',
+      'roofing',
+      'windows-doors',
+      'electrical',
+      'waterproofing',
+      'plastering',
+      'tiling-flooring',
+      'painting',
+      'kitchen-joinery',
+      'hvac',
+      'scaffolding',
+      'external-works',
+      'landscaping',
+      'waste-removal',
+      'cleaning',
+      'fixtures-fittings',
+      'other',
+    ]);
+  });
+
+  test('waste, cleaning and fixtures are appended immediately before Other', () => {
+    expect(APP_TRADES.slice(-4)).toEqual([
+      { id: 'waste-removal', name: 'Waste and bins' },
+      { id: 'cleaning', name: 'Cleaning' },
+      { id: 'fixtures-fittings', name: 'Fixtures and fittings' },
+      { id: 'other', name: 'Other' },
+    ]);
   });
 
   test('accepts a target-only plan in integer cents', () => {
@@ -368,5 +405,40 @@ describe('quotes and coding', () => {
       'cost-plan-uncoded-stale',
       'cost-plan-spend-no-quote',
     ]);
+  });
+});
+
+describe('waste, cleaning and fixtures aliases match whole words only', () => {
+  const trades = APP_TRADES.map((trade, index) => ({
+    id: trade.id,
+    name: trade.name,
+    order: index,
+    isAppDefault: true,
+    status: 'active' as const,
+  }));
+
+  test.each([
+    [{ itemName: 'Skip bin hire' }, 'waste-removal'],
+    [{ supplier: 'Rubbish removal co' }, 'waste-removal'],
+    [{ itemName: 'Tip fees' }, 'waste-removal'],
+    [{ itemName: 'Builders clean' }, 'cleaning'],
+    [{ itemName: 'Final clean' }, 'cleaning'],
+    [{ supplier: 'Bathroom taps and mixers' }, 'fixtures-fittings'],
+    [{ itemName: 'Dishwasher install' }, 'fixtures-fittings'],
+    [{ itemName: 'PC item allowance' }, 'fixtures-fittings'],
+  ])('%o suggests %s and nothing else', (expense, expected) => {
+    expect(suggestTradeForExpense(expense, trades, [])?.id).toBe(expected);
+  });
+
+  test.each([
+    [{ itemName: 'Wasteland development' }, 'waste is not wasteland'],
+    [{ itemName: 'Cabinet delivery' }, 'bin is not cabinet'],
+    [{ itemName: 'Tipping point analysis' }, 'tip is not tipping'],
+    [{ itemName: 'Cleanliness inspection' }, 'clean is not cleanliness'],
+    [{ itemName: 'Tape measure' }, 'tap is not tape'],
+    [{ itemName: 'Tapered leg bolts' }, 'tap is not tapered'],
+    [{ itemName: 'Sinking fund' }, 'sink is not sinking'],
+  ])('%o suggests nothing — %s', (expense, _why) => {
+    expect(suggestTradeForExpense(expense, trades, [])).toBeNull();
   });
 });

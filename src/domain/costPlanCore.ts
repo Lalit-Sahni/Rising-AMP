@@ -33,6 +33,9 @@ export const APP_TRADES = [
   { id: 'scaffolding', name: 'Scaffolding' },
   { id: 'external-works', name: 'External works' },
   { id: 'landscaping', name: 'Landscaping' },
+  { id: 'waste-removal', name: 'Waste and bins' },
+  { id: 'cleaning', name: 'Cleaning' },
+  { id: 'fixtures-fittings', name: 'Fixtures and fittings' },
   { id: 'other', name: 'Other' },
 ] as const;
 

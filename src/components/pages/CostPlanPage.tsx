@@ -1,8 +1,10 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, Paperclip, Pencil, Plus } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useApp } from '../../context/AppContext';
 import { useCostPlan, useCostPlanQuotes, useTradeList } from '../../hooks/useCostPlan';
+import { queryKeys } from '../../query/client';
 import {
   activeTrades,
   canCodeExpenses,
@@ -26,7 +28,7 @@ import QuoteSheet from '../costPlan/QuoteSheet';
 import ImportEstimateSheet, { type EstimateImportMeta } from '../costPlan/ImportEstimateSheet';
 import ExpenseTradePicker from '../costPlan/ExpenseTradePicker';
 import EditCategoriesSheet from '../costPlan/EditCategoriesSheet';
-import type { CostPlanQuote, JobFile } from '../../domain/schemas';
+import type { CostPlanQuote, JobFile, TradeListItem } from '../../domain/schemas';
 import { expenseDisplayName, formatExpenseDay } from '../../domain/expenseDisplay';
 import { quoteFileIds } from '../../domain/quoteFiles';
 import { getExpenseTotalCents } from '../../utils/jobMetrics';
@@ -82,6 +84,7 @@ export default function CostPlanPage() {
     membership,
   } = useApp();
   const isOwner = Boolean(membership && membership.role === 'owner');
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const planQuery = useCostPlan(orgId, jobId);
   const tradeQuery = useTradeList(orgId);
@@ -99,6 +102,9 @@ export default function CostPlanPage() {
   const [codeSheetOpen, setCodeSheetOpen] = useState(false);
   const [factsOpen, setFactsOpen] = useState(false);
   const [factsBoq, setFactsBoq] = useState<EstimateImportMeta | null>(null);
+  const [sectionFormOpen, setSectionFormOpen] = useState(false);
+  const [newSectionName, setNewSectionName] = useState('');
+  const [sectionBusy, setSectionBusy] = useState(false);
 
   useEffect(() => {
     setJobFiles([]);
@@ -161,6 +167,31 @@ export default function CostPlanPage() {
   const openFactsFromRecords = () => {
     setFactsBoq(null);
     setFactsOpen(true);
+  };
+
+  /** A new section is a bucket spend can be coded to. No allocation is
+   * written, so the estimate, the margin and every imported figure stay put. */
+  const handleAddSection = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const name = newSectionName.trim();
+    if (!name || sectionBusy) return;
+    setSectionBusy(true);
+    try {
+      const { addOrgTrade } = await import('../../firebase/tradeList');
+      const created = await addOrgTrade(name);
+      queryClient.setQueryData(queryKeys.tradeList(orgId || ''), (current: TradeListItem[] | undefined) => {
+        const list = current || [];
+        if (list.some((row) => row.id === created.id)) return list;
+        return [...list, created];
+      });
+      setNewSectionName('');
+      setSectionFormOpen(false);
+      showToast(`Added ${created.name}. It starts with no allocation; the estimate does not change.`, 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Could not add that section.', 'error');
+    } finally {
+      setSectionBusy(false);
+    }
   };
 
   const handleEstimateSaved = async (_plan: unknown, meta: EstimateImportMeta) => {
@@ -634,6 +665,55 @@ export default function CostPlanPage() {
                     </div>
                   ))}
                 </div>
+              </div>
+            ) : null}
+
+            {isOwner && planHasTrades(plan) ? (
+              <div className="border border-dashed border-hairline rounded-ot px-4 py-3 bg-canvas">
+                {sectionFormOpen ? (
+                  <form onSubmit={handleAddSection}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newSectionName}
+                        onChange={(event) => setNewSectionName(event.target.value)}
+                        placeholder="Section name, like Waste and bins"
+                        maxLength={80}
+                        autoFocus
+                        className="flex-1 min-w-0 px-3 py-2 rounded-ot-sm border border-hairline bg-surface text-[13px]"
+                      />
+                      <button
+                        type="submit"
+                        disabled={sectionBusy || !newSectionName.trim()}
+                        className="shrink-0 text-[13px] font-bold text-accent disabled:opacity-50"
+                      >
+                        {sectionBusy ? 'Adding…' : 'Add'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSectionFormOpen(false);
+                          setNewSectionName('');
+                        }}
+                        className="shrink-0 text-[13px] text-slate-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <p className="text-[11.5px] text-slate-400 mt-2">
+                      A new section starts with no allocation. The estimate, the margin and the imported figures do not change.
+                    </p>
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setSectionFormOpen(true)}
+                    className="inline-flex min-h-[36px] items-center gap-1.5 text-[12.5px] font-bold text-slate-600 hover:text-accent"
+                  >
+                    <Plus className="w-4 h-4" strokeWidth={1.7} />
+                    Add a section
+                  </button>
+                )}
               </div>
             ) : null}
           </div>
