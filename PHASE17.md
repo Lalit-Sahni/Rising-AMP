@@ -115,6 +115,46 @@ Report as a morning summary in `PROGRESS.md` under Phase 17, in the usual format
 
 ---
 
+## Part F: know whether the email actually went
+
+Independent of Parts A to E. An agent can take this in parallel.
+
+The owner sent two job invites. One arrived, one did not, and **the app cannot tell him which**. `sendJobInviteEmail` returns `{ ok: true, id }`, `sendJobInvite` throws the id away, and nothing is written to Firestore. "Sent" in this app means Resend accepted the handoff. It does not mean anyone received anything. Three defects and one piece of missing plumbing.
+
+**1. The fallback predicate is inverted.** `src/firebase/inviteSendSwitch.ts` treats five error codes as real and **everything else** as "the Cloud Function is not deployed, fall back to Gmail". But `functions/internal` is exactly what `sendJobInviteEmail` throws when Resend rejects the send. So a genuine delivery failure is misread as a missing function and the invite is quietly re-sent from the owner's personal Gmail. The recipient gets mail from `sahni.lalit18@gmail.com` instead of `invites@risingamp.com.au`, or the Google consent popup is blocked and nothing goes at all.
+
+Invert it: only `functions/not-found` and `functions/unimplemented` mean the function is missing. Every other code is a real error that surfaces to the user with what actually went wrong. The Gmail fallback stays, but it fires only for the one case it was built for.
+
+**2. Inline SVG does not survive an email client.** `src/emails/risingAmpMail.js` puts real `<svg>` elements inside the mail: `HELMET_18`, `HELMET_13`, `SHIELD`, `DEVICE`, `BRIEFCASE`. Apple Mail, Gmail and Outlook all strip them. What the recipient sees is the container without its contents: a 46px pale green square where the shield was, a 36px white square in the job card where the briefcase was, and an empty accent tile in the header. The owner has a screenshot of exactly this on macOS Mail.
+
+Remove every `<svg>` from this file. Nothing in an email may rely on SVG, on a webfont, or on CSS that is not inline. Where a mark is genuinely needed, either a hosted PNG from `brand/png/` with a real `alt`, or a shape built from a table cell background and a text character. Prefer removing the icon: an invite does not need a briefcase to explain that a job is a job. The redesign in `design/risingamp-invite-email-v2.html` is the target; follow it rather than patching the current layout.
+
+**3. Default blue links.** The mail sets `color` on some anchors and not others, so Apple Mail paints the rest default blue and underlined, against an orange brand. Set an explicit `color` and `text-decoration` on **every** `<a>`.
+
+**4. Record the send.** New collection `organizations/{orgId}/projects/{jobId}/invites/{inviteId}`, zod schema like every other entity:
+
+```
+to              the address, normalised
+invitedBy       caller email
+sentAt
+via             'resend' | 'gmail'
+providerId      the Resend id, or null
+status          'sent' | 'delivered' | 'bounced' | 'complained' | 'failed'
+statusAt
+```
+
+`sendJobInviteEmail` writes the row on success with `status: 'sent'` and the Resend id. The client writes `via: 'gmail'` when the fallback legitimately fires. A failure writes `status: 'failed'` with the reason. Then the job's people list can say **"invited 3 days ago, delivered"** instead of nothing, and a bounced invite is visible in the app rather than only in a dashboard the owner has to remember to check.
+
+**5. Close the loop with a webhook.** A new `onRequest` function, `resendWebhook`, receiving Resend's `email.delivered`, `email.bounced` and `email.complained` events and patching `status` and `statusAt` on the matching row by `providerId`. Verify the Resend signing secret on every request; an unsigned or wrongly signed request is rejected without touching Firestore. New secret `RESEND_WEBHOOK_SECRET`, set at a masked prompt like the others. Without this, a hard bounce is invisible forever, which is the exact situation that produced this part.
+
+Rules: members read invite rows for a job they are on, nobody writes them from the client except the `via: 'gmail'` fallback row, delete denied.
+
+Do not deploy. Staging only, and only the functions named, one at a time, no `--force`.
+
+Commit: `Record every invite, and learn when one bounces.`
+
+---
+
 ## Known, deliberately not in this phase
 
 - **Cross-kind party duplicates.** Charlie Bobcat appears three times across two kinds, Aluming across two. This weakens party history and directly limits Part C. It is a data merge needing the owner's decision on the Metro Consulting / Metro Consultancy / Metro Consulting Group three-way. Flag it again at the end; merge nothing yourself.
