@@ -15,7 +15,7 @@ Trunk is **`phase-18-people`**. It holds Phase 17, Phase 18, the Firestore sign-
 
 A missing `assistantWritesEnabled` field means assistant writes are **on** (staging, localhost, and production). Only an explicit `false` is off.
 
-Independent proof on this trunk: `npm run typecheck` clean; `npm test` **723** vitest + **184** node; `npm run test:rules` passed; production `npm run build` **Initial JS gzip 271.1 KB** (ceiling **400 KB**). Built bundle contains `rising-amp-467702-b5`, not staging. No new npm packages. No `--apply`. No `--force`.
+Independent proof on this trunk: `npm run typecheck` clean; `npm test` **725** vitest + **184** node; `npm run test:rules` passed; production `npm run build` **Initial JS gzip 271.1 KB** (ceiling **400 KB**). Built bundle contains `rising-amp-467702-b5`, not staging. No new npm packages. No `--apply`. No `--force`.
 
 ### Hotfix (19 Sep 2026, after go-live)
 
@@ -24,6 +24,10 @@ Inviting `lalit@opalssconstructions.com.au` showed delivered in Resend because M
 Shipped on staging and production (rules, `sendJobInviteEmail`, hosting): Outlook/company invites also send a Gmail copy from the signed-in owner; profile get of a missing own document is allowed; org/profile queries use the token email; permission-denied is not retried; hosting sends `Cross-Origin-Opener-Policy: same-origin-allow-popups`.
 
 Still add an SPF TXT on `risingamp.com.au` at Crazy Domains (`v=spf1 include:_spf.resend.com ~all` next to the existing hosting-site TXT). Until that exists, Resend-only mail to Outlook can still vanish. `sahnilalit365@gmail.com` is not on the org list, so that login should show Ask for access, not the family jobs.
+
+### Files on 95 Tahmoor (19 Sep 2026)
+
+Files for 95 Tahmoor Rd Austral (`job-440c15f02d8f4e96`) never left the skeleton. Kelly and 72 Centenary loaded. Tahmoor is the only live job with **no expenses**. Files waited on `expensesLoaded`. The expense listener skips an empty disk-cache snapshot so it cannot wipe a painted list; without metadata events, an empty cache and an empty server look the same, so the follow-up never fired. Fix: `includeMetadataChanges` on the expense and invoice listeners, and Files paints documents without waiting on expenses. Hosting only.
 
 ### What was decided about the orphan (`2900f9b`)
 

@@ -154,6 +154,17 @@ export function receiptsFromExpenses(expenses: unknown[]): FileBrowserItem[] {
   return items;
 }
 
+/** Files can paint as soon as documents arrive. Wait for expenses only when the list is still empty, because receipts live on expenses. */
+export function filesRegisterLoading(
+  filesLoading: boolean,
+  expensesLoaded: boolean,
+  fileCount: number,
+): boolean {
+  if (filesLoading) return true;
+  if (expensesLoaded) return false;
+  return fileCount === 0;
+}
+
 export function combineJobFilesAndReceipts(
   files: JobFile[],
   expenses: unknown[],

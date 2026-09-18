@@ -10,6 +10,7 @@ import {
   fileAddedByLabel,
   fileLinkColumnLabel,
   fileLinkLabel,
+  filesRegisterLoading,
   fileRegisterSummary,
   fileTypeCounts,
   formatFileRegisterSummary,
@@ -35,6 +36,14 @@ const sampleFile = jobFileSchema.parse({
 });
 
 describe('Files screen browser', () => {
+  test('does not wait on expenses when the job already has documents', () => {
+    expect(filesRegisterLoading(true, false, 0)).toBe(true);
+    expect(filesRegisterLoading(true, true, 1)).toBe(true);
+    expect(filesRegisterLoading(false, false, 1)).toBe(false);
+    expect(filesRegisterLoading(false, false, 0)).toBe(true);
+    expect(filesRegisterLoading(false, true, 0)).toBe(false);
+  });
+
   test('search matches name, note and type', () => {
     const items = combineJobFilesAndReceipts([sampleFile], []);
     expect(searchFileItems(items, 'slab')[0].name).toMatch(/Slab/);

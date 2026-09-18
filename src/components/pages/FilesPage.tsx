@@ -24,6 +24,7 @@ import type { JobFile } from '../../domain/schemas';
 import {
   DEFAULT_FILE_SORT,
   combineJobFilesAndReceipts,
+  filesRegisterLoading,
   fileRegisterSummary,
   fileTypeCounts,
   formatFileRegisterSummary,
@@ -289,9 +290,9 @@ export default function FilesPage() {
     );
   }
 
-  const emptyLibrary = !loading && expensesLoaded && !error && items.length === 0;
-  const noMatches = !loading && expensesLoaded && !error && items.length > 0 && visible.length === 0;
-  const registerLoading = loading || !expensesLoaded;
+  const registerLoading = filesRegisterLoading(loading, expensesLoaded, files.length);
+  const emptyLibrary = !registerLoading && !error && items.length === 0;
+  const noMatches = !registerLoading && !error && items.length > 0 && visible.length === 0;
 
   return (
     <div className="text-ink px-4 py-6 md:px-[26px] md:py-[26px]">

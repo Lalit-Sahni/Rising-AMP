@@ -1,3 +1,6 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { mapExpenseSnapshot, mapInvoiceSnapshot, shouldApplyCachedSnapshot } from './ledgerMap';
 
 function snapshotOf(rows: Array<{ id: string; data: Record<string, unknown> }>) {
@@ -43,5 +46,14 @@ describe('cached snapshots', () => {
     expect(shouldApplyCachedSnapshot(true, 0)).toBe(false);
     expect(shouldApplyCachedSnapshot(true, 2)).toBe(true);
     expect(shouldApplyCachedSnapshot(false, 0)).toBe(true);
+  });
+
+  test('expense and invoice listeners watch metadata so an empty job can finish loading', () => {
+    const src = fs.readFileSync(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'ledgerListen.ts'),
+      'utf8',
+    );
+    expect(src).toContain('includeMetadataChanges: true');
+    expect((src.match(/includeMetadataChanges: true/g) || []).length).toBe(2);
   });
 });

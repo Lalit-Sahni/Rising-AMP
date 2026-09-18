@@ -75,8 +75,13 @@ export function listenJobExpenses(
     });
   };
 
+  // includeMetadataChanges: an empty cache snapshot is skipped so it cannot
+  // wipe a painted list. Without metadata events, a job with no expenses never
+  // fires again (empty cache and empty server look the same), so Files waits
+  // forever. The follow-up fromCache=false empty snapshot is what unblocks it.
   const unsub = onSnapshot(
     expensesQuery,
+    { includeMetadataChanges: true },
     (snap) => {
       const fromCache = snap.metadata.fromCache;
       if (!shouldApplyCachedSnapshot(fromCache, snap.size) && !appliedExpenses) {
@@ -120,6 +125,7 @@ export function listenJobInvoices(
 
   return onSnapshot(
     invoicesQuery,
+    { includeMetadataChanges: true },
     (snap) => {
       const fromCache = snap.metadata.fromCache;
       if (!shouldApplyCachedSnapshot(fromCache, snap.size) && !applied) {
