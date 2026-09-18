@@ -4,18 +4,18 @@
 
 Trunk is **`phase-18-people`**. It holds Phase 17, Phase 18, the Firestore sign-up hotfix, and the Overview/History polish. Restore tags: **`pre-phase18-2026-09-18`**, plus safety tags `cleanup-base-phase17`, `cleanup-base-phase18`, `cleanup-base-ui`, `cleanup-base-hotfix`. **Not merged to `master`/`main`.** Localhost stays on staging. Never `--force`.
 
-**Staging is live** from this trunk (19 Sep 2026). **Production is not.** Do not deploy production until the owner names the project and the surface.
+**Staging and production are live** from this trunk (19 Sep 2026). **Not merged to `master`/`main`.** Localhost stays on staging. Never `--force`.
 
 | Surface | Staging now | Production now |
 | --- | --- | --- |
-| Hosting | `index-g3uSRedv.js` on https://rising-amp-staging.web.app | `index-D_v50ECA.js` on https://risingamp.com.au (not `index-DhMkWQ3T.js`, and not this trunk) |
-| Firestore rules | Phase 18 roles (missing `managers`/`viewers` = Site) | Phase 16 |
-| Storage rules | Avatars scoped to family org | Previous rules (avatars world-readable to any signed-in account) |
-| Functions | Same eight as before, plus `sendJobInviteEmail` updated (invite record + no inline SVG). **`resendWebhook` is not deployed.** | Same eight as 11 Sep 2026. No `resendWebhook`. |
+| Hosting | `index-g3uSRedv.js` on https://rising-amp-staging.web.app | `index-BQRAZDNK.js` on https://risingamp.com.au (and https://rising-amp-467702-b5.web.app). Was `index-D_v50ECA.js`. |
+| Firestore rules | Phase 18 roles (missing `managers`/`viewers` = Site) | Same |
+| Storage rules | Avatars scoped to family org | Same |
+| Functions | Same eight, `sendJobInviteEmail` updated. **`resendWebhook` is not deployed.** | Same eight, `sendJobInviteEmail` updated. **`resendWebhook` is not deployed.** |
 
-On **staging / localhost**, a missing `assistantWritesEnabled` field means assistant writes are **on**. Only an explicit `false` is off. **Production still runs the old code, where missing means off.**
+A missing `assistantWritesEnabled` field means assistant writes are **on** (staging, localhost, and production). Only an explicit `false` is off.
 
-Independent proof on this trunk: `npm run typecheck` clean; `npm test` **720** vitest + **184** node; `npm run test:rules` passed (including Site can write an expense and cannot write an invoice); `npm run build:staging` **Initial JS gzip 271.0 KB** (ceiling **400 KB**). No new npm packages. No `--apply`. No `--production`. No `--force`.
+Independent proof on this trunk: `npm run typecheck` clean; `npm test` **720** vitest + **184** node; `npm run test:rules` passed (including Site can write an expense and cannot write an invoice); production `npm run build` **Initial JS gzip 271.0 KB** (ceiling **400 KB**). Built bundle contains `rising-amp-467702-b5`, not staging. No new npm packages. No `--apply`. No `--force`.
 
 ### What was decided about the orphan (`2900f9b`)
 
@@ -53,12 +53,26 @@ In order, no `--force`, stop recorded where it applied:
 3. `sendJobInviteEmail` first failed in non-interactive mode because `RESEND_WEBHOOK_SECRET` did not exist (the new `defineSecret` is loaded with the whole functions codebase). A **placeholder** secret was created on staging so other functions could deploy. **It is not the Resend signing secret.** Then `firebase deploy --project staging --only functions:sendJobInviteEmail` succeeded. **`resendWebhook` was not deployed.**
 4. `firebase deploy --project staging --only hosting` succeeded. Shopfront https://rising-amp-staging.web.app serves `index-g3uSRedv.js`.
 
-Owner still to do for bounce tracking: set the real Resend webhook signing secret at a masked prompt (`firebase functions:secrets:set RESEND_WEBHOOK_SECRET --project staging`), deploy `resendWebhook` by name, and point Resend at that URL. Do not paste the secret into chat.
+Owner still to do for bounce tracking: set the real Resend webhook signing secret at a masked prompt (`firebase functions:secrets:set RESEND_WEBHOOK_SECRET --project staging` and the same on production), deploy `resendWebhook` by name, and point Resend at that URL. Do not paste the secret into chat.
+
+### Production walk (19 Sep 2026)
+
+Owner named production. Same order as staging. No `--force`. Stop was not needed.
+
+Backup first: `backups/production-2026-09-18T17-38-27-338Z` (UTC; 565 Firestore documents, 50 Storage files, 0 failed). Restore dry-run parsed that backup toward staging and wrote nothing (`refusedProduction: true`).
+
+1. `firebase deploy --project production --only firestore:rules` succeeded.
+2. `firebase deploy --project production --only storage` succeeded.
+3. `RESEND_WEBHOOK_SECRET` did not exist on production (module-scoped `defineSecret` blocks any functions deploy). A **placeholder** secret was created (`versions/1`). **It is not the Resend signing secret.** Then `firebase deploy --project production --only functions:sendJobInviteEmail` succeeded. Function list still eight. **`resendWebhook` was not deployed.** `maintainLedgerRollup` was not redeployed.
+4. `npm run build` used `.env.production.local` (`VITE_FIREBASE_PROJECT_ID=rising-amp-467702-b5`). Then `firebase deploy --project production --only hosting` succeeded. https://risingamp.com.au and https://rising-amp-467702-b5.web.app serve `index-BQRAZDNK.js`.
+
+On the phone: force-close and reopen the home-screen app **twice**, because the service worker needs one load to fetch and a second to activate.
+
+Everyone invited who is not in `managers` or `viewers` is now **Site**. Until `--apply`, that includes Opal and Mannat: expenses yes, invoices no.
 
 ### Still open
 
-- **Production.** Not named. Do not walk it. Back up first when he does. Current production hosting hash is `index-D_v50ECA.js`.
-- **`resendWebhook`** on staging, blocked on the real Resend secret (see above).
+- **`resendWebhook`** on staging and production, blocked on the real Resend signing secret (see above). Placeholder secrets exist so other functions can deploy; they are not bounce-tracking.
 - **Two-browser Site test** (invoice refused with a message; expense succeeds).
 - **Role apply.** `scripts/phase18-assign-roles.ts` dry-run still stands (0 writes). Do not `--apply` until he decides Manager vs Site vs leave as `ask` for Opal and Mannat.
 - **Metro Consulting** and the cross-kind unlinked list. Still the owner's.
@@ -66,7 +80,7 @@ Owner still to do for bounce tracking: set the real Resend webhook signing secre
 
 ## Phase 18 — morning summary (18 Sep 2026)
 
-Branch **`phase-18-people`**. Brief: `PHASE18.md`. Restore tag **`pre-phase18-2026-09-18`**. Staging later went live on 19 Sep 2026 (see the top of this file). Production was not deployed from this trunk.
+Branch **`phase-18-people`**. Brief: `PHASE18.md`. Restore tag **`pre-phase18-2026-09-18`**. Staging and production went live on 19 Sep 2026 (see the top of this file).
 
 Independent proof on this worktree (Part F `f2e82e4`, then this Part G note): `npm run typecheck` clean; `npm test` **716** vitest + **184** node; `npm run test:rules` passed; `npm run build` **Initial JS gzip 271.0 KB** (ceiling **400 KB**). No new npm packages. No `--apply`. No `--production`.
 
@@ -123,7 +137,7 @@ Items **1 and 4 are true of the deployed staging rules.** They still need a Site
 
 Branch **`phase-17-coding-fixes`**, cut from `phase-16-job-facts` at `ac1239c`. Restore tag **`pre-phase17-2026-09-14`**. Briefs: `PHASE17.md`, and `PHASE17-CLOSEOUT.md`. Parts A to F are committed. Part E ran on staging 19 Sep 2026 (numbers at the top of this file). Batch undo is atomic (`b7d54c6`). The JobPeople em dash went with that file in Phase 18; remaining People copy is without the dash (`dc352d0`). Artefacts are tracked (`40714f6`). Staging is live from `phase-18-people`; production is not.
 
-**Read this before trusting the older notes below.** On **staging / localhost** a missing `assistantWritesEnabled` field means writes are **on**. Only an explicit `false` is off. **Production still runs the old code, where missing means off.**
+**Read this before trusting the older notes below.** A missing `assistantWritesEnabled` field means writes are **on**. Only an explicit `false` is off. That is true on staging, localhost, and production as of 19 Sep 2026.
 
 ### What shipped to the branch
 
