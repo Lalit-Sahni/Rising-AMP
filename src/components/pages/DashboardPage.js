@@ -12,10 +12,11 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import ExportDialog from '../ExportDialog';
-import JobPeople from '../JobPeople';
+import JobPresence from '../JobPresence';
 import EmptyState from '../EmptyState';
 import { fetchJobFiles } from '../../firebase/jobFiles';
-import { listJobInvites } from '../../firebase/invites';
+import { permissionDeniedMessage } from '../../firebase/permissionMessage';
+import { canManageJob } from '../../domain/jobRole';
 import { withFileAttention } from '../../domain/jobFileAttention';
 import { withAssistantDailyLine } from '../../domain/assistantActivity';
 import { withJobFactsAttention } from '../../domain/jobFactsAttention';
@@ -70,13 +71,13 @@ export default function DashboardPage() {
     showToast,
     jobInvitedEmails,
     authUser,
+    membership,
     jobKind,
     onJobKindChange,
   } = useApp();
   const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [showExport, setShowExport] = useState(false);
   const [jobFiles, setJobFiles] = useState([]);
-  const [jobInvites, setJobInvites] = useState([]);
   const [assistantReceipts, setAssistantReceipts] = useState([]);
   const [jobFacts, setJobFacts] = useState(null);
   const [targetSheetOpen, setTargetSheetOpen] = useState(false);
@@ -115,24 +116,6 @@ export default function DashboardPage() {
     fetchJobFiles(jobId).then((result) => {
       if (!cancelled && result.success) setJobFiles(result.files || []);
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [jobId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (!jobId) {
-      setJobInvites([]);
-      return undefined;
-    }
-    listJobInvites(jobId)
-      .then((rows) => {
-        if (!cancelled) setJobInvites(rows);
-      })
-      .catch((error) => {
-        console.warn('Invite status could not be loaded:', error);
-      });
     return () => {
       cancelled = true;
     };
@@ -258,8 +241,20 @@ export default function DashboardPage() {
     setCostPlanSetupDismissed(true);
   };
 
+  const currentJob = (allowedJobs || []).find((job) => job.projectId === jobId);
+  const canManageThisJob = Boolean(
+    (membership && membership.role === 'owner')
+    || canManageJob({
+      email: (authUser && authUser.email) || (membership && membership.email),
+      ownerEmail: membership && membership.ownerEmail,
+      invitedEmails: (currentJob && currentJob.invitedEmails) || jobInvitedEmails,
+      managers: currentJob && currentJob.managers,
+      viewers: currentJob && currentJob.viewers,
+    }),
+  );
+
   const handleKind = async (next) => {
-    if (!jobId || next === jobKind || kindBusy) return;
+    if (!jobId || next === jobKind || kindBusy || !canManageThisJob) return;
     setKindBusy(true);
     try {
       const { setOrgProjectKind } = await import('../../firebase/projectCatalog');
@@ -267,7 +262,7 @@ export default function DashboardPage() {
       if (onJobKindChange) onJobKindChange(saved);
       showToast(saved === 'own' ? 'This job is now an own build.' : 'This job is now a client build.', 'success');
     } catch (error) {
-      showToast(error.message || 'Could not update this job.', 'error');
+      showToast(permissionDeniedMessage(error), 'error');
     } finally {
       setKindBusy(false);
     }
@@ -311,25 +306,29 @@ export default function DashboardPage() {
               <p className="text-[13.5px] text-warn mt-1">This job is archived. Records stay. The owner can bring it back from Jobs.</p>
             )}
             <p className="text-[13.5px] text-slate-600 mt-0.5">{subtitle}</p>
-            <JobPeople emails={jobInvitedEmails} invites={jobInvites} />
-            <div className="inline-flex mt-3 bg-surface border border-hairline rounded-[9px] p-[3px]">
-              {[
-                { id: 'client', label: 'Client build' },
-                { id: 'own', label: 'Own build' },
-              ].map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  disabled={kindBusy}
-                  onClick={() => handleKind(option.id)}
-                  className={`px-3 py-1.5 rounded-md text-[12.5px] font-medium ${
-                    jobKind === option.id ? 'bg-accent text-white' : 'text-slate-600 hover:text-ink'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
+            <JobPresence emails={jobInvitedEmails} jobId={jobId} />
+            {canManageThisJob ? (
+              <div className="inline-flex mt-3 bg-surface border border-hairline rounded-[9px] p-[3px]">
+                {[
+                  { id: 'client', label: 'Client build' },
+                  { id: 'own', label: 'Own build' },
+                ].map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    disabled={kindBusy}
+                    onClick={() => handleKind(option.id)}
+                    className={`px-3 py-1.5 rounded-md text-[12.5px] font-medium ${
+                      jobKind === option.id ? 'bg-accent text-white' : 'text-slate-600 hover:text-ink'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-[12.5px] text-slate-600 mt-3">{jobKind === 'own' ? 'Own build' : 'Client build'}</p>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <div className="inline-flex bg-surface border border-hairline rounded-[9px] p-[3px]">

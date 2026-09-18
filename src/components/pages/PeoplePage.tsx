@@ -6,7 +6,7 @@ import { ChevronRight, Plus, X } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { permissionDeniedMessage } from '../../firebase/permissionMessage';
-import { inviteEmailToProject, removeEmailFromProject } from '../../firebase/projectCatalog';
+import { inviteEmailToProject } from '../../firebase/projectCatalog';
 import { listJobInvites } from '../../firebase/invites';
 import {
   loadPeopleProfileCards,
@@ -163,6 +163,8 @@ export default function PeoplePage() {
   useEffect(() => {
     if (!addParam) return;
     setAdding(true);
+    const jobFromUrl = searchParams.get('job');
+    if (jobFromUrl) setDraftJobId(jobFromUrl);
     const timer = window.setTimeout(() => addRef.current?.focus(), 0);
     const next = new URLSearchParams(searchParams);
     next.delete('add');
@@ -309,7 +311,11 @@ export default function PeoplePage() {
     setBusy(true);
     setError('');
     try {
-      await removeEmailFromProject(projectId, row.email, actorEmail);
+      await removePersonFromVisibleJobs({
+        projectIds: [projectId],
+        email: row.email,
+        ownerEmail,
+      });
       setPanelMenu(null);
       showToast(`${row.displayName} is off ${job.name}.`, 'success');
     } catch (err) {

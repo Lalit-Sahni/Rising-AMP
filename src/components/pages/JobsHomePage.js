@@ -1,19 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Archive, ArchiveRestore, Check, ChevronRight, Pencil, Plus, Search, UserPlus, X } from 'lucide-react';
+import { Archive, ArchiveRestore, Check, ChevronRight, Pencil, Plus, Search, UserPlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { canonicalEmail, emailInviteVariants } from '../../firebase/emailAddress';
 import { permissionDeniedMessage } from '../../firebase/permissionMessage';
 import {
   createOrgProject,
-  inviteEmailToProject,
   listOrgProjects,
-  removeEmailFromProject,
   renameOrgProject,
   setOrgProjectArchived,
 } from '../../firebase/projectCatalog';
+import { canManageJob } from '../../domain/jobRole';
 import LoadingSkeleton from '../ui/LoadingSkeleton';
 import EmptyState from '../EmptyState';
-import JobPeople from '../JobPeople';
 import { jobMark } from '../../utils/jobMetrics';
 import { formatCents } from '../../money';
 
@@ -31,33 +29,28 @@ function rowSubtitle(row, metricsLoading) {
   return count ? `${count} ${count === 1 ? 'expense' : 'expenses'}` : 'No expenses yet';
 }
 
-function displayInviteEmails(emails) {
-  const seen = new Set();
-  const out = [];
-  for (const email of emails || []) {
-    const key = canonicalEmail(email);
-    if (!key || seen.has(key)) continue;
-    seen.add(key);
-    out.push(email);
-  }
-  return out;
-}
-
-function initialsFromEmail(email) {
-  return String(email || '?').slice(0, 1).toUpperCase();
+function actorCanManageProject(membership, project) {
+  if (!membership) return false;
+  if (membership.role === 'owner') return true;
+  return canManageJob({
+    email: membership.email,
+    ownerEmail: membership.ownerEmail,
+    invitedEmails: project.invitedEmails,
+    managers: project.managers,
+    viewers: project.viewers,
+  });
 }
 
 export default function JobsHomePage() {
   const { membership, allowedJobs, onOpenJob } = useApp();
+  const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [metricsLoading, setMetricsLoading] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [editingId, setEditingId] = useState(null);
-  const [invitingId, setInvitingId] = useState(null);
   const [draftName, setDraftName] = useState('');
-  const [draftEmail, setDraftEmail] = useState('');
   const [savingId, setSavingId] = useState(null);
   const [creating, setCreating] = useState(false);
   const [draftKind, setDraftKind] = useState('client');
@@ -145,29 +138,23 @@ export default function JobsHomePage() {
 
   const startRename = (event, project) => {
     event.stopPropagation();
-    setInvitingId(null);
     setCreating(false);
     setEditingId(project.id);
     setDraftName(project.name);
     setError('');
   };
 
-  const startInvite = (event, project) => {
+  const openInvite = (event, project) => {
     event.stopPropagation();
-    setEditingId(null);
-    setCreating(false);
-    setInvitingId(project.id);
-    setDraftEmail('');
-    setError('');
+    if (!project.projectId) return;
+    navigate(`/people?job=${encodeURIComponent(project.projectId)}&add=1`);
   };
 
   const cancelPanels = (event) => {
     if (event) event.stopPropagation();
     setEditingId(null);
-    setInvitingId(null);
     setCreating(false);
     setDraftName('');
-    setDraftEmail('');
     setDraftKind('client');
   };
 
@@ -186,47 +173,7 @@ export default function JobsHomePage() {
       cancelPanels();
     } catch (err) {
       console.error('Rename failed:', err);
-      setError(err.message || 'Could not save the new name.');
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  const saveInvite = async (event, project) => {
-    if (event) event.stopPropagation();
-    const nextEmail = draftEmail.trim();
-    if (!nextEmail) {
-      setError('Enter an email address.');
-      return;
-    }
-    setSavingId(project.id);
-    setError('');
-    try {
-      const saved = await inviteEmailToProject(project.projectId, nextEmail);
-      const added = emailInviteVariants(saved);
-      setJobs((current) =>
-        current.map((row) =>
-          row.id === project.id
-            ? { ...row, invitedEmails: Array.from(new Set([...(row.invitedEmails || []), ...added])) }
-            : row
-        )
-      );
-      cancelPanels();
-      try {
-        const { sendJobInvite } = await import('../../firebase/email');
-        await sendJobInvite({ to: saved, projectId: project.projectId, projectName: project.name });
-      } catch (mailErr) {
-        console.error('Invite email failed:', mailErr);
-        const closed = mailErr && mailErr.code === 'auth/popup-closed-by-user';
-        setError(
-          closed
-            ? `${saved} is on ${project.name}. Google asked to send the email and that window was closed — tap Invite again to send it.`
-            : `${saved} is on ${project.name}, but the invite email did not send. Ask them to open this same page and sign in with that email.`
-        );
-      }
-    } catch (err) {
-      console.error('Invite failed:', err);
-      setError(permissionDeniedMessage(err, 'invite'));
+      setError(permissionDeniedMessage(err));
     } finally {
       setSavingId(null);
     }
@@ -255,7 +202,7 @@ export default function JobsHomePage() {
       cancelPanels();
     } catch (err) {
       console.error('Create job failed:', err);
-      setError(err.message || 'Could not create that job.');
+      setError(permissionDeniedMessage(err));
     } finally {
       setSavingId(null);
     }
@@ -277,36 +224,7 @@ export default function JobsHomePage() {
       setJobs((current) => current.map((row) => (row.id === project.id ? { ...row, status } : row)));
     } catch (err) {
       console.error('Archive failed:', err);
-      setError(err.message || 'Could not update that job.');
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  const removePerson = async (event, project, email) => {
-    event.stopPropagation();
-    const ok = window.confirm(
-      `Remove ${email} from ${project.name}? They lose access. Records they entered stay.`
-    );
-    if (!ok) return;
-    setSavingId(project.id);
-    setError('');
-    try {
-      await removeEmailFromProject(project.projectId, email, membership.email);
-      const removed = new Set(emailInviteVariants(email).map((value) => value.toLowerCase()));
-      setJobs((current) =>
-        current.map((row) =>
-          row.id === project.id
-            ? {
-                ...row,
-                invitedEmails: (row.invitedEmails || []).filter((value) => !removed.has(String(value).toLowerCase())),
-              }
-            : row
-        )
-      );
-    } catch (err) {
-      console.error('Remove person failed:', err);
-      setError(permissionDeniedMessage(err, 'remove'));
+      setError(permissionDeniedMessage(err));
     } finally {
       setSavingId(null);
     }
@@ -314,7 +232,6 @@ export default function JobsHomePage() {
 
   const startCreate = () => {
     setEditingId(null);
-    setInvitingId(null);
     setCreating(true);
     setDraftName('');
     setDraftKind('client');
@@ -471,8 +388,8 @@ export default function JobsHomePage() {
           {!loading &&
             visible.map((project) => {
               const isEditing = editingId === project.id;
-              const isInviting = invitingId === project.id;
               const isSaving = savingId === project.id;
+              const canManage = actorCanManageProject(membership, project);
 
               if (isEditing) {
                 return (
@@ -502,53 +419,6 @@ export default function JobsHomePage() {
                       >
                         <Check className="w-4 h-4" />
                         {isSaving ? 'Saving…' : 'Save'}
-                      </button>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (isInviting) {
-                return (
-                  <div key={project.id} className="px-[18px] py-4 border-b border-hairline last:border-0">
-                    <p className="text-sm text-ink mb-2">
-                      Invite someone to <span className="font-medium">{project.name}</span> only. They will not see your other jobs.
-                    </p>
-                    {displayInviteEmails(project.invitedEmails).length > 0 && (
-                      <div className="mb-3">
-                        <JobPeople
-                          emails={project.invitedEmails}
-                          ownerEmail={ownerEmail}
-                          saving={isSaving}
-                          onRemove={isOwner ? (event, email) => removePerson(event, project, email) : undefined}
-                        />
-                      </div>
-                    )}
-                    <input
-                      autoFocus
-                      type="email"
-                      value={draftEmail}
-                      disabled={isSaving}
-                      placeholder="you@company.com.au"
-                      onChange={(event) => setDraftEmail(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') saveInvite(event, project);
-                        if (event.key === 'Escape') cancelPanels(event);
-                      }}
-                      className="w-full px-3 py-2 rounded-ot-sm border border-hairline text-ink focus:outline-none focus:border-accent"
-                    />
-                    <div className="mt-3 flex items-center justify-end gap-2">
-                      <button type="button" onClick={cancelPanels} disabled={isSaving} className="px-3 py-1.5 text-sm text-slate-600">
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(event) => saveInvite(event, project)}
-                        disabled={isSaving}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-accent hover:bg-accent-600 rounded-ot-sm disabled:opacity-50"
-                      >
-                        <Check className="w-4 h-4" />
-                        {isSaving ? 'Saving…' : 'Invite'}
                       </button>
                     </div>
                   </div>
@@ -594,17 +464,17 @@ export default function JobsHomePage() {
                     {project.status === 'archived' ? 'Archived' : 'Active'}
                   </div>
                   <div className="flex items-center justify-end gap-1">
-                    {isOwner && (
+                    {canManage && (
                       <button
                         type="button"
-                        onClick={(event) => startInvite(event, project)}
+                        onClick={(event) => openInvite(event, project)}
                         className="p-1 text-slate-400 hover:text-ink"
                         title="Invite"
                       >
                         <UserPlus className="w-4 h-4" />
                       </button>
                     )}
-                    {isOwner && (
+                    {canManage && (
                       <button
                         type="button"
                         onClick={(event) => toggleArchive(event, project)}
@@ -618,14 +488,16 @@ export default function JobsHomePage() {
                         )}
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={(event) => startRename(event, project)}
-                      className="p-1 text-slate-400 hover:text-ink"
-                      title="Rename"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={(event) => startRename(event, project)}
+                        className="p-1 text-slate-400 hover:text-ink"
+                        title="Rename"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                    )}
                     <ChevronRight className="w-4 h-4 text-slate-400 hidden md:block" strokeWidth={1.7} />
                   </div>
                 </div>

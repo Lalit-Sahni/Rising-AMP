@@ -1165,6 +1165,12 @@ async function main() {
     await assertFails(coworker.firestore().doc(
       `organizations/${ORG}/projects/${JOB}/invoices/inv-site-default`,
     ).set({ invoiceNumber: '2026-0101', status: 'draft', total: 5 }));
+    await assertFails(coworker.firestore().doc(
+      `organizations/${ORG}/projects/${JOB}`,
+    ).update({
+      name: 'Renamed by default site',
+      updatedAt: new Date(),
+    }));
     await assertSucceeds(coworker.firestore().doc(costPlanPath).update({
       targetCents: 2500000,
       updatedAt: new Date(),
@@ -1181,7 +1187,7 @@ async function main() {
       updatedAt: new Date(),
     }));
 
-    // Viewer reads, writes nothing, can still rename (Part B).
+    // Viewer reads, writes nothing. Rename is manage-only (Part D).
     await assertSucceeds(viewer.firestore().doc(rolesExpense).get());
     await assertSucceeds(viewer.firestore().doc(rolesInvoice).get());
     await assertSucceeds(viewer.firestore().doc(rolesPlan).get());
@@ -1192,12 +1198,20 @@ async function main() {
     await assertFails(viewer.firestore().doc(
       `organizations/${ORG}/projects/${JOB_ROLES}/invoices/inv-viewer`,
     ).set({ invoiceNumber: '2026-0103', status: 'draft', total: 1 }));
-    await assertSucceeds(viewer.firestore().doc(rolesJob).update({
+    await assertFails(viewer.firestore().doc(rolesJob).update({
       name: 'Renamed by viewer',
+      updatedAt: new Date(),
+    }));
+    await assertFails(site.firestore().doc(rolesJob).update({
+      name: 'Renamed by site',
       updatedAt: new Date(),
     }));
 
     // Manager: invoice, lock, people below them. Not managers[], not owner.
+    await assertSucceeds(manager.firestore().doc(rolesJob).update({
+      name: 'Renamed by manager',
+      updatedAt: new Date(),
+    }));
     await assertSucceeds(manager.firestore().doc(
       `organizations/${ORG}/projects/${JOB_ROLES}/invoices/inv-manager`,
     ).set({ invoiceNumber: '2026-0104', status: 'draft', total: 11 }));

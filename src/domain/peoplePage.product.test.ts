@@ -23,7 +23,15 @@ describe('People page product wiring', () => {
     expect(sidebar).toContain("needsJob: false");
     expect(sidebar).toContain("label: 'People'");
     expect(readRepo('src/App.js')).not.toContain('PeoplePage');
-    expect(readRepo('src/components/pages/DashboardPage.js')).toContain('<JobPeople');
+    expect(readRepo('src/components/pages/DashboardPage.js')).not.toContain('JobPeople');
+    expect(readRepo('src/components/pages/DashboardPage.js')).toContain('JobPresence');
+    expect(readRepo('src/components/pages/DashboardPage.js')).not.toContain('PeoplePage');
+    expect(readRepo('src/components/JobPresence.tsx')).not.toContain('PeoplePage');
+    expect(readRepo('src/components/pages/JobsHomePage.js')).not.toContain('JobPeople');
+    expect(readRepo('src/components/pages/JobsHomePage.js')).not.toContain('removePerson');
+    expect(readRepo('src/components/pages/JobsHomePage.js')).toContain("navigate(`/people?job=${encodeURIComponent(project.projectId)}&add=1`)");
+    expect(readRepo('src/components/pages/JobsHomePage.js')).toContain('canManageJob');
+    expect(fs.existsSync(path.join(root, 'src/components/JobPeople.jsx'))).toBe(false);
   });
 
   test('the panel mapper uses toPublicProfile and the page does not render private fields', () => {
@@ -42,6 +50,8 @@ describe('People page product wiring', () => {
     expect(page).toContain('directory');
     expect(page).toContain("searchParams.get('job')");
     expect(page).toContain("searchParams.get('add')");
+    expect(page).not.toContain('removeEmailFromProject');
+    expect(page).toContain('removePersonFromVisibleJobs');
   });
 
   test('org-remove updates visible job documents and leaves the org invitedEmails alone', () => {

@@ -118,11 +118,6 @@ service cloud.firestore {
             || isOrgOwner();
         }
 
-        function memberRenameKeys() {
-          return request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['name', 'updatedAt', 'budget', 'kind']);
-        }
-
         function managePeopleKeys() {
           return request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly([
@@ -159,14 +154,12 @@ service cloud.firestore {
             || request.resource.data.kind in ['client', 'own']
           )
           && !request.resource.data.keys().hasAny(['legacyWorkspaceId', 'accessCode']);
-        allow update: if isProjectMember()
+        allow update: if canManage()
           && ownerStaysOnJob()
           && statusOk()
           && roleArraysOk(request.resource.data)
-          && (
-            memberRenameKeys()
-            || (canManage() && managePeopleKeys() && managersEditOk())
-          );
+          && managePeopleKeys()
+          && managersEditOk();
         allow delete: if false;
 
         function expenseOk() {
