@@ -5,6 +5,7 @@ import { Menu, Search, X } from 'lucide-react';
 const PAGE_TITLES = {
   jobs: 'Jobs',
   profile: 'Profile',
+  people: 'People',
   'assistant-activity': 'Activity',
   dashboard: 'Overview',
   'add-expense': 'Add expense',
@@ -26,7 +27,7 @@ const Header = ({ projectName }) => {
   } = useApp();
   const title = PAGE_TITLES[currentPage] || 'RisingAMP';
   const showJobCrumb = currentPage !== 'jobs' && currentPage !== 'profile'
-    && currentPage !== 'assistant-activity' && projectName;
+    && currentPage !== 'people' && currentPage !== 'assistant-activity' && projectName;
 
   return (
     <header className="bg-canvas md:bg-surface border-b border-hairline px-4 md:px-[26px] py-3.5">
@@ -60,7 +61,7 @@ const Header = ({ projectName }) => {
         </div>
 
         <div className="flex items-center gap-2">
-          {projectName && currentPage !== 'jobs' && (
+          {projectName && currentPage !== 'jobs' && currentPage !== 'people' && (
             <button
               type="button"
               onClick={() => setCurrentPage('jobs')}

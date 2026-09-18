@@ -40,4 +40,7 @@ test('job list fingerprint ignores order and notices a rename', () => {
   expect(invitedJobsFingerprint(a)).not.toBe(
     invitedJobsFingerprint([{ ...a[0], name: 'Kelly Street' }, a[1]]),
   );
+  expect(invitedJobsFingerprint(a)).not.toBe(
+    invitedJobsFingerprint([{ ...a[0], managers: ['boss@x'] }, a[1]]),
+  );
 });

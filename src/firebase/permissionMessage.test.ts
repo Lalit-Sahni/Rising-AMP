@@ -11,6 +11,8 @@ describe('permissionDeniedMessage', () => {
     )).toBe("You don't have permission to change invoices on this job.");
     expect(permissionDeniedMessage({ code: 'permission-denied' }, 'costPlanLock'))
       .toBe("You don't have permission to lock the cost plan.");
+    expect(permissionDeniedMessage({ code: 'permission-denied' }, 'role'))
+      .toBe("You don't have permission to change roles on this job.");
   });
 
   test('leaves a real application error alone', () => {

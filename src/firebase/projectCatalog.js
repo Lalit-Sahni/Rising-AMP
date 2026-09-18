@@ -24,6 +24,8 @@ export { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJo
 
 function mapProjectDoc(projectDoc, email, ownerEmail) {
   const data = projectDoc.data() || {};
+  const managers = (data.managers || []).map((value) => normalizeEmail(value));
+  const viewers = (data.viewers || []).map((value) => normalizeEmail(value));
   return {
     id: projectDoc.id,
     projectId: projectDoc.id,
@@ -31,6 +33,8 @@ function mapProjectDoc(projectDoc, email, ownerEmail) {
     name: (data.name && String(data.name).trim()) || 'Untitled job',
     invitedEmails: (data.invitedEmails || []).map((value) => normalizeEmail(value)),
     formerEmails: (data.formerEmails || []).map((value) => normalizeEmail(value)),
+    managers,
+    viewers,
     status: isJobArchived(data) ? 'archived' : 'active',
     kind: data.kind === 'own' ? 'own' : 'client',
     jobRole: resolveJobRole({

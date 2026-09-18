@@ -4,12 +4,13 @@
 
 Branch **`phase-18-people`**. Brief: `PHASE18.md`. Nothing deployed. Production is untouched and still runs the Phase 16/17 shopfront.
 
-Part A is recorded (`6bd23a3`, People design). **Part B is this branch:** roles on the job document (`managers[]` / `viewers[]`, missing = Site) and Firestore rules that mean them. Not production. Parts C–G have not started.
+Part A is recorded (`6bd23a3`, People design). Part B is on this branch (`682b662`). **Part C is this commit:** `/people` is a real lazy org page (sidebar Main, no phone job tab). One row per person on jobs the viewer can already read. Role is one strongest pill, not a matrix. Org-remove writes only visible job documents (`invitedEmails` / `managers` / `viewers`) and leaves the org `invitedEmails` alone. Nothing deployed. Parts D–G have not started.
 
-| Part | SHA | State |
-| --- | --- | --- |
-| A People design | `6bd23a3` | recorded |
-| B Roles model + rules | this commit | on `phase-18-people` only |
+| Part | SHA | Initial JS gzip | State |
+| --- | --- | --- | --- |
+| A People design | `6bd23a3` | — | recorded |
+| B Roles model + rules | `682b662` | — | on `phase-18-people` only |
+| C People page | this commit | **271.5 KB** | on `phase-18-people` only |
 
 ## Phase 17 — in flight (14 Sep 2026)
 

@@ -11,6 +11,7 @@ import {
   FileText,
   Files,
   Users,
+  Contact,
   FileCheck,
   Briefcase,
   BarChart3,
@@ -25,6 +26,7 @@ const navMain = [
   { key: 'add-expense', label: 'Add expense', icon: PlusCircle, needsJob: true },
   { key: 'new-invoice', label: 'Invoices', icon: FileText, needsJob: true },
   { key: 'files', label: 'Files', icon: Files, needsJob: true },
+  { key: 'people', label: 'People', icon: Contact, needsJob: false },
   { key: 'history', label: 'History', icon: Clock, needsJob: true },
 ];
 

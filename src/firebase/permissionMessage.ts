@@ -13,6 +13,7 @@ export function isPermissionDenied(error: unknown): boolean {
 export type PermissionAction =
   | 'invite'
   | 'remove'
+  | 'role'
   | 'expense'
   | 'invoice'
   | 'costPlanLock'
@@ -22,6 +23,7 @@ export type PermissionAction =
 const ACTION_COPY: Record<PermissionAction, string> = {
   invite: "You don't have permission to invite people to this job.",
   remove: "You don't have permission to remove people from this job.",
+  role: "You don't have permission to change roles on this job.",
   expense: "You don't have permission to change expenses on this job.",
   invoice: "You don't have permission to change invoices on this job.",
   costPlanLock: "You don't have permission to lock the cost plan.",

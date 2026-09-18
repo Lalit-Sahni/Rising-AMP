@@ -36,6 +36,13 @@ describe('pathForPage', () => {
     expect(pathForPage('assistant-activity', 'job-kelly')).toBe('/assistant-activity');
     expect(pageFromPath('/assistant-activity')).toBe('assistant-activity');
   });
+
+  test('people is an org page at /people', () => {
+    expect(pathForPage('people', 'job-kelly')).toBe('/people');
+    expect(pathForPage('people', null)).toBe('/people');
+    expect(pageFromPath('/people')).toBe('people');
+    expect(pageFromPath('/people/')).toBe('people');
+  });
 });
 
 describe('showsJobTabBar', () => {
@@ -44,6 +51,7 @@ describe('showsJobTabBar', () => {
     expect(showsJobTabBar('history', 'job-kelly')).toBe(true);
     expect(showsJobTabBar('jobs', 'job-kelly')).toBe(false);
     expect(showsJobTabBar('profile', 'job-kelly')).toBe(false);
+    expect(showsJobTabBar('people', 'job-kelly')).toBe(false);
     expect(showsJobTabBar('assistant-activity', 'job-kelly')).toBe(false);
     expect(showsJobTabBar('not-found', 'job-kelly')).toBe(false);
     expect(showsJobTabBar('dashboard', null)).toBe(false);

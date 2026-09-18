@@ -45,6 +45,8 @@ export function invitedJobsFingerprint(jobs) {
       job.status || 'active',
       job.kind === 'own' ? 'own' : 'client',
       (job.invitedEmails || []).join(','),
+      (job.managers || []).join(','),
+      (job.viewers || []).join(','),
     ].join(':'))
     .sort()
     .join('|');

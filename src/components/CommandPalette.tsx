@@ -14,6 +14,7 @@ import {
   Search,
   User,
   Users,
+  Contact,
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -77,6 +78,7 @@ const PAGE_ROWS: Array<{ key: string; label: string; icon: typeof Clock; needsJo
   { key: 'client-manager', label: 'Clients', icon: Users, needsJob: true },
   { key: 'hia-contract', label: 'HIA contracts', icon: FileCheck, needsJob: true },
   { key: 'jobs', label: 'All jobs', icon: Briefcase, needsJob: false },
+  { key: 'people', label: 'People', icon: Contact, needsJob: false },
   { key: 'profile', label: 'Your profile', icon: User, needsJob: false },
   { key: 'assistant-activity', label: 'Activity', icon: Clock, needsJob: false },
 ];
