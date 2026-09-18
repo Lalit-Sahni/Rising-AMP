@@ -24,7 +24,7 @@ Fill the table with every part, its real SHA, and its gzip figure measured at th
 
 Also record, in prose, the three things a future agent must not have to rediscover:
 
-- On this branch a missing `assistantWritesEnabled` means **on**. Production still runs the old code where missing means **off**. `CLAUDE.md`, `AGENTS.md` and `DATABASE.md` all still say "missing = off" and must be corrected **when this phase ships**, not before.
+- On this branch a missing `assistantWritesEnabled` means **on**. Production still runs the old code where missing means **off**. `CLAUDE.md`, `AGENTS.md` and `DATABASE.md` were corrected when staging shipped (19 Sep 2026).
 - `origin: 'human' | 'assistant'` is now required on `codeExpense`, `createExpense` and `codeExpenseBatch`. Only the screen that owns the confirmation may claim `'human'`. Never spread a model-supplied object into an action input.
 - An expense write and its receipt are one `writeBatch`. Do not add a new write path that puts them in separate calls.
 

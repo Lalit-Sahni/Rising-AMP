@@ -1,8 +1,72 @@
 # Progress
 
+## Where we are (19 Sep 2026)
+
+Trunk is **`phase-18-people`**. It holds Phase 17, Phase 18, the Firestore sign-up hotfix, and the Overview/History polish. Restore tags: **`pre-phase18-2026-09-18`**, plus safety tags `cleanup-base-phase17`, `cleanup-base-phase18`, `cleanup-base-ui`, `cleanup-base-hotfix`. **Not merged to `master`/`main`.** Localhost stays on staging. Never `--force`.
+
+**Staging is live** from this trunk (19 Sep 2026). **Production is not.** Do not deploy production until the owner names the project and the surface.
+
+| Surface | Staging now | Production now |
+| --- | --- | --- |
+| Hosting | `index-g3uSRedv.js` on https://rising-amp-staging.web.app | `index-D_v50ECA.js` on https://risingamp.com.au (not `index-DhMkWQ3T.js`, and not this trunk) |
+| Firestore rules | Phase 18 roles (missing `managers`/`viewers` = Site) | Phase 16 |
+| Storage rules | Avatars scoped to family org | Previous rules (avatars world-readable to any signed-in account) |
+| Functions | Same eight as before, plus `sendJobInviteEmail` updated (invite record + no inline SVG). **`resendWebhook` is not deployed.** | Same eight as 11 Sep 2026. No `resendWebhook`. |
+
+On **staging / localhost**, a missing `assistantWritesEnabled` field means assistant writes are **on**. Only an explicit `false` is off. **Production still runs the old code, where missing means off.**
+
+Independent proof on this trunk: `npm run typecheck` clean; `npm test` **720** vitest + **184** node; `npm run test:rules` passed (including Site can write an expense and cannot write an invoice); `npm run build:staging` **Initial JS gzip 271.0 KB** (ceiling **400 KB**). No new npm packages. No `--apply`. No `--production`. No `--force`.
+
+### What was decided about the orphan (`2900f9b`)
+
+**Kept.** `ui-overview-history` dropped leftover Overview week/month/quarter buttons (the KPI stays This month; Ask still understands those periods) and replaced native History category and cost-plan dropdowns with `QuietSelect` (phone bottom sheet, desktop portal). Cherry-pick onto this trunk conflicted only in `PROGRESS.md`. `DashboardPage.js` auto-merged with Phase 18's `JobPresence`. Branch and tag `cleanup-base-ui` stay; nothing was deleted.
+
+### Phase 17 Part E, real staging numbers (read-only, 19 Sep 2026)
+
+`scripts/phase17-staging-proposals.ts` against `rising-amp-staging`. Refuses `--production`. Zero writes. Org `assistantWritesEnabled` is **missing** (Part A reads that as on). Part D sections (`waste-removal`, `cleaning`, `fixtures-fittings`) are present after `mergeTradeList`. Test 1 is archived, so it did not appear.
+
+Live uncoded set: **131** live expenses, **10** coded, **121** uncoded (72 Centenary Dr 126/5/121; Kelly Street 5/5/0).
+
+1. Proposals **before Part C: 8**. After: **22** (+14). 0 confident, 22 uncertain.
+2. Name field produced a proposal the description did not, **4 rows**, all on 72 Centenary Dr:
+   - Framework, Joinery and Amendments · $1,200.00 · `expense_1784109762527_6px03caq5` · Service name matches Kitchen and joinery
+   - Framework, Joinery and Amendments · $1,200.00 · `expense_1784109815078_3i9tomx4j` · Service name matches Kitchen and joinery
+   - Niches, Gyprock Prep Aircon, Media Wall · $800.00 · `expense_1784587250436_wn2ri9mef` · Service name matches Air conditioning
+   - Electrical Plan · $500.00 · `expense_1784588509133_piy3vknb6` · Service name matches Electrical
+3. Lost a proposal by going multi-hit: **0**. No fix proposed.
+4. Already-coded expenses in any proposal set: **0**.
+
+### Phase 18 Part G
+
+Rules emulator: a default Site coworker **succeeds** at an expense write and **fails** at an invoice write and at locking the cost plan. Owner can still write invoices.
+
+Click-through on localhost:3000 against staging, signed in as the owner: People lists Lalit (Owner), Mannat Sahni (Site, Kelly Street), Opal (Site, 72 Centenary Dr). Overview on Kelly Street has the compact "2 people / Manage" line and **no** week/month/quarter buttons. History uses `QuietSelect` for category and cost plan.
+
+**Two-browser Site invoice refusal was not clicked.** There is no Site password in this environment. That still needs the owner in one browser and Mannat (or another Site person) in the other. The refusal copy is `You don't have permission to change invoices on this job.`
+
+### Staging walk (19 Sep 2026)
+
+In order, no `--force`, stop recorded where it applied:
+
+1. `firebase deploy --project staging --only firestore:rules` succeeded.
+2. `firebase deploy --project staging --only storage` succeeded.
+3. `sendJobInviteEmail` first failed in non-interactive mode because `RESEND_WEBHOOK_SECRET` did not exist (the new `defineSecret` is loaded with the whole functions codebase). A **placeholder** secret was created on staging so other functions could deploy. **It is not the Resend signing secret.** Then `firebase deploy --project staging --only functions:sendJobInviteEmail` succeeded. **`resendWebhook` was not deployed.**
+4. `firebase deploy --project staging --only hosting` succeeded. Shopfront https://rising-amp-staging.web.app serves `index-g3uSRedv.js`.
+
+Owner still to do for bounce tracking: set the real Resend webhook signing secret at a masked prompt (`firebase functions:secrets:set RESEND_WEBHOOK_SECRET --project staging`), deploy `resendWebhook` by name, and point Resend at that URL. Do not paste the secret into chat.
+
+### Still open
+
+- **Production.** Not named. Do not walk it. Back up first when he does. Current production hosting hash is `index-D_v50ECA.js`.
+- **`resendWebhook`** on staging, blocked on the real Resend secret (see above).
+- **Two-browser Site test** (invoice refused with a message; expense succeeds).
+- **Role apply.** `scripts/phase18-assign-roles.ts` dry-run still stands (0 writes). Do not `--apply` until he decides Manager vs Site vs leave as `ask` for Opal and Mannat.
+- **Metro Consulting** and the cross-kind unlinked list. Still the owner's.
+- **`Claude outputs/`** is gitignored, still on disk in the main checkout. Not deleted.
+
 ## Phase 18 — morning summary (18 Sep 2026)
 
-Branch **`phase-18-people`**. Brief: `PHASE18.md`. Restore tag **`pre-phase18-2026-09-18`**. **Nothing deployed** (not hosting, not Firestore rules, not Storage, not functions, staging or production). Production is untouched and still runs the Phase 16/17 shopfront. Localhost stays on staging. Do not read this as Phase 18 live.
+Branch **`phase-18-people`**. Brief: `PHASE18.md`. Restore tag **`pre-phase18-2026-09-18`**. Staging later went live on 19 Sep 2026 (see the top of this file). Production was not deployed from this trunk.
 
 Independent proof on this worktree (Part F `f2e82e4`, then this Part G note): `npm run typecheck` clean; `npm test` **716** vitest + **184** node; `npm run test:rules` passed; `npm run build` **Initial JS gzip 271.0 KB** (ceiling **400 KB**). No new npm packages. No `--apply`. No `--production`.
 
@@ -44,7 +108,7 @@ Dry-run. 0 write(s). Pass --apply --staging to write manager arrays after the ow
 
 ### What the owner still has to click (two browsers)
 
-This session did **not** click through items 1–4. Vite for **this** branch is `npm run dev` → http://localhost:3001 (this worktree). Do **not** use localhost:**3000** — that checkout is `ui-overview-history`, the wrong app. Do **not** use https://risingamp.com.au or deployed staging: **staging rules and hosting are not deployed**, so a browser against those is the old model. The IDE browser never kept a signed-in tab here, and there is no second Site account session in this agent.
+Staging rules and hosting **are** deployed as of 19 Sep 2026. Items 1 and 4 can be clicked against localhost:3000 or https://rising-amp-staging.web.app. Item 1 still needs a Site person signed in; this session only had the owner.
 
 Owner checklist:
 
@@ -53,13 +117,13 @@ Owner checklist:
 3. Invite while the other person sits on Ask for access: they enter without reload (org query listener).
 4. Edit `risingAmp.boot.{uid}` to claim manager: UI may lie; invoice/lock write still refused with a message.
 
-Items **1 and 4 are not true against current deployed staging rules.** They need a named staging **rules + hosting** deploy of this branch, which the owner has not named.
+Items **1 and 4 are true of the deployed staging rules.** They still need a Site login to click through.
 
 ## Phase 17 (18 Sep 2026)
 
-Branch **`phase-17-coding-fixes`**, cut from `phase-16-job-facts` at `ac1239c`. Restore tag **`pre-phase17-2026-09-14`**. Briefs: `PHASE17.md`, and `PHASE17-CLOSEOUT.md` for what is still open. **Not deployed.** Parts A to F are committed. Part E, the verification on real data, has never been run.
+Branch **`phase-17-coding-fixes`**, cut from `phase-16-job-facts` at `ac1239c`. Restore tag **`pre-phase17-2026-09-14`**. Briefs: `PHASE17.md`, and `PHASE17-CLOSEOUT.md`. Parts A to F are committed. Part E ran on staging 19 Sep 2026 (numbers at the top of this file). Batch undo is atomic (`b7d54c6`). The JobPeople em dash went with that file in Phase 18; remaining People copy is without the dash (`dc352d0`). Artefacts are tracked (`40714f6`). Staging is live from `phase-18-people`; production is not.
 
-**Read this before trusting the older notes below.** On this branch a missing `assistantWritesEnabled` field means writes are **on**. Only an explicit `false` is off. **Production still runs the old code, where missing means off**, so every older line in this file, `CLAUDE.md`, `AGENTS.md` and `DATABASE.md` that says "missing = off" is still true of production and will be corrected when this phase ships.
+**Read this before trusting the older notes below.** On **staging / localhost** a missing `assistantWritesEnabled` field means writes are **on**. Only an explicit `false` is off. **Production still runs the old code, where missing means off.**
 
 ### What shipped to the branch
 
@@ -96,14 +160,14 @@ The failure is in memory only. Nothing is written to IndexedDB, so a reload rest
 curl -s https://risingamp.com.au | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'
 ```
 
-If it is still `index-DhMkWQ3T.js`, production does **not** have the fix and new users still cannot sign up.
+If it is still `index-DhMkWQ3T.js`, that 11 Sep 2026 bundle is still serving. As of 19 Sep 2026 production served `index-D_v50ECA.js`. This trunk was not deployed there.
 
-### Open, and why it matters
+### Open as of 18 Sep, closed on 19 Sep
 
-1. **Part E never ran.** `scripts/phase17-staging-proposals.ts` exists, is read-only and refuses `--production`, but has never been executed and no results are recorded. So the central claim of Part C is unverified. There is a specific reason it might have gone backwards: `expenseHaystackFields` now feeds nine fields into the matcher instead of four, and a multi-hit returns `none` rather than a proposal, so the proposal count could have fallen. That is the first number to look at.
-2. **Batch undo is not atomic.** Single-row coding, creation and undo are. `restoreTradeIdBatch` in `src/actions/undo.ts` still stamps the parent receipt in a separate `patchReceipt`, and its fallback inside the loop is a bare `updateExpense` with no receipt patch at all. It self-heals on retry, so it corrupts nothing, but the docblock at the top of `src/actions/atomicCommits.test.ts` claims "no reverted row still showing 'applied'" and the batch parent can do exactly that. Finish it or narrow the claim.
-3. **One em dash in shipped copy**, `src/components/JobPeople.jsx`. Standing constraint is no em dashes.
-4. **Untracked and undecided**: `Claude outputs/`, `brand/`, and the design files. Commit or gitignore them before merging.
+1. **Part E never ran.** Ran 19 Sep 2026. See the top of this file.
+2. **Batch undo is not atomic.** Closed in `b7d54c6`. Remaining children and the parent stamp are one `commitUndoBatch`.
+3. **One em dash in shipped copy**, `src/components/JobPeople.jsx`. That file is deleted. Remaining Phase 18 People copy is without the dash (`dc352d0`).
+4. **Untracked and undecided.** Design files, briefs, scripts and `brand/` are tracked (`40714f6`). `Claude outputs/` is gitignored and still on disk.
 
 ### Orphan UI branch (`2900f9b`)
 
