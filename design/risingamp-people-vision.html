@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RisingAMP People</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#0E0F13; --panel:#17181C; --panel-2:#1F2127; --edge:#2A2D34; --edge-soft:#212429;
+    --on-dark:#E8EAEE; --on-dark-dim:#9AA0A9; --on-dark-faint:#6B7079;
+    --steel-900:#17181C; --steel-800:#1F2127;
+    --ink:#1C1E23; --slate-600:#565B64; --slate-500:#6B7079; --slate-400:#8A9099;
+    --hairline:#E7E9EC; --canvas:#F5F6F8; --surface:#FFFFFF;
+    --accent:#E85D1A; --accent-600:#C64E12; --accent-tint:#FCEEE4;
+    --pos:#2E7D57; --pos-tint:#E7F1EC; --warn:#B7862B; --warn-tint:#F7F0DF; --neg:#C0392B;
+    --neutral-tint:#EDEFF2;
+    --ui:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --spec:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--on-dark);font-family:var(--ui);margin:0;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto;padding-inline:20px;padding-block:0 76px}
+
+  /* masthead */
+  .masthead{border-bottom:1px solid var(--edge);padding-block:38px 26px;display:flex;flex-wrap:wrap;gap:30px;align-items:flex-end;justify-content:space-between}
+  .kicker{font-family:var(--spec);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin:0 0 14px}
+  h1{font-size:clamp(30px,5vw,44px);line-height:1.04;letter-spacing:-.028em;font-weight:800;margin:0;text-wrap:balance}
+  .lede{max-width:35rem}
+  .lede p{color:var(--on-dark-dim);font-size:15px;line-height:1.62;margin:16px 0 0}
+  .stamp{font-family:var(--spec);font-size:11px;line-height:1.95;color:var(--on-dark-faint);border-left:2px solid var(--accent);padding-left:14px}
+  .stamp b{color:var(--on-dark-dim);font-weight:500}
+
+  .sec{padding-block:54px 0}
+  .sec-head{display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--edge);padding-bottom:12px;margin-bottom:26px}
+  .sec-num{font-family:var(--spec);font-size:11px;color:var(--accent);letter-spacing:.14em;flex:none}
+  .sec-head h2{font-size:19px;font-weight:700;letter-spacing:-.016em;margin:0}
+  .sec-head .note{font-family:var(--spec);font-size:11px;color:var(--on-dark-faint);margin-left:auto;letter-spacing:.04em}
+  .prose{color:var(--on-dark-dim);font-size:13.5px;line-height:1.68;max-width:44rem;margin:0 0 22px}
+  .prose b{color:var(--on-dark)}
+  .prose code{font-family:var(--spec);font-size:12px;color:var(--accent);background:var(--panel);padding:1px 5px;border-radius:4px}
+
+  /* role matrix */
+  .tw{overflow-x:auto;border:1px solid var(--edge-soft);border-radius:10px}
+  table.matrix{width:100%;border-collapse:collapse;font-size:12.5px;min-width:620px;background:var(--panel)}
+  table.matrix th{text-align:left;font-family:var(--spec);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--on-dark-faint);font-weight:500;padding:14px 14px 11px;border-bottom:1px solid var(--edge)}
+  table.matrix td{padding:11px 14px;border-bottom:1px solid var(--edge-soft);color:var(--on-dark-dim);vertical-align:middle}
+  table.matrix tr:last-child td{border-bottom:0}
+  table.matrix td:first-child{color:var(--on-dark);font-weight:600;white-space:nowrap}
+  .yes{color:var(--pos);font-weight:700}
+  .no{color:var(--on-dark-faint)}
+  .part{color:var(--warn);font-size:11.5px}
+
+  /* device frames */
+  .stage{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start;justify-content:center}
+  .rig{flex:1 1 720px;min-width:0;max-width:940px}
+  .rig.phone{flex:0 1 360px;max-width:360px}
+  .rig-label{font-family:var(--spec);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--on-dark-faint);display:flex;justify-content:space-between;gap:12px;padding-bottom:11px}
+  .rig-label b{color:var(--on-dark-dim);font-weight:500}
+  .frame{border:1px solid var(--edge);border-radius:12px;overflow:hidden;background:var(--canvas);box-shadow:0 26px 64px rgba(0,0,0,.5)}
+  .chrome{background:var(--panel-2);border-bottom:1px solid var(--edge);padding:10px 14px;display:flex;align-items:center;gap:7px}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .chrome-url{font-family:var(--spec);font-size:10.5px;color:var(--on-dark-faint);margin-left:10px}
+
+  /* ---------- the app ---------- */
+  .app{display:flex;min-height:560px;font-family:var(--ui);color:var(--ink);background:var(--canvas)}
+  .side{width:186px;flex:none;background:var(--steel-900);color:#C9CDD4;padding:16px 12px;display:flex;flex-direction:column}
+  .brand{display:flex;align-items:center;gap:9px;padding:2px 4px 20px}
+  .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);flex:none}
+  .brand b{font-size:13.5px;font-weight:800;color:#fff;letter-spacing:-.01em}
+  .navlab{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#5B606A;font-weight:700;padding:8px 8px 7px}
+  .nav{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;font-size:12.5px;font-weight:500;color:#B4B9C1;margin-bottom:2px;position:relative}
+  .nav.on{background:var(--steel-800);color:#fff}
+  .nav.on::before{content:'';position:absolute;left:-12px;top:7px;bottom:7px;width:3px;border-radius:0 2px 2px 0;background:var(--accent)}
+  .glyph{width:14px;height:14px;border-radius:3px;border:1.5px solid currentColor;opacity:.7;flex:none}
+  .glyph.f{border-radius:50%}
+  .side-foot{margin-top:auto;border-top:1px solid #2A2D34;padding-top:11px;display:flex;align-items:center;gap:8px}
+
+  .main{flex:1;min-width:0;display:flex}
+  .col{flex:1;min-width:0;padding:22px 24px 26px;overflow:hidden}
+  .eyebrow{font-size:10px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--slate-400)}
+  .h1{font-size:23px;font-weight:800;letter-spacing:-.025em;margin:5px 0 0;color:var(--ink)}
+  .sub{font-size:12.5px;color:var(--slate-500);margin-top:5px}
+  .rowtop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:9px 14px;font-size:12.5px;font-weight:700;font-family:var(--ui);white-space:nowrap}
+  .btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--hairline);font-weight:600}
+
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:18px 0 12px}
+  .chip{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid var(--hairline);background:var(--surface);color:var(--slate-600)}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+
+  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:12px;overflow:hidden}
+  .thead,.prow{display:grid;grid-template-columns:minmax(0,2.1fr) 92px minmax(0,1.5fr) 88px 26px;gap:12px;align-items:center;padding:10px 14px}
+  .thead{font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--slate-400);border-bottom:1px solid var(--hairline);background:#FBFCFD}
+  .prow{border-bottom:1px solid var(--hairline);min-height:54px}
+  .prow:last-child{border-bottom:0}
+  .prow.sel{background:#FBF7F4;box-shadow:inset 3px 0 0 var(--accent)}
+  .who{display:flex;align-items:center;gap:10px;min-width:0}
+  .av{width:32px;height:32px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:11.5px;font-weight:700;color:#fff;letter-spacing:.01em}
+  .nm{min-width:0}
+  .nm b{display:block;font-size:13px;font-weight:700;color:var(--ink);letter-spacing:-.008em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nm small{display:block;font-size:11px;color:var(--slate-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  .pill{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:4px 8px;border-radius:5px;white-space:nowrap}
+  .p-owner{background:var(--accent-tint);color:var(--accent-600)}
+  .p-manager{background:var(--neutral-tint);color:var(--ink)}
+  .p-site{background:transparent;border:1px solid var(--hairline);color:var(--slate-600)}
+  .p-viewer{background:transparent;border:1px dashed #D5D9DE;color:var(--slate-400)}
+  .p-none{background:var(--warn-tint);color:#8A6418}
+  .jobs{font-size:11.5px;color:var(--slate-600);line-height:1.45}
+  .jobs span{color:var(--slate-400)}
+  .when{font-size:11px;color:var(--slate-400);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .when.warn{color:var(--warn);font-weight:600}
+  .caret{color:var(--slate-400);font-size:14px;text-align:right}
+  .flag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--warn);margin-top:3px}
+  .flag i{width:5px;height:5px;border-radius:50%;background:var(--warn);font-style:normal}
+
+  /* person panel */
+  .panel{width:296px;flex:none;border-left:1px solid var(--hairline);background:var(--surface);padding:20px 18px;overflow:hidden}
+  .panel-top{display:flex;align-items:center;gap:11px;padding-bottom:14px;border-bottom:1px solid var(--hairline)}
+  .panel-top .av{width:42px;height:42px;font-size:14px}
+  .panel-top b{display:block;font-size:15px;font-weight:800;letter-spacing:-.018em;color:var(--ink)}
+  .panel-top small{display:block;font-size:11.5px;color:var(--slate-400);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fld{padding:12px 0;border-bottom:1px solid var(--hairline)}
+  .fld .k{font-size:9.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--slate-400);margin-bottom:6px}
+  .fld .v{font-size:12.5px;color:var(--ink);line-height:1.5}
+  .seg{display:flex;border:1px solid var(--hairline);border-radius:8px;overflow:hidden}
+  .seg div{flex:1;text-align:center;font-size:10.5px;font-weight:700;padding:7px 2px;color:var(--slate-500);border-right:1px solid var(--hairline)}
+  .seg div:last-child{border-right:0}
+  .seg div.on{background:var(--ink);color:#fff}
+  .jl{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--ink);padding:5px 0}
+  .jl em{font-style:normal;font-size:10.5px;color:var(--slate-400)}
+  .acts{display:flex;flex-direction:column;gap:7px;padding-top:14px}
+  .act{font-size:12px;font-weight:600;padding:8px 11px;border-radius:8px;border:1px solid var(--hairline);color:var(--ink);background:var(--surface)}
+  .act.danger{color:var(--neg);border-color:#EDD4D0}
+  .noteline{font-size:11px;color:var(--slate-400);line-height:1.5;padding-top:12px}
+
+  /* phone */
+  .handset{border:1px solid var(--edge);border-radius:34px;padding:9px;background:var(--panel-2);box-shadow:0 26px 60px rgba(0,0,0,.5)}
+  .screen{background:var(--canvas);border-radius:26px;overflow:hidden}
+  .status{padding:10px 18px 5px;display:flex;justify-content:space-between;font-family:var(--spec);font-size:10px;color:var(--slate-600)}
+  .ph{padding:6px 14px 18px}
+  .ph .prow{grid-template-columns:minmax(0,1fr) auto;gap:8px;padding:11px 12px}
+  .ph .thead{display:none}
+  .ph .rowtop{flex-direction:column;gap:12px}
+  .ph .btn{width:100%;text-align:center}
+
+  /* before / after */
+  .ba{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:22px}
+  .ba-col .tag{font-family:var(--spec);font-size:10px;letter-spacing:.15em;text-transform:uppercase;padding-bottom:10px;display:block}
+  .tag.bad{color:var(--neg)}
+  .tag.good{color:var(--pos)}
+  .mini{background:var(--surface);border:1px solid var(--hairline);border-radius:11px;padding:16px 16px 18px;color:var(--ink)}
+  .mini h3{font-size:19px;font-weight:800;letter-spacing:-.024em;margin:6px 0 0}
+  .mini .messy{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+  .mini .mchip{display:flex;align-items:center;gap:5px;font-size:10.5px;background:var(--canvas);border:1px solid var(--hairline);border-radius:99px;padding:3px 8px 3px 3px;color:var(--slate-600)}
+  .mini .mchip .av{width:18px;height:18px;font-size:8px}
+  .mini .inv{font-size:10.5px;color:var(--slate-400);margin-top:6px;line-height:1.5}
+  .stack{display:flex;align-items:center;gap:8px;margin-top:10px}
+  .faces{display:flex}
+  .faces .av{width:24px;height:24px;font-size:9px;border:2px solid var(--surface);margin-left:-7px}
+  .faces .av:first-child{margin-left:0}
+  .stack a{font-size:11.5px;color:var(--accent-600);font-weight:700}
+  .stack .cnt{font-size:11.5px;color:var(--slate-500)}
+  .toggle{display:flex;gap:6px;margin-top:14px}
+  .toggle div{font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;border:1px solid var(--hairline);color:var(--slate-500)}
+  .toggle div.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .callouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;background:var(--edge-soft);border:1px solid var(--edge-soft);border-radius:10px;overflow:hidden;margin-top:26px}
+  .co{background:var(--panel);padding:17px 19px 19px}
+  .co .t{font-family:var(--spec);font-size:10px;letter-spacing:.13em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:9px}
+  .co h3{font-size:13.5px;font-weight:700;margin:0 0 7px;letter-spacing:-.01em}
+  .co p{font-size:12.5px;line-height:1.6;color:var(--on-dark-dim);margin:0}
+  .co code{font-family:var(--spec);font-size:11px;color:var(--on-dark);background:var(--panel-2);padding:1px 5px;border-radius:4px}
+
+  @media (max-width:860px){
+    .panel{display:none}
+    .side{display:none}
+    .thead,.prow{grid-template-columns:minmax(0,1fr) 88px auto}
+    .thead span:nth-child(3),.prow .jobs,.thead span:nth-child(5),.prow .caret{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="lede">
+      <p class="kicker">RisingAMP / Phase 18</p>
+      <h1>A person is a person, not a list of email strings</h1>
+      <p>Today the whole permission system is one line of code: is your email the same as the
+        org's owner email. Everyone else on a job can do everything on it. People show up as
+        chips under the job title, removing one means digging through an invite panel, and there
+        is nowhere to look at anybody. This is what replaces that.</p>
+    </div>
+    <div class="stamp">
+      <b>FILE</b> design/risingamp-people-vision.html<br>
+      <b>ROUTE</b> /people<br>
+      <b>ROLES</b> Owner · Manager · Site · Viewer<br>
+      <b>SCOPE</b> no client or homeowner role<br>
+      <b>STATUS</b> approved, build to it
+    </div>
+  </header>
+
+  <!-- ============ roles ============ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">A</span>
+      <h2>Four roles, and what each one is for</h2>
+      <span class="note">enforced in firestore.rules, not just the UI</span>
+    </div>
+
+    <p class="prose">Every row below is a rules change, not a hidden button. The UI hides what you
+      cannot do so the screen stays honest, but <b>hiding is not the enforcement</b>. A person who
+      edits their cached role in local storage should see the interface change and every write
+      still fail, with a message that says why.</p>
+
+    <div class="tw">
+      <table class="matrix">
+        <tr>
+          <th>Can</th><th>Owner</th><th>Manager</th><th>Site</th><th>Viewer</th>
+        </tr>
+        <tr><td>Add expenses, scan receipts</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
+        <tr><td>Upload files and photos</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
+        <tr><td>Code expenses to the cost plan</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
+        <tr><td>Lock or archive the cost plan</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td>Create and send invoices</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td>Edit the contract and progress claims</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td>Rename or archive a job</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td>Create a job</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td>Invite and remove people</td><td class="yes">Yes</td><td class="part">Below their own level</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td>Assign roles</td><td class="yes">Yes</td><td class="part">Site and Viewer only</td><td class="no">No</td><td class="no">No</td></tr>
+        <tr><td>Read everything on their jobs</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+        <tr><td>Turn assistant writes on or off</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+      </table>
+    </div>
+
+    <div class="callouts">
+      <div class="co">
+        <span class="t">The one that matters most</span>
+        <h3>A homeowner is not a Viewer</h3>
+        <p>A Viewer reads the cost plan, which means supplier pricing, subcontractor rates and the
+          margin. Never give a client this role. A client-facing view is a separate build with a
+          different data boundary, and it is deliberately not in this phase.</p>
+      </div>
+      <div class="co">
+        <span class="t">Data model</span>
+        <h3>Two arrays, one extra read of nothing</h3>
+        <p><code>managers[]</code> and <code>viewers[]</code> on the job document, alongside the
+          existing <code>invitedEmails[]</code>. Absent from both means Site. The rules already
+          fetch the job document once, so the role rides along in that same read and costs nothing.</p>
+      </div>
+      <div class="co">
+        <span class="t">Migration</span>
+        <h3>Assign from evidence, not from a guess</h3>
+        <p>The script reads what each person actually did in the last ninety days, expenses,
+          invoices, files, cost plan changes, and proposes a role from that. It prints the table
+          and writes nothing until you approve it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ the page ============ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">B</span>
+      <h2>The People page</h2>
+      <span class="note">/people</span>
+    </div>
+
+    <p class="prose">One row per person in the business, not per job. The row carries everything
+      you would squint at a chip to find out: who they are, what they can do, which jobs they are
+      on, and whether they have actually turned up. Attention sorts to the top, so somebody who
+      was invited nine days ago and never signed in is the first thing you see.</p>
+
+    <div class="stage">
+      <div class="rig">
+        <div class="rig-label"><span>Desktop</span><b>Person panel open</b></div>
+        <div class="frame">
+          <div class="chrome">
+            <span class="dot" style="background:#FF5F57"></span>
+            <span class="dot" style="background:#FEBC2E"></span>
+            <span class="dot" style="background:#28C840"></span>
+            <span class="chrome-url">risingamp.com.au/people</span>
+          </div>
+
+          <div class="app">
+            <!-- sidebar -->
+            <aside class="side">
+              <div class="brand"><span class="mark"></span><b>RisingAMP</b></div>
+              <div class="navlab">Main</div>
+              <div class="nav"><span class="glyph"></span>Jobs</div>
+              <div class="nav"><span class="glyph"></span>Cost plan</div>
+              <div class="nav"><span class="glyph"></span>Add expense</div>
+              <div class="nav"><span class="glyph"></span>Invoices</div>
+              <div class="nav"><span class="glyph"></span>Files</div>
+              <div class="nav on"><span class="glyph f"></span>People</div>
+              <div class="nav"><span class="glyph"></span>History</div>
+              <div class="side-foot">
+                <span class="av" style="background:#C64E12;width:24px;height:24px;font-size:9px">LS</span>
+                <span style="font-size:11px;color:#E5E7EA;font-weight:600">Lalit Sahni</span>
+              </div>
+            </aside>
+
+            <div class="main">
+              <div class="col">
+                <div class="rowtop">
+                  <div>
+                    <div class="eyebrow">Opal SS Constructions</div>
+                    <div class="h1">People</div>
+                    <div class="sub">5 people · 1 invite not accepted · 1 role not set</div>
+                  </div>
+                  <button class="btn">Add someone</button>
+                </div>
+
+                <div class="chips">
+                  <span class="chip on">Everyone</span>
+                  <span class="chip">95 Tahmoor Rd</span>
+                  <span class="chip">72 Centenary Dr</span>
+                  <span class="chip">Kelly St</span>
+                </div>
+
+                <div class="card">
+                  <div class="thead">
+                    <span>Person</span><span>Role</span><span>Jobs</span><span>Last active</span><span></span>
+                  </div>
+
+                  <div class="prow">
+                    <div class="who">
+                      <span class="av" style="background:#B5654A">RK</span>
+                      <span class="nm"><b>Ravi Kumar</b><small>ravi.kumar.site@gmail.com</small>
+                        <span class="flag"><i></i>Invited 9 days ago, never signed in</span></span>
+                    </div>
+                    <span><span class="pill p-none">No role</span></span>
+                    <span class="jobs">95 Tahmoor Rd</span>
+                    <span class="when warn">Never</span>
+                    <span class="caret">›</span>
+                  </div>
+
+                  <div class="prow sel">
+                    <div class="who">
+                      <span class="av" style="background:#4E8C82">PJ</span>
+                      <span class="nm"><b>Prabhsharan Jabbal</b><small>prabhsharanjabbal@gmail.com</small></span>
+                    </div>
+                    <span><span class="pill p-manager">Manager</span></span>
+                    <span class="jobs">95 Tahmoor Rd, Kelly St</span>
+                    <span class="when">2h ago</span>
+                    <span class="caret">›</span>
+                  </div>
+
+                  <div class="prow">
+                    <div class="who">
+                      <span class="av" style="background:#C64E12">LS</span>
+                      <span class="nm"><b>Lalit Sahni</b><small>sahni.lalit18@gmail.com</small></span>
+                    </div>
+                    <span><span class="pill p-owner">Owner</span></span>
+                    <span class="jobs">All 3 jobs</span>
+                    <span class="when">Now</span>
+                    <span class="caret">›</span>
+                  </div>
+
+                  <div class="prow">
+                    <div class="who">
+                      <span class="av" style="background:#7E9B63">DS</span>
+                      <span class="nm"><b>Deepak Sharma</b><small>deepak@opalss.com.au</small></span>
+                    </div>
+                    <span><span class="pill p-site">Site</span></span>
+                    <span class="jobs">72 Centenary Dr, Kelly St</span>
+                    <span class="when">Yesterday</span>
+                    <span class="caret">›</span>
+                  </div>
+
+                  <div class="prow">
+                    <div class="who">
+                      <span class="av" style="background:#5E82A6">MT</span>
+                      <span class="nm"><b>Megan Tran</b><small>megan@trancoaccounting.com.au</small></span>
+                    </div>
+                    <span><span class="pill p-viewer">Viewer</span></span>
+                    <span class="jobs">All 3 jobs <span>· read only</span></span>
+                    <span class="when">4 days ago</span>
+                    <span class="caret">›</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- person panel -->
+              <aside class="panel">
+                <div class="panel-top">
+                  <span class="av" style="background:#4E8C82">PJ</span>
+                  <span style="min-width:0">
+                    <b>Prabhsharan Jabbal</b>
+                    <small>prabhsharanjabbal@gmail.com</small>
+                  </span>
+                </div>
+
+                <div class="fld">
+                  <div class="k">Role</div>
+                  <div class="seg">
+                    <div>Owner</div><div class="on">Manager</div><div>Site</div><div>Viewer</div>
+                  </div>
+                </div>
+
+                <div class="fld">
+                  <div class="k">On these jobs</div>
+                  <div class="jl">95 Tahmoor Rd Austral <em>since 14 Aug</em></div>
+                  <div class="jl">Kelly St <em>since 2 Jun</em></div>
+                </div>
+
+                <div class="fld">
+                  <div class="k">Last 90 days</div>
+                  <div class="v">42 expenses, 6 invoices, 11 files.<br>Locked the Kelly St cost plan on 3 Sep.</div>
+                </div>
+
+                <div class="fld">
+                  <div class="k">Signs in with</div>
+                  <div class="v">Google · joined 2 Jun 2026</div>
+                </div>
+
+                <div class="acts">
+                  <div class="act">Add to a job</div>
+                  <div class="act">Resend invite</div>
+                  <div class="act danger">Remove from Opal SS</div>
+                </div>
+
+                <p class="noteline">Phone numbers and addresses are not shown here, to anyone.
+                  They live on the person's own profile and only they can read it. For a worker's
+                  contact number, use the directory.</p>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- phone -->
+      <div class="rig phone">
+        <div class="rig-label"><span>Phone</span><b>390 px</b></div>
+        <div class="handset">
+          <div class="screen">
+            <div class="status"><span>9:41</span><span>People</span></div>
+            <div class="ph">
+              <div class="rowtop" style="flex-direction:column;align-items:stretch;gap:12px">
+                <div>
+                  <div class="eyebrow">Opal SS Constructions</div>
+                  <div class="h1" style="font-size:21px">People</div>
+                  <div class="sub">5 people · 1 needs attention</div>
+                </div>
+                <button class="btn" style="width:100%">Add someone</button>
+              </div>
+
+              <div class="chips" style="margin:14px 0 10px;flex-wrap:nowrap;overflow:hidden">
+                <span class="chip on">Everyone</span>
+                <span class="chip">95 Tahmoor Rd</span>
+              </div>
+
+              <div class="card">
+                <div class="prow" style="grid-template-columns:minmax(0,1fr) auto;gap:8px">
+                  <div class="who">
+                    <span class="av" style="background:#B5654A">RK</span>
+                    <span class="nm"><b>Ravi Kumar</b>
+                      <span class="flag"><i></i>Never signed in</span></span>
+                  </div>
+                  <span><span class="pill p-none">No role</span></span>
+                </div>
+                <div class="prow" style="grid-template-columns:minmax(0,1fr) auto;gap:8px">
+                  <div class="who">
+                    <span class="av" style="background:#4E8C82">PJ</span>
+                    <span class="nm"><b>Prabhsharan Jabbal</b><small>2 jobs · 2h ago</small></span>
+                  </div>
+                  <span><span class="pill p-manager">Manager</span></span>
+                </div>
+                <div class="prow" style="grid-template-columns:minmax(0,1fr) auto;gap:8px">
+                  <div class="who">
+                    <span class="av" style="background:#C64E12">LS</span>
+                    <span class="nm"><b>Lalit Sahni</b><small>All 3 jobs · now</small></span>
+                  </div>
+                  <span><span class="pill p-owner">Owner</span></span>
+                </div>
+                <div class="prow" style="grid-template-columns:minmax(0,1fr) auto;gap:8px">
+                  <div class="who">
+                    <span class="av" style="background:#7E9B63">DS</span>
+                    <span class="nm"><b>Deepak Sharma</b><small>2 jobs · yesterday</small></span>
+                  </div>
+                  <span><span class="pill p-site">Site</span></span>
+                </div>
+                <div class="prow" style="grid-template-columns:minmax(0,1fr) auto;gap:8px">
+                  <div class="who">
+                    <span class="av" style="background:#5E82A6">MT</span>
+                    <span class="nm"><b>Megan Tran</b><small>All 3 jobs · 4 days ago</small></span>
+                  </div>
+                  <span><span class="pill p-viewer">Viewer</span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ job header ============ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">C</span>
+      <h2>The job header stops being a people list</h2>
+      <span class="note">DashboardPage.js:314</span>
+    </div>
+
+    <p class="prose">Right now <code>&lt;JobPeople&gt;</code> renders between the job name and the
+      build-type toggle with no owner and no remove handler passed in, so it labels nobody and
+      does nothing. It is three rows of chips competing with the thing you actually came to read.
+      It becomes one line that answers the only question worth asking here, which is who is on this
+      job, and gets out of the way.</p>
+
+    <div class="ba">
+      <div class="ba-col">
+        <span class="tag bad">Today</span>
+        <div class="mini">
+          <div class="eyebrow">Job</div>
+          <h3>95 Tahmoor Rd Austral</h3>
+          <div class="messy">
+            <span class="mchip"><span class="av" style="background:#C64E12">LS</span>Lalit Sahni</span>
+            <span class="mchip"><span class="av" style="background:#4E8C82">PJ</span>Prabhsharan Jabbal</span>
+            <span class="mchip"><span class="av" style="background:#B5654A">RK</span>ravi.kumar.site@gmail.com</span>
+            <span class="mchip"><span class="av" style="background:#5E82A6">MT</span>megan@trancoaccounting.com.au</span>
+          </div>
+          <div class="inv">ravi.kumar.site@gmail.com — invited 9 days ago · sent</div>
+          <div class="toggle"><div class="on">Client build</div><div>Own build</div></div>
+        </div>
+      </div>
+
+      <div class="ba-col">
+        <span class="tag good">Phase 18</span>
+        <div class="mini">
+          <div class="eyebrow">Job</div>
+          <h3>95 Tahmoor Rd Austral</h3>
+          <div class="stack">
+            <span class="faces">
+              <span class="av" style="background:#C64E12">LS</span>
+              <span class="av" style="background:#4E8C82">PJ</span>
+              <span class="av" style="background:#B5654A">RK</span>
+              <span class="av" style="background:#5E82A6">MT</span>
+            </span>
+            <span class="cnt">4 people</span>
+            <a>Manage</a>
+          </div>
+          <div class="toggle"><div class="on">Client build</div><div>Own build</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callouts">
+      <div class="co">
+        <span class="t">Delete this</span>
+        <h3>Two implementations of one thing</h3>
+        <p><code>removePerson</code> at <code>JobsHomePage.js:285</code> and the inline invite
+          panel at line 518 go away. The job row keeps an invite affordance because inviting
+          somebody while looking at their job is the right moment, but it opens the People page
+          filtered to that job. One place edits people.</p>
+      </div>
+      <div class="co">
+        <span class="t">Found while reading</span>
+        <h3>Anyone can rename any job</h3>
+        <p>The Pencil button at <code>JobsHomePage.js:620</code> has no owner gate, and
+          <code>firestore.rules:87</code> lets any member change <code>name</code>,
+          <code>budget</code> and <code>kind</code>. Renaming becomes a Manager action. Fix the
+          rule and the button together.</p>
+      </div>
+      <div class="co">
+        <span class="t">Attention first</span>
+        <h3>Sort by who needs you</h3>
+        <p>Never signed in, invite bounced, no role set, all above everyone who is fine. This is a
+          list of five people, so it should read calm. The ordering is what makes it useful, not
+          the density.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ commitments ============ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">D</span>
+      <h2>What this design commits to</h2>
+      <span class="note">hold the build to these</span>
+    </div>
+
+    <div class="tw">
+      <table class="matrix">
+        <tr><th>Commitment</th><th>Why, and what breaks if it slips</th></tr>
+        <tr>
+          <td>A person is a row</td>
+          <td>Photo, name, role, jobs, last active, and what they have done. A chip cannot carry
+            that, which is why the current one tells you nothing.</td>
+        </tr>
+        <tr>
+          <td>One place to change anything</td>
+          <td>Invite, assign, move, remove, all from the person panel. The moment there are two
+            places, they drift, and the one you are not looking at is the one that is wrong.</td>
+        </tr>
+        <tr>
+          <td>No phone numbers, no addresses</td>
+          <td><code>toPublicProfile</code> strips them deliberately and a comment in the code says
+            so. That boundary was closed on purpose in an earlier phase. Do not reopen it to make
+            this page feel fuller.</td>
+        </tr>
+        <tr>
+          <td>Hiding is never the enforcement</td>
+          <td>The role is cached in local storage for first paint. Anybody can edit it. Every
+            gated action must fail on the rules, and say so out loud when it does.</td>
+        </tr>
+        <tr>
+          <td>A refused write explains itself</td>
+          <td>"You need to be a manager to send an invoice" and not a button that silently does
+            nothing. Under four roles this will happen daily to somebody.</td>
+        </tr>
+        <tr>
+          <td>Attention sorts to the top</td>
+          <td>The page exists to answer who needs something from me. Alphabetical would be a list;
+            this is a worklist.</td>
+        </tr>
+      </table>
+    </div>
+
+    <p class="prose" style="margin-top:22px">Names and figures on this page are illustrative,
+      apart from the owner and the job names, which are real. Ravi Kumar, Deepak Sharma and Megan
+      Tran are stand-ins for the shapes of person this has to handle: somebody invited who never
+      arrived, somebody who only does site work, and an outside bookkeeper who must never be able
+      to change a number.</p>
+  </section>
+
+</div>
+</body>
+</html>
