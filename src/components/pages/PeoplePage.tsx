@@ -250,7 +250,7 @@ export default function PeoplePage() {
         const closed = mailErr && typeof mailErr === 'object' && (mailErr as { code?: string }).code === 'auth/popup-closed-by-user';
         setError(
           closed
-            ? `${saved} is on ${job.name}. Google asked to send the email and that window was closed — send it again.`
+            ? `${saved} is on ${job.name}. Google asked to send the email and that window was closed. Send it again.`
             : `${saved} is on ${job.name}, but the invite email did not send. Ask them to open this same page and sign in with that email.`,
         );
       }

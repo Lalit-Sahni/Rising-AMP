@@ -700,7 +700,7 @@ export function personPanelModel(input: {
   if (input.row.inviteLine) {
     activity += ` Invite ${input.row.inviteLine.statusLabel}, ${input.row.inviteLine.ageLabel}.`;
   }
-  activity += ' Spend and files live on History and Cost plan — this page does not count them.';
+  activity += ' Spend and files live on History and Cost plan. This page does not count them.';
   let invitedLabel = '';
   if (input.row.inviteLine) {
     invitedLabel = `Invited ${input.row.inviteLine.ageLabel}`;
