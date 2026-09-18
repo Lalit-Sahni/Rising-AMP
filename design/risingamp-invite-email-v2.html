@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RisingAMP Invite Email</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#0E0F13;
+    --panel:#17181C;
+    --panel-2:#1F2127;
+    --edge:#2A2D34;
+    --edge-soft:#232529;
+    --paper:#FFFFFF;
+    --canvas:#F5F6F8;
+    --hairline:#E7E9EC;
+    --ink:#1C1E23;
+    --slate-600:#565B64;
+    --slate-400:#8A9099;
+    --accent:#E85D1A;
+    --accent-600:#C64E12;
+    --accent-tint:#FCEEE4;
+    --pos:#2E7D57;
+    --on-dark:#E8EAEE;
+    --on-dark-dim:#9AA0A9;
+    --on-dark-faint:#6B7079;
+    --ui:'Manrope',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --spec:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+
+  *{box-sizing:border-box}
+
+  body{
+    background:var(--ground);
+    color:var(--on-dark);
+    font-family:var(--ui);
+    margin:0;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding-inline:20px;
+    padding-block:0 72px;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead{
+    border-bottom:1px solid var(--edge);
+    padding-block:38px 26px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:28px;
+    align-items:flex-end;
+    justify-content:space-between;
+  }
+  .lede{max-width:34rem}
+  .kicker{
+    font-family:var(--spec);
+    font-size:11px;
+    font-weight:500;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 14px;
+  }
+  h1{
+    font-size:clamp(30px,5vw,44px);
+    line-height:1.04;
+    letter-spacing:-.028em;
+    font-weight:800;
+    margin:0;
+    text-wrap:balance;
+  }
+  .lede p{
+    color:var(--on-dark-dim);
+    font-size:15px;
+    line-height:1.6;
+    margin:16px 0 0;
+    max-width:32rem;
+  }
+  .stamp{
+    font-family:var(--spec);
+    font-size:11px;
+    line-height:1.9;
+    color:var(--on-dark-faint);
+    border-left:2px solid var(--accent);
+    padding-left:14px;
+  }
+  .stamp b{color:var(--on-dark-dim);font-weight:500}
+
+  /* ---------- swatches ---------- */
+  .swatches{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:26px;
+  }
+  .sw{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    border:1px solid var(--edge);
+    border-radius:7px;
+    padding:6px 11px 6px 7px;
+    font-family:var(--spec);
+    font-size:10.5px;
+    color:var(--on-dark-faint);
+    letter-spacing:.04em;
+  }
+  .chip{width:15px;height:15px;border-radius:4px;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.09)}
+
+  /* ---------- section headers ---------- */
+  .sec{padding-block:52px 0}
+  .sec-head{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    border-bottom:1px solid var(--edge);
+    padding-bottom:12px;
+    margin-bottom:26px;
+  }
+  .sec-num{
+    font-family:var(--spec);
+    font-size:11px;
+    color:var(--accent);
+    letter-spacing:.14em;
+    flex:none;
+  }
+  .sec-head h2{
+    font-size:19px;
+    font-weight:700;
+    letter-spacing:-.016em;
+    margin:0;
+  }
+  .sec-head span.note{
+    font-family:var(--spec);
+    font-size:11px;
+    color:var(--on-dark-faint);
+    margin-left:auto;
+    letter-spacing:.04em;
+  }
+
+  /* ---------- defect list ---------- */
+  .defects{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(248px,1fr));
+    gap:1px;
+    background:var(--edge-soft);
+    border:1px solid var(--edge-soft);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .defect{
+    background:var(--panel);
+    padding:18px 20px 20px;
+  }
+  .defect .tag{
+    font-family:var(--spec);
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--accent);
+    display:block;
+    margin-bottom:10px;
+  }
+  .defect h3{
+    font-size:14px;
+    font-weight:700;
+    margin:0 0 7px;
+    letter-spacing:-.01em;
+  }
+  .defect p{
+    font-size:13px;
+    line-height:1.6;
+    color:var(--on-dark-dim);
+    margin:0;
+  }
+  .defect code{
+    font-family:var(--spec);
+    font-size:11.5px;
+    color:var(--on-dark);
+    background:var(--panel-2);
+    padding:1px 5px;
+    border-radius:4px;
+  }
+
+  /* ---------- device stage ---------- */
+  .stage{
+    display:flex;
+    flex-wrap:wrap;
+    gap:44px;
+    align-items:flex-start;
+    justify-content:center;
+    padding-top:6px;
+  }
+  .rig{flex:1 1 560px;min-width:0;max-width:660px}
+  .rig.phone{flex:0 1 390px;max-width:390px}
+  .rig-label{
+    font-family:var(--spec);
+    font-size:10.5px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--on-dark-faint);
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding-bottom:11px;
+  }
+  .rig-label b{color:var(--on-dark-dim);font-weight:500}
+
+  /* desktop mail client chrome */
+  .mac{
+    border:1px solid var(--edge);
+    border-radius:12px;
+    overflow:hidden;
+    background:var(--canvas);
+    box-shadow:0 26px 60px rgba(0,0,0,.5);
+  }
+  .mac-bar{
+    background:var(--panel-2);
+    border-bottom:1px solid var(--edge);
+    padding:11px 14px;
+    display:flex;
+    align-items:center;
+    gap:7px;
+  }
+  .dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .mac-from{
+    font-family:var(--spec);
+    font-size:10.5px;
+    color:var(--on-dark-faint);
+    margin-left:10px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .mac-body{padding:26px 22px 34px;overflow-x:auto}
+
+  /* phone chrome */
+  .handset{
+    border:1px solid var(--edge);
+    border-radius:34px;
+    padding:10px;
+    background:var(--panel-2);
+    box-shadow:0 26px 60px rgba(0,0,0,.5);
+  }
+  .screen{
+    background:var(--canvas);
+    border-radius:26px;
+    overflow:hidden;
+  }
+  .status{
+    background:var(--canvas);
+    padding:11px 20px 7px;
+    display:flex;
+    justify-content:space-between;
+    font-family:var(--spec);
+    font-size:10.5px;
+    color:var(--slate-600);
+    letter-spacing:.02em;
+  }
+  .phone-body{padding:8px 10px 22px}
+
+  /* ---------- the email itself ---------- */
+  .mailroot{
+    font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);
+  }
+  .mailroot table{border-collapse:collapse}
+  .mailroot a{text-decoration:none}
+
+  /* ---------- spec table ---------- */
+  .spec-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  .spec-table th{
+    text-align:left;
+    font-family:var(--spec);
+    font-size:10px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--on-dark-faint);
+    font-weight:500;
+    padding:0 16px 11px 0;
+    border-bottom:1px solid var(--edge);
+  }
+  .spec-table td{
+    padding:13px 16px 13px 0;
+    border-bottom:1px solid var(--edge-soft);
+    vertical-align:top;
+    line-height:1.55;
+    color:var(--on-dark-dim);
+  }
+  .spec-table td:first-child{
+    color:var(--on-dark);
+    font-weight:600;
+    width:31%;
+    min-width:150px;
+  }
+  .spec-table code{
+    font-family:var(--spec);
+    font-size:11.5px;
+    color:var(--accent);
+  }
+  .tw{overflow-x:auto}
+
+  .verdict{
+    margin-top:26px;
+    border:1px solid var(--edge);
+    border-left:2px solid var(--pos);
+    border-radius:9px;
+    background:var(--panel);
+    padding:18px 22px;
+    font-size:13.5px;
+    line-height:1.65;
+    color:var(--on-dark-dim);
+  }
+  .verdict b{color:var(--on-dark)}
+
+  @media (max-width:700px){
+    .rig.phone{flex:1 1 100%;max-width:420px;margin-inline:auto}
+    .mac-body{padding:16px 12px 24px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="lede">
+      <p class="kicker">RisingAMP / Transactional mail</p>
+      <h1>The job invite, rebuilt for the inbox</h1>
+      <p>The current invite is not far off. What breaks it is that three of its icons are inline
+        SVG, and every mail client on earth strips those, leaving empty coloured squares where the
+        artwork should be. This is the same email with nothing in it that can fail to render.</p>
+    </div>
+    <div class="stamp">
+      <b>FILE</b> design/risingamp-invite-email-v2.html<br>
+      <b>SENDER</b> invites@risingamp.com.au<br>
+      <b>WIDTH</b> 600 fluid to 320<br>
+      <b>TARGETS</b> Apple Mail, Gmail, Outlook<br>
+      <b>STATUS</b> For approval
+    </div>
+  </header>
+
+  <div class="swatches">
+    <span class="sw"><span class="chip" style="background:#E85D1A"></span>accent E85D1A</span>
+    <span class="sw"><span class="chip" style="background:#C64E12"></span>accent-600 C64E12</span>
+    <span class="sw"><span class="chip" style="background:#FCEEE4"></span>tint FCEEE4</span>
+    <span class="sw"><span class="chip" style="background:#17181C"></span>steel-900 17181C</span>
+    <span class="sw"><span class="chip" style="background:#1C1E23"></span>ink 1C1E23</span>
+    <span class="sw"><span class="chip" style="background:#565B64"></span>slate-600 565B64</span>
+    <span class="sw"><span class="chip" style="background:#F5F6F8"></span>canvas F5F6F8</span>
+    <span class="sw"><span class="chip" style="background:#E7E9EC"></span>hairline E7E9EC</span>
+  </div>
+
+  <!-- ============ what's wrong ============ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">A</span>
+      <h2>What the recipient actually sees today</h2>
+      <span class="note">src/emails/risingAmpMail.js</span>
+    </div>
+
+    <div class="defects">
+      <div class="defect">
+        <span class="tag">Breaks the whole thing</span>
+        <h3>Three icons are inline SVG</h3>
+        <p><code>HELMET_18</code>, <code>SHIELD</code> and <code>BRIEFCASE</code> are real
+          <code>&lt;svg&gt;</code> elements. Apple Mail, Gmail and Outlook all strip them. What is
+          left is the container with nothing in it: the pale green square, the white square in the
+          job card, the empty tile in the header.</p>
+      </div>
+      <div class="defect">
+        <span class="tag">Reads as unfinished</span>
+        <h3>Default blue links</h3>
+        <p>Some anchors set a colour and some do not, so the client paints the rest in browser
+          blue and underlines them. Two blue links sit inside an orange brand.</p>
+      </div>
+      <div class="defect">
+        <span class="tag">Weak hierarchy</span>
+        <h3>The job name appears three times</h3>
+        <p>Once in the headline, once in the sentence under it, once in the card. Nothing is the
+          hero, so the eye has nowhere to land before the button.</p>
+      </div>
+      <div class="defect">
+        <span class="tag">Alignment</span>
+        <h3>Label left, value hard right</h3>
+        <p>The detail rows leave a wide empty gutter and force long addresses to wrap against the
+          right edge. It reads like a receipt, not an invitation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ the design ============ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">B</span>
+      <h2>Proposed</h2>
+      <span class="note">Same markup, two widths</span>
+    </div>
+
+    <div class="stage">
+
+      <!-- DESKTOP -->
+      <div class="rig">
+        <div class="rig-label"><span>Desktop / Mail on macOS</span><b>600 px</b></div>
+        <div class="mac">
+          <div class="mac-bar">
+            <span class="dot" style="background:#FF5F57"></span>
+            <span class="dot" style="background:#FEBC2E"></span>
+            <span class="dot" style="background:#28C840"></span>
+            <span class="mac-from">RisingAMP &lt;invites@risingamp.com.au&gt;</span>
+          </div>
+          <div class="mac-body">
+
+            <div class="mailroot" id="email-source">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F6F8">
+                <tr><td align="center" style="padding:0">
+
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#FFFFFF;border-radius:14px;overflow:hidden;border:1px solid #E7E9EC">
+
+                    <!-- masthead -->
+                    <tr><td style="background:#17181C;padding:20px 28px">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                        <td style="font-size:16px;font-weight:800;letter-spacing:-.01em;color:#FFFFFF;line-height:1">Rising<span style="color:#E85D1A">AMP</span></td>
+                        <td align="right" style="font-size:10px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#8A9099;line-height:1">Job invite</td>
+                      </tr></table>
+                    </td></tr>
+                    <tr><td style="background:#E85D1A;font-size:0;line-height:0;height:3px">&nbsp;</td></tr>
+
+                    <!-- headline -->
+                    <tr><td style="padding:36px 28px 0">
+                      <div style="font-size:10.5px;font-weight:700;letter-spacing:.17em;text-transform:uppercase;color:#8A9099;padding-bottom:13px">You have been added to a job</div>
+                      <div style="font-size:29px;line-height:1.14;font-weight:800;letter-spacing:-.03em;color:#1C1E23">95 Tahmoor Rd Austral</div>
+                      <div style="font-size:14.5px;line-height:1.62;color:#565B64;padding-top:14px">
+                        Lalit Sahni added you to this job on RisingAMP. Sign in with the address
+                        below and you will see this job only, nothing else on the account.
+                      </div>
+                    </td></tr>
+
+                    <!-- docket -->
+                    <tr><td style="padding:26px 28px 0">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F6F8;border:1px solid #E7E9EC;border-radius:11px">
+
+                        <tr><td style="padding:16px 18px 14px;border-bottom:1px solid #E7E9EC">
+                          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+                            <td style="width:42px;height:42px;background:#FCEEE4;border-radius:9px;text-align:center;font-size:15px;font-weight:800;letter-spacing:-.02em;color:#C64E12;line-height:42px">95</td>
+                            <td style="padding-left:13px">
+                              <div style="font-size:14.5px;font-weight:700;color:#1C1E23;letter-spacing:-.012em;line-height:1.3">95 Tahmoor Rd Austral</div>
+                              <div style="font-size:11.5px;color:#8A9099;padding-top:3px;letter-spacing:.01em">Austral NSW</div>
+                            </td>
+                          </tr></table>
+                        </td></tr>
+
+                        <tr><td style="padding:13px 18px;border-bottom:1px solid #E7E9EC">
+                          <div style="font-size:9.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A9099;padding-bottom:4px">Invited by</div>
+                          <div style="font-size:13.5px;color:#1C1E23;font-weight:600">Lalit Sahni</div>
+                          <div style="font-size:12.5px;padding-top:2px"><a href="#" style="color:#C64E12;text-decoration:none">sahni.lalit18@gmail.com</a></div>
+                        </td></tr>
+
+                        <tr><td style="padding:13px 18px 15px">
+                          <div style="font-size:9.5px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#8A9099;padding-bottom:4px">Sign in with</div>
+                          <div style="font-size:13.5px;color:#1C1E23;font-weight:600;word-break:break-all">prabhsharanjabbal@gmail.com</div>
+                        </td></tr>
+
+                      </table>
+                    </td></tr>
+
+                    <!-- CTA -->
+                    <tr><td style="padding:22px 28px 0">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                        <td align="center" style="background:#E85D1A;border-radius:10px">
+                          <a href="#" style="display:block;padding:15px 20px;font-size:14.5px;font-weight:700;letter-spacing:-.005em;color:#FFFFFF;text-decoration:none">Open the job</a>
+                        </td>
+                      </tr></table>
+                      <div style="font-size:11.5px;color:#8A9099;text-align:center;padding-top:11px;line-height:1.5">
+                        Or paste this into your browser: <span style="color:#565B64">risingamp.com.au</span>
+                      </div>
+                    </td></tr>
+
+                    <!-- note -->
+                    <tr><td style="padding:24px 28px 0">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+                        <td style="border-left:3px solid #E7E9EC;padding:2px 0 2px 14px;font-size:12.5px;line-height:1.6;color:#565B64">
+                          <b style="color:#1C1E23;font-weight:700">New to RisingAMP?</b> Create an account with this
+                          same address. Google sign-in and a password both work. If you were not
+                          expecting this, ignore it and nothing happens.
+                        </td>
+                      </tr></table>
+                    </td></tr>
+
+                    <!-- footer -->
+                    <tr><td style="padding:26px 28px 24px">
+                      <div style="border-top:1px solid #E7E9EC;padding-top:16px;font-size:11.5px;line-height:1.65;color:#8A9099">
+                        Sent because Lalit Sahni invited prabhsharanjabbal@gmail.com to a job on RisingAMP.<br>
+                        <span style="color:#B6BAC1">RisingAMP, Sydney NSW</span>
+                      </div>
+                    </td></tr>
+
+                  </table>
+
+                </td></tr>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- PHONE -->
+      <div class="rig phone">
+        <div class="rig-label"><span>Phone / Mail on iOS</span><b>390 px</b></div>
+        <div class="handset">
+          <div class="screen">
+            <div class="status"><span>9:41</span><span>RisingAMP</span></div>
+            <div class="phone-body"><div class="mailroot" id="email-clone"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ build spec ============ -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-num">C</span>
+      <h2>Rules this markup follows</h2>
+      <span class="note">Hand this to the agent</span>
+    </div>
+
+    <div class="tw">
+      <table class="spec-table">
+        <tr><th>Rule</th><th>Why, and what it replaced</th></tr>
+        <tr>
+          <td>No SVG anywhere</td>
+          <td>Every client strips inline <code>&lt;svg&gt;</code>. The job tile is now the street
+            number set as live text on a tint background, so there is nothing to strip. It also
+            carries more information than a briefcase did.</td>
+        </tr>
+        <tr>
+          <td>No images at all</td>
+          <td>Most clients block remote images until the reader allows them, so an image-built
+            header shows as a grey box on first open. The wordmark is type. Nothing here needs
+            downloading to be readable.</td>
+        </tr>
+        <tr>
+          <td>Tables and inline styles only</td>
+          <td>No flex, no grid, no <code>&lt;style&gt;</code> block, no CSS variables. Outlook
+            renders through Word and ignores all four.</td>
+        </tr>
+        <tr>
+          <td>Every anchor sets its own colour</td>
+          <td>An <code>&lt;a&gt;</code> without an explicit <code>color</code> and
+            <code>text-decoration</code> gets painted browser blue. Links here are
+            <code>#C64E12</code>, which is the accent darkened to pass contrast on white.</td>
+        </tr>
+        <tr>
+          <td>Full-width button, padding on the anchor</td>
+          <td>The padding sits on the <code>&lt;a&gt;</code>, not the cell, so the whole block is
+            tappable. 15px vertical clears the 44px touch target on a phone.</td>
+        </tr>
+        <tr>
+          <td>Font stack, not a webfont</td>
+          <td>Apple Mail will use Manrope if you serve it; Gmail will not. The stack falls back to
+            the system face, and the layout is set in points that hold either way. No layout
+            depends on Manrope's metrics.</td>
+        </tr>
+        <tr>
+          <td>Fluid 600 down to 320</td>
+          <td>One set of paddings works at both widths, so no media query is needed. Gmail's app
+            ignores media queries, which is why the phone view is the same markup, not a variant.</td>
+        </tr>
+        <tr>
+          <td>Long addresses use <code>word-break</code></td>
+          <td>The recipient address stacks under its own label rather than being pushed right,
+            so a 28 character address cannot blow out the row.</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="verdict">
+      <b>On the current one:</b> the typography and spacing were already decent. It looked
+      unprofessional for one reason, which is the two empty boxes, and those are a five minute
+      fix. The rest of this is hierarchy: making the job name the thing you see first, and the
+      button the thing you see second.
+    </div>
+  </section>
+
+</div>
+
+<script>
+  (function () {
+    var source = document.getElementById('email-source');
+    var target = document.getElementById('email-clone');
+    if (source && target) {
+      var copy = source.cloneNode(true);
+      copy.removeAttribute('id');
+      target.appendChild(copy);
+    }
+  })();
+</script>
+</body>
+</html>

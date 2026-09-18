@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Signed on Glass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#F5F6F8; --surface:#FFFFFF; --ink:#1C1E23; --muted:#565B64; --faint:#8A9099;
+    --line:#E7E9EC; --line-strong:#D6D9DD;
+    --accent:#E85D1A; --accent-600:#C64E12; --accent-tint:#FCEEE4;
+    --pos:#2E7D57; --pos-tint:#E7F1EC; --warn:#B7862B; --warn-tint:#F7F0DF; --neg:#C0392B; --neg-tint:#F9E9E7;
+    --steel:#17181C; --steel-2:#1F2127; --steel-3:#2A2D34;
+    --on-steel:#E5E7EA; --on-steel-muted:#969DA7; --on-steel-line:#33373F;
+    --shadow:0 1px 2px rgba(23,24,28,.04),0 1px 3px rgba(23,24,28,.03);
+    --lift:0 10px 34px rgba(23,24,28,.10);
+    --radius:12px; --radius-sm:8px;
+    --badge:#17181C; --badge-fg:#FFFFFF;
+    --ui:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --serif:'Newsreader',Georgia,'Times New Roman',serif;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --canvas:#141519; --surface:#1C1E22; --ink:#E6E8EB; --muted:#B0B6BE; --faint:#7C828B;
+      --line:#2A2D33; --line-strong:#383C44;
+      --accent:#F0703A; --accent-600:#E85D1A; --accent-tint:#3A2418;
+      --pos:#63B58E; --pos-tint:#1B2E25; --warn:#D6A54F; --warn-tint:#31301E; --neg:#E4705F; --neg-tint:#39221F;
+      --steel:#0E0F12; --steel-2:#15161A; --steel-3:#1F2127;
+      --on-steel:#E6E8EB; --on-steel-muted:#969DA7; --on-steel-line:#2B2F36;
+      --shadow:0 1px 2px rgba(0,0,0,.34); --lift:0 10px 34px rgba(0,0,0,.44);
+      --badge:#383C44; --badge-fg:#E6E8EB;
+    }
+  }
+  :root[data-theme="dark"]{
+    --canvas:#141519; --surface:#1C1E22; --ink:#E6E8EB; --muted:#B0B6BE; --faint:#7C828B;
+    --line:#2A2D33; --line-strong:#383C44;
+    --accent:#F0703A; --accent-600:#E85D1A; --accent-tint:#3A2418;
+    --pos:#63B58E; --pos-tint:#1B2E25; --warn:#D6A54F; --warn-tint:#31301E; --neg:#E4705F; --neg-tint:#39221F;
+    --steel:#0E0F12; --steel-2:#15161A; --steel-3:#1F2127;
+    --on-steel:#E6E8EB; --on-steel-muted:#969DA7; --on-steel-line:#2B2F36;
+    --shadow:0 1px 2px rgba(0,0,0,.34); --lift:0 10px 34px rgba(0,0,0,.44);
+    --badge:#383C44; --badge-fg:#E6E8EB;
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);font-family:var(--ui);font-size:15px;line-height:1.62;-webkit-font-smoothing:antialiased}
+  .tab{font-variant-numeric:tabular-nums}
+  a{color:var(--accent)}
+  a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+
+  /* ---------- shell ---------- */
+  .band{padding:0 24px}
+  .inner{max-width:1120px;margin:0 auto}
+  .doc{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr);gap:0}
+  @media(min-width:1080px){
+    .doc{grid-template-columns:186px minmax(0,1fr);column-gap:56px;align-items:start}
+  }
+  nav.toc{display:none}
+  @media(min-width:1080px){
+    nav.toc{display:block;position:sticky;top:26px;font-size:12.5px;padding-top:54px}
+    nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:6px 0 6px 13px;border-left:2px solid var(--line);line-height:1.35}
+    nav.toc a:hover{color:var(--ink);border-left-color:var(--accent)}
+  }
+  main{min-width:0}
+
+  .eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+  h1{font-family:var(--serif);font-weight:300;font-size:clamp(38px,6.4vw,62px);line-height:1.02;letter-spacing:-.02em;margin:14px 0 0;text-wrap:balance}
+  h2{font-family:var(--serif);font-weight:400;font-size:clamp(25px,3.2vw,32px);line-height:1.14;letter-spacing:-.012em;margin:0 0 10px;text-wrap:balance}
+  h3{font-size:14px;font-weight:800;letter-spacing:-.005em;margin:0 0 5px}
+  p{margin:0 0 14px;max-width:66ch}
+  section{padding:56px 0;border-top:1px solid var(--line);scroll-margin-top:20px}
+  section:first-of-type{border-top:0}
+  .sub{color:var(--muted);max-width:60ch;margin-bottom:26px}
+
+  /* ---------- header ---------- */
+  header.top{padding:54px 0 40px}
+  .lede{font-family:var(--serif);font-size:clamp(19px,2.3vw,23px);line-height:1.5;color:var(--muted);max-width:48ch;margin:20px 0 0}
+  .lede b{color:var(--ink);font-weight:500}
+  .strip{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:34px}
+  @media(min-width:760px){.strip{grid-template-columns:repeat(4,1fr)}}
+  .cell{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;box-shadow:var(--shadow)}
+  .cell .k{font-size:11px;font-weight:700;color:var(--faint);letter-spacing:.04em}
+  .cell .v{font-size:21px;font-weight:800;letter-spacing:-.022em;margin-top:5px;line-height:1.15}
+  .cell .v small{display:block;font-size:11.5px;font-weight:600;color:var(--faint);letter-spacing:0;margin-top:3px}
+
+  /* ---------- thesis band ---------- */
+  .thesis{background:var(--steel);color:var(--on-steel);border-radius:16px;padding:38px 34px;margin:6px 0 0}
+  .thesis .eyebrow{color:var(--on-steel-muted)}
+  .thesis blockquote{font-family:var(--serif);font-weight:300;font-size:clamp(23px,3.1vw,31px);line-height:1.26;letter-spacing:-.014em;margin:14px 0 0;color:#fff;text-wrap:balance}
+  .thesis blockquote em{font-style:italic;color:var(--accent)}
+  .thesis .attrib{font-size:12.5px;color:var(--on-steel-muted);margin-top:18px;line-height:1.55;max-width:62ch}
+  .thesis .attrib a{color:var(--on-steel)}
+
+  /* ---------- generic blocks ---------- */
+  .note{border-left:3px solid var(--accent);background:var(--accent-tint);color:var(--ink);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:14px 17px;margin:22px 0;font-size:13.5px;line-height:1.55}
+  .note b{font-weight:800}
+  .note p{margin:0;max-width:none}
+
+  .grid2{display:grid;grid-template-columns:1fr;gap:14px;margin-top:8px}
+  @media(min-width:720px){.grid2{grid-template-columns:1fr 1fr}}
+  .grid3{display:grid;grid-template-columns:1fr;gap:14px;margin-top:8px}
+  @media(min-width:720px){.grid3{grid-template-columns:repeat(3,1fr)}}
+  .box{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:17px 18px;box-shadow:var(--shadow)}
+  .box p{font-size:13.5px;color:var(--muted);margin:0;max-width:none}
+  .box .tagline{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:7px}
+
+  .tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:790px}
+  th{text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);padding:11px 14px;border-bottom:1px solid var(--line);background:var(--canvas);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--muted)}
+  td:first-child{color:var(--ink);font-weight:700;white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+  .no{color:var(--neg);font-weight:700}
+  .yes{color:var(--pos);font-weight:700}
+  .part{color:var(--warn);font-weight:700}
+
+  ul.plain{margin:0 0 14px;padding-left:19px;max-width:66ch}
+  ul.plain li{margin:7px 0}
+  ul.plain li b{font-weight:800}
+
+  /* ---------- phone mockups ---------- */
+  .showcase{display:grid;grid-template-columns:1fr;gap:26px;align-items:start;margin-top:10px}
+  @media(min-width:860px){.showcase{grid-template-columns:302px minmax(0,1fr);gap:40px}}
+  .showcase.flip{grid-template-columns:1fr}
+  @media(min-width:860px){.showcase.flip{grid-template-columns:minmax(0,1fr) 302px}}
+  .showcase.flip .phone{order:2}
+
+  .phone{background:var(--steel-2);border:1px solid var(--on-steel-line);border-radius:30px;padding:9px;box-shadow:var(--lift)}
+  .screen{background:var(--canvas);border-radius:22px;overflow:hidden;font-size:12.5px;line-height:1.45}
+  .ph-bar{background:var(--steel);color:var(--on-steel);padding:9px 15px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .ph-bar .t{font-size:12.5px;font-weight:800;letter-spacing:-.01em}
+  .ph-bar .s{font-size:10px;color:var(--on-steel-muted);font-weight:600}
+  .ph-body{padding:13px}
+  .ph-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 13px;margin-bottom:9px;box-shadow:var(--shadow)}
+  .ph-card:last-child{margin-bottom:0}
+  .ph-lab{font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--faint)}
+  .ph-h{font-size:13.5px;font-weight:800;color:var(--ink);margin-top:3px;line-height:1.3}
+  .ph-sub{font-size:11.5px;color:var(--muted);margin-top:4px;line-height:1.45}
+  .ph-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}
+  .ph-row:last-child{border-bottom:0}
+  .ph-row .l{font-size:11.5px;color:var(--muted)}
+  .ph-row .r{font-size:12.5px;font-weight:800;color:var(--ink)}
+  .pill{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.05em;padding:3px 8px;border-radius:999px;text-transform:uppercase}
+  .pill.ok{background:var(--pos-tint);color:var(--pos)}
+  .pill.wait{background:var(--warn-tint);color:var(--warn)}
+  .pill.bad{background:var(--neg-tint);color:var(--neg)}
+  .btn{display:block;text-align:center;background:var(--accent);color:#fff;font-size:12.5px;font-weight:800;padding:11px;border-radius:9px;margin-top:10px;letter-spacing:-.005em}
+  .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line-strong);margin-top:7px}
+  .sigbox{background:var(--canvas);border:1px dashed var(--line-strong);border-radius:9px;padding:8px 10px 4px;margin-top:9px}
+  .sigbox svg{display:block;width:100%;height:44px}
+  .sigmeta{font-size:9.5px;color:var(--faint);margin-top:2px;line-height:1.5}
+  .photos{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:9px}
+  .ph-img{aspect-ratio:4/3;border-radius:7px;border:1px solid var(--line);display:grid;place-items:center;font-size:9.5px;font-weight:700;color:var(--faint);letter-spacing:.06em;text-transform:uppercase;background:
+    repeating-linear-gradient(135deg,var(--canvas) 0 7px,var(--line) 7px 8px)}
+  .clock{background:var(--steel);color:var(--on-steel);border-radius:10px;padding:12px 13px;margin-bottom:9px}
+  .clock .big{font-size:23px;font-weight:800;letter-spacing:-.03em;color:#fff;line-height:1.1}
+  .clock .cap{font-size:10.5px;color:var(--on-steel-muted);font-weight:600;margin-top:3px}
+  .track{height:5px;border-radius:99px;background:var(--on-steel-line);margin-top:10px;overflow:hidden}
+  .track i{display:block;height:100%;background:var(--accent);border-radius:99px}
+  .caption{font-size:12px;color:var(--faint);margin-top:11px;line-height:1.5;text-align:center;max-width:302px}
+
+  /* ---------- build order ---------- */
+  .steps{counter-reset:s;margin-top:8px;display:grid;gap:11px}
+  .step{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px 16px 58px;position:relative;box-shadow:var(--shadow)}
+  .step::before{counter-increment:s;content:counter(s);position:absolute;left:17px;top:15px;width:26px;height:26px;border-radius:50%;background:var(--badge);color:var(--badge-fg);font-size:12px;font-weight:800;display:grid;place-items:center;font-variant-numeric:tabular-nums}
+  .step h3{margin-bottom:4px}
+  .step p{font-size:13.5px;color:var(--muted);margin:0;max-width:none}
+  .step .meta{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-top:8px}
+
+  footer{border-top:1px solid var(--line);margin-top:10px;padding:26px 0 60px;font-size:12.5px;color:var(--faint);line-height:1.6}
+  @media (prefers-reduced-motion: reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+</style>
+
+<div class="band">
+<div class="doc">
+
+  <nav class="toc" aria-label="On this page">
+    <div class="eyebrow" style="margin-bottom:9px">Contents</div>
+    <a href="#gap">The gap</a>
+    <a href="#primitive">The one primitive</a>
+    <a href="#variations">Variations</a>
+    <a href="#clock">The claim clock</a>
+    <a href="#diary">The evidence spine</a>
+    <a href="#owner">The owner's view</a>
+    <a href="#scaffold">Where scaffold fits</a>
+    <a href="#sell">How it sells</a>
+    <a href="#build">What to build first</a>
+  </nav>
+
+  <main>
+
+    <header class="top">
+      <div class="eyebrow">RisingAMP &middot; Product direction &middot; 5 September 2026</div>
+      <h1>Signed on Glass</h1>
+      <p class="lede">Your app already knows what a job <b>cost</b>. It does not know what was <b>agreed</b>. In Australian residential building, that second record is the one worth money, and almost nobody sells it to small builders.</p>
+
+      <div class="strip">
+        <div class="cell"><div class="k">AU small-builder software</div><div class="v tab">$199&ndash;349<small>per month, Buildxact tier</small></div></div>
+        <div class="cell"><div class="k">Days to answer a payment claim</div><div class="v tab">10<small>business days, or pay it in full</small></div></div>
+        <div class="cell"><div class="k">Unsigned variation is worth</div><div class="v" style="color:var(--neg)">Nothing<small>unenforceable in NSW</small></div></div>
+        <div class="cell"><div class="k">Tools doing both</div><div class="v tab">0<small>found in the AU market survey</small></div></div>
+      </div>
+    </header>
+
+    <section id="gap">
+      <div class="eyebrow">Start here</div>
+      <h2>Everyone sells the estimate. Nobody sells the evidence.</h2>
+      <p class="sub">I went through what a small Australian builder can actually buy today, and what the law actually demands of them. The two lists do not meet.</p>
+
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>Tool</th><th>Per month</th><th>Built for</th><th>Signed variations</th><th>Statutory claim dates</th><th>Owner can see it</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Buildxact</td><td class="tab">$199&ndash;349</td><td>Custom home builders, estimating first</td><td class="no">No</td><td class="no">No</td><td class="part">Limited</td></tr>
+            <tr><td>Buildertrend</td><td>Quote only</td><td>Mid to large US remodellers</td><td class="part">Approvals, not AU form</td><td class="no">No</td><td class="yes">Strong portal</td></tr>
+            <tr><td>Procore</td><td class="tab">$1,500+</td><td>Commercial and civil</td><td class="part">Enterprise workflow</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>Tradify / Simpro</td><td class="tab">$49&ndash;130</td><td>Service trades, per user</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>Built Simple</td><td class="tab">$39&ndash;399</td><td>Owner-builders and small builders</td><td class="no">No</td><td class="no">No</td><td class="part">Limited</td></tr>
+            <tr><td>A spreadsheet</td><td class="tab">$0</td><td>Most of the market, honestly</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <p><b>The two facts this whole document rests on.</b> In NSW a variation to a home building contract must be in writing and signed by the parties, or the builder cannot enforce it and falls back to quantum meruit capped at contract rates. And under the Security of Payment Act, a respondent who does not serve a payment schedule within 10 business days must pay the claim in full. Both are hard, dated, jurisdictional rules. Neither appears in any product above.</p>
+      </div>
+
+      <p>That is the opening. It is not a feature gap, it is a category gap. Every tool in that table is built to help a builder <em>plan and price</em> work. None is built to help a builder <em>prove</em> what was agreed, on the day it was agreed, in the form a tribunal accepts. The whole market optimises the front of the job. The money is lost at the back.</p>
+    </section>
+
+    <section id="primitive">
+      <div class="thesis">
+        <div class="eyebrow">The idea</div>
+        <blockquote>Build one thing well: a record the other party signed, on a date you can prove, that <em>nobody can edit afterwards.</em></blockquote>
+        <p class="attrib">Everything below is that same object wearing different clothes. A variation is a signed record. A progress claim is a signed record with a statutory clock on it. A site instruction, a delivery docket, a defect sign-off, a gear return: all the same. Build the primitive once and the product writes itself.</p>
+      </div>
+
+      <div class="grid3" style="margin-top:26px">
+        <div class="box">
+          <div class="tagline">What it holds</div>
+          <h3>The agreement</h3>
+          <p>Description, price, GST treatment, who asked for it, the effect on the completion date, and the photos taken the day it happened.</p>
+        </div>
+        <div class="box">
+          <div class="tagline">What it proves</div>
+          <h3>The signature</h3>
+          <p>Signed on a phone on site, or accepted by an emailed link with a full trail: sent, opened, accepted, from where. Timestamped by the server, not the device.</p>
+        </div>
+        <div class="box">
+          <div class="tagline">What makes it worth anything</div>
+          <h3>It cannot be changed</h3>
+          <p>Once signed, the document is frozen. Corrections happen as a new record referencing the old one. That is the entire difference between a file and evidence.</p>
+        </div>
+      </div>
+
+      <p style="margin-top:22px">This is also the part that is genuinely hard to copy. A US company can add a variations tab in a sprint. What they will not do is build NSW business-day arithmetic, Home Building Act variation formalities, HBCF and licence rules, and progress claim wording that survives an adjudicator. That is unglamorous, jurisdictional, and it is exactly the kind of moat a solo founder can dig while a funded competitor looks elsewhere.</p>
+    </section>
+
+    <section id="variations">
+      <div class="eyebrow">The wedge</div>
+      <h2>Variations, signed before the work starts</h2>
+      <p class="sub">This is the one feature to lead with. It is the clearest money story in residential building, and it is the feature a builder will switch products for.</p>
+
+      <div class="showcase">
+        <div>
+          <div class="phone">
+            <div class="screen">
+              <div class="ph-bar">
+                <div><div class="t">Variation 07</div><div class="s">Kelly St &middot; awaiting signature</div></div>
+                <span class="pill wait">Pending</span>
+              </div>
+              <div class="ph-body">
+                <div class="ph-card">
+                  <div class="ph-lab">What changed</div>
+                  <div class="ph-h">Tiled niche to main bathroom, plus upgraded tapware</div>
+                  <div class="ph-sub">Requested by Sarah on site, 3 Sept. Replaces the standard recess in the contract drawings.</div>
+                  <div class="photos">
+                    <div class="ph-img">Before</div>
+                    <div class="ph-img">Marked up</div>
+                  </div>
+                </div>
+                <div class="ph-card">
+                  <div class="ph-row"><span class="l">Labour and materials</span><span class="r tab">$1,840.00</span></div>
+                  <div class="ph-row"><span class="l">Margin 15%</span><span class="r tab">$276.00</span></div>
+                  <div class="ph-row"><span class="l">GST</span><span class="r tab">$211.60</span></div>
+                  <div class="ph-row"><span class="l"><b>Variation total</b></span><span class="r tab" style="color:var(--accent)">$2,327.60</span></div>
+                  <div class="ph-row"><span class="l">Completion date</span><span class="r">+2 days</span></div>
+                </div>
+                <div class="ph-card">
+                  <div class="ph-lab">Owner signature</div>
+                  <div class="sigbox">
+                    <svg viewBox="0 0 240 44" fill="none" aria-label="Signature">
+                      <path d="M9 33c3-13 8-24 12-23s3 21 5 25 6-27 11-28 4 23 7 25 8-17 13-17 3 11 7 12 10-7 15-8c8-2 13 5 21 3s16-9 24-8c9 1 17 5 26 3s21-8 30-6" stroke="var(--ink)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>
+                      <path d="M22 40c34 3 118 2 196-4" stroke="var(--ink)" stroke-width="1.3" stroke-linecap="round" opacity=".45"/>
+                    </svg>
+                  </div>
+                  <div class="sigmeta">Sent 3 Sept 4:12pm &middot; opened 3 Sept 6:38pm &middot; awaiting signature</div>
+                  <div class="btn">Send reminder</div>
+                  <div class="btn ghost">Print unsigned copy</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="caption">Sign on the phone on site, or accept by link from the kitchen table. Either way the trail is the same.</p>
+        </div>
+
+        <div>
+          <h3 style="font-size:16px;margin-bottom:8px">Why this one first</h3>
+          <p>The money is not in the big scope fights. It is in the half-dozen small changes a job that get done on a handshake, disappear into a group chat, and never make it onto an invoice. Six of those across a twelve month build is a fortnight of margin gone, and the builder never sees it leave.</p>
+          <p>Then there is the other end. When it does go bad, an unsigned variation in NSW is not a weak claim, it is <b>no claim</b>. The builder did the work, paid for the materials, and cannot enforce the price. The owner keeps the benefit.</p>
+
+          <h3 style="font-size:16px;margin:24px 0 8px">What it has to do</h3>
+          <ul class="plain">
+            <li><b>Refuse to be vague.</b> No variation saves without a price, a GST treatment and a date effect. The discipline is the product.</li>
+            <li><b>Sign in under a minute,</b> standing in a hallway, one-handed, on site data. If it is slower than sending a text message the builder will send a text message.</li>
+            <li><b>Print as a document,</b> not a screenshot. Contract reference, both parties, the clause it varies, both signatures, dates.</li>
+            <li><b>Feed the cost plan.</b> An approved variation lifts the contract sum and lands in the trade it belongs to. You already built the place for it to go.</li>
+            <li><b>Show the running total.</b> "Contract $805,000, approved variations $23,410, revised sum $828,410" on both sides of the screen, always.</li>
+          </ul>
+
+          <div class="note" style="margin-top:20px">
+            <p><b>Your own file.</b> You are defending a residential matter at NCAT right now with points of defence due this month. Whatever it costs you in time, it is also the best product research anyone building in this space could have. Build the thing you wish had been running on that job.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="clock">
+      <div class="eyebrow">The second feature</div>
+      <h2>A progress claim is not an invoice. It is a clock.</h2>
+      <p class="sub">You already generate progress claims from HIA contracts. What is missing is the only part that carries legal force: the dates that start running the moment you serve one.</p>
+
+      <div class="showcase flip">
+        <div>
+          <p>Serve a payment claim under the Security of Payment Act and the other side has 10 business days to serve a payment schedule. Miss that window and they owe the claim in full. Payment itself falls due 15 business days later for a head contractor, 20 for a subcontractor, 10 on exempt residential work.</p>
+          <p>Those are not reminders a builder sets. They are statutory rights that quietly expire. Right now every small builder in the country tracks them in their head or not at all, and the ones who track them get paid faster than the ones who do not.</p>
+
+          <h3 style="font-size:16px;margin:24px 0 8px">The screen is a countdown, not a list</h3>
+          <ul class="plain">
+            <li><b>Business days, done properly.</b> NSW public holidays, the Christmas shutdown, all of it. Get this wrong once and nobody trusts the number again.</li>
+            <li><b>Tell them what it means.</b> Not "0 days remaining" but "no payment schedule was served, so the full $84,200 is now due and you can apply for adjudication".</li>
+            <li><b>Retention is money you are owed.</b> Show it held, and show both release dates: practical completion, and the end of the defects liability period. Builders forget the second one for years.</li>
+            <li><b>Attach the evidence.</b> The stage photos from the diary ride along with the claim, so the claim proves itself.</li>
+          </ul>
+        </div>
+
+        <div>
+          <div class="phone">
+            <div class="screen">
+              <div class="ph-bar">
+                <div><div class="t">Claim 04</div><div class="s">Lock-up stage &middot; served 28 Aug</div></div>
+                <span class="pill bad">Overdue</span>
+              </div>
+              <div class="ph-body">
+                <div class="clock">
+                  <div class="cap">Payment schedule was due</div>
+                  <div class="big tab">2 days ago</div>
+                  <div class="track"><i style="width:100%"></i></div>
+                  <div class="cap" style="margin-top:9px">10 business days from 28 Aug. None received.</div>
+                </div>
+                <div class="ph-card" style="border-color:var(--neg);border-left:3px solid var(--neg)">
+                  <div class="ph-lab" style="color:var(--neg)">What this means</div>
+                  <div class="ph-h">They now owe the claim in full</div>
+                  <div class="ph-sub">No payment schedule was served in time, so the amount cannot be reduced. You can apply for adjudication.</div>
+                  <div class="btn">See your options</div>
+                </div>
+                <div class="ph-card">
+                  <div class="ph-row"><span class="l">Claimed this stage</span><span class="r tab">$84,200.00</span></div>
+                  <div class="ph-row"><span class="l">Retention held 5%</span><span class="r tab">$4,210.00</span></div>
+                  <div class="ph-row"><span class="l">Payment due</span><span class="r">18 Sept</span></div>
+                  <div class="ph-row"><span class="l">Evidence attached</span><span class="r">14 photos</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="caption">The same claim your app already prints, with the only thing that makes it a legal instrument.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="diary">
+      <div class="eyebrow">The third feature</div>
+      <h2>The diary that wins the argument</h2>
+      <p class="sub">You have Files and a handover pack. What you do not have is a contemporaneous record, and contemporaneous is the whole word that matters.</p>
+
+      <div class="grid2">
+        <div class="box">
+          <div class="tagline">What it is</div>
+          <h3>A photo and a line, tied to a stage</h3>
+          <p>Taken on the day, stamped by the server, pinned to the stage of works and optionally the trade. Weather, who was on site, what was instructed. Thirty seconds at smoko.</p>
+        </div>
+        <div class="box">
+          <div class="tagline">Why it is different from a camera roll</div>
+          <h3>It cannot be backdated</h3>
+          <p>A folder of photos proves nothing about when they were taken. A server-stamped entry written the day of, in a sequence with no gaps, is the thing an expert and a tribunal will accept.</p>
+        </div>
+      </div>
+
+      <p style="margin-top:22px">This is the least exciting of the three features and probably the most valuable one. Defect claims are won and lost on whether the builder can show what the site looked like on a given day. A builder who has two years of dated entries walks into a hearing with a different case than one who has a phone full of undated photos, and every builder learns this exactly once.</p>
+
+      <div class="note">
+        <p><b>It sells itself the same way insurance does, which is to say badly.</b> Do not sell the diary. Sell the variation feature, sell the claim clock, and make the diary the thing that happens automatically when they use those two. Nobody buys evidence until the day they need it, and on that day it is too late to start.</p>
+      </div>
+    </section>
+
+    <section id="owner">
+      <div class="eyebrow">The second persona</div>
+      <h2>The same record, from the other side of the table</h2>
+      <p class="sub">You asked what a 21 year old buying his first place would use. This is it, and the good news is that it is not a second product. It is a read-only view of the record the builder is already keeping.</p>
+
+      <div class="showcase">
+        <div>
+          <div class="phone">
+            <div class="screen">
+              <div class="ph-bar">
+                <div><div class="t">Your build</div><div class="s">Kelly St &middot; lock-up stage</div></div>
+                <span class="pill ok">On contract</span>
+              </div>
+              <div class="ph-body">
+                <div class="ph-card">
+                  <div class="ph-lab">Where the money stands</div>
+                  <div class="ph-row"><span class="l">Contract sum</span><span class="r tab">$805,000</span></div>
+                  <div class="ph-row"><span class="l">Variations you approved</span><span class="r tab">$23,410</span></div>
+                  <div class="ph-row"><span class="l"><b>Revised contract sum</b></span><span class="r tab">$828,410</span></div>
+                  <div class="ph-row"><span class="l">Paid so far</span><span class="r tab">$497,046</span></div>
+                  <div class="ph-row"><span class="l">Still to come</span><span class="r tab">$331,364</span></div>
+                </div>
+                <div class="ph-card" style="border-left:3px solid var(--warn)">
+                  <div class="ph-lab" style="color:var(--warn)">Needs you</div>
+                  <div class="ph-h">Tiled niche and tapware upgrade</div>
+                  <div class="ph-sub">$2,327.60 including GST, adds 2 days. Sign before the tiler starts Monday.</div>
+                  <div class="btn">Read it and sign</div>
+                </div>
+                <div class="ph-card">
+                  <div class="ph-lab">Claim 04 &middot; lock-up</div>
+                  <div class="ph-h">$84,200 due 18 September</div>
+                  <div class="ph-sub">14 photos of the stage attached. Nothing to do until you have looked.</div>
+                  <div class="photos">
+                    <div class="ph-img">Frame</div>
+                    <div class="ph-img">Roof on</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p class="caption">Free for the owner, forever. They never see the builder's costs or margin.</p>
+        </div>
+
+        <div>
+          <h3 style="font-size:16px;margin-bottom:8px">What a first-home buyer is actually afraid of</h3>
+          <p>Not the build. The ambush. The fear is that a number arrives at the end that nobody mentioned at the start, and that they have no way to tell a fair variation from an invented one. Every renovation horror story a 21 year old has heard is that story.</p>
+          <p>So the owner's view answers three questions and nothing else. What did I agree to. What have I paid. What is being asked of me right now, and is it reasonable. Anything past that is the builder's business and should stay hidden.</p>
+
+          <h3 style="font-size:16px;margin:24px 0 8px">And this is the growth engine</h3>
+          <p>Builders pay. Owners are invited free, one or two per job. Those owners are the next decade of renovators and owner-builders, and some of them are already builders' next clients. Every job you sell puts your product in front of the person most likely to need it next, with the builder doing the introduction.</p>
+          <p>That loop is worth more than any ad spend available to a solo founder, and it only works if the owner's view is genuinely good rather than a token portal. Make it the nicest screen in the app.</p>
+
+          <div class="note" style="margin-top:20px">
+            <p><b>You are already this user.</b> Kelly St is your own investment property, not a client build. You have the job kind flag proposed. Run your own place through the owner's view and you will find the holes in an afternoon.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="scaffold">
+      <div class="eyebrow">The awkward one</div>
+      <h2>Where the scaffolder actually fits</h2>
+      <p class="sub">You have one interested paying customer and he is asking for something that is not this. Worth being straight about it.</p>
+
+      <p>Gear tracking is a different product. An asset register, a hire clock, dockets, where are my 1.8s. Your scaffold vision file is good thinking and none of it is wrong, but building it now makes RisingAMP a worse builder product and a mediocre scaffold product at the same time, and you would be maintaining two things alone.</p>
+
+      <p>Here is the reframe. A scaffolder is a <b>subcontractor</b>. He gets paid by progress claim under the same Act, chases the same retention, and his entire commercial life runs on <b>dockets signed on site</b>. That is the primitive again. Same object, different label.</p>
+
+      <div class="grid3" style="margin-top:20px">
+        <div class="box">
+          <div class="tagline">Ships with the core</div>
+          <h3>Dockets signed on glass</h3>
+          <p>Erect, alter, dismantle, extra hire. Signed by the site supervisor on the spot. Becomes the backing evidence for his claim. This is the signature primitive with a different form on top.</p>
+        </div>
+        <div class="box">
+          <div class="tagline">Ships with the core</div>
+          <h3>Claims and retention</h3>
+          <p>He is a subbie under the same statutory dates. He benefits from the claim clock without you writing a line of scaffold-specific code.</p>
+        </div>
+        <div class="box">
+          <div class="tagline">Later, and only if he pays</div>
+          <h3>The gear ledger</h3>
+          <p>Counts by size, per site, with the hire clock. Genuinely valuable, genuinely a separate build. Charge for it as a module, do not let it set the roadmap.</p>
+        </div>
+      </div>
+
+      <p style="margin-top:22px">Serve him with the core now, get him paying, and let him tell you whether the gear ledger is worth building by whether he keeps asking. One customer's feature request is a data point. It is not a strategy, and the fastest way to kill a young product is to build the first thing anyone offers to pay for.</p>
+    </section>
+
+    <section id="sell">
+      <div class="eyebrow">Commercials</div>
+      <h2>Price it per job, not per seat</h2>
+
+      <div class="grid2">
+        <div class="box">
+          <div class="tagline">Why per job</div>
+          <h3>It matches how builders think</h3>
+          <p>A small builder runs three to eight jobs and has a crew that changes weekly. Per-seat pricing punishes them for putting the apprentice on the app, which is exactly the person whose photos you want. Per job, unlimited people, owners free.</p>
+        </div>
+        <div class="box">
+          <div class="tagline">Where to land</div>
+          <h3>Well under the incumbents</h3>
+          <p>Buildxact is $199 to $349 a month. You are not competing on breadth and should not price like it. Something in the order of $49 a job a month, with the first job free, reads as obviously worth trying against a $2,300 variation.</p>
+        </div>
+      </div>
+
+      <h3 style="font-size:16px;margin:26px 0 8px">The sentence you sell on</h3>
+      <p>Not "construction management software". That word is taken and you will lose to people with more money. Something closer to: <b>the app that makes sure you get paid for what you actually did.</b> A builder understands that in one read, and it is true of all three features at once.</p>
+
+      <h3 style="font-size:16px;margin:26px 0 8px">Who you sell to first</h3>
+      <ul class="plain">
+        <li><b>Builders who have been burned.</b> Anyone who has been to NCAT or Fair Trading buys this instantly. Anyone who has not thinks it will not happen to them. Find the first group.</li>
+        <li><b>Through the people who see the wreckage.</b> Building lawyers, expert witnesses, contract administrators and brokers all watch builders lose money on missing paperwork every week, and none of them have anything to recommend.</li>
+        <li><b>Your own network.</b> You are at a tier one builder, you are doing an RPL for a contractor licence, and your family has been running jobs for years. That is a warm list most founders would pay for.</li>
+      </ul>
+    </section>
+
+    <section id="build">
+      <div class="eyebrow">Sequence</div>
+      <h2>What to build first</h2>
+      <p class="sub">In order, because each one makes the next cheaper. Nothing here needs a rewrite, and the first item is the one that would make me pay.</p>
+
+      <div class="steps">
+        <div class="step">
+          <h3>Variations, end to end, on one job</h3>
+          <p>Create, price with GST, attach photos, send for signature, sign, freeze, print. Land it on Kelly St and your own jobs first. This alone is a product someone would pay for.</p>
+          <div class="meta">The wedge</div>
+        </div>
+        <div class="step">
+          <h3>The revised contract sum, everywhere</h3>
+          <p>Approved variations lift the contract sum on Overview, the cost plan and every claim. Small change, and it is what makes the variation feature feel like it belongs rather than sits beside the app.</p>
+          <div class="meta">Makes it one product</div>
+        </div>
+        <div class="step">
+          <h3>The claim clock on the claims you already print</h3>
+          <p>Business-day maths with NSW holidays, the schedule deadline, the payment due date, retention held with both release dates. No new document types, just dates and meaning on what exists.</p>
+          <div class="meta">Gets them paid</div>
+        </div>
+        <div class="step">
+          <h3>The owner's view</h3>
+          <p>Read-only, free, beautiful. Contract sum, variations pending their signature, claims with photos, what they have paid. This is the growth loop, so it is worth more care than it looks like it deserves.</p>
+          <div class="meta">Distribution</div>
+        </div>
+        <div class="step">
+          <h3>The diary, quietly</h3>
+          <p>By this point variations and claims are already generating dated, stamped entries. Give them a screen and a name and the evidence spine exists without anyone having been asked to keep a diary.</p>
+          <div class="meta">The moat</div>
+        </div>
+        <div class="step">
+          <h3>Dockets for the scaffolder</h3>
+          <p>Same signature primitive, scaffold wording. Get him paying on the core. Decide on the gear ledger later, with a customer's money and a customer's opinion rather than a guess.</p>
+          <div class="meta">The first sale</div>
+        </div>
+      </div>
+
+      <div class="note" style="margin-top:26px">
+        <p><b>One thing before any of it.</b> Multi-tenancy and Firestore rules hardening are still on your list from the productising work. A signed record that another organisation can read is not a signed record, it is a liability. That work is not glamorous and it comes first.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p style="margin:0 0 8px"><b style="color:var(--muted)">Sources for the two legal claims:</b> variations must be in writing and signed to be enforceable in NSW, per <em>Rice v JR &amp; SD Farmer</em> [2020] NSWCATAP 208 and <em>Paraiso v CBS Pty Ltd</em> [2020] NSWSC 19. Payment schedule and payment timeframes per NSW Government guidance on making a payment claim under the Building and Construction Industry Security of Payment Act 1999. Pricing figures from published AU vendor rates, September 2026.</p>
+      <p style="margin:0">Not legal advice. Before any of this ships as a compliance claim, have a construction lawyer read the wording of the documents it generates.</p>
+    </footer>
+
+  </main>
+</div>
+</div>
+
+</body>
+</html>

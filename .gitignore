@@ -86,3 +86,7 @@ backups/**
 # Finder junk
 .DS_Store
 **/.DS_Store
+
+# Agent scratch sitting in the main checkout. Not source.
+# Do not delete without the owner; just do not commit it.
+Claude outputs/
