@@ -55,17 +55,55 @@ Owner checklist:
 
 Items **1 and 4 are not true against current deployed staging rules.** They need a named staging **rules + hosting** deploy of this branch, which the owner has not named.
 
-## Phase 17 — in flight (14 Sep 2026)
+## Phase 17 (18 Sep 2026)
 
-Branch **`phase-17-coding-fixes`**, cut from `phase-16-job-facts` at `ac1239c`. Restore tag **`pre-phase17-2026-09-14`**. Brief: `PHASE17.md`. Nothing deployed. Production is untouched and still runs the Phase 16 build.
+Branch **`phase-17-coding-fixes`**, cut from `phase-16-job-facts` at `ac1239c`. Restore tag **`pre-phase17-2026-09-14`**. Briefs: `PHASE17.md`, and `PHASE17-CLOSEOUT.md` for what is still open. **Not deployed.** Parts A to F are committed. Part E, the verification on real data, has never been run.
 
 **Read this before trusting the older notes below.** On this branch a missing `assistantWritesEnabled` field means writes are **on**. Only an explicit `false` is off. **Production still runs the old code, where missing means off**, so every older line in this file, `CLAUDE.md`, `AGENTS.md` and `DATABASE.md` that says "missing = off" is still true of production and will be corrected when this phase ships.
 
-| Part | SHA | Initial JS gzip | State |
-| --- | --- | --- | --- |
-| A switch defaults on, gate on tier and origin | this commit | **271.2 KB** | done |
+### What shipped to the branch
 
-Baseline at the branch point: typecheck clean, 54 files / 568 vitest tests, 168 node tests, rules pass, **271.2 KB** gzip (ceiling 400 KB).
+| Part | SHA | What |
+| --- | --- | --- |
+| A | `888d118` | Assistant writes default **on**. The gate gives up on function names and reads the tier plus a new required `origin: 'human' \| 'assistant'`. A person who picks a trade on screen is never refused. A failed read of the switch is `'unknown'` and allowed, not reported as someone's choice. |
+| B | `e54d37c` | Activity page shows what was done **and who did it**. `origin` on the receipt, a real empty state, one label (**Activity**) across sidebar, header, palette and profile. `assistantYesterdayCounts` no longer credits the assistant with rows a person accepted. |
+| F brief | `3289331` | Part F added to `PHASE17.md`. |
+| C | `66e76c8` | Trade proposals read **who was paid**, not just the description: supplier, worker, service, equipment and the resolved party name. A single prior coding now proposes as `inferred`/`uncertain`, so it can never auto-write. Reasons name the field that won. |
+| F | `49afc12` | Every invite is recorded (`invites` collection, `inviteStatus.ts`, `invites.ts`), `resendWebhook` closes the loop on bounces, the mail template loses all inline SVG, and `isInviteFunctionUnavailable` is inverted so a Resend failure is no longer misread as a missing function. |
+| D | `9da2dfe` | `waste-removal`, `cleaning`, `fixtures-fittings` appended to `APP_TRADES`, and the owner can add a section from the Cost plan page instead of only during setup. Test asserts the imported plan still totals `32_191_629` cents to the cent. |
+| Atomic | `2582fe1` | Not in the brief, found by the agent. An expense write and its receipt were two separate Firestore writes; a failure between them left a coded expense with no receipt, which cannot be undone. Now one `writeBatch`. |
+| Hotfix | `ba521fa` | Cherry-picked from `0056c8d` on `hotfix-firestore-assertion`. firebase `12.0.0` to `12.14.0` plus `src/firestoreRecovery.js`. See below. |
+
+### Measured at `ba521fa`, 18 Sep
+
+- Typecheck clean.
+- **57 vitest files, 657 tests** pass. Branch point was 54 files / 568 tests.
+- **184 node tests** pass. Branch point was 168.
+- Entry bundle `index-lr4Pt5Nc.js`, **271.5 KB gzip** against the 400 KB ceiling. Branch point was 271.2 KB, so six parts cost 0.3 KB.
+- firebase `12.14.0` confirmed in the built bundle.
+
+Per-part gzip was asked for in the brief and was never captured at each commit. The figures above are the only measured ones. Do not back-fill that column with guesses.
+
+### The sign-up crash, and what production actually runs
+
+Creating an account fired a Firestore internal assertion (`ca9`, `pendingResponses` below zero) on the watch stream during the auth change that sign-up triggers. That poisons the SDK's `AsyncQueue`, so every later operation throws `b815` and the client is dead for the life of the page. Cause is target ID reuse in the SDK, fixed upstream by firebase-js-sdk PR #9842 (in 12.13.0) and hardened by PR #9985 (in 12.14.0). 12.14.0 is the lowest version carrying both and is **smaller** than 12.0.0; 12.19.0 also fixes it but costs 58 KB.
+
+The failure is in memory only. Nothing is written to IndexedDB, so a reload restores an affected user and they do not need to clear site data. `terminate()` cannot help, because it enqueues and therefore throws `b815` itself.
+
+**Deploy state was not confirmed from the session that wrote this.** Check what production serves before assuming:
+
+```
+curl -s https://risingamp.com.au | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'
+```
+
+If it is still `index-DhMkWQ3T.js`, production does **not** have the fix and new users still cannot sign up.
+
+### Open, and why it matters
+
+1. **Part E never ran.** `scripts/phase17-staging-proposals.ts` exists, is read-only and refuses `--production`, but has never been executed and no results are recorded. So the central claim of Part C is unverified. There is a specific reason it might have gone backwards: `expenseHaystackFields` now feeds nine fields into the matcher instead of four, and a multi-hit returns `none` rather than a proposal, so the proposal count could have fallen. That is the first number to look at.
+2. **Batch undo is not atomic.** Single-row coding, creation and undo are. `restoreTradeIdBatch` in `src/actions/undo.ts` still stamps the parent receipt in a separate `patchReceipt`, and its fallback inside the loop is a bare `updateExpense` with no receipt patch at all. It self-heals on retry, so it corrupts nothing, but the docblock at the top of `src/actions/atomicCommits.test.ts` claims "no reverted row still showing 'applied'" and the batch parent can do exactly that. Finish it or narrow the claim.
+3. **One em dash in shipped copy**, `src/components/JobPeople.jsx`. Standing constraint is no em dashes.
+4. **Untracked and undecided**: `Claude outputs/`, `brand/`, and the design files. Commit or gitignore them before merging.
 
 ## Fleet (11 Sep 2026)
 
