@@ -1,8 +1,8 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from './config';
-import { normalizeEmail } from './emailAddress';
+import { emailInviteVariants, normalizeEmail } from './emailAddress';
 import logger from '../utils/logger';
-import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile, toPublicProfile, pickProfileForEmail } from './profileGate';
+import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile, toPublicProfile, pickFoundPublicProfile, pickProfileForEmail } from './profileGate';
 
 export { profileIsComplete, profileNeedsSetup, toClientProfile, toPublicProfile };
 export const ROLES = ['Owner', 'Director', 'Site manager', 'Estimator', 'Bookkeeper', 'Other'];
@@ -65,9 +65,15 @@ function asPublicPerson(email, data = {}) {
 async function syncPublicProfile(profile) {
   const publicProfile = toPublicProfile(profile);
   if (!publicProfile) return;
+  // Rules pin emailKey to token.email.lower() (no String.replace, so Gmail
+  // dots cannot be stripped in rules). Write that allowed key. Lookups try
+  // every emailInviteVariants candidate; canonical-id copies are the dry-run
+  // backfill, not a second write key.
+  const emailKey = normalizeEmail(publicProfile.email);
   try {
-    await setDoc(doc(db, 'publicProfiles', publicProfile.email), {
+    await setDoc(doc(db, 'publicProfiles', emailKey), {
       ...publicProfile,
+      email: emailKey,
       updatedAt: serverTimestamp(),
     }, { merge: true });
   } catch (error) {
@@ -76,18 +82,23 @@ async function syncPublicProfile(profile) {
 }
 
 async function findProfileByEmail(email, exceptUid) {
-  if (!email) return null;
-  try {
-    const snap = await getDocs(query(
-      collection(db, 'profiles'),
-      where('email', '==', normalizeEmail(email)),
-    ));
-    const rows = snap.docs.map((row) => ({ uid: row.id, ...row.data() }));
-    return pickProfileForEmail(rows, email, exceptUid);
-  } catch (error) {
-    logger.warn('Profile email lookup failed', error && error.code);
-    return null;
-  }
+  const variants = emailInviteVariants(email);
+  if (variants.length === 0) return null;
+  const rows = [];
+  await Promise.all(variants.map(async (variant) => {
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'profiles'),
+        where('email', '==', variant),
+      ));
+      snap.docs.forEach((row) => {
+        rows.push({ uid: row.id, ...row.data() });
+      });
+    } catch (error) {
+      logger.warn('Profile email lookup failed', error && error.code);
+    }
+  }));
+  return pickProfileForEmail(rows, email, exceptUid);
 }
 
 export async function loadProfile(uid, email) {
@@ -182,18 +193,22 @@ export async function loadProfilesForEmails(emails) {
   const wanted = Array.from(new Set((emails || []).map(normalizeEmail).filter(Boolean)));
   if (wanted.length === 0) return [];
 
+  const keys = Array.from(new Set(wanted.flatMap((email) => emailInviteVariants(email))));
   const found = new Map();
 
-  await Promise.all(wanted.map(async (email) => {
+  await Promise.all(keys.map(async (key) => {
     try {
-      const snap = await getDoc(doc(db, 'publicProfiles', email));
+      const snap = await getDoc(doc(db, 'publicProfiles', key));
       if (snap.exists()) {
-        found.set(email, asPublicPerson(email, snap.data()));
+        found.set(key, asPublicPerson(key, snap.data()));
       }
     } catch (error) {
       logger.warn('Public profile lookup failed', error && error.code);
     }
   }));
 
-  return wanted.map((email) => found.get(email) || { email, displayName: '', photoUrl: '', setupComplete: false });
+  return wanted.map((email) => {
+    const card = pickFoundPublicProfile(found, email);
+    return card || { email, displayName: '', photoUrl: '', setupComplete: false };
+  });
 }

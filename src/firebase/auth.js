@@ -99,9 +99,10 @@ export const lookupSignInMethods = async (email) => {
 };
 
 export const signOut = async () => {
+  const uid = auth.currentUser && auth.currentUser.uid;
   try {
     await firebaseSignOut(auth);
-    clearSession();
+    clearSession(uid);
     return { success: true };
   } catch (error) {
     console.error('Sign out error:', error);

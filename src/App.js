@@ -13,8 +13,28 @@ import BootScreen from './components/BootScreen';
 import AskForAccessScreen from './components/AskForAccessScreen';
 import { listenInvitedProjects, invitedJobsFingerprint } from './firebase/projectCatalog';
 import { loadProfile, profileIsComplete, profileNeedsSetup, readProfileCache, recordSignIn } from './firebase/profiles';
-import { clearBootCache, clearSession, readBootCache, readSession, resolveInvitation, setActiveOrgId, writeBootCache, writeSession } from './firebase/tenancy';
+import {
+  FAMILY_ORG_ID,
+  clearBootCache,
+  clearLegacyFlatSessionKeys,
+  clearSession,
+  listenOrganisationsForEmail,
+  readBootCache,
+  readSession,
+  setActiveOrgId,
+  writeBootCache,
+  writeSession,
+} from './firebase/tenancy';
+import {
+  accessScreen,
+  invitationReasonFromError,
+  invitationReasonFromOrgs,
+  isRetryableMembershipError,
+  pickPreferredOrganisation,
+} from './domain/accessGate';
 import { jobIdFromPath } from './navigation';
+
+const MEMBERSHIP_RETRY_MS = 2000;
 
 function legalHtmlPath() {
   if (typeof window === 'undefined') return null;
@@ -48,11 +68,11 @@ function AppShell() {
   const [membershipLoading, setMembershipLoading] = useState(true);
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [projectId, setProjectId] = useState(() => readSession().projectId);
-  const [workspaceId, setWorkspaceId] = useState(() => readSession().workspaceId);
-  const [projectName, setProjectName] = useState(() => readSession().projectName);
-  const [jobInvitedEmails, setJobInvitedEmails] = useState(() => readSession().invitedEmails || []);
-  const [projectStatus, setProjectStatus] = useState(() => readSession().projectStatus || 'active');
+  const [projectId, setProjectId] = useState(null);
+  const [workspaceId, setWorkspaceId] = useState(null);
+  const [projectName, setProjectName] = useState(null);
+  const [jobInvitedEmails, setJobInvitedEmails] = useState([]);
+  const [projectStatus, setProjectStatus] = useState('active');
   const [projectKind, setProjectKind] = useState('client');
   const [allowedJobs, setAllowedJobs] = useState([]);
 
@@ -75,31 +95,52 @@ function AppShell() {
 
   useEffect(() => {
     let cancelled = false;
+    let unsubOrgs = () => {};
     let unsubJobs = () => {};
+    let retryTimer = 0;
+    let lastFingerprint = '';
+    let listeningOrgId = '';
     if (authUid === undefined) return undefined;
     if (!authUid) {
       setMembership(null);
       setMembershipLoading(false);
       setProfile(null);
       setProfileLoading(false);
+      setAllowedJobs([]);
+      setProjectId(null);
+      setWorkspaceId(null);
+      setProjectName(null);
+      setJobInvitedEmails([]);
+      setProjectStatus('active');
+      setProjectKind('client');
       return undefined;
     }
+
+    clearLegacyFlatSessionKeys();
 
     const cachedProfile = readProfileCache(authUid);
     if (profileIsComplete(cachedProfile)) {
       setProfile(cachedProfile);
     }
 
+    const session = readSession(authUid);
+    if (session.projectId) {
+      setProjectId(session.projectId);
+      setWorkspaceId(session.workspaceId);
+      setProjectName(session.projectName);
+      setJobInvitedEmails(session.invitedEmails || []);
+      setProjectStatus(session.projectStatus || 'active');
+    }
+
     // Paint the real app from last time's answer instead of holding the boot
     // logo through two round trips to a database that is not in this country.
     // The network chain below still runs and overwrites all of it.
     const cachedBoot = readBootCache(authUid);
-    let lastFingerprint = cachedBoot ? invitedJobsFingerprint(cachedBoot.jobs) : '';
+    lastFingerprint = cachedBoot ? invitedJobsFingerprint(cachedBoot.jobs) : '';
     if (cachedBoot) {
       setMembership(cachedBoot.membership);
       setAllowedJobs(cachedBoot.jobs);
       if (cachedBoot.membership.orgId) setActiveOrgId(cachedBoot.membership.orgId);
-      const session = readSession();
       const current = cachedBoot.jobs.find((row) => row.projectId === session.projectId);
       if (current) {
         setProjectId(current.projectId);
@@ -115,100 +156,136 @@ function AppShell() {
     }
     setProfileLoading(true);
 
-    Promise.all([
-      resolveInvitation({ email: authEmail }),
-      loadProfile(authUid, authEmail).catch((err) => {
-        console.error('Profile load failed:', err);
-        return readProfileCache(authUid);
-      }),
-    ])
-      .then(([invite, savedProfile]) => {
-        if (cancelled) return;
-        setMembership(invite);
-        setProfile((current) => {
-          if (profileIsComplete(savedProfile)) return savedProfile;
-          if (profileIsComplete(current)) return current;
-          return savedProfile;
-        });
-        setProfileLoading(false);
+    loadProfile(authUid, authEmail).catch((err) => {
+      console.error('Profile load failed:', err);
+      return readProfileCache(authUid);
+    }).then((savedProfile) => {
+      if (cancelled) return;
+      setProfile((current) => {
+        if (profileIsComplete(savedProfile)) return savedProfile;
+        if (profileIsComplete(current)) return current;
+        return savedProfile;
+      });
+      setProfileLoading(false);
+    });
 
-        if (!invite.invited) {
-          clearBootCache(authUid);
-          clearSession();
-          setAllowedJobs([]);
+    const clearOpenJob = () => {
+      setAllowedJobs([]);
+      setProjectId(null);
+      setWorkspaceId(null);
+      setProjectName(null);
+      setJobInvitedEmails([]);
+      setProjectStatus('active');
+      setProjectKind('client');
+    };
+
+    const stopJobs = () => {
+      unsubJobs();
+      unsubJobs = () => {};
+      listeningOrgId = '';
+    };
+
+    const applyJobs = (invite) => (allowed, meta) => {
+      if (cancelled) return;
+      if (meta.fromCache && allowed.length === 0) {
+        setMembershipLoading(false);
+        return;
+      }
+      const fingerprint = invitedJobsFingerprint(allowed);
+      if (fingerprint !== lastFingerprint) {
+        lastFingerprint = fingerprint;
+        setAllowedJobs(allowed);
+        writeBootCache(authUid, invite, allowed);
+        const stored = readSession(authUid);
+        const current = allowed.find((row) => row.projectId === stored.projectId);
+        if (current) {
+          setProjectId(current.projectId);
+          setWorkspaceId(current.workspaceId);
+          setProjectName(current.name);
+          setJobInvitedEmails(current.invitedEmails || []);
+          setProjectStatus(current.status || 'active');
+          setProjectKind(current.kind === 'own' ? 'own' : 'client');
+        } else {
+          writeSession(authUid, {
+            projectId: null,
+            workspaceId: null,
+            projectName: null,
+            orgId: invite.orgId,
+            invitedEmails: [],
+            projectStatus: null,
+          });
           setProjectId(null);
           setWorkspaceId(null);
           setProjectName(null);
           setJobInvitedEmails([]);
           setProjectStatus('active');
-          setMembershipLoading(false);
-          return;
+          setProjectKind('client');
         }
+      }
+      setMembershipLoading(false);
+    };
 
-        setActiveOrgId(invite.orgId);
-        if (cancelled) return;
-        unsubJobs = listenInvitedProjects(
-          invite.email,
-          (allowed, meta) => {
-            if (cancelled) return;
-            if (meta.fromCache && allowed.length === 0) {
-              setMembershipLoading(false);
-              return;
-            }
-            const fingerprint = invitedJobsFingerprint(allowed);
-            if (fingerprint !== lastFingerprint) {
-              lastFingerprint = fingerprint;
-              setAllowedJobs(allowed);
-              writeBootCache(authUid, invite, allowed);
-              const session = readSession();
-              const current = allowed.find((row) => row.projectId === session.projectId);
-              if (current) {
-                setProjectId(current.projectId);
-                setWorkspaceId(current.workspaceId);
-                setProjectName(current.name);
-                setJobInvitedEmails(current.invitedEmails || []);
-                setProjectStatus(current.status || 'active');
-                setProjectKind(current.kind === 'own' ? 'own' : 'client');
-              } else {
-                writeSession({
-                  projectId: null,
-                  workspaceId: null,
-                  projectName: null,
-                  orgId: invite.orgId,
-                  invitedEmails: [],
-                  projectStatus: null,
-                });
-                setProjectId(null);
-                setWorkspaceId(null);
-                setProjectName(null);
-                setJobInvitedEmails([]);
-                setProjectStatus('active');
-                setProjectKind('client');
-              }
-            }
+    const startJobs = (invite) => {
+      if (listeningOrgId === invite.orgId) return;
+      stopJobs();
+      listeningOrgId = invite.orgId;
+      setActiveOrgId(invite.orgId);
+      unsubJobs = listenInvitedProjects(
+        invite.email,
+        applyJobs(invite),
+        (err) => {
+          console.error('Job list listen failed:', err);
+          if (!cancelled) setMembershipLoading(false);
+        },
+      );
+    };
+
+    const attachOrgs = () => {
+      unsubOrgs();
+      unsubOrgs = listenOrganisationsForEmail(
+        authEmail,
+        (orgs, meta) => {
+          if (cancelled) return;
+          if (meta.fromCache && orgs.length === 0) return;
+          if (invitationReasonFromOrgs(orgs.length) === 'not-on-list') {
+            stopJobs();
+            setMembership({ invited: false, reason: 'not-on-list', email: authEmail });
+            clearBootCache(authUid);
+            clearSession(authUid);
+            clearOpenJob();
             setMembershipLoading(false);
-          },
-          (err) => {
-            console.error('Job list listen failed:', err);
-            if (!cancelled) setMembershipLoading(false);
-          },
-        );
-      })
-      .catch((err) => {
-        console.error('Sign-in setup failed:', err);
-        if (!cancelled) {
+            return;
+          }
+          const stored = readSession(authUid);
+          const preferred = pickPreferredOrganisation(orgs, stored.orgId, FAMILY_ORG_ID) || orgs[0];
+          setMembership(preferred);
+          startJobs(preferred);
+        },
+        (err) => {
+          console.error('Organisation lookup failed:', err);
+          if (cancelled) return;
+          stopJobs();
           setMembership({
             invited: false,
-            reason: 'lookup-failed',
+            reason: invitationReasonFromError(err),
+            error: err && err.message,
             email: authEmail,
           });
           setMembershipLoading(false);
-          setProfileLoading(false);
-        }
-      });
+          if (!isRetryableMembershipError(err)) return;
+          retryTimer = window.setTimeout(() => {
+            if (!cancelled) attachOrgs();
+          }, MEMBERSHIP_RETRY_MS);
+        },
+      );
+    };
+
+    attachOrgs();
 
     return () => {
       cancelled = true;
+      window.clearTimeout(retryTimer);
+      unsubOrgs();
       unsubJobs();
     };
   }, [authUid, authEmail]);
@@ -228,10 +305,12 @@ function AppShell() {
   }, [authUser, profile, profileLoading]);
 
   const handleLogout = async () => {
+    clearSession(authUid);
     clearBootCache(authUid);
     await signOut();
     setMembership(null);
     setProfile(null);
+    setAllowedJobs([]);
     setProjectId(null);
     setWorkspaceId(null);
     setProjectName(null);
@@ -245,7 +324,7 @@ function AppShell() {
       return;
     }
     const status = project.status === 'archived' ? 'archived' : 'active';
-    writeSession({
+    writeSession(authUid, {
       projectId: project.projectId,
       workspaceId: project.workspaceId,
       projectName: project.name,
@@ -271,7 +350,7 @@ function AppShell() {
   };
 
   const handleJobAccessLost = () => {
-    writeSession({
+    writeSession(authUid, {
       projectId: null,
       workspaceId: null,
       projectName: null,
@@ -294,7 +373,7 @@ function AppShell() {
     if (row) {
       if (row.projectId !== projectId) {
         const status = row.status === 'archived' ? 'archived' : 'active';
-        writeSession({
+        writeSession(authUid, {
           projectId: row.projectId,
           workspaceId: row.workspaceId,
           projectName: row.name,
@@ -328,25 +407,44 @@ function AppShell() {
     ? profile
     : (profileIsComplete(cachedProfile) ? cachedProfile : profile);
 
-  if (membershipLoading || !membership || (profileLoading && !profileIsComplete(shownProfile))) {
+  const screen = accessScreen({
+    membershipLoading,
+    membership,
+    profileLoading,
+    profileIsComplete: profileIsComplete(shownProfile),
+    profileNeedsSetup: profileNeedsSetup(shownProfile),
+  });
+
+  if (screen === 'boot') {
     return <BootScreen />;
   }
 
-  if (profileNeedsSetup(shownProfile)) {
+  if (screen === 'lookup-failed') {
     return (
-      <ProfileSetupScreen
-        user={authUser}
-        initialProfile={shownProfile}
-        onComplete={setProfile}
+      <AskForAccessScreen
+        email={authEmail}
+        reason="lookup-failed"
         onSignOut={handleLogout}
       />
     );
   }
 
-  if (!membership.invited) {
+  if (screen === 'ask-for-access') {
     return (
       <AskForAccessScreen
         email={authEmail}
+        reason="not-on-list"
+        onSignOut={handleLogout}
+      />
+    );
+  }
+
+  if (screen === 'profile-setup') {
+    return (
+      <ProfileSetupScreen
+        user={authUser}
+        initialProfile={shownProfile}
+        onComplete={setProfile}
         onSignOut={handleLogout}
       />
     );

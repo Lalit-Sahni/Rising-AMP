@@ -1,6 +1,14 @@
-import { collection, doc, getDoc, getDocs, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, doc, getDocs, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { db } from './config';
-import { canonicalEmail, isEmailOnList, normalizeEmail } from './emailAddress';
+import { canonicalEmail, normalizeEmail } from './emailAddress';
+import {
+  invitationReasonFromError,
+  invitationReasonFromOrgs,
+  pickPreferredOrganisation,
+} from '../domain/accessGate';
+import { readSession } from './sessionStore';
+
+export { clearSession, readSession, writeSession, clearLegacyFlatSessionKeys, emptySession } from './sessionStore';
 
 // Opal's live org id. Kept as a fallback so the family app cannot lose its home.
 export const FAMILY_ORG_ID = 'opal-ss-constructions';
@@ -17,55 +25,6 @@ export function getActiveOrgId() {
   return activeOrgId || FAMILY_ORG_ID;
 }
 
-const SESSION_KEYS = {
-  projectId: 'risingAmp.projectId',
-  workspaceId: 'risingAmp.workspaceId',
-  projectName: 'risingAmp.projectName',
-  orgId: 'risingAmp.orgId',
-  invitedEmails: 'risingAmp.invitedEmails',
-  projectStatus: 'risingAmp.projectStatus',
-};
-
-export function readSession() {
-  let invitedEmails = [];
-  try {
-    invitedEmails = JSON.parse(localStorage.getItem(SESSION_KEYS.invitedEmails) || '[]');
-  } catch (error) {
-    invitedEmails = [];
-  }
-  return {
-    projectId: localStorage.getItem(SESSION_KEYS.projectId),
-    workspaceId: localStorage.getItem(SESSION_KEYS.workspaceId),
-    projectName: localStorage.getItem(SESSION_KEYS.projectName),
-    orgId: localStorage.getItem(SESSION_KEYS.orgId),
-    invitedEmails: Array.isArray(invitedEmails) ? invitedEmails : [],
-    projectStatus: localStorage.getItem(SESSION_KEYS.projectStatus) || 'active',
-  };
-}
-
-export function writeSession({ projectId, workspaceId, projectName, orgId, invitedEmails, projectStatus }) {
-  if (projectId) localStorage.setItem(SESSION_KEYS.projectId, projectId);
-  else localStorage.removeItem(SESSION_KEYS.projectId);
-
-  if (workspaceId) localStorage.setItem(SESSION_KEYS.workspaceId, workspaceId);
-  else localStorage.removeItem(SESSION_KEYS.workspaceId);
-
-  if (projectName) localStorage.setItem(SESSION_KEYS.projectName, projectName);
-  else localStorage.removeItem(SESSION_KEYS.projectName);
-
-  if (orgId) localStorage.setItem(SESSION_KEYS.orgId, orgId);
-  else localStorage.removeItem(SESSION_KEYS.orgId);
-
-  if (invitedEmails) localStorage.setItem(SESSION_KEYS.invitedEmails, JSON.stringify(invitedEmails));
-  else localStorage.removeItem(SESSION_KEYS.invitedEmails);
-
-  if (projectStatus) localStorage.setItem(SESSION_KEYS.projectStatus, projectStatus);
-  else localStorage.removeItem(SESSION_KEYS.projectStatus);
-
-  // Legacy PIN-era key. The string must stay; do not rename it to jobId.
-  localStorage.removeItem('accessCode');
-}
-
 /**
  * Cold start used to hold the boot logo through the JS parse, the auth restore,
  * resolveInvitation AND listInvitedProjects before rendering anything. Firestore
@@ -79,8 +38,8 @@ export function writeSession({ projectId, workspaceId, projectName, orgId, invit
  *
  * Keyed by uid and cleared on sign out. Cached membership and jobRole are first
  * paint only and are never authorisation — Firestore rules decide every write.
- * Flat session keys (`risingAmp.projectId` and friends) are still not uid-scoped
- * (Part E.1). Do not treat either cache as a grant.
+ * Session keys are uid-scoped (`risingAmp.session.{uid}`) the same way. Do not
+ * treat either cache as a grant.
  */
 function bootCacheKey(uid) {
   return `risingAmp.boot.${uid}`;
@@ -124,10 +83,6 @@ export function clearBootCache(uid) {
   }
 }
 
-export function clearSession() {
-  writeSession({ projectId: null, workspaceId: null, projectName: null, orgId: null, projectStatus: null });
-}
-
 export { isPermissionDenied } from './permissionMessage';
 
 function mapOrgSnap(orgDoc, email) {
@@ -152,16 +107,40 @@ function mapOrgSnap(orgDoc, email) {
   };
 }
 
+function invitedOrgsQuery(email) {
+  return query(collection(db, 'organizations'), where('invitedEmails', 'array-contains', email));
+}
+
 export async function listOrganisationsForEmail(email) {
-  const snap = await getDocs(
-    query(collection(db, 'organizations'), where('invitedEmails', 'array-contains', email))
-  );
+  const snap = await getDocs(invitedOrgsQuery(email));
   return snap.docs.map((orgDoc) => mapOrgSnap(orgDoc, email));
+}
+
+/**
+ * Same array-contains query as listOrganisationsForEmail. Uninvited users
+ * cannot get a named org doc; an empty snapshot is not-on-list. Keep this
+ * listener attached so an invite lands without a reload.
+ */
+export function listenOrganisationsForEmail(email, onNext, onError) {
+  const queryEmail = normalizeEmail(email);
+  if (!queryEmail.includes('@')) {
+    onNext([], { fromCache: false });
+    return () => {};
+  }
+  const next = (snap) => {
+    onNext(
+      snap.docs.map((orgDoc) => mapOrgSnap(orgDoc, queryEmail)),
+      { fromCache: snap.metadata.fromCache },
+    );
+  };
+  if (onError) return onSnapshot(invitedOrgsQuery(queryEmail), next, onError);
+  return onSnapshot(invitedOrgsQuery(queryEmail), next);
 }
 
 /**
  * Resolve the signed-in user's organisation from membership, not from a
  * hardcoded constant. Prefer a stored org, then Opal if they are on it.
+ * Permission-denied is a failed lookup, not a stranger.
  */
 export async function resolveInvitation(user) {
   const email = normalizeEmail(user && user.email);
@@ -171,25 +150,22 @@ export async function resolveInvitation(user) {
 
   try {
     const orgs = await listOrganisationsForEmail(email);
-    if (orgs.length === 0) {
+    if (invitationReasonFromOrgs(orgs.length) === 'not-on-list') {
       return { invited: false, reason: 'not-on-list', email };
     }
 
-    const session = readSession();
-    const preferred =
-      orgs.find((org) => org.orgId === session.orgId)
-      || orgs.find((org) => org.orgId === FAMILY_ORG_ID)
-      || orgs[0];
-
+    const session = readSession(user && user.uid);
+    const preferred = pickPreferredOrganisation(orgs, session.orgId, FAMILY_ORG_ID) || orgs[0];
     setActiveOrgId(preferred.orgId);
     return { ...preferred, organisations: orgs };
   } catch (error) {
-    const code = error && error.code;
-    if (code === 'permission-denied') {
-      return { invited: false, reason: 'not-on-list', email };
-    }
     console.error('Invitation lookup failed:', error);
-    return { invited: false, reason: 'lookup-failed', error: error.message, email };
+    return {
+      invited: false,
+      reason: invitationReasonFromError(error),
+      error: error && error.message,
+      email,
+    };
   }
 }
 

@@ -1300,7 +1300,10 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Name and photo only, keyed by lowercase email. Get if signed in; no listing.
+    // Name and photo only, keyed by lowercase token email. Get if signed in; no listing.
+    // Gmail dots cannot be stripped here (no String.replace in this rules language).
+    // Lookups try emailInviteVariants. Canonical-id copies are a dry-run backfill,
+    // not a second write key.
     match /publicProfiles/{emailKey} {
       function publicProfileShape() {
         return request.resource.data.keys()

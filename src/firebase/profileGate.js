@@ -1,6 +1,4 @@
-function normalizeEmail(email) {
-  return String(email || '').trim().toLowerCase();
-}
+import { canonicalEmail, emailInviteVariants, emailsMatch, normalizeEmail } from './emailAddress';
 
 export function profileIsComplete(profile) {
   if (!profile) return false;
@@ -47,13 +45,24 @@ export function toPublicProfile(profile) {
   };
 }
 
+export function pickFoundPublicProfile(found, email) {
+  if (!found || typeof found.get !== 'function') return null;
+  const canonical = canonicalEmail(email);
+  if (canonical && found.has(canonical)) return found.get(canonical);
+  const variants = emailInviteVariants(email);
+  for (let i = 0; i < variants.length; i += 1) {
+    if (found.has(variants[i])) return found.get(variants[i]);
+  }
+  return null;
+}
+
 export function pickProfileForEmail(rows, email, exceptUid) {
   const wanted = normalizeEmail(email);
   if (!wanted) return null;
   let fallback = null;
   let sameUidComplete = null;
   for (const candidate of rows || []) {
-    if (normalizeEmail(candidate && candidate.email) !== wanted) continue;
+    if (!emailsMatch(candidate && candidate.email, email)) continue;
     if (!profileIsComplete(candidate)) {
       if (!fallback) fallback = candidate;
       continue;

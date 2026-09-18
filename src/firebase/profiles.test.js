@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile, toPublicProfile, pickProfileForEmail } from './profileGate';
+import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile, toPublicProfile, pickFoundPublicProfile, pickProfileForEmail } from './profileGate';
 
 describe('profile setup gate', () => {
   test('a finished profile is not asked to set up again', () => {
@@ -116,6 +116,26 @@ describe('profile setup gate', () => {
       },
     ], 'Lalit.Sahni@gmail.com', 'google-uid');
     expect(picked.uid).toBe('password-uid');
+  });
+
+  test('email lookup matches Gmail dotted and canonical spellings', () => {
+    const picked = pickProfileForEmail([
+      {
+        uid: 'password-uid',
+        email: 'lalitsahni@gmail.com',
+        displayName: 'Lalit Sahni',
+        businessName: 'Opal SS',
+        setupComplete: true,
+      },
+    ], 'lalit.sahni@gmail.com', 'google-uid');
+    expect(picked.uid).toBe('password-uid');
+    const found = new Map([
+      ['lalitsahni@gmail.com', { email: 'lalitsahni@gmail.com', displayName: 'Lalit Sahni' }],
+    ]);
+    expect(pickFoundPublicProfile(found, 'Lalit.Sahni+job@gmail.com')).toEqual({
+      email: 'lalitsahni@gmail.com',
+      displayName: 'Lalit Sahni',
+    });
   });
 });
 

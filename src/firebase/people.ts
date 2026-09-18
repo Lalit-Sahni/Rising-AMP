@@ -11,7 +11,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from './config';
-import { emailInviteVariants, emailsMatch, normalizeEmail } from './emailAddress';
+import { canonicalEmail, emailInviteVariants, emailsMatch, normalizeEmail } from './emailAddress';
 import { getActiveOrgId } from './tenancy';
 import {
   arraysAfterAssigningRole,
@@ -33,12 +33,16 @@ function jobRef(projectId: string) {
 export async function loadPeopleProfileCards(emails: string[]): Promise<PersonProfileLoad[]> {
   const wanted = Array.from(new Set((emails || []).map((email) => normalizeEmail(email)).filter(Boolean)));
   return Promise.all(wanted.map(async (email) => {
+    const keys = Array.from(new Set([canonicalEmail(email), ...emailInviteVariants(email)].filter(Boolean)));
     try {
-      const snap = await getDoc(doc(db, 'publicProfiles', email));
-      if (!snap.exists()) {
+      const snaps = await Promise.all(keys.map((key) => getDoc(doc(db, 'publicProfiles', key))));
+      const hit = keys
+        .map((key, index) => (snaps[index] && snaps[index].exists() ? { key, snap: snaps[index] } : null))
+        .find((row) => row);
+      if (!hit) {
         return { email, signedIn: false, card: null, updatedAt: null };
       }
-      const data = snap.data() || {};
+      const data = hit.snap.data() || {};
       const card = mapPersonPublicCard({
         uid: data.uid,
         email: data.email || email,
