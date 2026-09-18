@@ -195,6 +195,14 @@ async function main() {
     reason: string;
     trade: string;
   }> = [];
+  const multiHitLosses: Array<{
+    job: string;
+    expenseId: string;
+    who: string;
+    amount: string;
+    beforeReason: string;
+    afterHits: string;
+  }> = [];
   let codedTargeted = 0;
 
   for (const job of jobs) {
@@ -251,6 +259,21 @@ async function main() {
         });
       }
     });
+    after.forEach((row) => {
+      const beforeRow = beforeById.get(row.expenseId);
+      const lostProposal = Boolean(beforeRow && beforeRow.status !== 'none' && row.status === 'none');
+      const multiHit = (row.alternatives || []).length >= 2;
+      if (!lostProposal || !multiHit) return;
+      const expense = uncoded.find((e) => String(e.id) === row.expenseId) as any;
+      multiHitLosses.push({
+        job: jobName,
+        expenseId: row.expenseId,
+        who: String(expense?.supplier || expense?.description || expense?.id || '(unnamed)'),
+        amount: dollars(getExpenseTotalCents(expense)),
+        beforeReason: String(beforeRow?.reason || ''),
+        afterHits: (row.alternatives || []).map((alt) => alt.reason).join(' | '),
+      });
+    });
 
     const beforeCount = before.filter((r) => r.status !== 'none').length;
     const afterRows = after.filter((r) => r.status !== 'none');
@@ -267,18 +290,29 @@ async function main() {
     );
   }
 
-  console.log('\n— Org-wide —');
+  console.log('\n- Org-wide -');
   console.log(`  live ${totalLive} · coded ${totalCoded} · uncoded ${totalUncoded}`);
-  console.log(`  proposals before ${totalBefore} → after ${totalAfter} (+${totalAfter - totalBefore})`);
+  console.log(`  proposals before ${totalBefore} → after ${totalAfter} (${totalAfter - totalBefore >= 0 ? '+' : ''}${totalAfter - totalBefore})`);
   console.log(`  proposals pointing at an already-coded expense: ${codedTargeted} (must be 0)`);
+  console.log(`  lost a proposal by going multi-hit: ${multiHitLosses.length}`);
 
-  console.log('\n— Proposed from who he paid, where the description said nothing —');
+  console.log('\n- Proposed from who he paid, where the description said nothing -');
   if (nameOnlyWins.length === 0) {
     console.log('  (none)');
   }
   nameOnlyWins.forEach((row) => {
     console.log(`  ${row.job} · ${row.who} · ${row.amount} · ${row.expenseId}`);
     console.log(`    ${row.reason}`);
+  });
+
+  console.log('\n- Lost a proposal because two sections now match -');
+  if (multiHitLosses.length === 0) {
+    console.log('  (none)');
+  }
+  multiHitLosses.forEach((row) => {
+    console.log(`  ${row.job} · ${row.who} · ${row.amount} · ${row.expenseId}`);
+    console.log(`    before: ${row.beforeReason}`);
+    console.log(`    after: ${row.afterHits}`);
   });
 
   if (codedTargeted > 0) {
