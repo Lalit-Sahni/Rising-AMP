@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Archive, ArchiveRestore, Check, ChevronRight, Pencil, Plus, Search, UserPlus, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { canonicalEmail, emailInviteVariants } from '../../firebase/emailAddress';
+import { permissionDeniedMessage } from '../../firebase/permissionMessage';
 import {
   createOrgProject,
   inviteEmailToProject,
@@ -225,7 +226,7 @@ export default function JobsHomePage() {
       }
     } catch (err) {
       console.error('Invite failed:', err);
-      setError(err.message || 'Could not save that invite.');
+      setError(permissionDeniedMessage(err, 'invite'));
     } finally {
       setSavingId(null);
     }
@@ -305,7 +306,7 @@ export default function JobsHomePage() {
       );
     } catch (err) {
       console.error('Remove person failed:', err);
-      setError(err.message || 'Could not remove that person.');
+      setError(permissionDeniedMessage(err, 'remove'));
     } finally {
       setSavingId(null);
     }

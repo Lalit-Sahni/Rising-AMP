@@ -77,14 +77,17 @@ export function writeSession({ projectId, workspaceId, projectName, orgId, invit
  * are in the org, and which jobs you can open. Both are revalidated over the
  * network immediately; this only decides what is on screen while that happens.
  *
- * Keyed by uid and cleared on sign out, so a shared machine cannot show one
- * person another's jobs.
+ * Keyed by uid and cleared on sign out. Cached membership and jobRole are first
+ * paint only and are never authorisation — Firestore rules decide every write.
+ * Flat session keys (`risingAmp.projectId` and friends) are still not uid-scoped
+ * (Part E.1). Do not treat either cache as a grant.
  */
 function bootCacheKey(uid) {
   return `risingAmp.boot.${uid}`;
 }
 
 export function readBootCache(uid) {
+  // First paint only. Never authorisation.
   if (!uid || typeof localStorage === 'undefined') return null;
   try {
     const parsed = JSON.parse(localStorage.getItem(bootCacheKey(uid)) || 'null');
@@ -97,6 +100,7 @@ export function readBootCache(uid) {
 }
 
 export function writeBootCache(uid, membership, jobs) {
+  // Paint cache. The role inside membership is not a grant.
   if (!uid || typeof localStorage === 'undefined') return;
   if (!membership || !Array.isArray(jobs)) return;
   try {
@@ -124,11 +128,7 @@ export function clearSession() {
   writeSession({ projectId: null, workspaceId: null, projectName: null, orgId: null, projectStatus: null });
 }
 
-export function isPermissionDenied(error) {
-  const code = error && error.code;
-  const message = String((error && error.message) || error || '');
-  return code === 'permission-denied' || /permission-denied|insufficient permissions/i.test(message);
-}
+export { isPermissionDenied } from './permissionMessage';
 
 function mapOrgSnap(orgDoc, email) {
   const data = orgDoc.data() || {};

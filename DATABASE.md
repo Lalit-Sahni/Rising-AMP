@@ -57,12 +57,13 @@ organizations/{orgId}
     name, orgId, status                        # active | archived
     kind                               # client | own; missing means client
     invitedEmails, formerEmails
+    managers, viewers                     # Phase 18 Part B. Per-job roles. Missing keys = empty = Site. Both Gmail spellings, like invitedEmails. Disjoint; each is a subset of invitedEmails; owner email is never in viewers. Only the org owner may change managers[]. Firestore rules authorise; the uid-keyed boot cache is first paint only and is never a grant.
     archivedAt, archivedBy, createdAt, updatedAt
     legacyWorkspaceId, accessCode              # only on the two original jobs
     budget, expenses[]                         # leftover PIN copy fields; ignore
     files/{id}             job documents (Phase 9). type from a fixed list including estimate; no folders. status active | archived; delete denied. Optional linkedTo { kind, id } for expense | invoice | hiaContract. Files screen also lists expense receipts read-only; it does not copy them. Job Overview reads files for What needs you today; Jobs home does not. Handover pack is generated in the browser from selected files and is not stored. Extracted text is not on this list document.
     files/{id}/content/text  Phase 13 Part C sibling. text, textStatus (ok | truncated | none | unsupported | error), charCount, truncated, contentType, updatedAt. Cap 80_000 characters. Members may read `text` only; client create/update/delete denied. Written by `extractJobFileText` after the file record exists (embedded PDF text, text/plain; images are `none`; Word/Excel/other are `unsupported`). No OCR. No OpenAI. `findFiles` searches this extract. Phase 14 Part F `answerFromDocuments` quotes a verbatim slice of it (with file identity and character position; page only if stored). It never loads the original PDF. A `none` or `error` status is returned as unreadable, not guessed. Staging function live (retry: false so the first create did not need --force). Staging re-extract of existing PDFs (7 Sep 2026, `scripts/reextract-job-file-text.js`): 8 scanned, 4 written (3 ok, 1 error on a broken test PDF). Production function created 11 Sep 2026 (new uploads only; existing production PDFs not backfilled).
-    costPlan/current        optional Phase 10 plan. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections hold trade amounts and optional imported lines. sourceFileId optional. Members only; delete denied. Archiving is reversible: the same `current` document can be replaced with a new draft.
+    costPlan/current        optional Phase 10 plan. targetCents is integer cents; baselineDate; GST mode; draft | locked | archived; sections hold trade amounts and optional imported lines. sourceFileId optional. Job members read. Site may create and edit a draft (including restore archived→draft); lock and archive are manager or owner. Delete denied. Archiving is reversible: the same `current` document can be replaced with a new draft.
     facts/current           optional Phase 16 facts record (`schemaVersion: 1`). Site, building, commercial, dates and compliance; every field optional with source / sourceRef / confirmation / previous (cap 20). Money is integer cents; areas are `{ value, unit: 'sqm' }`. Empty `{ jobId, schemaVersion: 1, updatedAt }` is valid. Schema in `src/domain/jobFacts.ts`. Members of the job read and write a valid shape; delete denied. **Rules live on staging and production (11 Sep 2026).** Phase 16 Part B: proposals are collected in memory (BOQ cover, HIA, unique client/invoice address, labelled file extracts, job name) and written only after a human accepts, via `saveJobFacts`. Proposals are not stored as their own documents. Phase 16 Part C: Overview reads `facts/current` (fail quiet) and shows present fields on the lead and Details panel; in-place owner edits call `saveJobFacts`. Handover / invoice Job line / expense export read present facts only. Phase 16 Part D: Ask `jobFacts` reads this document with getDoc only (403/missing → empty); it never writes.
     ledgerRollup/current    Phase 11 Part E + Phase 13 Part B. Server-owned expense totals (costCents, counts, byCategory, byMonth, byDay, byTrade, byParty). Schema version stays 1. Members read; client write denied. Recomputed from the expense collection; a failed write leaves the previous document. Staging and production have the Phase 13 buckets (production recomputed 11 Sep 2026).
     quotes/{id}            optional Phase 10 quotes. Allocations must sum to amountCents. status received | chosen | passed | void. Optional fileIds (max 10) point at files/{id}; fileId is the first pointer. The PDF is not stored on the quote. Delete denied.
@@ -94,6 +95,8 @@ Live jobs (production):
 Staging may also have Part B test jobs. Localhost always talks to staging.
 
 **Membership** is “is this email string in `invitedEmails`?” There is no `members` subcollection. Invite stores Gmail dotted/undotted variants, so raw array length looks larger than the number of people. Org `invitedEmails` is the door (union of people still on any job). Job `invitedEmails` is what Firestore rules and the Jobs list query use.
+
+**Per-job role** (Phase 18 Part B, on `phase-18-people`, not production) sits on the same job document: `managers[]` and `viewers[]`. Absent from both means **Site**. Rules compare lowercased strings only, so both arrays store both Gmail spellings the same way `invitedEmails` does. The two role arrays are disjoint, each is a subset of `invitedEmails`, and the owner is never a viewer. Only the org owner may edit `managers[]`. A manager can invite and edit `viewers[]` on jobs they already manage. Site does the daily writes (expenses, files, draft cost-plan content). Viewer reads everything and writes nothing. Invoices, HIA, progress payments, and locking or archiving the cost plan are manager or owner. Cached membership/role in `risingAmp.boot.{uid}` is first paint only — it is never authorisation.
 
 **A job is an ID.** Expenses live under that ID. Renaming the job document changes the card and header. Invoices still also store a free-text `projectName` typed at save time (six spellings on Centenary). That string is a snapshot for PDFs, not the source of truth. Screens should show the job’s `name`.
 
@@ -183,9 +186,9 @@ Repo `storage.rules` require sign-in and job membership (or a known legacy PIN f
 
 Staging has a Storage bucket (`rising-amp-staging.firebasestorage.app`, created 28 Aug 2026) so localhost can upload receipts and job files. CORS allows `http://localhost:3000`.
 
-### 3.9 Anyone on a job can write everything on that job
+### 3.9 Job roles are Site, Viewer, Manager, Owner
 
-Rules: if your email is on `invitedEmails`, you can read and write every subcollection (expenses, invoices, HIA, directories). Only the org owner can create jobs, archive, invite, remove people. There is no “bookkeeper vs site manager” split in Firestore. Fine for family. Wrong for a multi-tenant product.
+Rules read `invitedEmails`, `managers[]` and `viewers[]` off the same job `get()`. Missing `managers`/`viewers` means empty means Site, so existing jobs keep working. Site may write expenses, files, quotes, facts and draft cost-plan content; they cannot write invoices or lock/archive the cost plan. Viewer reads those collections and writes nothing. Manager or owner write invoices, HIA, progress payments, and lock or archive the cost plan. Only the org owner may change `managers[]`. Only the org owner may create a job (manager-create needs an org-level signal and is deferred). Rename of `name`/`budget`/`kind` is still any job member until Part D. The boot cache is paint, not a grant.
 
 ### 3.10 One hard-coded organisation
 
@@ -221,7 +224,7 @@ Firestore does not have SQL `SUM()`. If you want a total on the chooser, you eit
 
 | Area | Status |
 |------|--------|
-| Job data | Signed-in email must be on that job’s `invitedEmails`. Isolation holds for one org. |
+| Job data | Signed-in email must be on that job’s `invitedEmails` to read. Writes split by role: Site vs Viewer vs Manager vs Owner. Isolation holds for one org. |
 | Org create | Denied. Cannot spawn a second org from the client. |
 | Job delete | Denied. Archive only. |
 | `users/**` PIN copies | Repo + production Firestore: **deny**. Documents kept. |

@@ -10,6 +10,7 @@ import { costPlanSchema, parseAtBoundary, type CostPlan, type CostPlanSection } 
 import { COST_PLAN_DOC_ID, sumSectionAmounts } from '../domain/costPlan';
 import { db } from './config';
 import { getActiveOrgId } from './tenancy';
+import { permissionDeniedMessage } from './permissionMessage';
 
 type SaveTargetInput = {
   targetCents: number;
@@ -284,36 +285,40 @@ export async function lockCostPlan(jobId: string): Promise<CostPlan> {
   const ref = planRef(jobId);
   let saved: CostPlan | null = null;
 
-  await runTransaction(db, async (transaction) => {
-    const snap = await transaction.get(ref);
-    if (!snap.exists()) {
-      throw new Error('There is no cost plan to lock');
-    }
-    const existing = parseAtBoundary(costPlanSchema, {
-      id: snap.id,
-      ...snap.data(),
+  try {
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(ref);
+      if (!snap.exists()) {
+        throw new Error('There is no cost plan to lock');
+      }
+      const existing = parseAtBoundary(costPlanSchema, {
+        id: snap.id,
+        ...snap.data(),
+      });
+      if (!existing.ok) {
+        throw new Error(validationError(existing.issues));
+      }
+      if (existing.data.status !== 'draft') {
+        throw new Error(baselineNotEditable(existing.data.status));
+      }
+      const now = new Date();
+      const parsed = parseAtBoundary(costPlanSchema, {
+        ...existing.data,
+        status: 'locked' as const,
+        updatedAt: now,
+      });
+      if (!parsed.ok) {
+        throw new Error(validationError(parsed.issues));
+      }
+      transaction.update(ref, {
+        status: 'locked',
+        updatedAt: serverTimestamp(),
+      });
+      saved = parsed.data;
     });
-    if (!existing.ok) {
-      throw new Error(validationError(existing.issues));
-    }
-    if (existing.data.status !== 'draft') {
-      throw new Error(baselineNotEditable(existing.data.status));
-    }
-    const now = new Date();
-    const parsed = parseAtBoundary(costPlanSchema, {
-      ...existing.data,
-      status: 'locked' as const,
-      updatedAt: now,
-    });
-    if (!parsed.ok) {
-      throw new Error(validationError(parsed.issues));
-    }
-    transaction.update(ref, {
-      status: 'locked',
-      updatedAt: serverTimestamp(),
-    });
-    saved = parsed.data;
-  });
+  } catch (error) {
+    throw new Error(permissionDeniedMessage(error, 'costPlanLock'));
+  }
 
   if (!saved) throw new Error('Cost plan was not locked');
   return saved;
@@ -323,38 +328,42 @@ export async function archiveCostPlan(jobId: string): Promise<CostPlan> {
   const ref = planRef(jobId);
   let saved: CostPlan | null = null;
 
-  await runTransaction(db, async (transaction) => {
-    const snap = await transaction.get(ref);
-    if (!snap.exists()) {
-      throw new Error('There is no cost plan to archive');
-    }
-    const existing = parseAtBoundary(costPlanSchema, {
-      id: snap.id,
-      ...snap.data(),
+  try {
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(ref);
+      if (!snap.exists()) {
+        throw new Error('There is no cost plan to archive');
+      }
+      const existing = parseAtBoundary(costPlanSchema, {
+        id: snap.id,
+        ...snap.data(),
+      });
+      if (!existing.ok) {
+        throw new Error(validationError(existing.issues));
+      }
+      if (existing.data.status === 'archived') {
+        throw new Error('This cost plan is already archived');
+      }
+      const now = new Date();
+      const parsed = parseAtBoundary(costPlanSchema, {
+        ...existing.data,
+        status: 'archived' as const,
+        archivedAt: now,
+        updatedAt: now,
+      });
+      if (!parsed.ok) {
+        throw new Error(validationError(parsed.issues));
+      }
+      transaction.update(ref, {
+        status: 'archived',
+        archivedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      saved = parsed.data;
     });
-    if (!existing.ok) {
-      throw new Error(validationError(existing.issues));
-    }
-    if (existing.data.status === 'archived') {
-      throw new Error('This cost plan is already archived');
-    }
-    const now = new Date();
-    const parsed = parseAtBoundary(costPlanSchema, {
-      ...existing.data,
-      status: 'archived' as const,
-      archivedAt: now,
-      updatedAt: now,
-    });
-    if (!parsed.ok) {
-      throw new Error(validationError(parsed.issues));
-    }
-    transaction.update(ref, {
-      status: 'archived',
-      archivedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
-    saved = parsed.data;
-  });
+  } catch (error) {
+    throw new Error(permissionDeniedMessage(error, 'costPlanArchive'));
+  }
 
   if (!saved) throw new Error('Cost plan was not archived');
   return saved;

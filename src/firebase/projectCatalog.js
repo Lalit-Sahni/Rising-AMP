@@ -18,10 +18,11 @@ import { canonicalEmail, emailInviteVariants, normalizeEmail } from './emailAddr
 import { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJobArchived, newJobId } from './jobIdentity';
 import { FAMILY_ORG_ID, getActiveOrgId } from './tenancy';
 import { LEDGER_ROLLUP_COLLECTION, LEDGER_ROLLUP_DOC_ID } from '../domain/ledgerRollupMeta';
+import { resolveJobRole } from '../domain/jobRole';
 
 export { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJobArchived, newJobId };
 
-function mapProjectDoc(projectDoc) {
+function mapProjectDoc(projectDoc, email, ownerEmail) {
   const data = projectDoc.data() || {};
   return {
     id: projectDoc.id,
@@ -32,6 +33,13 @@ function mapProjectDoc(projectDoc) {
     formerEmails: (data.formerEmails || []).map((value) => normalizeEmail(value)),
     status: isJobArchived(data) ? 'archived' : 'active',
     kind: data.kind === 'own' ? 'own' : 'client',
+    jobRole: resolveJobRole({
+      email,
+      ownerEmail: ownerEmail || data.ownerEmail,
+      invitedEmails: data.invitedEmails,
+      managers: data.managers,
+      viewers: data.viewers,
+    }),
   };
 }
 
@@ -98,7 +106,7 @@ export async function listInvitedProjects(email) {
   if (!queryEmail.includes('@')) return [];
 
   const docs = await queryProjectsForEmail(queryEmail);
-  return docs.map(mapProjectDoc);
+  return docs.map((projectDoc) => mapProjectDoc(projectDoc, queryEmail));
 }
 
 /**
@@ -114,7 +122,7 @@ export function listenInvitedProjects(email, onNext, onError) {
   }
 
   const next = (snap) => {
-    onNext(snap.docs.map(mapProjectDoc), { fromCache: snap.metadata.fromCache });
+    onNext(snap.docs.map((projectDoc) => mapProjectDoc(projectDoc, queryEmail)), { fromCache: snap.metadata.fromCache });
   };
 
   if (onError) {
@@ -200,7 +208,7 @@ export async function createOrgProject({ name, ownerEmail, kind }) {
       status: 'active',
       kind: jobKind,
     }),
-  });
+  }, variants[0], ownerEmail);
 }
 
 export async function setOrgProjectArchived(projectId, archived, actorEmail) {
@@ -267,11 +275,22 @@ export async function removeEmailFromProject(projectId, email, viewerEmail) {
     throw new Error('A job must keep its owner.');
   }
 
-  await updateDoc(doc(db, 'organizations', orgId(), 'projects', projectId), {
+  const projectRef = doc(db, 'organizations', orgId(), 'projects', projectId);
+  const projectSnap = await getDoc(projectRef);
+  const projectData = projectSnap.exists() ? (projectSnap.data() || {}) : {};
+  const payload = {
     invitedEmails: arrayRemove(...variants),
     formerEmails: arrayUnion(...variants),
     updatedAt: serverTimestamp(),
-  });
+  };
+  // Missing managers/viewers means Site. arrayRemove on a non-array field fails.
+  if (Array.isArray(projectData.managers)) {
+    payload.managers = arrayRemove(...variants);
+  }
+  if (Array.isArray(projectData.viewers)) {
+    payload.viewers = arrayRemove(...variants);
+  }
+  await updateDoc(projectRef, payload);
 
   // Rules only allow listing jobs *you* are on. Querying the removed
   // person's email is denied even for the owner.

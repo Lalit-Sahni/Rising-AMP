@@ -25,6 +25,7 @@ import {
 } from '../data';
 import logger from '../utils/logger';
 import { isPermissionDenied } from '../firebase/tenancy';
+import { permissionDeniedMessage } from '../firebase/permissionMessage';
 import { AuthProvider, useAuth } from './AuthContext';
 import { OrgProvider, useOrg } from './OrgContext';
 import { UIProvider, useUI } from './UIContext';
@@ -201,12 +202,12 @@ const AppDataProvider = ({
         showToast('Expense added', 'success');
         return { success: true, expense: result.expense };
       } else {
-        showToast('Could not add that expense', 'error');
+        showToast(permissionDeniedMessage(result.error, 'expense'), 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error adding expense:', error);
-      showToast('Could not add that expense', 'error');
+      showToast(permissionDeniedMessage(error, 'expense'), 'error');
       return { success: false, error: error.message };
     }
   };
@@ -222,12 +223,12 @@ const AppDataProvider = ({
         showToast('Expense saved', 'success');
         return { success: true, expense: result.expense };
       } else {
-        showToast('Could not save that expense', 'error');
+        showToast(permissionDeniedMessage(result.error, 'expense'), 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error updating expense:', error);
-      showToast('Could not save that expense', 'error');
+      showToast(permissionDeniedMessage(error, 'expense'), 'error');
       return { success: false, error: error.message };
     }
   };
@@ -399,12 +400,12 @@ const AppDataProvider = ({
         setInvoices(prev => [...prev, result.invoice]);
         return { success: true, invoice: result.invoice };
       } else {
-        showToast('Could not save that invoice', 'error');
+        showToast(permissionDeniedMessage(result.error, 'invoice'), 'error');
         return { success: false, error: result.error };
       }
     } catch (error) {
       console.error('Error adding invoice:', error);
-      showToast('Could not save that invoice', 'error');
+      showToast(permissionDeniedMessage(error, 'invoice'), 'error');
       return { success: false, error: error.message };
     }
   };

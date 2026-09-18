@@ -56,13 +56,79 @@ service cloud.firestore {
           return signedIn() && emailLower() in resource.data.invitedEmails;
         }
 
-        function canUseProject() {
+        // One get. Missing managers/viewers means empty = Site.
+        // Keep these helpers tiny: facts/quotes already sit near the
+        // 1000-expression ceiling, so canWrite must not nest other functions.
+        function jobData() {
+          return get(/databases/$(database)/documents/organizations/$(orgId)/projects/$(projectId)).data;
+        }
+
+        function hasEmailList(data, key) {
+          return data.keys().hasAny([key]) && data[key] is list;
+        }
+
+        function roleList(data, key) {
+          return hasEmailList(data, key) ? data[key] : [];
+        }
+
+        function canRead() {
+          return signedIn() && emailLower() in jobData().invitedEmails;
+        }
+
+        function canWrite() {
+          let job = jobData();
           return signedIn()
-            && emailLower() in get(/databases/$(database)/documents/organizations/$(orgId)/projects/$(projectId)).data.invitedEmails;
+            && emailLower() in job.invitedEmails
+            && !(job.keys().hasAny(['viewers']) && emailLower() in job.viewers);
+        }
+
+        function canManage() {
+          let job = jobData();
+          return isOrgOwner()
+            || (
+              signedIn()
+              && job.keys().hasAny(['managers'])
+              && emailLower() in job.managers
+            );
+        }
+
+        function ownerEmailLower() {
+          return orgDoc().data.ownerEmail.lower();
         }
 
         function ownerStaysOnJob() {
-          return orgDoc().data.ownerEmail.lower() in request.resource.data.invitedEmails;
+          return ownerEmailLower() in request.resource.data.invitedEmails
+            && !(ownerEmailLower() in roleList(request.resource.data, 'viewers'));
+        }
+
+        function roleArraysOk(data) {
+          let managers = roleList(data, 'managers');
+          let viewers = roleList(data, 'viewers');
+          return data.invitedEmails is list
+            && (!data.keys().hasAny(['managers']) || data.managers is list)
+            && (!data.keys().hasAny(['viewers']) || data.viewers is list)
+            && data.invitedEmails.hasAll(managers)
+            && data.invitedEmails.hasAll(viewers)
+            && !managers.hasAny(viewers)
+            && !(ownerEmailLower() in viewers);
+        }
+
+        function managersEditOk() {
+          return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['managers'])
+            || isOrgOwner();
+        }
+
+        function memberRenameKeys() {
+          return request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['name', 'updatedAt', 'budget', 'kind']);
+        }
+
+        function managePeopleKeys() {
+          return request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly([
+              'name', 'invitedEmails', 'managers', 'viewers', 'formerEmails',
+              'status', 'archivedAt', 'archivedBy', 'updatedAt', 'budget', 'kind'
+            ]);
         }
 
         function statusOk() {
@@ -71,6 +137,9 @@ service cloud.firestore {
         }
 
         allow read: if isProjectMember();
+        // isManager() reads this job. On create that document does not exist,
+        // so a manager of another job cannot prove it here. Manager-create
+        // needs an org-level signal and is deferred. Owner can create.
         allow create: if isOrgOwner()
           && request.resource.data.orgId == orgId
           && request.resource.data.name is string
@@ -78,7 +147,13 @@ service cloud.firestore {
           && request.resource.data.status == 'active'
           && request.resource.data.invitedEmails is list
           && emailLower() in request.resource.data.invitedEmails
-          && orgDoc().data.ownerEmail.lower() in request.resource.data.invitedEmails
+          && ownerEmailLower() in request.resource.data.invitedEmails
+          && roleArraysOk(request.resource.data)
+          && (
+            !hasEmailList(request.resource.data, 'managers')
+            || request.resource.data.managers.size() == 0
+            || isOrgOwner()
+          )
           && (
             !request.resource.data.keys().hasAny(['kind'])
             || request.resource.data.kind in ['client', 'own']
@@ -87,14 +162,10 @@ service cloud.firestore {
         allow update: if isProjectMember()
           && ownerStaysOnJob()
           && statusOk()
+          && roleArraysOk(request.resource.data)
           && (
-            request.resource.data.diff(resource.data).affectedKeys()
-              .hasOnly(['name', 'updatedAt', 'budget', 'kind'])
-            || (
-              isOrgOwner()
-              && request.resource.data.diff(resource.data).affectedKeys()
-                .hasOnly(['name', 'invitedEmails', 'formerEmails', 'status', 'archivedAt', 'archivedBy', 'updatedAt', 'budget', 'kind'])
-            )
+            memberRenameKeys()
+            || (canManage() && managePeopleKeys() && managersEditOk())
           );
         allow delete: if false;
 
@@ -158,62 +229,62 @@ service cloud.firestore {
         }
 
         match /expenses/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject() && expenseOk();
-          allow delete: if canUseProject()
+          allow read: if canRead();
+          allow create, update: if canWrite() && expenseOk();
+          allow delete: if canWrite()
             && resource.data.keys().hasAny(['status'])
             && resource.data.status == 'void';
         }
         match /invoices/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject() && invoiceOk();
-          allow delete: if canUseProject()
+          allow read: if canRead();
+          allow create, update: if canManage() && invoiceOk();
+          allow delete: if canManage()
             && resource.data.keys().hasAny(['status'])
             && resource.data.status == 'void';
         }
         match /hiaContracts/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject();
+          allow read: if canRead();
+          allow create, update: if canManage();
           allow delete: if false;
         }
         match /progressPayments/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject();
+          allow read: if canRead();
+          allow create, update: if canManage();
           allow delete: if false;
         }
         match /labour/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject();
+          allow read: if canRead();
+          allow create, update: if canWrite();
           allow delete: if false;
         }
         match /trades/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject();
+          allow read: if canRead();
+          allow create, update: if canWrite();
           allow delete: if false;
         }
         match /clients/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject();
+          allow read: if canRead();
+          allow create, update: if canWrite();
           allow delete: if false;
         }
         match /suppliers/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject();
+          allow read: if canRead();
+          allow create, update: if canWrite();
           allow delete: if false;
         }
         match /serviceProviders/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject();
+          allow read: if canRead();
+          allow create, update: if canWrite();
           allow delete: if false;
         }
         match /payers/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject();
+          allow read: if canRead();
+          allow create, update: if canWrite();
           allow delete: if false;
         }
         match /bankDetails/{itemId} {
-          allow read: if canUseProject();
-          allow create, update: if canUseProject();
+          allow read: if canRead();
+          allow create, update: if canWrite();
           allow delete: if false;
         }
         match /costPlan/{planId} {
@@ -284,36 +355,39 @@ service cloud.firestore {
               .hasOnly(['targetCents', 'baselineDate', 'gstMode', 'updatedAt', 'level', 'sections', 'sourceFileId']);
           }
 
-          allow read: if canUseProject();
-          allow create: if canUseProject()
+          allow read: if canRead();
+          allow create: if canWrite()
             && costPlanShapeOk()
             && request.resource.data.createdBy == request.auth.uid
             && request.resource.data.status == 'draft'
             && request.resource.data.level == 'target'
             && request.resource.data.sections.size() == 0;
-          allow update: if canUseProject()
-            && costPlanShapeOk()
+          allow update: if costPlanShapeOk()
             && costPlanIdentityOk()
             && (
               (
-                resource.data.status == 'draft'
+                canWrite()
+                && resource.data.status == 'draft'
                 && request.resource.data.status == 'draft'
                 && costPlanDraftContentKeys()
               )
               || (
-                resource.data.status == 'draft'
+                canManage()
+                && resource.data.status == 'draft'
                 && request.resource.data.status == 'locked'
                 && request.resource.data.diff(resource.data).affectedKeys()
                   .hasOnly(['status', 'updatedAt'])
               )
               || (
-                resource.data.status in ['draft', 'locked']
+                canManage()
+                && resource.data.status in ['draft', 'locked']
                 && request.resource.data.status == 'archived'
                 && request.resource.data.diff(resource.data).affectedKeys()
                   .hasOnly(['status', 'archivedAt', 'updatedAt'])
               )
               || (
-                resource.data.status == 'archived'
+                canWrite()
+                && resource.data.status == 'archived'
                 && request.resource.data.status == 'draft'
                 && request.resource.data.archivedAt == null
                 && request.resource.data.diff(resource.data).affectedKeys()
@@ -586,14 +660,14 @@ service cloud.firestore {
               );
           }
 
-          allow read: if canUseProject();
-          allow create: if canUseProject()
+          allow read: if canRead();
+          allow create: if canWrite()
             && factsShapeOk()
             && (
               !request.resource.data.keys().hasAny(['createdBy'])
               || request.resource.data.createdBy == request.auth.uid
             );
-          allow update: if canUseProject()
+          allow update: if canWrite()
             && factsShapeOk()
             && factsIdentityOk();
           allow delete: if false;
@@ -662,12 +736,12 @@ service cloud.firestore {
               );
           }
 
-          allow read: if canUseProject();
-          allow create: if canUseProject()
+          allow read: if canRead();
+          allow create: if canWrite()
             && quoteOk()
             && request.resource.data.createdBy == request.auth.uid
             && request.resource.data.status in ['received', 'chosen', 'passed'];
-          allow update: if canUseProject()
+          allow update: if canWrite()
             && quoteOk()
             && request.resource.data.createdBy == resource.data.createdBy
             && request.resource.data.createdAt == resource.data.createdAt
@@ -758,12 +832,12 @@ service cloud.firestore {
               && jobFileLinkedToOk();
           }
 
-          allow read: if canUseProject();
-          allow create: if canUseProject()
+          allow read: if canRead();
+          allow create: if canWrite()
             && jobFileOk()
             && request.resource.data.uploadedBy == request.auth.uid
             && request.resource.data.status == 'active';
-          allow update: if canUseProject()
+          allow update: if canWrite()
             && jobFileOk()
             && request.resource.data.uploadedBy == resource.data.uploadedBy
             && request.resource.data.storagePath == resource.data.storagePath;
@@ -773,12 +847,12 @@ service cloud.firestore {
           // document. Must stay inside this match — the project catch-all
           // below would deny it.
           match /content/{docId} {
-            allow read: if canUseProject() && docId == 'text';
+            allow read: if canRead() && docId == 'text';
             allow create, update, delete: if false;
           }
         }
         match /ledgerRollup/{docId} {
-          allow read: if canUseProject() && docId == 'current';
+          allow read: if canRead() && docId == 'current';
           allow create, update, delete: if false;
         }
         // Phase 17 Part F. One row per invite send. The sendJobInviteEmail
@@ -809,8 +883,8 @@ service cloud.firestore {
               && request.resource.data.to in get(/databases/$(database)/documents/organizations/$(orgId)/projects/$(projectId)).data.invitedEmails;
           }
 
-          allow read: if canUseProject();
-          allow create: if canUseProject() && gmailInviteOk();
+          allow read: if canRead();
+          allow create: if canWrite() && gmailInviteOk();
           allow update, delete: if false;
         }
         match /{allPaths=**} {

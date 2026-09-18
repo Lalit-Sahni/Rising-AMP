@@ -1,5 +1,16 @@
 # Progress
 
+## Phase 18 — in flight (18 Sep 2026)
+
+Branch **`phase-18-people`**. Brief: `PHASE18.md`. Nothing deployed. Production is untouched and still runs the Phase 16/17 shopfront.
+
+Part A is recorded (`6bd23a3`, People design). **Part B is this branch:** roles on the job document (`managers[]` / `viewers[]`, missing = Site) and Firestore rules that mean them. Not production. Parts C–G have not started.
+
+| Part | SHA | State |
+| --- | --- | --- |
+| A People design | `6bd23a3` | recorded |
+| B Roles model + rules | this commit | on `phase-18-people` only |
+
 ## Phase 17 — in flight (14 Sep 2026)
 
 Branch **`phase-17-coding-fixes`**, cut from `phase-16-job-facts` at `ac1239c`. Restore tag **`pre-phase17-2026-09-14`**. Brief: `PHASE17.md`. Nothing deployed. Production is untouched and still runs the Phase 16 build.

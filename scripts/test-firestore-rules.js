@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Rules tests: profiles, ledger void/purge, org isolation, job files,
- * and invite send records (Phase 17 Part F).
+ * invite send records (Phase 17 Part F), and Phase 18 Part B job roles.
  * Run with: npm run test:rules
  */
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require('@firebase/rules-unit-testing');
@@ -1089,6 +1089,193 @@ async function main() {
     await assertFails(owner.firestore().doc(seededInvitePath).delete());
     await assertFails(owner.firestore().doc(`organizations/${ORG}/projects/${JOB}/invites/inv-gmail`).delete());
 
+    // Phase 18 Part B. Roles on the job document.
+    const SITE = { uid: 'site-1', email: 'site@opal.test' };
+    const VIEWER = { uid: 'viewer-1', email: 'viewer@opal.test' };
+    const MANAGER = { uid: 'manager-1', email: 'manager@opal.test' };
+    const JOB_ROLES = 'job-roles';
+    const JOB_SITE = 'job-site-only';
+    const rolesExpense = `organizations/${ORG}/projects/${JOB_ROLES}/expenses/e-roles`;
+    const rolesInvoice = `organizations/${ORG}/projects/${JOB_ROLES}/invoices/inv-roles`;
+    const rolesPlan = `organizations/${ORG}/projects/${JOB_ROLES}/costPlan/current`;
+    const rolesJob = `organizations/${ORG}/projects/${JOB_ROLES}`;
+    const siteOnlyJob = `organizations/${ORG}/projects/${JOB_SITE}`;
+    const draftPlan = (jobId, uid) => ({
+      jobId,
+      level: 'target',
+      targetCents: 1000000,
+      baselineDate: '2026-08-31',
+      gstMode: 'inclusive',
+      status: 'draft',
+      sections: [],
+      createdBy: uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      archivedAt: null,
+    });
+
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      const db = context.firestore();
+      await db.doc(`organizations/${ORG}`).update({
+        invitedEmails: [
+          OWNER.email, COWORKER.email, SITE.email, VIEWER.email, MANAGER.email,
+        ],
+      });
+      await db.doc(rolesJob).set({
+        name: 'Roles job',
+        orgId: ORG,
+        invitedEmails: [OWNER.email, SITE.email, VIEWER.email, MANAGER.email],
+        managers: [MANAGER.email],
+        viewers: [VIEWER.email],
+        status: 'active',
+      });
+      await db.doc(siteOnlyJob).set({
+        name: 'Site-only job',
+        orgId: ORG,
+        invitedEmails: [OWNER.email, MANAGER.email],
+        status: 'active',
+      });
+      await db.doc(rolesExpense).set({ category: 'purchase', total: 4 });
+      await db.doc(rolesInvoice).set({
+        invoiceNumber: '2026-0100',
+        status: 'draft',
+        total: 9,
+      });
+      await db.doc(rolesPlan).set(draftPlan(JOB_ROLES, OWNER.uid));
+    });
+
+    const site = testEnv.authenticatedContext(SITE.uid, {
+      email: SITE.email,
+      email_verified: true,
+    });
+    const viewer = testEnv.authenticatedContext(VIEWER.uid, {
+      email: VIEWER.email,
+      email_verified: true,
+    });
+    const manager = testEnv.authenticatedContext(MANAGER.uid, {
+      email: MANAGER.email,
+      email_verified: true,
+    });
+
+    // Missing managers/viewers = Site. Invited coworker writes expenses,
+    // cannot write invoices or lock the cost plan. Owner can.
+    await assertSucceeds(coworker.firestore().doc(
+      `organizations/${ORG}/projects/${JOB}/expenses/e-site-default`,
+    ).set({ category: 'purchase', total: 2 }));
+    await assertFails(coworker.firestore().doc(
+      `organizations/${ORG}/projects/${JOB}/invoices/inv-site-default`,
+    ).set({ invoiceNumber: '2026-0101', status: 'draft', total: 5 }));
+    await assertSucceeds(coworker.firestore().doc(costPlanPath).update({
+      targetCents: 2500000,
+      updatedAt: new Date(),
+    }));
+    await assertFails(coworker.firestore().doc(costPlanPath).update({
+      status: 'locked',
+      updatedAt: new Date(),
+    }));
+    await assertSucceeds(owner.firestore().doc(
+      `organizations/${ORG}/projects/${JOB}/invoices/inv-owner-roles`,
+    ).set({ invoiceNumber: '2026-0102', status: 'draft', total: 8 }));
+    await assertSucceeds(owner.firestore().doc(costPlanPath).update({
+      status: 'locked',
+      updatedAt: new Date(),
+    }));
+
+    // Viewer reads, writes nothing, can still rename (Part B).
+    await assertSucceeds(viewer.firestore().doc(rolesExpense).get());
+    await assertSucceeds(viewer.firestore().doc(rolesInvoice).get());
+    await assertSucceeds(viewer.firestore().doc(rolesPlan).get());
+    await assertFails(viewer.firestore().doc(rolesExpense).set({
+      category: 'purchase',
+      total: 3,
+    }));
+    await assertFails(viewer.firestore().doc(
+      `organizations/${ORG}/projects/${JOB_ROLES}/invoices/inv-viewer`,
+    ).set({ invoiceNumber: '2026-0103', status: 'draft', total: 1 }));
+    await assertSucceeds(viewer.firestore().doc(rolesJob).update({
+      name: 'Renamed by viewer',
+      updatedAt: new Date(),
+    }));
+
+    // Manager: invoice, lock, people below them. Not managers[], not owner.
+    await assertSucceeds(manager.firestore().doc(
+      `organizations/${ORG}/projects/${JOB_ROLES}/invoices/inv-manager`,
+    ).set({ invoiceNumber: '2026-0104', status: 'draft', total: 11 }));
+    await assertSucceeds(manager.firestore().doc(rolesPlan).update({
+      status: 'locked',
+      updatedAt: new Date(),
+    }));
+    await assertSucceeds(manager.firestore().doc(rolesJob).update({
+      invitedEmails: [OWNER.email, SITE.email, VIEWER.email, MANAGER.email, 'book@opal.test'],
+      viewers: [VIEWER.email],
+      updatedAt: new Date(),
+    }));
+    await assertFails(manager.firestore().doc(rolesJob).update({
+      invitedEmails: [SITE.email, VIEWER.email, MANAGER.email, 'book@opal.test'],
+      updatedAt: new Date(),
+    }));
+    await assertFails(manager.firestore().doc(rolesJob).update({
+      viewers: [VIEWER.email, OWNER.email],
+      updatedAt: new Date(),
+    }));
+    await assertFails(manager.firestore().doc(rolesJob).update({
+      managers: [MANAGER.email, SITE.email],
+      updatedAt: new Date(),
+    }));
+    await assertFails(manager.firestore().doc(siteOnlyJob).update({
+      managers: [MANAGER.email],
+      updatedAt: new Date(),
+    }));
+    await assertFails(manager.firestore().doc(
+      `organizations/${ORG}/projects/job-manager-create`,
+    ).set({
+      name: 'Manager create',
+      orgId: ORG,
+      invitedEmails: [OWNER.email, MANAGER.email],
+      status: 'active',
+      kind: 'client',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
+    // Site cannot invite. Disjoint / subset fail. Stranger fails. Owner create works.
+    await assertFails(coworker.firestore().doc(
+      `organizations/${ORG}/projects/${JOB}`,
+    ).update({
+      invitedEmails: [OWNER.email, COWORKER.email, SITE.email],
+      updatedAt: new Date(),
+    }));
+    await assertFails(site.firestore().doc(rolesJob).update({
+      invitedEmails: [OWNER.email, SITE.email, VIEWER.email, MANAGER.email, 'book@opal.test', 'extra@opal.test'],
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(rolesJob).update({
+      managers: [MANAGER.email, VIEWER.email],
+      viewers: [VIEWER.email],
+      updatedAt: new Date(),
+    }));
+    await assertFails(owner.firestore().doc(rolesJob).update({
+      managers: [MANAGER.email, 'ghost@opal.test'],
+      updatedAt: new Date(),
+    }));
+    await assertFails(stranger.firestore().doc(rolesExpense).get());
+    await assertFails(stranger.firestore().doc(rolesJob).update({
+      name: 'Hacked',
+      updatedAt: new Date(),
+    }));
+    await assertSucceeds(owner.firestore().doc(
+      `organizations/${ORG}/projects/job-owner-create`,
+    ).set({
+      name: 'Owner create',
+      orgId: ORG,
+      invitedEmails: [OWNER.email],
+      formerEmails: [],
+      status: 'active',
+      kind: 'client',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }));
+
     const storageRefPath = `files/${ORG}/${JOB}/f1/slab.pdf`;
     await assertSucceeds(
       owner.storage().ref(storageRefPath).put(Buffer.from('%PDF-1.4'), { contentType: 'application/pdf' }),
@@ -1115,7 +1302,7 @@ async function main() {
       ),
     );
 
-    console.log('firestore.rules cost-plan and job-file tests passed; storage.rules job-file tests passed');
+    console.log('firestore.rules cost-plan, job-file and role tests passed; storage.rules job-file tests passed');
   } finally {
     await testEnv.cleanup();
   }
