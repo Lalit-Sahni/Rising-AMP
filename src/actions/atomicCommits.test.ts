@@ -2,9 +2,11 @@
  * A write and its receipt are one commit. If the commit fails, nothing
  * lands: no coded expense pointing at a missing receipt, no created row
  * without its undo handle, no reverted row still showing 'applied'.
- * A failed commit never burns the clientKey, so the same tap retries clean.
+ * Batch undo is the same: remaining children and the parent stamp go
+ * together. A failed commit never burns the clientKey, so the same tap retries clean.
  */
 import { codeExpense } from './codeExpense';
+import { codeExpenseBatch } from './codeExpenseBatch';
 import { createExpense } from './createExpense';
 import { createMemoryActionStore } from './store';
 import { undoAction } from './undo';
@@ -211,5 +213,102 @@ describe('commitCreation', () => {
     expect(retry.ok).toBe(true);
     expect((await store.getExpense(SCOPE.orgId, 'job-a', 'exp-new'))?.status).toBe('void');
     expect((await store.getReceipt(SCOPE.orgId, created.receipt.id))?.status).toBe('undone');
+  });
+});
+
+describe('commitUndoBatch', () => {
+  async function codedBatch() {
+    const store = createMemoryActionStore();
+    store.seedExpense(SCOPE.orgId, { id: 'e1', jobId: 'job-a', tradeId: null });
+    store.seedExpense(SCOPE.orgId, { id: 'e2', jobId: 'job-a', tradeId: null });
+    const coded = await codeExpenseBatch({
+      scope: SCOPE,
+      jobId: 'job-a',
+      clientKey: 'client-key-atomic-batch',
+      origin: 'human',
+      rows: [
+        {
+          expenseId: 'e1',
+          tradeId: 'concreting',
+          evidence: { tradeId: { source: 'user', value: 'concreting' } },
+        },
+        {
+          expenseId: 'e2',
+          tradeId: 'carpentry',
+          evidence: { tradeId: { source: 'user', value: 'carpentry' } },
+        },
+      ],
+    }, store);
+    return { store, coded };
+  }
+
+  test('when the batch undo commit fails, no child is reverted and the parent stays applied', async () => {
+    const { store, coded } = await codedBatch();
+    expect(coded.ok).toBe(true);
+    if (!coded.ok) return;
+    store.failNextCommit = true;
+    await expect(undoAction({
+      scope: SCOPE,
+      receiptId: coded.receipt.id,
+      clientKey: 'client-key-atomic-batch-undo',
+    }, store)).rejects.toThrow('injected_commit_failure');
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'e1'))?.tradeId).toBe('concreting');
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'e2'))?.tradeId).toBe('carpentry');
+    expect((await store.getReceipt(SCOPE.orgId, coded.receipt.id))?.status).toBe('applied');
+    if (coded.receipt.undo.kind !== 'restoreTradeIdBatch') return;
+    const childA = await store.getReceipt(SCOPE.orgId, coded.receipt.undo.items[0].receiptId);
+    const childB = await store.getReceipt(SCOPE.orgId, coded.receipt.undo.items[1].receiptId);
+    expect(childA?.status).toBe('applied');
+    expect(childB?.status).toBe('applied');
+
+    const retry = await undoAction({
+      scope: SCOPE,
+      receiptId: coded.receipt.id,
+      clientKey: 'client-key-atomic-batch-undo',
+    }, store);
+    expect(retry.ok).toBe(true);
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'e1'))?.tradeId).toBe(null);
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'e2'))?.tradeId).toBe(null);
+    expect((await store.getReceipt(SCOPE.orgId, coded.receipt.id))?.status).toBe('undone');
+    expect((await store.getReceipt(SCOPE.orgId, coded.receipt.undo.items[0].receiptId))?.status).toBe('undone');
+    expect((await store.getReceipt(SCOPE.orgId, coded.receipt.undo.items[1].receiptId))?.status).toBe('undone');
+  });
+
+  test('a child already undone is skipped and the rest still land with the parent', async () => {
+    const { store, coded } = await codedBatch();
+    expect(coded.ok).toBe(true);
+    if (!coded.ok || coded.receipt.undo.kind !== 'restoreTradeIdBatch') return;
+    const firstChild = coded.receipt.undo.items[0];
+    await undoAction({
+      scope: SCOPE,
+      receiptId: firstChild.receiptId,
+      clientKey: 'client-key-atomic-child-first',
+    }, store);
+    store.failNextCommit = true;
+    await expect(undoAction({
+      scope: SCOPE,
+      receiptId: coded.receipt.id,
+      clientKey: 'client-key-atomic-batch-rest',
+    }, store)).rejects.toThrow('injected_commit_failure');
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'e1'))?.tradeId).toBe(null);
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'e2'))?.tradeId).toBe('carpentry');
+    expect((await store.getReceipt(SCOPE.orgId, coded.receipt.id))?.status).toBe('applied');
+
+    const retry = await undoAction({
+      scope: SCOPE,
+      receiptId: coded.receipt.id,
+      clientKey: 'client-key-atomic-batch-rest',
+    }, store);
+    expect(retry.ok).toBe(true);
+    expect((await store.getExpense(SCOPE.orgId, 'job-a', 'e2'))?.tradeId).toBe(null);
+    expect((await store.getReceipt(SCOPE.orgId, coded.receipt.id))?.status).toBe('undone');
+  });
+
+  test('batch undo does not fall back to a write that skips the receipt', async () => {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    const source = fs.readFileSync(path.join(process.cwd(), 'src/actions/undo.ts'), 'utf8');
+    expect(source).not.toMatch(/updateExpense/);
+    expect(source).not.toMatch(/undo-\$\{item\.receiptId\}/);
   });
 });

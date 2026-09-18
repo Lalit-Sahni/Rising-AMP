@@ -30,6 +30,7 @@ import type {
   ExpenseWrite,
   ReceiptPatch,
   StoredExpense,
+  UndoBatchCommit,
 } from '../actions/store';
 import { db } from './config';
 import { readAssistantWritesEnabled } from './assistantWrites';
@@ -264,6 +265,26 @@ export function createFirestoreActionStore(): ActionStore {
         }
       }
       batch.update(receiptRef(commit.orgId, commit.receiptId), receiptPatchFields(commit.receiptPatch));
+      await batch.commit();
+    },
+    async commitUndoBatch(commit: UndoBatchCommit) {
+      const batch = writeBatch(db);
+      commit.items.forEach((item) => {
+        batch.update(
+          expenseRef(commit.orgId, commit.jobId, item.expenseId),
+          expensePatchFields(item.patch),
+        );
+        if (item.receiptId && item.receiptPatch) {
+          batch.update(
+            receiptRef(commit.orgId, item.receiptId),
+            receiptPatchFields(item.receiptPatch),
+          );
+        }
+      });
+      batch.update(
+        receiptRef(commit.orgId, commit.parentReceiptId),
+        receiptPatchFields(commit.parentReceiptPatch),
+      );
       await batch.commit();
     },
     async assistantWritesEnabled(orgId) {

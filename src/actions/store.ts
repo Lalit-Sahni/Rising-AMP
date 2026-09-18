@@ -89,6 +89,26 @@ export type UndoCommit = {
   receiptPatch: ReceiptPatch;
 };
 
+/** One child in a batch undo. A missing child receipt still reverts the expense. */
+export type UndoBatchItem = {
+  expenseId: string;
+  patch: ExpenseWrite;
+  receiptId?: string;
+  receiptPatch?: ReceiptPatch;
+};
+
+/**
+ * Every remaining child revert, every remaining child receipt stamp, and the
+ * parent undone stamp. One commit, or nothing.
+ */
+export type UndoBatchCommit = {
+  orgId: string;
+  jobId: string;
+  items: UndoBatchItem[];
+  parentReceiptId: string;
+  parentReceiptPatch: ReceiptPatch;
+};
+
 export type ActionStore = {
   getExpense(orgId: string, jobId: string, expenseId: string): Promise<StoredExpense | null>;
   updateExpense(
@@ -112,6 +132,7 @@ export type ActionStore = {
   commitCoding(commit: CodingCommit): Promise<void>;
   commitCreation(commit: CreationCommit): Promise<void>;
   commitUndo(commit: UndoCommit): Promise<void>;
+  commitUndoBatch(commit: UndoBatchCommit): Promise<void>;
   /**
    * Only a deliberate false is off. Missing is on. A read that failed is
    * 'unknown', which is allowed rather than presented as someone's choice.
@@ -306,6 +327,16 @@ export function createMemoryActionStore(seed: StoredExpense[] = [], orgId = 'org
         applyVoidExpense(commit.orgId, commit.jobId, commit.expenseId);
       }
       applyReceiptPatch(commit.orgId, commit.receiptId, commit.receiptPatch);
+    },
+    async commitUndoBatch(commit) {
+      throwIfCommitFault();
+      commit.items.forEach((item) => {
+        applyExpensePatch(commit.orgId, commit.jobId, item.expenseId, item.patch);
+        if (item.receiptId && item.receiptPatch) {
+          applyReceiptPatch(commit.orgId, item.receiptId, item.receiptPatch);
+        }
+      });
+      applyReceiptPatch(commit.orgId, commit.parentReceiptId, commit.parentReceiptPatch);
     },
   };
 

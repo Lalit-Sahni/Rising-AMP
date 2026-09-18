@@ -12,7 +12,7 @@ import {
   queryScopeSchema,
   type ActionResult,
 } from './core';
-import type { ActionStore } from './store';
+import type { ActionStore, UndoBatchItem } from './store';
 
 export const undoActionInputSchema = z
   .object({
@@ -65,20 +65,29 @@ export async function undoAction(input: unknown, store: ActionStore): Promise<Ac
   }
 
   if (receipt.status === 'applied' && receipt.undo.kind === 'restoreTradeIdBatch') {
+    const items: UndoBatchItem[] = [];
     for (const item of receipt.undo.items) {
-      const child = await undoAction({
-        scope,
-        receiptId: item.receiptId,
-        clientKey: `undo-${item.receiptId}`.slice(0, 128).padEnd(8, 'x'),
-      }, store);
-      if (child.ok) continue;
-      await store.updateExpense(scope.orgId, receipt.jobId, item.expenseId, {
-        tradeId: item.previousTradeId,
-        clearAssistantStamp: true,
-        updatedAt: new Date(),
+      const child = await store.getReceipt(scope.orgId, item.receiptId);
+      if (child?.status === 'undone') continue;
+      items.push({
+        expenseId: item.expenseId,
+        patch: {
+          tradeId: item.previousTradeId,
+          clearAssistantStamp: true,
+          updatedAt: undoneAt,
+        },
+        ...(child
+          ? { receiptId: child.id, receiptPatch: { status: 'undone' as const, undoneAt } }
+          : {}),
       });
     }
-    await store.patchReceipt(scope.orgId, receipt.id, { status: 'undone', undoneAt });
+    await store.commitUndoBatch({
+      orgId: scope.orgId,
+      jobId: receipt.jobId,
+      items,
+      parentReceiptId: receipt.id,
+      parentReceiptPatch: { status: 'undone', undoneAt },
+    });
     return { ok: true, receipt: undoneReceipt };
   }
 
