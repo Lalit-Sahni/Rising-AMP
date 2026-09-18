@@ -1,23 +1,59 @@
 # Progress
 
-## Phase 18 — in flight (18 Sep 2026)
+## Phase 18 — morning summary (18 Sep 2026)
 
-Branch **`phase-18-people`**. Brief: `PHASE18.md`. Nothing deployed. Production is untouched and still runs the Phase 16/17 shopfront.
+Branch **`phase-18-people`**. Brief: `PHASE18.md`. Restore tag **`pre-phase18-2026-09-18`**. **Nothing deployed** (not hosting, not Firestore rules, not Storage, not functions, staging or production). Production is untouched and still runs the Phase 16/17 shopfront. Localhost stays on staging. Do not read this as Phase 18 live.
 
-Part A is recorded (`6bd23a3`, People design). Part B is on this branch (`682b662`). Part C is on this branch (`d51f91d`). Part D is on this branch (`eb1230c`). **Part E is this ladder:** session is uid-scoped and cleared on logout (old flat keys deleted; job state is not seeded until `authUid` is known). Uninvited people listen to the org `invitedEmails` array-contains query, so an invite lands without reload; permission-denied / unavailable retry as lookup-failed, never as a stranger. Ask-for-access is decided before ProfileSetup. Public profile lookups try every `emailInviteVariants` candidate; writes stay on `token.email.lower()` (rules have no String.replace, so Gmail dots are not stripped there). Dry-run backfill `scripts/phase18-canonical-public-profiles.ts` proposes canonical-id copies and refuses `--production` without `--i-mean-production`; not applied. `removeEmailFromProject` no longer writes the org document. `tradeList` read is `isOrgInvited()`; avatar read is signed-in family-org invited (own uid still reads). **Part F is on this branch (this commit).** `/profile` is you: People-language header (photo or initials, name, email, same role pill; strongest role from `allowedJobs` + membership; org owner is Owner), sign-in method from `providerData`, own `profiles/{uid}` editor, View in People (`?email=`), owner Activity + assistant writes (missing = on). Profile stays lazy. Nothing deployed. Storage and Firestore rules were not deployed. Part G has not started.
+Independent proof on this worktree (Part F `f2e82e4`, then this Part G note): `npm run typecheck` clean; `npm test` **716** vitest + **184** node; `npm run test:rules` passed; `npm run build` **Initial JS gzip 271.0 KB** (ceiling **400 KB**). No new npm packages. No `--apply`. No `--production`.
 
-| Part | SHA | Initial JS gzip | State |
+This phase **moves no money.** `git diff pre-phase18-2026-09-18...HEAD` is rules that *guard* expenses, invoices, files and costPlan, plus UI/helpers (including `permissionDeniedMessage` on invoice/expense writes and cost-plan lock/archive). There is no expense, invoice, file or costPlan **data** migration. `scripts/phase18-assign-roles.ts` only reads those collections to propose roles. `scripts/phase18-canonical-public-profiles.ts` is `publicProfiles` only and was not applied.
+
+What moved on the bundle: `/people` is a lazy route (`PeoplePage-*.js` 19.33 kB / **5.90 KB** gzip, plus `peoplePage-*.js` 11.72 / **4.28 KB**). `JobPeople.jsx` is deleted; Overview uses `JobPresence`. Session is `risingAmp.session.{uid}` in `sessionStore.ts` (legacy flat keys cleared on read). Profile stays lazy (`ProfilePage-*.js` 4.61 / **1.89 KB**). Role helpers and permission copy sit on first paint, which is why C rose then D dropped after the inline people list left the dashboard.
+
+| Part | SHA | Initial JS gzip | Notes |
 | --- | --- | --- | --- |
-| A People design | `6bd23a3` | — | recorded |
-| B Roles model + rules | `682b662` | — | on `phase-18-people` only |
-| C People page | `d51f91d` | **271.5 KB** | on `phase-18-people` only |
-| D Job header + assignment | `eb1230c` | **270.2 KB** | on `phase-18-people` only |
-| E1–5 session, invite listen, access gate, Gmail lookups | `53b2cdc` | — | on `phase-18-people` only |
-| E6 no org drop from visible jobs | `e166ad4` | — | on `phase-18-people` only |
-| E7 tradeList + avatar reads | `4e4fa9d` | **270.8 KB** | on `phase-18-people` only |
-| F Your profile | this commit | **270.8 KB** | on `phase-18-people` only |
+| A People design | `6bd23a3` | — | design HTML; gzip not measured |
+| B Roles model + rules | `682b662` | — | not measured at that commit |
+| C People page | `d51f91d` | **271.5 KB** | measured at C |
+| D Job header + assignment | `eb1230c` | **270.2 KB** | measured at D (`JobPeople` gone) |
+| E1–5 session, invite listen, access gate, Gmail lookups | `53b2cdc` | — | not measured at that commit |
+| E6 no org drop from visible jobs | `e166ad4` | — | not measured at that commit |
+| E7 tradeList + avatar reads | `4e4fa9d` | **270.8 KB** | measured at E7 |
+| F Your profile | `f2e82e4` | **270.8 KB** | measured at F |
+| G morning proof | this commit | **271.0 KB** | remeasured on this tree; this commit is PROGRESS only |
 
-Proof after F: typecheck clean, 716 vitest + 184 node tests, rules pass, build **270.8 KB** gzip (ceiling 400 KB). Profile stays lazy (`ProfilePage-*.js`). No new npm packages. No deploy. Part G leftover: staging proof (two browsers, session, invite listener, boot-cache lie, role dry-run table).
+### Role dry-run (real staging, 0 writes)
+
+`npx esbuild scripts/phase18-assign-roles.ts --bundle --platform=node --format=cjs --outfile=/tmp/phase18-roles.cjs` then `node /tmp/phase18-roles.cjs --staging`. Firebase CLI token via `scripts/lib/phase1Firebase.js`. Last 90 days. **Never Viewer** — `ask` is the no-writes bucket. Missing `managers`/`viewers` stay Site (no write needed). Apply was not run.
+
+```
+Org opal-ss-constructions  staging  last 90 days
+Owner sahni.lalit18@gmail.com  people 3  jobs 3
+Person                           Jobs                                   Activity (90 days)                   Proposed role
+-------------------------------  -------------------------------------  -----------------------------------  -------------
+info@opalssconstructions.com.au  72 Centenary Dr                        no writes in 90 days                 ask
+mannatandshiv@outlook.com        Kelly Street                           no writes in 90 days                 ask
+sahni.lalit18@gmail.com          72 Centenary Dr, Kelly Street, Test 1  1 photo, 8 files, 2 cost plan edits  site
+
+Proposed role "ask" is a question for the owner, not Viewer.
+Missing managers/viewers stay Site. No document is written for Site.
+Dry-run. 0 write(s). Pass --apply --staging to write manager arrays after the owner approves this table.
+```
+
+3 rows. **0 write(s).** Do not `--apply` until the owner decides Manager vs Site vs leave as `ask`.
+
+### What the owner still has to click (two browsers)
+
+This session did **not** click through items 1–4. Vite for **this** branch is `npm run dev` → http://localhost:3001 (this worktree). Do **not** use localhost:**3000** — that checkout is `ui-overview-history`, the wrong app. Do **not** use https://risingamp.com.au or deployed staging: **staging rules and hosting are not deployed**, so a browser against those is the old model. The IDE browser never kept a signed-in tab here, and there is no second Site account session in this agent.
+
+Owner checklist:
+
+1. Site refused on invoice edit with `permissionDeniedMessage`; Site can save an expense. (Needs this branch’s rules on the database the app points at.)
+2. Sign out / sign in as someone else: no previous job name or invite list on first paint (uid-scoped session).
+3. Invite while the other person sits on Ask for access: they enter without reload (org query listener).
+4. Edit `risingAmp.boot.{uid}` to claim manager: UI may lie; invoice/lock write still refused with a message.
+
+Items **1 and 4 are not true against current deployed staging rules.** They need a named staging **rules + hosting** deploy of this branch, which the owner has not named.
 
 ## Phase 17 — in flight (14 Sep 2026)
 
