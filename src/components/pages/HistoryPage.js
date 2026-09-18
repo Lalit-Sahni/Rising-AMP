@@ -502,27 +502,27 @@ export default function HistoryPage() {
                           </span>
                         </div>
                       </button>
-                      <div className="flex items-center justify-between gap-2 mt-2.5" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center gap-2 min-w-0">
-                          {!showRecentlyDeleted ? (
+                      <div className="mt-2.5 space-y-2" onClick={(e) => e.stopPropagation()}>
+                        {!showRecentlyDeleted ? (
+                          <div className="grid grid-cols-1 gap-2">
                             <ExpenseCategoryPicker
                               expense={expense}
-                              compact
                               onChange={(category) => codeExpenseCategory(expense.id, category)}
                             />
-                          ) : <CategoryChip category={expense.category} />}
-                          {showTradeCoding && !showRecentlyDeleted ? (
-                            <ExpenseTradePicker
-                              expense={expense}
-                              expenses={expenses}
-                              trades={trades}
-                              compact
-                              disabled={String(expense.category || '').toLowerCase() === 'investor'}
-                              onCode={(tradeId) => codeExpenseTrade(expense.id, tradeId)}
-                            />
-                          ) : null}
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">{rowActions(expense)}</div>
+                            {showTradeCoding ? (
+                              <ExpenseTradePicker
+                                expense={expense}
+                                expenses={expenses}
+                                trades={trades}
+                                disabled={String(expense.category || '').toLowerCase() === 'investor'}
+                                onCode={(tradeId) => codeExpenseTrade(expense.id, tradeId)}
+                              />
+                            ) : null}
+                          </div>
+                        ) : (
+                          <CategoryChip category={expense.category} />
+                        )}
+                        <div className="flex items-center justify-end gap-1.5">{rowActions(expense)}</div>
                       </div>
                     </li>
                   );
@@ -541,7 +541,7 @@ export default function HistoryPage() {
                         <span className="inline-flex items-center gap-1.5">Category <SortIcon column="category" /></span>
                       </th>
                       <th className="px-4 py-3">Description</th>
-                      {showTradeCoding && !showRecentlyDeleted ? <th className="px-4 py-3">Cost plan</th> : null}
+                      {showTradeCoding && !showRecentlyDeleted ? <th className="px-4 py-3 min-w-[12rem]">Cost plan</th> : null}
                       <th className="px-4 py-3 text-right cursor-pointer hover:text-ink select-none" onClick={() => handleSort('total')}>
                         <span className="inline-flex items-center gap-1.5">Amount <SortIcon column="total" /></span>
                       </th>
@@ -562,7 +562,7 @@ export default function HistoryPage() {
                             <td className="px-4 py-3.5 text-slate-600 tabular text-[13px] whitespace-nowrap">
                               {formatDay(expenseDate(expense))}
                             </td>
-                            <td className="px-4 py-3.5" onClick={(event) => event.stopPropagation()}>
+                            <td className="px-4 py-3.5 min-w-[11rem]" onClick={(event) => event.stopPropagation()}>
                               {showRecentlyDeleted ? (
                                 <CategoryChip category={expense.category} />
                               ) : (
@@ -595,7 +595,7 @@ export default function HistoryPage() {
                               {expense.notes ? <div className="text-xs text-slate-400 mt-0.5 truncate max-w-xs">{expense.notes}</div> : null}
                             </td>
                             {showTradeCoding && !showRecentlyDeleted ? (
-                              <td className="px-4 py-3.5" onClick={(event) => event.stopPropagation()}>
+                              <td className="px-4 py-3.5 min-w-[12rem]" onClick={(event) => event.stopPropagation()}>
                                 <ExpenseTradePicker
                                   expense={expense}
                                   expenses={expenses}

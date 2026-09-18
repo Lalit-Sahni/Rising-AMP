@@ -8,6 +8,7 @@ import {
   tradeNameById,
 } from '../../domain/costPlan';
 import type { TradeListItem } from '../../domain/schemas';
+import QuietSelect, { type QuietSelectOption } from '../ui/QuietSelect';
 
 type ExpenseTradePickerProps = {
   expense: Record<string, unknown>;
@@ -34,6 +35,22 @@ export default function ExpenseTradePicker({
     [expense, options, expenses],
   );
 
+  const selectOptions = useMemo<QuietSelectOption[]>(() => {
+    const rows: QuietSelectOption[] = [{ value: '', label: 'Uncoded' }];
+    if (suggestion && suggestion.id !== current) {
+      rows.push({ value: suggestion.id, label: `${suggestion.name} (suggested)` });
+    }
+    if (current && current !== NOT_IN_ESTIMATE_TRADE_ID && current !== INVESTOR_TRADE_ID) {
+      rows.push({ value: current, label: tradeNameById(trades, current) });
+    }
+    options.forEach((trade) => {
+      rows.push({ value: trade.id, label: trade.name });
+    });
+    rows.push({ value: NOT_IN_ESTIMATE_TRADE_ID, label: 'Not in the estimate' });
+    rows.push({ value: INVESTOR_TRADE_ID, label: 'Investor' });
+    return rows;
+  }, [suggestion, current, options, trades]);
+
   const handleChange = async (value: string) => {
     const next = value === '' ? null : value;
     if (next === current) return;
@@ -46,29 +63,15 @@ export default function ExpenseTradePicker({
   };
 
   return (
-    <div className={compact ? '' : 'space-y-1.5'} onClick={(event) => event.stopPropagation()}>
-      <select
-        value={current || ''}
-        disabled={disabled || busy}
-        onChange={(event) => handleChange(event.target.value)}
-        className="w-full min-h-[36px] px-2 py-1.5 rounded-ot-sm border border-hairline bg-surface text-[12.5px] text-ink"
-        aria-label="Cost plan trade"
-      >
-        <option value="">Uncoded</option>
-        {suggestion && suggestion.id !== current ? (
-          <option value={suggestion.id}>
-            {suggestion.name} (suggested)
-          </option>
-        ) : null}
-        {options.map((trade) => (
-          <option key={trade.id} value={trade.id}>{trade.name}</option>
-        ))}
-        <option value={NOT_IN_ESTIMATE_TRADE_ID}>Not in the estimate</option>
-        <option value={INVESTOR_TRADE_ID}>Investor</option>
-      </select>
-      {compact && current ? (
-        <div className="sr-only">{tradeNameById(options, current)}</div>
-      ) : null}
-    </div>
+    <QuietSelect
+      value={current || ''}
+      options={selectOptions}
+      disabled={disabled || busy}
+      compact={compact}
+      ariaLabel="Cost plan trade"
+      title="Cost plan"
+      placeholder="Uncoded"
+      onChange={(value) => void handleChange(value)}
+    />
   );
 }

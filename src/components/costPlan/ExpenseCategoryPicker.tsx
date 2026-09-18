@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { EXPENSE_CATEGORIES, normalizeExpenseCategory } from '../../domain/expenseCategory';
 import { getCategoryStyle } from '../../utils/categoryStyle';
+import QuietSelect, { type QuietSelectOption } from '../ui/QuietSelect';
 
 type ExpenseCategoryPickerProps = {
   expense: Record<string, unknown>;
@@ -17,9 +18,16 @@ export default function ExpenseCategoryPicker({
 }: ExpenseCategoryPickerProps) {
   const [busy, setBusy] = useState(false);
   const current = normalizeExpenseCategory(expense.category) || String(expense.category || '').trim();
-  const extras = current && !EXPENSE_CATEGORIES.includes(current as (typeof EXPENSE_CATEGORIES)[number])
-    ? [current]
-    : [];
+
+  const options = useMemo<QuietSelectOption[]>(() => {
+    const extras = current && !EXPENSE_CATEGORIES.includes(current as (typeof EXPENSE_CATEGORIES)[number])
+      ? [current]
+      : [];
+    return [...extras, ...EXPENSE_CATEGORIES].map((key) => {
+      const style = getCategoryStyle(key);
+      return { value: key, label: style.label, color: style.hex };
+    });
+  }, [current]);
 
   const handleChange = async (value: string) => {
     if (!value || value === current) return;
@@ -32,22 +40,15 @@ export default function ExpenseCategoryPicker({
   };
 
   return (
-    <div className={compact ? '' : 'space-y-1.5'} onClick={(event) => event.stopPropagation()}>
-      <select
-        value={current || ''}
-        disabled={disabled || busy}
-        onChange={(event) => void handleChange(event.target.value)}
-        className="w-full min-h-[36px] px-2 py-1.5 rounded-ot-sm border border-hairline bg-surface text-[12.5px] text-ink"
-        aria-label="Expense category"
-      >
-        {!current ? <option value="">Choose a category</option> : null}
-        {extras.map((key) => (
-          <option key={key} value={key}>{getCategoryStyle(key).label}</option>
-        ))}
-        {EXPENSE_CATEGORIES.map((key) => (
-          <option key={key} value={key}>{getCategoryStyle(key).label}</option>
-        ))}
-      </select>
-    </div>
+    <QuietSelect
+      value={current || ''}
+      options={options}
+      disabled={disabled || busy}
+      compact={compact}
+      ariaLabel="Expense category"
+      title="Category"
+      placeholder="Choose a category"
+      onChange={(value) => void handleChange(value)}
+    />
   );
 }

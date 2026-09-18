@@ -105,6 +105,10 @@ If it is still `index-DhMkWQ3T.js`, production does **not** have the fix and new
 3. **One em dash in shipped copy**, `src/components/JobPeople.jsx`. Standing constraint is no em dashes.
 4. **Untracked and undecided**: `Claude outputs/`, `brand/`, and the design files. Commit or gitignore them before merging.
 
+### Orphan UI branch (`2900f9b`)
+
+**Kept.** `ui-overview-history` was an orphan off the Firestore hotfix: it dropped leftover Overview week/month/quarter buttons (the KPI stays This month; Ask still understands those periods) and replaced native History category and cost-plan dropdowns with `QuietSelect` (phone bottom sheet, desktop portal). Cherry-pick onto this trunk conflicted only in `PROGRESS.md`. `DashboardPage.js` auto-merged with Phase 18's `JobPresence` header. Branch and tag `cleanup-base-ui` stay in place; nothing was deleted.
+
 ## Fleet (11 Sep 2026)
 
 Latest branch **`phase-16-job-facts`** (pushed; **not merged to `master`/`main`**). Restore tag **`pre-phase16-2026-09-09`** (`a3fba94`, last Phase 15 commit). Production walked **12 → 13 → 14 → 15 → 16** (hosting `index-DhMkWQ3T.js`, Firestore rules, `extractJobFileText`, `askRisingAmp`, `maintainLedgerRollup` + recompute). Kill switch stays **off**. Phase 14 Parts A–G remain on `phase-14-ask`. The model never calculates and never chooses the tier. Production backup: `backups/production-2026-09-11T12-03-06-245Z` (528 documents, 36 Storage files). Localhost stays on staging. Never `--force`. Gzip ceiling **400 KB**.

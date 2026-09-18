@@ -75,7 +75,6 @@ export default function DashboardPage() {
     jobKind,
     onJobKindChange,
   } = useApp();
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
   const [showExport, setShowExport] = useState(false);
   const [jobFiles, setJobFiles] = useState([]);
   const [assistantReceipts, setAssistantReceipts] = useState([]);
@@ -95,7 +94,7 @@ export default function DashboardPage() {
     expenses,
     expensesCapped,
     expensesLoaded,
-    period: selectedPeriod,
+    period: 'month',
   });
   const totals = summaryQuery.totals;
 
@@ -160,7 +159,7 @@ export default function DashboardPage() {
   const metrics = useMemo(
     () => {
       const base = withFileAttention(
-        deriveJobMetrics({ expenses, invoices }, { period: selectedPeriod, expensesCapped, jobKind }),
+        deriveJobMetrics({ expenses, invoices }, { period: 'month', expensesCapped, jobKind }),
         { files: jobFiles, invoices },
       );
       const withAttention = withCostPlanAttention(base, {
@@ -177,7 +176,7 @@ export default function DashboardPage() {
         jobFacts,
       );
     },
-    [expenses, invoices, jobFiles, selectedPeriod, expensesCapped, jobKind, costPlanQuery.data, quotesQuery.data, totals, assistantReceipts, jobId, jobFacts]
+    [expenses, invoices, jobFiles, expensesCapped, jobKind, costPlanQuery.data, quotesQuery.data, totals, assistantReceipts, jobId, jobFacts]
   );
   const leadParts = jobFactsLeadParts(jobFactsLead(jobFacts, projectName));
   const planProgress = useMemo(
@@ -331,19 +330,6 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="inline-flex bg-surface border border-hairline rounded-[9px] p-[3px]">
-              {['week', 'month', 'quarter'].map((period) => (
-                <button
-                  key={period}
-                  onClick={() => setSelectedPeriod(period)}
-                  className={`px-3.5 py-1.5 rounded-md text-[12.5px] font-medium capitalize ${
-                    selectedPeriod === period ? 'bg-accent text-white' : 'text-slate-600 hover:text-ink'
-                  }`}
-                >
-                  {period}
-                </button>
-              ))}
-            </div>
             <button
               type="button"
               onClick={() => handleNavigate('add-expense')}
@@ -460,7 +446,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="bg-surface border border-hairline rounded-ot p-[17px] shadow-whisper">
-            <div className="text-[11.5px] text-slate-400 font-semibold">{periodLabel(selectedPeriod)}</div>
+            <div className="text-[11.5px] text-slate-400 font-semibold">{periodLabel('month')}</div>
             <div className="tabular font-extrabold text-[23px] tracking-tight my-2">
               {formatMoney(metrics.periodSpend)}
             </div>
