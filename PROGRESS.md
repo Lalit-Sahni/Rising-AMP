@@ -168,13 +168,13 @@ Creating an account fired a Firestore internal assertion (`ca9`, `pendingRespons
 
 The failure is in memory only. Nothing is written to IndexedDB, so a reload restores an affected user and they do not need to clear site data. `terminate()` cannot help, because it enqueues and therefore throws `b815` itself.
 
-**Deploy state was not confirmed from the session that wrote this.** Check what production serves before assuming:
+**As of 19 Sep 2026 this trunk is live.** https://risingamp.com.au serves `index-BQRAZDNK.js`. Confirm with:
 
 ```
 curl -s https://risingamp.com.au | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'
 ```
 
-If it is still `index-DhMkWQ3T.js`, that 11 Sep 2026 bundle is still serving. As of 19 Sep 2026 production served `index-D_v50ECA.js`. This trunk was not deployed there.
+Earlier hashes: `index-DhMkWQ3T.js` (11 Sep 2026 Phase 16), `index-D_v50ECA.js` (what production ran immediately before this walk).
 
 ### Open as of 18 Sep, closed on 19 Sep
 
