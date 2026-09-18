@@ -8,14 +8,14 @@ Trunk is **`phase-18-people`**. It holds Phase 17, Phase 18, the Firestore sign-
 
 | Surface | Staging now | Production now |
 | --- | --- | --- |
-| Hosting | `index-BD5jfyNY.js` on https://rising-amp-staging.web.app | `index-C-Zkfj8K.js` on https://risingamp.com.au (and https://rising-amp-467702-b5.web.app). Earlier today: `index-BQRAZDNK.js`. |
+| Hosting | `index-BD5jfyNY.js` on https://rising-amp-staging.web.app | `index-CqcIKLS-.js` on https://risingamp.com.au (and https://rising-amp-467702-b5.web.app). Earlier today: `index-C-Zkfj8K.js`, then `index-BQRAZDNK.js`. |
 | Firestore rules | Phase 18 roles (missing `managers`/`viewers` = Site) | Same |
 | Storage rules | Avatars scoped to family org | Same |
 | Functions | Same eight, `sendJobInviteEmail` updated. **`resendWebhook` is not deployed.** | Same eight, `sendJobInviteEmail` updated. **`resendWebhook` is not deployed.** |
 
 A missing `assistantWritesEnabled` field means assistant writes are **on** (staging, localhost, and production). Only an explicit `false` is off.
 
-Independent proof on this trunk: `npm run typecheck` clean; `npm test` **725** vitest + **184** node; `npm run test:rules` passed; production `npm run build` **Initial JS gzip 271.1 KB** (ceiling **400 KB**). Built bundle contains `rising-amp-467702-b5`, not staging. No new npm packages. No `--apply`. No `--force`.
+Independent proof on this trunk: `npm run typecheck` clean; `npm test` **725** vitest + **184** node; production `npm run build` **Initial JS gzip 271.2 KB** (ceiling **400 KB**). Built bundle contains `rising-amp-467702-b5`, not staging. No new npm packages. No `--apply`. No `--force`.
 
 ### Hotfix (19 Sep 2026, after go-live)
 
@@ -27,7 +27,7 @@ Still add an SPF TXT on `risingamp.com.au` at Crazy Domains (`v=spf1 include:_sp
 
 ### Files on 95 Tahmoor (19 Sep 2026)
 
-Files for 95 Tahmoor Rd Austral (`job-440c15f02d8f4e96`) never left the skeleton. Kelly and 72 Centenary loaded. Tahmoor is the only live job with **no expenses**. Files waited on `expensesLoaded`. The expense listener skips an empty disk-cache snapshot so it cannot wipe a painted list; without metadata events, an empty cache and an empty server look the same, so the follow-up never fired. Fix: `includeMetadataChanges` on the expense and invoice listeners, and Files paints documents without waiting on expenses. Hosting only.
+Files for 95 Tahmoor Rd Austral (`job-440c15f02d8f4e96`) never left the skeleton. Kelly and 72 Centenary loaded. Tahmoor is the only live job with **no expenses**. Files waited on `expensesLoaded`. The expense listener skips an empty disk-cache snapshot so it cannot wipe a painted list; without metadata events, an empty cache and an empty server look the same, so the follow-up never fired. Fix: `includeMetadataChanges` on the expense and invoice listeners, and Files paints documents without waiting on expenses. Production hosting `index-CqcIKLS-.js` (19 Sep 2026). Hosting only. Staging hosting was not redeployed.
 
 ### What was decided about the orphan (`2900f9b`)
 
@@ -180,7 +180,7 @@ Creating an account fired a Firestore internal assertion (`ca9`, `pendingRespons
 
 The failure is in memory only. Nothing is written to IndexedDB, so a reload restores an affected user and they do not need to clear site data. `terminate()` cannot help, because it enqueues and therefore throws `b815` itself.
 
-**As of 19 Sep 2026 this trunk is live.** https://risingamp.com.au serves `index-C-Zkfj8K.js`. Confirm with:
+**As of 19 Sep 2026 this trunk is live.** https://risingamp.com.au serves `index-CqcIKLS-.js`. Confirm with:
 
 ```
 curl -s https://risingamp.com.au | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'
