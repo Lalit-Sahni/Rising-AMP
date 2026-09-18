@@ -32,6 +32,7 @@ import {
   peopleListSummary,
   peopleListSummaryShort,
   personInitials,
+  personKeyForEmail,
   personPanelModel,
   planOrgRemove,
   planRoleChange,
@@ -98,7 +99,9 @@ export default function PeoplePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const jobFilter = searchParams.get('job') || null;
   const addParam = searchParams.get('add') === '1';
+  const emailParam = searchParams.get('email') || null;
   const addRef = useRef<HTMLInputElement>(null);
+  const openedEmail = useRef<string | null>(null);
 
   const actorEmail = membership?.email || '';
   const ownerEmail = membership?.ownerEmail || '';
@@ -177,7 +180,18 @@ export default function PeoplePage() {
     [jobs, ownerEmail, profiles, invites],
   );
   const visible = useMemo(() => filterPeopleByJob(people, jobFilter), [people, jobFilter]);
-  const selected = visible.find((row) => row.key === selectedKey) || null;
+  const selected = people.find((row) => row.key === selectedKey) || null;
+
+  useEffect(() => {
+    if (!emailParam || loading) return;
+    if (openedEmail.current === emailParam) return;
+    const key = personKeyForEmail(people, emailParam);
+    if (key) {
+      setSelectedKey(key);
+      setPanelMenu(null);
+    }
+    openedEmail.current = emailParam;
+  }, [emailParam, loading, people]);
 
   const jobChips = useMemo(() => {
     return jobs

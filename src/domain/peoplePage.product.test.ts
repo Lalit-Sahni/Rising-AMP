@@ -50,6 +50,8 @@ describe('People page product wiring', () => {
     expect(page).toContain('directory');
     expect(page).toContain("searchParams.get('job')");
     expect(page).toContain("searchParams.get('add')");
+    expect(page).toContain("searchParams.get('email')");
+    expect(page).toContain('personKeyForEmail');
     expect(page).not.toContain('removeEmailFromProject');
     expect(page).toContain('removePersonFromVisibleJobs');
   });
@@ -64,5 +66,33 @@ describe('People page product wiring', () => {
     expect(adapter).toContain("doc(db, 'organizations', orgId(), 'projects'");
     expect(readRepo('src/domain/peoplePage.ts')).toContain('orgTouched: false');
     expect(readRepo('src/domain/peoplePage.ts')).toContain('stay on the organisation');
+  });
+
+  test('Profile is you: lazy, own details only, People email opens the row', () => {
+    const main = readRepo('src/components/MainContent.js');
+    expect(main).toContain("lazy(() => import('./pages/ProfilePage'))");
+    expect(main).not.toMatch(/from ['"][^'"]*pages\/ProfilePage/);
+    expect(fs.existsSync(path.join(root, 'src/components/pages/ProfilePage.tsx'))).toBe(true);
+    expect(fs.existsSync(path.join(root, 'src/components/pages/ProfilePage.js'))).toBe(false);
+    const profile = readRepo('src/components/pages/ProfilePage.tsx');
+    expect(profile).toContain('ownProfileModel');
+    expect(profile).toContain('signInMethodLabel');
+    expect(profile).toContain('View in People');
+    expect(profile).toContain('permissionDeniedMessage');
+    expect(profile).toContain("membership.role === 'owner'");
+    expect(profile).toContain('writesSetting !== false');
+    expect(profile).not.toContain('loadPeopleProfileCards');
+    expect(profile).not.toContain('loadProfilesForEmails');
+    expect(profile).not.toContain('toPublicProfile');
+    expect(profile).not.toMatch(/from ['"][^'"]*firebase\/people/);
+    expect(profile).not.toMatch(/from ['"][^'"]*actions/);
+    const setup = readRepo('src/components/ProfileSetupScreen.jsx');
+    expect(setup).toContain('linkPasswordToGoogleUser');
+    expect(setup).toContain('AddPasswordCard');
+    expect(setup).toContain('embedded');
+    expect(profile).toContain('embedded');
+    const people = readRepo('src/components/pages/PeoplePage.tsx');
+    expect(people).toContain("searchParams.get('email')");
+    expect(people).toContain('personKeyForEmail');
   });
 });

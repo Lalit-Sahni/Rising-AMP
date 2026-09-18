@@ -4,7 +4,7 @@
 
 Branch **`phase-18-people`**. Brief: `PHASE18.md`. Nothing deployed. Production is untouched and still runs the Phase 16/17 shopfront.
 
-Part A is recorded (`6bd23a3`, People design). Part B is on this branch (`682b662`). Part C is on this branch (`d51f91d`). Part D is on this branch (`eb1230c`). **Part E is this ladder:** session is uid-scoped and cleared on logout (old flat keys deleted; job state is not seeded until `authUid` is known). Uninvited people listen to the org `invitedEmails` array-contains query, so an invite lands without reload; permission-denied / unavailable retry as lookup-failed, never as a stranger. Ask-for-access is decided before ProfileSetup. Public profile lookups try every `emailInviteVariants` candidate; writes stay on `token.email.lower()` (rules have no String.replace, so Gmail dots are not stripped there). Dry-run backfill `scripts/phase18-canonical-public-profiles.ts` proposes canonical-id copies and refuses `--production` without `--i-mean-production`; not applied. `removeEmailFromProject` no longer writes the org document. `tradeList` read is `isOrgInvited()`; avatar read is signed-in family-org invited (own uid still reads). Nothing deployed. Storage and Firestore rules were not deployed. Parts F–G have not started.
+Part A is recorded (`6bd23a3`, People design). Part B is on this branch (`682b662`). Part C is on this branch (`d51f91d`). Part D is on this branch (`eb1230c`). **Part E is this ladder:** session is uid-scoped and cleared on logout (old flat keys deleted; job state is not seeded until `authUid` is known). Uninvited people listen to the org `invitedEmails` array-contains query, so an invite lands without reload; permission-denied / unavailable retry as lookup-failed, never as a stranger. Ask-for-access is decided before ProfileSetup. Public profile lookups try every `emailInviteVariants` candidate; writes stay on `token.email.lower()` (rules have no String.replace, so Gmail dots are not stripped there). Dry-run backfill `scripts/phase18-canonical-public-profiles.ts` proposes canonical-id copies and refuses `--production` without `--i-mean-production`; not applied. `removeEmailFromProject` no longer writes the org document. `tradeList` read is `isOrgInvited()`; avatar read is signed-in family-org invited (own uid still reads). **Part F is on this branch (this commit).** `/profile` is you: People-language header (photo or initials, name, email, same role pill; strongest role from `allowedJobs` + membership; org owner is Owner), sign-in method from `providerData`, own `profiles/{uid}` editor, View in People (`?email=`), owner Activity + assistant writes (missing = on). Profile stays lazy. Nothing deployed. Storage and Firestore rules were not deployed. Part G has not started.
 
 | Part | SHA | Initial JS gzip | State |
 | --- | --- | --- | --- |
@@ -14,9 +14,10 @@ Part A is recorded (`6bd23a3`, People design). Part B is on this branch (`682b66
 | D Job header + assignment | `eb1230c` | **270.2 KB** | on `phase-18-people` only |
 | E1–5 session, invite listen, access gate, Gmail lookups | `53b2cdc` | — | on `phase-18-people` only |
 | E6 no org drop from visible jobs | `e166ad4` | — | on `phase-18-people` only |
-| E7 tradeList + avatar reads | this commit | **270.8 KB** | on `phase-18-people` only |
+| E7 tradeList + avatar reads | `4e4fa9d` | **270.8 KB** | on `phase-18-people` only |
+| F Your profile | this commit | **270.8 KB** | on `phase-18-people` only |
 
-Proof after E: typecheck clean, 711 vitest + 184 node tests, rules pass (stranger cannot read `tradeList` or `/avatars/{uid}/…`), build **270.8 KB** gzip (ceiling 400 KB). No new npm packages. No `--apply`. No deploy.
+Proof after F: typecheck clean, 716 vitest + 184 node tests, rules pass, build **270.8 KB** gzip (ceiling 400 KB). Profile stays lazy (`ProfilePage-*.js`). No new npm packages. No deploy. Part G leftover: staging proof (two browsers, session, invite listener, boot-cache lie, role dry-run table).
 
 ## Phase 17 — in flight (14 Sep 2026)
 

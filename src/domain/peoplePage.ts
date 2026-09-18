@@ -192,10 +192,105 @@ export function formatLastActive(
   };
 }
 
-export function peopleSearchFromString(search: string): { jobId: string | null; add: boolean } {
+export function peopleSearchFromString(search: string): {
+  jobId: string | null;
+  add: boolean;
+  email: string | null;
+} {
   const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search);
   const job = String(params.get('job') || '').trim();
-  return { jobId: job || null, add: params.get('add') === '1' };
+  const email = String(params.get('email') || '').trim();
+  return { jobId: job || null, add: params.get('add') === '1', email: email || null };
+}
+
+/** Open this person’s panel on People. Same key as the list row. */
+export function personKeyForEmail(rows: PersonRow[], email: unknown): string | null {
+  const wanted = canonicalEmail(email);
+  if (!wanted.includes('@')) return null;
+  const row = (rows || []).find((item) => item.key === wanted || emailsMatch(item.email, email));
+  return row ? row.key : null;
+}
+
+/**
+ * Sign-in method from Firebase providerData. Google, email and password, or both.
+ * Empty when the auth record has neither.
+ */
+export function signInMethodLabel(
+  providerData: Array<{ providerId?: string | null } | null | undefined> | null | undefined,
+): string {
+  const ids = new Set((providerData || []).map((row) => String((row && row.providerId) || '')));
+  const google = ids.has('google.com');
+  const password = ids.has('password');
+  if (google && password) return 'Google and email and password';
+  if (google) return 'Google';
+  if (password) return 'email and password';
+  return '';
+}
+
+export type OwnProfileModel = {
+  role: JobRole | 'none';
+  roleLabel: string;
+  jobs: PersonJobLink[];
+  jobsLabel: string;
+  peopleHref: string;
+};
+
+function ownJobsQuietLabel(jobs: PersonJobLink[]): string {
+  if (jobs.length === 0) return 'Not on a job you can see.';
+  if (jobs.length === 1) return `On ${jobs[0].name}.`;
+  if (jobs.length === 2) return `On ${jobs[0].name} and ${jobs[1].name}.`;
+  const head = jobs.slice(0, -1).map((job) => job.name).join(', ');
+  return `On ${head} and ${jobs[jobs.length - 1].name}.`;
+}
+
+/**
+ * Your role on Profile. Same strongest-role rule as the People list, for a
+ * signed-in person. Org owner is Owner. Never a client role.
+ */
+export function ownProfileModel(input: {
+  jobs: PeopleJob[];
+  email: unknown;
+  ownerEmail: unknown;
+  membershipRole?: string | null;
+}): OwnProfileModel {
+  const isOwner = input.membershipRole === 'owner' || emailsMatch(input.email, input.ownerEmail);
+  const visibleJobs = (input.jobs || []).filter((job) => jobKey(job));
+  const jobLinks: PersonJobLink[] = [];
+  visibleJobs.forEach((job) => {
+    const onJob = isOwner || isEmailOnList(job.invitedEmails, input.email);
+    if (!onJob) return;
+    const role = isOwner
+      ? 'owner'
+      : (resolveJobRole({
+        email: input.email,
+        ownerEmail: input.ownerEmail,
+        invitedEmails: job.invitedEmails,
+        managers: job.managers,
+        viewers: job.viewers,
+      }) || 'site');
+    jobLinks.push({
+      projectId: jobKey(job),
+      name: String(job.name || 'Untitled job').trim() || 'Untitled job',
+      role,
+    });
+  });
+  let role: JobRole | 'none' = 'none';
+  if (isOwner) role = 'owner';
+  else {
+    const strongest = strongestJobRole(jobLinks.map((job) => job.role));
+    role = strongest || 'none';
+  }
+  const displayEmail = normalizeEmail(input.email);
+  const peopleHref = jobLinks.length > 0 && displayEmail.includes('@')
+    ? `${PEOPLE_PATH}?email=${encodeURIComponent(displayEmail)}`
+    : PEOPLE_PATH;
+  return {
+    role,
+    roleLabel: roleLabel(role),
+    jobs: jobLinks,
+    jobsLabel: ownJobsQuietLabel(jobLinks),
+    peopleHref,
+  };
 }
 
 export function collectDisplayEmails(jobs: PeopleJob[], ownerEmail: unknown): string[] {

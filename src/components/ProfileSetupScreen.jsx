@@ -78,7 +78,14 @@ function AddPasswordCard({ user }) {
   );
 }
 
-export default function ProfileSetupScreen({ user, initialProfile, onComplete, onSignOut, editing = false }) {
+export default function ProfileSetupScreen({
+  user,
+  initialProfile,
+  onComplete,
+  onSignOut,
+  editing = false,
+  embedded = false,
+}) {
   const [form, setForm] = useState(() => ({ ...emptyProfile(user), ...(initialProfile || {}) }));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -132,27 +139,36 @@ export default function ProfileSetupScreen({ user, initialProfile, onComplete, o
     }
   };
 
+  const frameClass = embedded
+    ? ''
+    : editing
+      ? 'text-ink px-4 py-6 md:px-[26px] md:py-[26px]'
+      : 'auth-frame min-h-screen bg-canvas text-ink px-4 py-8 md:px-10 md:py-10';
+  const innerClass = embedded ? '' : 'max-w-[600px] mx-auto';
+
   return (
-    <div className={editing ? 'text-ink px-4 py-6 md:px-[26px] md:py-[26px]' : 'auth-frame min-h-screen bg-canvas text-ink px-4 py-8 md:px-10 md:py-10'}>
-      <div className="max-w-[600px] mx-auto">
-        <div className="flex items-center justify-between">
-          {editing ? (
-            <div>
-              <div className="eyebrow">Account</div>
-              <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Your profile</h1>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2.5 font-extrabold text-[15px]">
-              <BrandMark size={28} icon={16} />
-              RisingAMP
-            </div>
-          )}
-          {!editing && (
-            <span className="text-[11px] font-bold text-slate-500 bg-surface border border-hairline px-2.5 py-1 rounded-full">
-              Step 2 of 2
-            </span>
-          )}
-        </div>
+    <div className={frameClass}>
+      <div className={innerClass}>
+        {!embedded && (
+          <div className="flex items-center justify-between">
+            {editing ? (
+              <div>
+                <div className="eyebrow">Account</div>
+                <h1 className="text-[25px] font-extrabold tracking-tight mt-1">Your profile</h1>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5 font-extrabold text-[15px]">
+                <BrandMark size={28} icon={16} />
+                RisingAMP
+              </div>
+            )}
+            {!editing && (
+              <span className="text-[11px] font-bold text-slate-500 bg-surface border border-hairline px-2.5 py-1 rounded-full">
+                Step 2 of 2
+              </span>
+            )}
+          </div>
+        )}
 
         {!editing && (
           <>
@@ -162,7 +178,7 @@ export default function ProfileSetupScreen({ user, initialProfile, onComplete, o
             </p>
           </>
         )}
-        {editing && (
+        {editing && !embedded && (
           <p className="text-slate-600 text-[13.5px] mt-1.5 mb-6">
             This is what people see when they look at a job you are on.
           </p>
@@ -174,7 +190,7 @@ export default function ProfileSetupScreen({ user, initialProfile, onComplete, o
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className={embedded ? 'mt-6' : ''}>
           <div className="flex items-center gap-4 mb-6">
             <button
               type="button"

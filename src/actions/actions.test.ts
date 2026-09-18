@@ -631,11 +631,12 @@ describe('action layer stays off first paint and never talks to OpenAI', () => {
     expect(modal).toContain('setExpenseAssistantConfirmed');
     const sidebar = read('src/components/Sidebar.js');
     expect(sidebar).toContain('assistant-activity');
-    const profile = read('src/components/pages/ProfilePage.js');
+    const profile = read('src/components/pages/ProfilePage.tsx');
     expect(profile).toContain('assistant-activity');
     expect(profile).toContain('Allow the assistant to write');
     expect(profile).toContain("import('../../firebase/assistantWrites')");
     expect(profile).toContain("membership.role === 'owner'");
+    expect(profile).toContain('permissionDeniedMessage');
     expect(profile).not.toMatch(/from ['"][^'"]*actions/);
     expect(read('src/components/Header.js')).not.toContain('assistantWritesEnabled');
     expect(read('src/App.js')).not.toContain('assistantWritesEnabled');

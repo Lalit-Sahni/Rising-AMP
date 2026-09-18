@@ -6,11 +6,14 @@ import {
   confirmOrgRemove,
   filterPeopleByJob,
   mapPersonPublicCard,
+  ownProfileModel,
   peopleSearchFromString,
+  personKeyForEmail,
   personPanelModel,
   planOrgRemove,
   planRoleChange,
   roleControlDisabled,
+  signInMethodLabel,
   strongestJobRole,
 } from './peoplePage';
 
@@ -354,6 +357,7 @@ describe('job filter from the query string', () => {
     expect(peopleSearchFromString('?job=job-kelly&add=1')).toEqual({
       jobId: 'job-kelly',
       add: true,
+      email: null,
     });
     const listed = filterPeopleByJob(rows(), 'job-kelly');
     expect(listed.map((row) => row.email).sort()).toEqual([
@@ -364,5 +368,74 @@ describe('job filter from the query string', () => {
     ].sort());
     expect(listed.some((row) => row.email === site)).toBe(false);
     expect(filterPeopleByJob(rows(), null).length).toBe(5);
+  });
+
+  test('?email= selects that person’s row', () => {
+    expect(peopleSearchFromString(`?email=${manager}`)).toEqual({
+      jobId: null,
+      add: false,
+      email: manager,
+    });
+    expect(personKeyForEmail(rows(), manager)).toBe(rows().find((row) => row.email === manager)?.key);
+    expect(personKeyForEmail(rows(), 'nobody@opal.test')).toBe(null);
+  });
+});
+
+describe('own profile matches the People strongest-role helper', () => {
+  test('owner / manager / site / viewer match the list row', () => {
+    const listed = rows();
+    const cases = [
+      { email: owner, membershipRole: 'owner' },
+      { email: manager, membershipRole: 'member' },
+      { email: otherSite, membershipRole: 'member' },
+      { email: viewer, membershipRole: 'member' },
+    ];
+    cases.forEach(({ email, membershipRole }) => {
+      const row = listed.find((person) => person.email === email);
+      const own = ownProfileModel({
+        jobs,
+        email,
+        ownerEmail: owner,
+        membershipRole,
+      });
+      expect(own.role).toBe(row?.role);
+      expect(own.roleLabel).toBe(row?.roleLabel);
+    });
+    expect(ownProfileModel({
+      jobs,
+      email: manager,
+      ownerEmail: owner,
+      membershipRole: 'member',
+    }).role).toBe(strongestJobRole(['manager', 'manager']));
+  });
+
+  test('View in People includes the email when you are on a job', () => {
+    const withJobs = ownProfileModel({
+      jobs,
+      email: manager,
+      ownerEmail: owner,
+      membershipRole: 'member',
+    });
+    expect(withJobs.peopleHref).toBe(`/people?email=${encodeURIComponent(manager)}`);
+    const none = ownProfileModel({
+      jobs: [],
+      email: manager,
+      ownerEmail: owner,
+      membershipRole: 'member',
+    });
+    expect(none.peopleHref).toBe('/people');
+    expect(none.role).toBe('none');
+  });
+});
+
+describe('sign-in method copy from providerData', () => {
+  test('Google, email and password, or both', () => {
+    expect(signInMethodLabel([{ providerId: 'google.com' }])).toBe('Google');
+    expect(signInMethodLabel([{ providerId: 'password' }])).toBe('email and password');
+    expect(signInMethodLabel([
+      { providerId: 'google.com' },
+      { providerId: 'password' },
+    ])).toBe('Google and email and password');
+    expect(signInMethodLabel([])).toBe('');
   });
 });
