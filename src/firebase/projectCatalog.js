@@ -294,17 +294,14 @@ export async function removeEmailFromProject(projectId, email, viewerEmail) {
   if (Array.isArray(projectData.viewers)) {
     payload.viewers = arrayRemove(...variants);
   }
+  // Never writes the organisation document. Job arrays only. Listing the
+  // remover's visible jobs cannot prove the person is off every job (rules
+  // hide jobs you are not on). Dropping org invitedEmails from that view
+  // would lock them out of the app while they still appear on a hidden job.
+  // Harmless leftover: on the org, on no jobs the remover can see.
+  // viewerEmail is unused: it used to feed that visible-jobs trap.
+  void viewerEmail;
   await updateDoc(projectRef, payload);
-
-  // Rules only allow listing jobs *you* are on. Querying the removed
-  // person's email is denied even for the owner.
-  const visibleJobs = await listInvitedProjects(viewerEmail || ownerEmail);
-  if (!emailRemainsOnJobs(visibleJobs, email)) {
-    await updateDoc(doc(db, 'organizations', orgId()), {
-      invitedEmails: arrayRemove(...variants),
-      updatedAt: serverTimestamp(),
-    });
-  }
 
   return canonicalEmail(email);
 }

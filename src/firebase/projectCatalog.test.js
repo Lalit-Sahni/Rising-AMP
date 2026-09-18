@@ -1,4 +1,9 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { canRemoveEmailFromJob, emailRemainsOnJobs, invitedJobsFingerprint, isJobArchived, newJobId } from './jobIdentity';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 test('treats missing status as active', () => {
   expect(isJobArchived({})).toBe(false);
@@ -43,4 +48,24 @@ test('job list fingerprint ignores order and notices a rename', () => {
   expect(invitedJobsFingerprint(a)).not.toBe(
     invitedJobsFingerprint([{ ...a[0], managers: ['boss@x'] }, a[1]]),
   );
+});
+
+test('removeEmailFromProject never writes organisation invitedEmails', () => {
+  const source = fs.readFileSync(path.join(root, 'src/firebase/projectCatalog.js'), 'utf8');
+  const start = source.indexOf('export async function removeEmailFromProject');
+  const next = source.indexOf('\nexport ', start + 10);
+  const fn = source.slice(start, next === -1 ? undefined : next);
+  expect(fn).toContain('Never writes the organisation document');
+  expect(fn).toContain('invitedEmails: arrayRemove');
+  expect(fn).toContain('formerEmails: arrayUnion');
+  expect(fn).toContain('payload.managers');
+  expect(fn).toContain('payload.viewers');
+  expect(fn).not.toContain('emailRemainsOnJobs');
+  expect(fn).not.toMatch(/updateDoc\(doc\(db, 'organizations', orgId\(\)\),/);
+  const invite = source.slice(
+    source.indexOf('export async function inviteEmailToProject'),
+    source.indexOf('export async function removeEmailFromProject'),
+  );
+  expect(invite).toContain("updateDoc(doc(db, 'organizations', orgId()),");
+  expect(invite).toContain('invitedEmails: arrayUnion');
 });
