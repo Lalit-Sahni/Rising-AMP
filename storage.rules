@@ -62,8 +62,19 @@ service firebase.storage {
       allow write: if canWriteReceiptFolder(folder);
     }
 
+    // Avatars are not under an org path. Family membership is enough to see
+    // a colleague's photo. The owner of the object can always read their own.
+    function isFamilyOrgInvited() {
+      return signedIn()
+        && firestore.exists(orgPath(familyOrgId()))
+        && emailLower() in firestore.get(orgPath(familyOrgId())).data.invitedEmails;
+    }
+
     match /avatars/{uid}/{fileName} {
-      allow read: if request.auth != null;
+      allow read: if request.auth != null && (
+        request.auth.uid == uid
+        || isFamilyOrgInvited()
+      );
       allow write: if request.auth != null && request.auth.uid == uid;
     }
 

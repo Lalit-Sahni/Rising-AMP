@@ -400,7 +400,8 @@ async function main() {
       createdAt: new Date(),
       updatedAt: new Date(),
     }));
-    await assertSucceeds(stranger.firestore().doc(tradeListPath).get());
+    await assertSucceeds(owner.firestore().doc(tradeListPath).get());
+    await assertFails(stranger.firestore().doc(tradeListPath).get());
     await assertFails(stranger.firestore().doc(tradeListPath).set({
       name: 'Hacked',
       order: 0,
@@ -1314,6 +1315,17 @@ async function main() {
         Buffer.from('%PDF-1.4'),
         { contentType: 'application/pdf' },
       ),
+    );
+
+    const avatarPath = `avatars/${OWNER.uid}/avatar.jpg`;
+    await assertSucceeds(
+      owner.storage().ref(avatarPath).put(Buffer.from('jpeg'), { contentType: 'image/jpeg' }),
+    );
+    await assertSucceeds(owner.storage().ref(avatarPath).getDownloadURL());
+    await assertSucceeds(site.storage().ref(avatarPath).getDownloadURL());
+    await assertFails(stranger.storage().ref(avatarPath).getDownloadURL());
+    await assertFails(
+      stranger.storage().ref(avatarPath).put(Buffer.from('jpeg'), { contentType: 'image/jpeg' }),
     );
 
     console.log('firestore.rules cost-plan, job-file and role tests passed; storage.rules job-file tests passed');

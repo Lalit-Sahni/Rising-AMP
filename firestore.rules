@@ -904,7 +904,7 @@ service cloud.firestore {
             && request.resource.data.updatedAt is timestamp;
         }
 
-        allow read: if signedIn();
+        allow read: if isOrgInvited();
         allow create: if isOrgInvited() && tradeListOk();
         allow update: if isOrgInvited()
           && tradeListOk()

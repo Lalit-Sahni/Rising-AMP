@@ -4,14 +4,19 @@
 
 Branch **`phase-18-people`**. Brief: `PHASE18.md`. Nothing deployed. Production is untouched and still runs the Phase 16/17 shopfront.
 
-Part A is recorded (`6bd23a3`, People design). Part B is on this branch (`682b662`). Part C is on this branch (`d51f91d`). **Part D is this commit:** Overview header is a compact presence line (up to four avatars, count, Manage → `/people?job=`), not JobPeople. Jobs home invite is a doorway to `/people?job=&add=1`; the inline editor and `removePerson` are gone. Invite, rename and archive are `canManageJob` (create stays org owner). Project update in rules is manage-only (viewer/site rename fail; manager rename succeeds; `managers[]` still owner-only). People page single-job remove writes only that job document. Nothing deployed. Parts E–G have not started.
+Part A is recorded (`6bd23a3`, People design). Part B is on this branch (`682b662`). Part C is on this branch (`d51f91d`). Part D is on this branch (`eb1230c`). **Part E is this ladder:** session is uid-scoped and cleared on logout (old flat keys deleted; job state is not seeded until `authUid` is known). Uninvited people listen to the org `invitedEmails` array-contains query, so an invite lands without reload; permission-denied / unavailable retry as lookup-failed, never as a stranger. Ask-for-access is decided before ProfileSetup. Public profile lookups try every `emailInviteVariants` candidate; writes stay on `token.email.lower()` (rules have no String.replace, so Gmail dots are not stripped there). Dry-run backfill `scripts/phase18-canonical-public-profiles.ts` proposes canonical-id copies and refuses `--production` without `--i-mean-production`; not applied. `removeEmailFromProject` no longer writes the org document. `tradeList` read is `isOrgInvited()`; avatar read is signed-in family-org invited (own uid still reads). Nothing deployed. Storage and Firestore rules were not deployed. Parts F–G have not started.
 
 | Part | SHA | Initial JS gzip | State |
 | --- | --- | --- | --- |
 | A People design | `6bd23a3` | — | recorded |
 | B Roles model + rules | `682b662` | — | on `phase-18-people` only |
 | C People page | `d51f91d` | **271.5 KB** | on `phase-18-people` only |
-| D Job header + assignment | this commit | **270.2 KB** | on `phase-18-people` only |
+| D Job header + assignment | `eb1230c` | **270.2 KB** | on `phase-18-people` only |
+| E1–5 session, invite listen, access gate, Gmail lookups | `53b2cdc` | — | on `phase-18-people` only |
+| E6 no org drop from visible jobs | `e166ad4` | — | on `phase-18-people` only |
+| E7 tradeList + avatar reads | this commit | **270.8 KB** | on `phase-18-people` only |
+
+Proof after E: typecheck clean, 711 vitest + 184 node tests, rules pass (stranger cannot read `tradeList` or `/avatars/{uid}/…`), build **270.8 KB** gzip (ceiling 400 KB). No new npm packages. No `--apply`. No deploy.
 
 ## Phase 17 — in flight (14 Sep 2026)
 
