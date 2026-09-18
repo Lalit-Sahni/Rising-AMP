@@ -240,6 +240,7 @@ function AppShell() {
       );
     };
 
+    let membershipRetries = 0;
     const attachOrgs = () => {
       unsubOrgs();
       unsubOrgs = listenOrganisationsForEmail(
@@ -273,6 +274,8 @@ function AppShell() {
           });
           setMembershipLoading(false);
           if (!isRetryableMembershipError(err)) return;
+          if (membershipRetries >= 5) return;
+          membershipRetries += 1;
           retryTimer = window.setTimeout(() => {
             if (!cancelled) attachOrgs();
           }, MEMBERSHIP_RETRY_MS);

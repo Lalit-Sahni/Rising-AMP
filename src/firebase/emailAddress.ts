@@ -36,3 +36,13 @@ export function isEmailOnList(invitedEmails: unknown[] | null | undefined, email
   const wanted = new Set(emailInviteVariants(email));
   return (invitedEmails || []).some((item) => wanted.has(normalizeEmail(item)) || wanted.has(canonicalEmail(item)));
 }
+
+/**
+ * Resend from invites@risingamp.com.au has no SPF on the apex, so Microsoft 365
+ * often accepts the message then drops it. A second copy from the owner's
+ * signed-in Gmail is the path that used to land. Gmail mailboxes do not need it.
+ */
+export function inviteNeedsGmailCopy(email: unknown): boolean {
+  const domain = normalizeEmail(email).split('@')[1] || '';
+  return Boolean(domain) && domain !== 'gmail.com' && domain !== 'googlemail.com';
+}

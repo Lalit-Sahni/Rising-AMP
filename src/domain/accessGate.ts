@@ -21,7 +21,10 @@ export function invitationReasonFromError(_error: unknown): 'lookup-failed' {
 export function isRetryableMembershipError(error: unknown): boolean {
   const record = error && typeof error === 'object' ? error as { code?: unknown } : null;
   const code = String((record && record.code) || '');
-  return code === 'permission-denied' || code === 'unavailable';
+  // permission-denied on the org array-contains query means the constraint
+  // does not match the signed-in token. Retrying it never helps and floods
+  // the console. unavailable is a network blip.
+  return code === 'unavailable';
 }
 
 export function pickPreferredOrganisation<T extends { orgId: string }>(

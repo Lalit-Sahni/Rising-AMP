@@ -199,6 +199,7 @@ exports.sendJobInviteEmail = onCall(
       body: JSON.stringify({
         from: FROM,
         to: [to],
+        reply_to: callerEmail || undefined,
         subject: mail.subject,
         html: mail.html,
         text: mail.text,

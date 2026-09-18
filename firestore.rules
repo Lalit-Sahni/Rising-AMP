@@ -1282,20 +1282,24 @@ service cloud.firestore {
       }
     }
 
-    // Private profile (mobile, ABN, business, address). Owner, or the same email on another uid.
+    // Private profile (mobile, ABN, business, address). Own uid, or the same
+    // email on another uid. Split get so a missing own document does not
+    // evaluate resource.data (that used to fail first-time Google sign-in).
     match /profiles/{uid} {
-      function profileEmail() {
-        return resource.data.email is string ? resource.data.email.lower() : '';
-      }
       function signedInEmail() {
         return request.auth != null
           && request.auth.token.email is string
           && request.auth.token.email.size() > 0;
       }
-      allow read: if request.auth != null && (
-        request.auth.uid == uid
-        || (signedInEmail() && request.auth.token.email.lower() == profileEmail())
-      );
+      function emailMatchesToken() {
+        return signedInEmail()
+          && resource.data.keys().hasAny(['email'])
+          && resource.data.email is string
+          && request.auth.token.email.lower() == resource.data.email.lower();
+      }
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow get: if emailMatchesToken();
+      allow list: if emailMatchesToken();
       allow create, update: if request.auth != null && request.auth.uid == uid;
       allow delete: if false;
     }

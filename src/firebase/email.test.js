@@ -3,6 +3,12 @@ import path from 'path';
 import { isInviteFunctionUnavailable } from './inviteSendSwitch';
 
 describe('invite send switch', () => {
+  test('Outlook invites still ask Gmail to send a copy', () => {
+    const src = fs.readFileSync(path.join(__dirname, 'email.js'), 'utf8');
+    expect(src).toContain('inviteNeedsGmailCopy');
+    expect(src).toContain('sendGmailInviteCopy');
+  });
+
   test('falls back only when the Cloud Function is not deployed', () => {
     expect(isInviteFunctionUnavailable({ code: 'functions/not-found' })).toBe(true);
     expect(isInviteFunctionUnavailable({ code: 'functions/unimplemented' })).toBe(true);

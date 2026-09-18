@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from './config';
+import { auth, db } from './config';
 import { emailInviteVariants, normalizeEmail } from './emailAddress';
 import logger from '../utils/logger';
 import { profileIsComplete, profileNeedsSetup, resolveLoadedProfile, toClientProfile, toPublicProfile, pickFoundPublicProfile, pickProfileForEmail } from './profileGate';
@@ -82,22 +82,23 @@ async function syncPublicProfile(profile) {
 }
 
 async function findProfileByEmail(email, exceptUid) {
-  const variants = emailInviteVariants(email);
-  if (variants.length === 0) return null;
+  // Rules only allow a profiles query whose email equals the token email.
+  // Extra Gmail spellings used to throw permission-denied on first sign-in.
+  const tokenEmail = normalizeEmail(auth.currentUser && auth.currentUser.email);
+  const queryEmail = tokenEmail || normalizeEmail(email);
+  if (!queryEmail.includes('@')) return null;
   const rows = [];
-  await Promise.all(variants.map(async (variant) => {
-    try {
-      const snap = await getDocs(query(
-        collection(db, 'profiles'),
-        where('email', '==', variant),
-      ));
-      snap.docs.forEach((row) => {
-        rows.push({ uid: row.id, ...row.data() });
-      });
-    } catch (error) {
-      logger.warn('Profile email lookup failed', error && error.code);
-    }
-  }));
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'profiles'),
+      where('email', '==', queryEmail),
+    ));
+    snap.docs.forEach((row) => {
+      rows.push({ uid: row.id, ...row.data() });
+    });
+  } catch (error) {
+    logger.warn('Profile email lookup failed', error && error.code);
+  }
   return pickProfileForEmail(rows, email, exceptUid);
 }
 

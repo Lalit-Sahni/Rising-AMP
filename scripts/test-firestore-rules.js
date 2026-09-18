@@ -73,6 +73,13 @@ async function main() {
     await assertFails(
       stranger.firestore().collection('profiles').where('email', '==', OWNER.email).get(),
     );
+    await assertSucceeds(stranger.firestore().doc(`profiles/${STRANGER.uid}`).get());
+    await assertSucceeds(
+      stranger.firestore().collection('profiles').where('email', '==', STRANGER.email).get(),
+    );
+    await assertSucceeds(
+      stranger.firestore().collection('organizations').where('invitedEmails', 'array-contains', STRANGER.email).get(),
+    );
 
     await assertSucceeds(stranger.firestore().doc(`publicProfiles/${OWNER.email}`).get());
     await assertFails(stranger.firestore().collection('publicProfiles').get());

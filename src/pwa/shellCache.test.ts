@@ -74,6 +74,13 @@ describe('app-shell service worker', () => {
     );
   });
 
+  test('Google sign-in popups can read window.closed', () => {
+    const rules = firebase.hosting.headers;
+    const htmlHeaders = rules.find((rule) => rule.source === '**')?.headers || [];
+    const coop = htmlHeaders.find((header) => header.key === 'Cross-Origin-Opener-Policy');
+    expect(coop?.value).toBe('same-origin-allow-popups');
+  });
+
   test('clear-sw is a real file, not the SPA shell', () => {
     const html = read('public/clear-sw.html');
     expect(html).toContain('serviceWorker.getRegistrations');

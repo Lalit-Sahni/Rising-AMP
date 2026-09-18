@@ -8,14 +8,22 @@ Trunk is **`phase-18-people`**. It holds Phase 17, Phase 18, the Firestore sign-
 
 | Surface | Staging now | Production now |
 | --- | --- | --- |
-| Hosting | `index-g3uSRedv.js` on https://rising-amp-staging.web.app | `index-BQRAZDNK.js` on https://risingamp.com.au (and https://rising-amp-467702-b5.web.app). Was `index-D_v50ECA.js`. |
+| Hosting | `index-BD5jfyNY.js` on https://rising-amp-staging.web.app | `index-C-Zkfj8K.js` on https://risingamp.com.au (and https://rising-amp-467702-b5.web.app). Earlier today: `index-BQRAZDNK.js`. |
 | Firestore rules | Phase 18 roles (missing `managers`/`viewers` = Site) | Same |
 | Storage rules | Avatars scoped to family org | Same |
 | Functions | Same eight, `sendJobInviteEmail` updated. **`resendWebhook` is not deployed.** | Same eight, `sendJobInviteEmail` updated. **`resendWebhook` is not deployed.** |
 
 A missing `assistantWritesEnabled` field means assistant writes are **on** (staging, localhost, and production). Only an explicit `false` is off.
 
-Independent proof on this trunk: `npm run typecheck` clean; `npm test` **720** vitest + **184** node; `npm run test:rules` passed (including Site can write an expense and cannot write an invoice); production `npm run build` **Initial JS gzip 271.0 KB** (ceiling **400 KB**). Built bundle contains `rising-amp-467702-b5`, not staging. No new npm packages. No `--apply`. No `--force`.
+Independent proof on this trunk: `npm run typecheck` clean; `npm test` **723** vitest + **184** node; `npm run test:rules` passed; production `npm run build` **Initial JS gzip 271.1 KB** (ceiling **400 KB**). Built bundle contains `rising-amp-467702-b5`, not staging. No new npm packages. No `--apply`. No `--force`.
+
+### Hotfix (19 Sep 2026, after go-live)
+
+Inviting `lalit@opalssconstructions.com.au` showed delivered in Resend because Microsoft 365 accepted the SMTP handoff. That mailbox is Outlook (`mail.protection.outlook.com`), not Gmail. Apex `risingamp.com.au` has no SPF (only the Firebase hosting TXT), so Exchange often drops the message after 250 OK. Sign-in as `sahnilalit365@gmail.com` (not on any family job) retried `permission-denied` forever and logged hundreds of org/profile errors. Chrome also blocked `window.closed` on the Google popup.
+
+Shipped on staging and production (rules, `sendJobInviteEmail`, hosting): Outlook/company invites also send a Gmail copy from the signed-in owner; profile get of a missing own document is allowed; org/profile queries use the token email; permission-denied is not retried; hosting sends `Cross-Origin-Opener-Policy: same-origin-allow-popups`.
+
+Still add an SPF TXT on `risingamp.com.au` at Crazy Domains (`v=spf1 include:_spf.resend.com ~all` next to the existing hosting-site TXT). Until that exists, Resend-only mail to Outlook can still vanish. `sahnilalit365@gmail.com` is not on the org list, so that login should show Ask for access, not the family jobs.
 
 ### What was decided about the orphan (`2900f9b`)
 
@@ -168,7 +176,7 @@ Creating an account fired a Firestore internal assertion (`ca9`, `pendingRespons
 
 The failure is in memory only. Nothing is written to IndexedDB, so a reload restores an affected user and they do not need to clear site data. `terminate()` cannot help, because it enqueues and therefore throws `b815` itself.
 
-**As of 19 Sep 2026 this trunk is live.** https://risingamp.com.au serves `index-BQRAZDNK.js`. Confirm with:
+**As of 19 Sep 2026 this trunk is live.** https://risingamp.com.au serves `index-C-Zkfj8K.js`. Confirm with:
 
 ```
 curl -s https://risingamp.com.au | grep -o 'assets/index-[A-Za-z0-9_-]*\.js'

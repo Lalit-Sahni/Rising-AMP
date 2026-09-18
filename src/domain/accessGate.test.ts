@@ -13,7 +13,7 @@ describe('invitation reasons', () => {
     expect(invitationReasonFromError({ code: 'permission-denied' })).toBe('lookup-failed');
     expect(invitationReasonFromError({ code: 'unavailable' })).toBe('lookup-failed');
     expect(invitationReasonFromError({ code: 'deadline-exceeded' })).toBe('lookup-failed');
-    expect(isRetryableMembershipError({ code: 'permission-denied' })).toBe(true);
+    expect(isRetryableMembershipError({ code: 'permission-denied' })).toBe(false);
     expect(isRetryableMembershipError({ code: 'unavailable' })).toBe(true);
     expect(isRetryableMembershipError({ code: 'not-found' })).toBe(false);
   });

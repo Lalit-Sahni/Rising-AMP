@@ -48,6 +48,7 @@ describe('Part E identity product wiring', () => {
     expect(app).not.toContain('getDoc(doc(db, \'organizations\'');
     expect(tenancy).toContain('onSnapshot');
     expect(tenancy).toContain("where('invitedEmails', 'array-contains'");
+    expect(tenancy).toContain('auth.currentUser && auth.currentUser.email');
     expect(tenancy).not.toMatch(/if \(code === 'permission-denied'\)[\s\S]{0,180}not-on-list/);
     expect(auth).toContain('clearSession(uid)');
   });

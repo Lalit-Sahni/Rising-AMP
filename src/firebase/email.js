@@ -11,12 +11,12 @@ import {
   inferLocationLabel,
 } from '../emails/risingAmpMail';
 
-import { normalizeEmail } from './emailAddress';
+import { inviteNeedsGmailCopy, normalizeEmail } from './emailAddress';
 
 const GMAIL_TOKEN_KEY = 'risingAmp.gmailAccessToken';
 
 // Address helpers live in emailAddress.ts so boot does not load the mail templates.
-export { normalizeEmail, canonicalEmail, emailInviteVariants, emailsMatch, isEmailOnList } from './emailAddress';
+export { normalizeEmail, canonicalEmail, emailInviteVariants, emailsMatch, isEmailOnList, inviteNeedsGmailCopy } from './emailAddress';
 
 function rememberGmailAccessToken(accessToken) {
   if (accessToken) {
@@ -168,23 +168,33 @@ async function sendInviteViaResend({ to, projectId, projectName }) {
  * deployed or not configured yet, fall back to the existing Gmail send path.
  * Do not remove Gmail until Resend is proven on staging.
  */
+async function sendGmailInviteCopy({ to, projectId, projectName }) {
+  await sendInviteFromSignedInGmail({ to, projectName });
+  try {
+    const { recordGmailInvite } = await import('./invites');
+    await recordGmailInvite({ projectId, to });
+  } catch (recordErr) {
+    console.warn('Invite sent via Gmail but the record was not written:', recordErr);
+  }
+}
+
 export async function sendJobInvite({ to, projectId, projectName }) {
   try {
     await sendInviteViaResend({ to, projectId, projectName });
+    if (inviteNeedsGmailCopy(to)) {
+      try {
+        await sendGmailInviteCopy({ to, projectId, projectName });
+      } catch (gmailErr) {
+        console.warn('Gmail copy of the invite was not sent:', gmailErr && gmailErr.code);
+      }
+    }
     return { via: 'resend' };
   } catch (error) {
     if (!isInviteFunctionUnavailable(error)) {
       throw error;
     }
     console.warn('Resend invite path unavailable, falling back to Gmail:', error && error.code);
-    await sendInviteFromSignedInGmail({ to, projectName });
-    try {
-      const { recordGmailInvite } = await import('./invites');
-      await recordGmailInvite({ projectId, to });
-    } catch (recordErr) {
-      // The email already went; a missing record must not read as a failed send.
-      console.warn('Invite sent via Gmail but the record was not written:', recordErr);
-    }
+    await sendGmailInviteCopy({ to, projectId, projectName });
     return { via: 'gmail' };
   }
 }

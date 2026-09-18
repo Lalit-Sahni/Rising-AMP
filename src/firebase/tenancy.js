@@ -1,5 +1,5 @@
 import { collection, doc, getDocs, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
-import { db } from './config';
+import { auth, db } from './config';
 import { canonicalEmail, normalizeEmail } from './emailAddress';
 import {
   invitationReasonFromError,
@@ -111,18 +111,26 @@ function invitedOrgsQuery(email) {
   return query(collection(db, 'organizations'), where('invitedEmails', 'array-contains', email));
 }
 
+function orgQueryEmail(email) {
+  const tokenEmail = normalizeEmail(auth.currentUser && auth.currentUser.email);
+  return tokenEmail || normalizeEmail(email);
+}
+
 export async function listOrganisationsForEmail(email) {
-  const snap = await getDocs(invitedOrgsQuery(email));
-  return snap.docs.map((orgDoc) => mapOrgSnap(orgDoc, email));
+  const queryEmail = orgQueryEmail(email);
+  if (!queryEmail.includes('@')) return [];
+  const snap = await getDocs(invitedOrgsQuery(queryEmail));
+  return snap.docs.map((orgDoc) => mapOrgSnap(orgDoc, queryEmail));
 }
 
 /**
- * Same array-contains query as listOrganisationsForEmail. Uninvited users
- * cannot get a named org doc; an empty snapshot is not-on-list. Keep this
+ * Same array-contains query as listOrganisationsForEmail. The constraint must
+ * equal the signed-in token email or Firestore returns permission-denied.
+ * Uninvited users get an empty snapshot (not-on-list), not an error. Keep this
  * listener attached so an invite lands without a reload.
  */
 export function listenOrganisationsForEmail(email, onNext, onError) {
-  const queryEmail = normalizeEmail(email);
+  const queryEmail = orgQueryEmail(email);
   if (!queryEmail.includes('@')) {
     onNext([], { fromCache: false });
     return () => {};
